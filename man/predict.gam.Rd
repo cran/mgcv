@@ -7,7 +7,7 @@ and produces predictions given a new set of values for the model covariates
 or the original values used for the model fit.}
 }
 \usage{
-predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE, ...)
+predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -15,22 +15,29 @@ predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE, ...)
  \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{newdata}{ A data frame containing the values of the model covariates at which predictions
-  are required. If this is not provided then predictions corresponding to the original data are returned.  } 
+  are required. If this is not provided then predictions corresponding to the original data are returned. 
+ 
+ } 
  
  
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
 parametric model components, followed by each smooth component. When \code{type="response"} predictions 
-on the scale of the response are returned (possibly with approximate standard errors).}
-
+on the scale of the response are returned (possibly with approximate
+standard errors). When \code{type="lpmatrix"} then a matrix is returned
+which yields the values of the linear predictor when applied to the
+parameter vector (in this case \code{se.fit} is ignored). The latter
+option is most useful for getting variance estimates for integrated quantities. }
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
  \item{plot.call}{used to signal a call from plot.gam, to avoid having to construct a data frame containing all
- the parametric model components.}
- \item{\dots}{further arguments to be passed to or from methods.}
+   the parametric model components.}
+ \item{...}{ other arguments.}
 }
 
-\value{ If \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
+\value{ If \code{type=="lpmatrix"} then a matrix is returned which will
+  give a vector of linear predictor values at the supplied covariate
+  values, when applied to the model coefficient vector. Otherwise, if \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
 and \code{se.fit} containing predictions and associated standard error estimates, otherwise an 
 array of predictions is returned. The dimensions of the returned arrays depends on whether 
 \code{type} is \code{"terms"} or not: if it is then the array is 2 dimensional with each 
@@ -81,18 +88,4 @@ pred<-predict.gam(b,newd)
  
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
