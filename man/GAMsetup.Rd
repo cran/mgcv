@@ -60,9 +60,9 @@ to the  row order in \code{G$x}. There are \code{G$dim[i]} arrays of length \cod
 \item{fit.method}{one of \code{"mgcv"} for the Wood (2000) method or 
 \code{"magic"} for a more recent and in principle more stable 
 alternative.} 
-\code{min.sp}{lower bounds on the smoothing parameters: only possible if 
-fit method is \code{"magic"}}
-\code{H}{the offset penalty matrix, \code{NULL} for none. This is the 
+\item{min.sp}{lower bounds on the smoothing parameters: only possible if 
+fit method is \code{"magic"}.}
+\item{H}{the offset penalty matrix, \code{NULL} for none. This is the 
 coefficient matrix of any user supplied fixed penalty.}
 } % end of itemize
 } % end of G

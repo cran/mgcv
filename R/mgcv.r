@@ -251,6 +251,7 @@ GAMsetup<-function(G) {
 # G$fit.method - one of "mgcv" or "magic", which determines the exact form of H$S and H$off
 # G$min.sp - minimum values for the smoothing parameters, only used with fit.method=="magic"
 # G$H - offset penalty matrix, only used with fit.method=="magic"
+# G$fix array of logicals indicating whether or not smooth should have no penalty
 # The function returns a list H containing all the above named elements plus the following:
 #
 # H$X the full design matrix.
@@ -328,16 +329,16 @@ GAMsetup<-function(G) {
     if (G$m>0)
     for (i in 1:G$m)
     { j<-G$df[i];Si<-matrix(o[[3]][k:(k+j*j-1)],j,j);k<-k+j*j;
-      if (G$sp[i]<0)
+      if (G$sp[i]<0&&!G$fix[i]) # then s.p. to be estimated
       { G$m.free<-G$m.free+1;G$S[[G$m.free]]<-Si;
         G$m.off[G$m.free]<-G$off[i]+1
         G$rank[G$m.free]<-G$rank[i]
       } else
-      if (G$sp[i]>0)
+      if (G$sp[i]>0&&!G$fix[i]) # then s.p. supplied by user
       { if (is.null(G$H)) G$H<-matrix(0,q,q)
         off1<-G$off[i]+1;off2<-off1+j-1
         G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*Si
-      }
+      } else G$sp[i]=0; # s.p. fixed at zero 
     }
     # if minimum smoothing parameters supplied then penalties times these must be added to H
     if (!is.null(G$min.sp)&&G$m>0)
@@ -475,6 +476,7 @@ mgcv<-function(M) {
       S[startj:stopj]<-M$S[start:stop]
       off[j]<-M$off[i]
       df[j]<-M$df[i]
+      M$sp[j]<-M$sp[i] 
       j<-j+1
     }  
   }
@@ -725,7 +727,6 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
   { ok<-TRUE
     if (length(sp)!=m) { ok<-FALSE;warning("Fixed smoothing parameter vector is too short - ignored.")}
     if (sum(is.na(sp))) { ok<-FALSE;warning("NA's in fixed smoothing parameter vector - ignoring.")}
-    #if (sum(sp<0)) { ok<-FALSE;warning("Negative values in fixed smoothing parameter vector  - ignoring.")}
     if (ok) { G$sp<-sp; G$fixed.sp<-1} else { G$fixed.sp<-0;G$sp<-rep(-1,m)}
   } else # set up for auto-initialization
   { G$fixed.sp<-0;G$sp<-rep(-1,m)}
@@ -941,8 +942,8 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.
  
   mgcv.conv<-object$mgcv.conv
   # need to check that i) following is wanted; (ii) there are free s.p.s to estimate...
-  if (!control$perf.iter&&((G$fit.method=="magic"&&G$m.free>0)||(G$fit.method=="mgcv"&&G$fixed.sp<0.5)))
-  { lsp<-log(object$sp)
+  if (!control$perf.iter&&((G$fit.method=="magic"&&G$m.free>0)||(G$fit.method=="mgcv"&&G$fixed.sp<0.5&&sum(!G$fix)!=0)))
+  { lsp<-log(object$sp[G$sp<0&!G$fix]) # make sure only free s.p.s are optimized!
     um<-nlm(full.score,lsp,typsize=lsp,fscale=abs(object$gcv.ubre),stepmax=1,
             ndigit=12,gradtol=1e-4,steptol=0.01,G=G,family=family,control=control,gamma=gamma)
     lsp<-um$estimate
@@ -1122,14 +1123,18 @@ mgcv.find.theta<-function(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,tol)
 full.score<-function(sp,G,family,control,gamma)
 # function suitable for calling from nlm in order to polish gam fit
 # so that actual minimum of score is found in generalized cases
-{ G$sp<-exp(sp);G$fixed.sp<-TRUE
+{ free.sp<-G$sp<0&!G$fix
+  G$sp[free.sp]<-exp(sp);
+  G$sp[G$fix]<-0
+  G$fixed.sp<-TRUE
   if (G$fit.method=="magic") # magic requires a different penalty matrix format to mgcv
   { k<-1;G$m.free<-0;G$m.off<-0;q<-NCOL(G$X)
     if (is.null(G$H)) G$H<-matrix(0,q,q)
     for (i in 1:G$m)
     { j<-G$df[i]
       off1<-G$off[i]+1;off2<-off1+j-1
-      G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*G$S[[i]]
+      if (free.sp[i]) 
+      { G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*G$S[[k]];k<-k+1}
     }
     G$S<-list() # have to reset since magic uses length of this as number of penalties
   }
@@ -2241,7 +2246,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.9-4 \n")
+    cat("This is mgcv 0.9-5 \n")
 }
 
 
