@@ -399,7 +399,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
 
  */
 { int *pi,*pivot,q,n,autoinit,left,ScS,m,i,j,tp,k,use_sd=0,rank,converged,iter=0,ok,
-      gcv,try,fit_call=0,step_fail=0,max_half,*spok,*dir_sp,maxit;
+      gcv,try,fit_call=0,step_fail=0,max_half,*spok,/* *dir_sp,*/maxit;
   double *p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
          min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign;
@@ -482,13 +482,13 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
     u=(double *)calloc((size_t)(m*m),sizeof(double));
     U1U1=(double *)calloc((size_t)(q*q),sizeof(double));
     spok=(int *)calloc((size_t)m,sizeof(int));
-    dir_sp=(int *)calloc((size_t)m,sizeof(int));
+    /*dir_sp=(int *)calloc((size_t)m,sizeof(int));*/
     bsp=(double *)calloc((size_t)m,sizeof(double));
     bag=(double *)calloc((size_t)m,sizeof(double));
     } else 
     { M=K=My=Ky=yK=hess=d2norm=d2delta=NULL;
       VS=grad=dnorm=ddelta=nsp=ev=u=U1U1=bsp=bag=NULL;
-      spok=dir_sp=NULL;
+      spok=NULL;/*dir_sp=NULL;*/
     }
 
   fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
@@ -547,7 +547,8 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
           for (i=0;i<m;i++) sp[i]=nsp[i];
         } else
         for (i=0;i<m;i++) step[i]/=2;
-        if (try==(max_half-1)&&ok) for (i=0;i<m;i++) step[i]=0.0; /* reset sp's to best so far before giving up */
+        if (try==(max_half-1)&&ok) 
+        for (i=0;i<m;i++) step[i]=0.0; /* reset sp's to best so far before giving up */
         if (try==max_half) {ok=0;} /* give up */
       }
       if (iter>3) /* test for convergence */
@@ -594,9 +595,10 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
     }
     fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
     /*Rprintf("\n Rank at final call = %d",rank);*/
+   
     /* free search related memory */
     free2d(Si);free2d(M);free2d(K);free2d(My);free2d(Ky);free2d(yK);free2d(hess);
-    free2d(d2norm);free2d(d2delta);free(U1U1);free(rSms);
+    free2d(d2norm);free2d(d2delta);free(U1U1);free(rSms);free(u);
     free(VS);free(grad);free(dnorm);free(ddelta);free(nsp);free(ev);
     free(bsp);free(bag);free(spok);
   }   
@@ -614,7 +616,6 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
   *tol = msg; /* the root mean square gradient at convergence */  
   control[0]=rank; /* problem rank at convergence */
   control[1]=1-step_fail; /* 1 for true convergence, 0  for step failure */
-  use_sd=0;for (p=ev;p<ev+m;p++) if (*p<0.0) {use_sd=1;break;} /* check hessian +ve def */
   control[2]=1-use_sd; /* 1 if Hessian +ve definite, 0 otherwise */
   control[3]=iter; /* iterations used */
   control[4]=fit_call; /* number of evaluations of GCV/UBRE score */

@@ -25,7 +25,7 @@ including the smooths.
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=3),...)
+control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
 }
 
 \arguments{ 
@@ -90,6 +90,10 @@ numbers of knots, unless they share a covariate.
 \code{\link{lmeControl}}. Note the default setting for the number of EM iterations 
 used by \code{lme}: high settings tend to lead to numerical problems because variance components
 for smooth terms can legitimately be non-finite.}
+
+\item{niterPQL}{Maximum number of PQL iterations (if any).}
+
+\item{verbosePQL}{Should PQL report its progress as it goes along?}
 
 \item{...}{further arguments for passing on e.g. to \code{lme}} 
 }
@@ -164,7 +168,10 @@ Models like \code{s(z)+s(x)+s(x,z)} are not currently supported.
 \code{niterEM} in the \code{control} argument can sometimes help.
 
 \code{gamm} is usually much slower than \code{gam}.
- 
+
+Note that the weights returned in the fitted GAM object are dummy, and not
+those used by the PQL iteration: this makes partial residual plots look odd.
+
 } 
 
 \seealso{\code{\link{te}}, \code{\link{s}}, \code{\link{predict.gam}},

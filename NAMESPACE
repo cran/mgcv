@@ -23,7 +23,7 @@ export(coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        smooth.construct.cr.smooth.spec,
        smooth.construct.tensor.smooth.spec,
        smooth.construct.tp.smooth.spec,
-       summary.gam,solve.pdIdnot,summary.pdIdnot,te,
+       summary.gam,solve.pdIdnot,summary.pdIdnot,summary.pdTens,te,
        tensor.prod.model.matrix,tensor.prod.penalties,
        uniquecombs, vis.gam)
 
@@ -36,6 +36,9 @@ S3method(print, gam)
 S3method(print, summary.gam)
 S3method(residuals, gam)
 S3method(summary, gam)
+S3method(summary, pdTens)
+S3method(summary, pdIdnot)
+
 
 S3method(smooth.construct, cc.smooth.spec)
 S3method(smooth.construct, cr.smooth.spec)

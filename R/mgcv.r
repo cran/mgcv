@@ -428,7 +428,7 @@ get.var<-function(txt,data)
 
 
 
-te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE)
+te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE)
 # function for use in gam formulae to specify a tensor product smooth term.
 # e.g. te(x0,x1,x2,k=c(5,4,4),bs=c("tp","cr","cr"),m=c(1,1,2),by=x3) specifies a rank 80 tensor  
 # product spline. The first basis is rank 5, t.p.r.s. basis penalty order 1, and the next 2 bases
@@ -441,13 +441,14 @@ te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE)
 # * fx     - array indicating which margins should be treated as fixed (i.e unpenalized).
 # * full.call - fully exapanded call for this term
 # * label  - label for this term
+# * mp - TRUE to use a penalty per dimension, FALSE to use a single penalty
 { vars<-as.list(substitute(list(...)))[-1] # gets terms to be smoothed without evaluation
   dim<-length(vars) # dimension of smoother
-  by.var<-deparse(substitute(by)) #getting the name of the by variable
-  term<-deparse(vars[[1]]) # first covariate
+  by.var<-deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
+  term<-deparse(vars[[1]],backtick=TRUE) # first covariate
   if (dim>1) # then deal with further covariates
   for (i in 2:dim)
-  { term[i]<-deparse(vars[[i]])
+  { term[i]<-deparse(vars[[i]],backtick=TRUE)
   }
   # term now contains the names of the covariates for this model term
   
@@ -470,7 +471,7 @@ te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE)
   if (sum(is.na(k))||is.null(k)) k<-5^d 
   else 
   { k<-round(k);ok<-TRUE
-    if (sum(k<3)) ok<-FALSE
+    if (sum(k<3)) { ok<-FALSE;warning("one or more supplied k too small - reset to default")}
     if (length(k)==1&&ok) k<-rep(k,n.bases)
     else if (length(k)!=n.bases) ok<-FALSE
     if (!ok) k<-5^d 
@@ -501,17 +502,20 @@ te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE)
   { j1<-j+d[i]-1
     stxt<-"s("
     for (l in j:j1) stxt<-paste(stxt,term[l],",",sep="")
-    stxt<-paste(stxt,"k=",deparse(k[i]),",bs=",deparse(bs[i]),",m=",deparse(m[i]),")")
+    stxt<-paste(stxt,"k=",deparse(k[i],backtick=TRUE),",bs=",deparse(bs[i],backtick=TRUE),
+                ",m=",deparse(m[i],backtick=TRUE),")")
     margin[[i]]<- eval(parse(text=stxt))  # NOTE: fx and by not dealt with here!
     j<-j1+1
   }
   # assemble version of call with all options expanded as text
+  if (mp) mp <- TRUE else mp <- FALSE
   full.call<-paste("te(",term[1],sep="")
   if (dim>1) for (i in 2:dim) full.call<-paste(full.call,",",term[i],sep="")
   label<-paste(full.call,")",sep="")   # label for parameters of this term
-  full.call<-paste(full.call,",k=",deparse(k),",bs=",deparse(bs),",m=",deparse(m),",d=",deparse(d),
-                   ",by=",by.var,",fx=",deparse(fx),")",sep="")
-  ret<-list(margin=margin,term=term,by=by.var,fx=fx,full.call=full.call,label=label,dim=dim)
+  full.call<-paste(full.call,",k=",deparse(k,backtick=TRUE),",bs=",deparse(bs,backtick=TRUE),
+                   ",m=",deparse(m,backtick=TRUE),",d=",deparse(d,backtick=TRUE),
+                   ",by=",by.var,",fx=",deparse(fx,backtick=TRUE),",mp=",deparse(mp,backtick=TRUE),")",sep="")
+  ret<-list(margin=margin,term=term,by=by.var,fx=fx,full.call=full.call,label=label,dim=dim,mp=mp)
   class(ret)<-"tensor.smooth.spec"
   ret
 }
@@ -535,12 +539,12 @@ s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
 { vars<-as.list(substitute(list(...)))[-1] # gets terms to be smoothed without evaluation
  # call<-match.call() # get function call
   d<-length(vars) # dimension of smoother
-  term<-deparse(vars[[d]]) # last term in the ... arguments
-  by.var<-deparse(substitute(by)) #getting the name of the by variable
-  term<-deparse(vars[[1]]) # first covariate
+  term<-deparse(vars[[d]],backtick=TRUE) # last term in the ... arguments
+  by.var<-deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
+  term<-deparse(vars[[1]],backtick=TRUE) # first covariate
   if (d>1) # then deal with further covariates
   for (i in 2:d)
-  { term[i]<-deparse(vars[[i]])
+  { term[i]<-deparse(vars[[i]],backtick=TRUE)
   }
   # term now contains the names of the covariates for this model term
   # now evaluate all the other 
@@ -548,8 +552,12 @@ s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
   if (!all.equal(k.new,k)) {warning("argument k of s() should be integer and has been rounded")}
   k<-k.new
   if (k==-1) k<-10*3^(d-1) # auto-initialize basis dimension
+  if (k < 2) 
+  { k <- 2
+    warning("meaninglessly low k; reset to 2\n")
+  }
   if (bs=="cr") # set basis types
-  { if (d>1) { warning("cr basis only works with 1-d smooths!");bs<-"tp";}
+  { if (d>1) { warning("cr basis only works with 1-d smooths!\n");bs<-"tp";}
   } 
   m[m<0]<-0
   # check for repeated variables in function argument list
@@ -558,7 +566,8 @@ s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
   full.call<-paste("s(",term[1],sep="")
   if (d>1) for (i in 2:d) full.call<-paste(full.call,",",term[i],sep="")
   label<-paste(full.call,")",sep="") # used for labelling parameters
-  full.call<-paste(full.call,",k=",deparse(k),",fx=",deparse(fx),",bs=",deparse(bs),",m=",deparse(m),
+  full.call<-paste(full.call,",k=",deparse(k,backtick=TRUE),",fx=",deparse(fx,backtick=TRUE),",bs=",
+             deparse(bs,backtick=TRUE),",m=",deparse(m,backtick=TRUE),
                    ",by=",by.var,")",sep="")
   ret<-list(term=term,bs.dim=k,fixed=fx,dim=d,p.order=m,by=by.var,full.call=full.call,label=label)
   class(ret)<-paste(bs,".smooth.spec",sep="")
@@ -580,8 +589,21 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   max.rank<-prod(d)
   r<-max.rank*r/d # penalty ranks
   X<-tensor.prod.model.matrix(Xm)
-  S<-tensor.prod.penalties(Sm)
-  for (i in m:1) if (object$fx[i]) S[[i]]<-NULL # remove penalties for un-penalized margins
+  if (object$mp) # multiple penalties
+  { S<-tensor.prod.penalties(Sm)
+    for (i in m:1) if (object$fx[i]) S[[i]]<-NULL # remove penalties for un-penalized margins
+  } else # single penalty
+  { S<-Sm[[1]];r<-object$margin[[i]]$rank
+    if (m>1) for (i in 2:m) 
+    { S<-S%x%Sm[[i]]
+      r<-r*object$margin[[i]]$rank
+    } 
+    if (sum(object$fx)==m) 
+    { S <- list();object$fixed=TRUE } else
+    { S<-list(S);object$fixed=FALSE }
+    nr <- max.rank-r
+    object$bs.dim<-max.rank
+  }
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
@@ -623,10 +645,16 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
     }
   }
   n<-nrow(data)
-  k<-object$bs.dim
+  k<-object$bs.dim 
+  M<-null.space.dimension(object$dim,object$p.order) 
+  if (k<M+1) # essential or construct_tprs will segfault, as tprs_setup does this
+  { k<-M+1
+    object$bs.dim<-k
+    warning("basis dimension, k, increased to minimum possible\n")
+  }
   X<-array(0,n*k)
   S<-array(0,k*k)
-  M<-null.space.dimension(object$dim,object$p.order)
+ 
   UZ<-array(0,(n+M)*k)
   Xu<-x
   C<-array(0,k)
@@ -1002,6 +1030,17 @@ coef.pdTens <-
   }
 }
 
+summary.pdTens <-
+  function(object, structName = "Tensor product smooth term", ...)
+{
+  # summary.pdMat(object, structName, noCorrelation = TRUE)
+
+  ## ... summary.pdMat is not exported in the nlme NAMESPACE file, so....
+
+  NextMethod(object, structName, noCorrelation=TRUE)
+}
+
+
 # .... end of pdMat definitions for tensor product smooths
 
 
@@ -1115,7 +1154,7 @@ coef.pdIdnot <-
 {
   if (unconstrained) NextMethod()
   else structure(notExp(as.vector(object)),
-           names = c(paste("sd(", deparse(formula(object)[[2]]),")",sep = "")))
+           names = c(paste("sd(", deparse(formula(object)[[2]],backtick=TRUE),")",sep = "")))
 }
 
 Dim.pdIdnot <-
@@ -1147,7 +1186,11 @@ solve.pdIdnot <-
 summary.pdIdnot <-
   function(object, structName = "Multiple of an Identity", ...)
 {
-  summary.pdMat(object, structName, noCorrelation = TRUE)
+  # summary.pdMat(object, structName, noCorrelation = TRUE)
+
+  ## ... summary.pdMat is not exported in the nlme NAMESPACE file, so....
+
+  NextMethod(object, structName, noCorrelation=TRUE)
 }
 
 ### end of pdIdnot class
@@ -1309,9 +1352,9 @@ gamm.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NU
   G$random<-random
   G$X<-X  
 
-  G$y <- data[[deparse(split$full.formula[[2]])]]
+  G$y <- data[[deparse(split$full.formula[[2]],backtick=TRUE)]]
   
-  G$n<-length(G$y)
+  G$n<-nrow(data)
 
   if (is.null(data$"(weights)")) G$w<-rep(1,G$n)
   else G$w<-data$"(weights)"  
@@ -1423,7 +1466,7 @@ new.name <- function(proposed,old.names)
 
 
 gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,
-               knots=NULL,control=lmeControl(niterEM=3),...)
+               knots=NULL,control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
@@ -1455,10 +1498,10 @@ gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(
   
     allvars <- c(cor.vars,random.vars)
     if (length(allvars))
-    mf$formula<-as.formula(paste(deparse(gp$fake.formula),"+",paste(allvars,collapse="+")))
+    mf$formula<-as.formula(paste(deparse(gp$fake.formula,backtick=TRUE),"+",paste(allvars,collapse="+")))
     else mf$formula<-gp$fake.formula
     mf$correlation<-mf$random<-mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-
-    mf$min.sp<-mf$H<-mf$gamma<-mf$fit<-mf$G<-mf$...<-NULL
+    mf$min.sp<-mf$H<-mf$gamma<-mf$fit<-mf$niterPQL<-mf$verbosePQL<-mf$G<-mf$...<-NULL
     mf$drop.unused.levels<-TRUE
     mf[[1]]<-as.name("model.frame")
     mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
@@ -1510,7 +1553,8 @@ gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(
     { ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
       reml.used <- TRUE
     } else
-    { ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,control=control)
+    { ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
+                       control=control,niter=niterPQL,verbose=verbosePQL)
       reml.used <- FALSE
     }
 
@@ -1551,7 +1595,7 @@ gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(
     k <- 1
     for (i in 1:G$m) # var.param in reverse term order, but forward order within terms!!
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
-      if (class(object$smooth[[i]])=="tensor.smooth") 
+      if (class(object$smooth[[i]])=="tensor.smooth"&&n.sp>1) 
       object$sp[k:(k+n.sp-1)] <- notExp(var.param[(n.v-n.sp+1):n.v])*2
       else object$sp[k:(k+n.sp-1)] <- 1/notExp(var.param[(n.v-n.sp+1):n.v])^2
       k <- k + n.sp
@@ -1651,7 +1695,8 @@ gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(
     if (is.null(weights))
     object$prior.weights <- object$y*0+1
     else object$prior.weights <- weights 
-   
+    object$weights<-object$prior.weights   
+
     ret$gam<-object
     ret
 
@@ -1754,6 +1799,8 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NUL
   
   G<-list(m=m,full.formula=split$full.formula,min.sp=min.sp,H=H)
 
+  
+
   if (fit.method=="fastest") 
   { if (G$m==1) G$fit.method<-"mgcv" else G$fit.method<-"magic"
   } else G$fit.method<-fit.method
@@ -1761,7 +1808,8 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NUL
   if (is.null(attr(data,"terms"))) # then data is not a model frame
   mf<-model.frame(split$pf,data,drop.unused.levels=FALSE) # must be false or can end up with wrong prediction matrix!
   else mf<-data # data is already a model frame
-  
+
+  G$intercept <-  attr(attr(mf,"terms"),"intercept")>0
   G$offset <- model.offset(mf)   # get the model offset (if any)
 
   # construct model matrix.... 
@@ -1865,7 +1913,7 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NUL
     }
     rm(C)
   }
-  G$y <- data[[deparse(split$full.formula[[2]])]]
+  G$y <- data[[deparse(split$full.formula[[2]],backtick=TRUE)]]
   
   G$n<-nrow(data)
 
@@ -1908,7 +1956,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.
     if (sum(control$fit.method==c("mgcv","magic","fastest"))==0) stop("Unknown fit method.") 
     G<-gam.setup(gp,data=mf,knots=knots,sp=sp,min.sp=min.sp,H=H,fit.method=control$fit.method,parametric.only=FALSE)
     
-    G$mf<-mf;G$cl<-cl
+    G$mf<-mf;G$cl<-cl;
 
     G$C<-gam.side.conditions(G) # check for identifiability of smooth part, constrain if poss.
  
@@ -1934,6 +1982,11 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.
   if (!fit) return(G)
    
   object<-gam.fit(G,family=family,control=control,gamma=gamma,...)
+
+  ## correct null deviance if there's an offset ....
+
+  if (G$intercept&&any(G$offset)) object$null.deviance <-
+                                  glm(G$y~offset(G$offset),family=family)$deviance
   
   if (!is.null(sp)) # fill returned s.p. array with estimated and supplied terms
   { temp.sp<-object$sp
@@ -2145,7 +2198,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
 # completely flat parts of gcv/ubre score). In the latter case autoinitialization is requested.
 
 {
-   
+    intercept<-G$intercept
     conv <- FALSE
     nobs <- NROW(G$y)
     nvars <- NCOL(G$X) # check this needed
@@ -2384,7 +2437,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
     wt <- rep(0, nobs)
     wt[good] <- w^2
    
-    wtdmu <- sum(weights * y)/sum(weights)
+    wtdmu <- if (intercept) sum(weights * y)/sum(weights) else linkinv(offset)
     nulldev <- sum(dev.resids(y, wtdmu, weights))
     n.ok <- nobs - sum(weights == 0)
     nulldf <- n.ok 
@@ -2435,18 +2488,30 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
   
   if (missing(newdata)) # then "fake" an object suitable for prediction 
   { newdata<-object$model}
-
+  else  # do an R ``standard'' evaluation to pick up data
+  { if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) # it's a model frame
+    { if (sum(!(names(object$model)%in%names(newdata)))) stop(
+      "newdata is a model.frame it should contain all required variables\n")
+    } else
+    { ff <- interpret.gam(object$full.formula)$fake.formula[-2]
+      if (sum(!(all.vars(ff)%in%names(newdata)))) { 
+      warning("not all required variables have been supplied in newdata: bad practice!\n")}
+      newdata <-
+      eval(model.frame(ff,data=newdata),parent.frame()) 
+    }
+  }
   # check that factor levels match for prediction and original fit 
   names(newdata)->nn # new data names
   colnames(object$model)->mn # original names
-  for (i in 1:ncol(newdata)) 
+  for (i in 1:length(newdata)) 
   if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
   { newdata[[i]]<-factor(newdata[[i]],levels=levels(object$model[,nn[i]])) # set prediction levels to fit levels
   }
-
+##  if (!is.data.frame(newdata)) newdata<-data.frame(newdata) # in case it's a  list 
   # split prediction into blocks, to avoid running out of memory
-  if (ncol(newdata)==1) newdata[,2]<-newdata[,1] # avoids data frame losing its labels and dimensions below!
-  np<-nrow(newdata)
+  if (length(newdata)==1) newdata[[2]]<-newdata[[1]] # avoids data frame losing its labels and dimensions below!
+  if (is.null(dim(newdata[[1]]))) np<-length(newdata[[1]]) 
+  else np<-dim(newdata[[1]])[1] 
   nb<-length(object$coefficients)
   block.size<-1000
   n.blocks<-np%/%block.size
@@ -2468,17 +2533,31 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
   { fit<-array(0,np)
     if (se.fit) se<-fit
   }
-  stop<-0
+  # check that newdata is complete .... 
+##  if (n.smooth) for (k in 1:n.smooth) for (i in 1:object$smooth[[k]]$dim)
+##  { xx<-get.var(object$smooth[[k]]$term[[i]],newdata)
+##    if (is.null(xx)) stop(paste("variable",object$smooth[[k]]$term[[i]],
+##         "missing from newdata"))
+##    if (length(xx)<np) stop(paste("variable",object$smooth[[k]]$term[[i]],
+##         "too short in newdata")) # should never get here!!
+##    if (sum(is.na(xx))) stop(paste("variable",object$smooth[[k]]$term[[i]],
+##         "contains missing data"))
+##  } # done earlier and more completely now
+##  rm(xx)
+  stop<-0;ColNames<-array("",0)
   for (b in 1:n.blocks)  # work through prediction blocks
   { start<-stop+1
     stop<-start+b.size[b]-1
     data<-newdata[start:stop,]
     X<-matrix(0,b.size[b],nb)
     G<-gam.setup(object$full.formula,data,parametric.only=TRUE)
+    if (b==1&&object$nsdf) ColNames<-colnames(G$X)
     if (object$nsdf) X[,1:object$nsdf]<-G$X
     if (n.smooth) for (k in 1:n.smooth) 
-    X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para]<-
+    { X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para]<-
                               Predict.matrix(object$smooth[[k]],data)
+      ColNames[object$nsdf+k]<-object$smooth[[k]]$label
+    }
     # have prediction matrix for this block, now do something with it
     if (type=="lpmatrix") H[start:stop,]<-X else 
     if (type=="terms")
@@ -2495,6 +2574,8 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
         se[start:stop,object$nsdf+k]<-
         sqrt(rowSums((X[,first:last]%*%object$Vp[first:last,first:last])*X[,first:last]))
       }
+      colnames(fit) <- ColNames
+      if (se.fit) colnames(se) <- ColNames
     } else # "link" or "response"
     { k<-attr(attr(object$model,"terms"),"offset")
       fit[start:stop]<-X%*%object$coefficients
@@ -2507,7 +2588,9 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
       }
     }
   }
-  if (type!="lpmatrix") { if (se.fit) H<-list(fit=fit,se.fit=se) else H<-fit}
+  if (type=="lpmatrix") { colnames(H) <- names(object$coefficients)} else { 
+    if (se.fit) H<-list(fit=fit,se.fit=se) else H<-fit
+  }
   H # ... and return
 }
 
@@ -2567,9 +2650,10 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 
 
   # start of main function
+  w.resid<-NULL
   if (length(residuals)>1) # residuals supplied 
   { if (length(residuals)==length(x$residuals)) 
-    x$residuals <- residuals else
+    w.resid <- residuals else
     warning("residuals argument to plot.gam is wrong length: ignored")
     partial.resids <- TRUE
   } else partial.resids <- residuals # use working residuals or none
@@ -2615,7 +2699,10 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
   # dim, x, fit, se, ylab, xlab for 1-d terms;
   # dim, xm, ym, fit, se, ylab, xlab, title for 2-d terms;
   # and dim otherwise
-  if (partial.resids) fv.terms <- predict(x,type="terms")
+  if (partial.resids) 
+  { fv.terms <- predict(x,type="terms")
+    if (is.null(w.resid)) w.resid<-x$residuals*sqrt(x$weights) # weighted working residuals
+  }
   pd<-list()
   for (i in 1:m) # work through smooth terms
   { if (x$smooth[[i]]$dim==1)
@@ -2638,7 +2725,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
       ylabel<-paste("s(",xterm,",",as.character(round(edf,2)),")",sep="") else
       ylabel <- ylab
       pd.item<-list(fit=fit,dim=1,x=xx,ylab=ylabel,xlab=xlabel,raw=raw[[1]])
-      if (partial.resids) {pd.item$p.resid <- fv.terms[,1+i]+x$residuals}
+      if (partial.resids) {pd.item$p.resid <- fv.terms[,1+i]+w.resid}
       if (se) pd.item$se=se.fit*se1.mult  # Note multiplier
       pd[[i]]<-pd.item;rm(pd.item)
     } else 
@@ -2671,7 +2758,11 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
         se.fit[exclude] <- NA # exclude grid points too distant from data
       }
       edf<-sum(x$edf[first:last])
-      if (is.null(main)) title<-paste("s(",xterm,",",yterm,",",as.character(round(edf,2)),")",sep="")
+      if (is.null(main)) 
+      { if (is.null(x$smooth[[i]]$margin))
+        title<-paste("s(",xterm,",",yterm,",",as.character(round(edf,2)),")",sep="") else
+        title<-paste("te(",xterm,",",yterm,",",as.character(round(edf,2)),")",sep="")
+      }
       else title <- main
       pd.item<-list(fit=fit,dim=2,xm=xm,ym=ym,ylab=ylabel,xlab=xlabel,title=title,raw=raw)
       if (is.null(ylim)) pd.item$ylim <- range(ym) else pd.item$ylim <- ylim
@@ -2750,10 +2841,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
           } else
           { sp.contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),matrix(pd[[i]]$se,n2,n2),
                      xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,zlab=pd[[i]]$title,se.mult=se2.mult,...)
-            if (rug) 
-            { if (is.null(list(...)[["pch"]])) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
-              points(pd[[i]]$raw$x,pd[[i]]$raw$y,...) 
-            }
+            if (rug) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...)
           } 
         } else
         { warning("no automatic plotting for smooths of more than one variable")
@@ -2806,7 +2894,10 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
           else
           { contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
                     main=pd[[i]]$title,xlim=pd[[i]]$xlim,ylim=pd[[i]]$ylim,...)
-            if (rug) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...)
+            if (rug) 
+            {  if (is.null(list(...)[["pch"]])) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
+               points(pd[[i]]$raw$x,pd[[i]]$raw$y,...)
+            }
           }  
 
         } else
@@ -2945,7 +3036,8 @@ exclude.too.far<-function(g1,g2,d1,d2,dist)
   res
 }
 
-vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo",se=-1,type="link",zlim=NULL,...)
+vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
+         contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,...)
 # takes a gam object and plots 2D views of it, supply ticktype="detailed" to get proper axis anotation
 # (c) Simon N. Wood 23/2/03
 { fac.seq<-function(fac,n.grid)
@@ -2966,6 +3058,8 @@ vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo
     if (length(v.names)<2) stop("Model doesn't seem to have enough terms to do anything useful")
     view<-v.names[1:2]
   }
+  if (!sum(view%in%names(x$model))) stop(
+  paste("view variables must be one of",names(x$model)))
   if (length(unique(x$model[,view[1]]))<=1||length(unique(x$model[,view[2]]))<=1) 
   stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
 
@@ -2996,7 +3090,6 @@ vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo
   v1<-rep(m1,n.grid);v2<-rep(m2,rep(n.grid,n.grid))
   newd<-data.frame(v1=rep(marg[[1]],n.grid*n.grid))
   for (i in 2:dim(x$model)[2]) newd[[i]]<-rep(marg[[i]],n.grid*n.grid)
-#  names(newd)<-m.name
   row.names <- attr(newd,"row.names")
   attributes(newd) <- attributes(x$model) # done so that handling of offsets etc. works
   attr(newd,"row.names") <- row.names
@@ -3006,6 +3099,9 @@ vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo
   if (type=="link") zlab<-paste("linear predictor")
   else if (type=="response") zlab<-type
   else stop("type must be \"link\" or \"response\"")
+  ## turn newd into a model frame, so that names and averages are valid
+  attributes(newd)<-attributes(x$model)
+  attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
   fv<-predict.gam(x,newdata=newd,se=TRUE,type=type)
   z<-fv$fit # store NA free copy now
   if (too.far>0) # exclude predictions too far from data
@@ -3036,14 +3132,20 @@ vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo
     surf.col<-surf.col-min.z
     surf.col<-surf.col/(max.z-min.z)  
     surf.col<-round(surf.col*50)
-    if (color=="heat") pal<-heat.colors(50)
-    else if (color=="topo") pal<-topo.colors(50)
-    else if (color=="cm") pal<-cm.colors(50)
-    else if (color=="terrain") pal<-terrain.colors(50)
+    con.col <-1
+    if (color=="heat") { pal<-heat.colors(50);con.col<-3;}
+    else if (color=="topo") { pal<-topo.colors(50);con.col<-2;}
+    else if (color=="cm") { pal<-cm.colors(50);con.col<-1;}
+    else if (color=="terrain") { pal<-terrain.colors(50);con.col<-2;}
     else stop("color scheme not recognised")
+    if (is.null(contour.col)) contour.col<-con.col   # default colour scheme
     surf.col[surf.col<1]<-1;surf.col[surf.col>50]<-50 # otherwise NA tiles can get e.g. -ve index
     if (is.na(col)) col<-pal[as.array(surf.col)]
     z<-matrix(fv$fit,n.grid,n.grid)
+    if (plot.type=="contour")
+    { image(m1,m2,z,xlab=view[1],ylab=view[2],main=zlab,col=pal,zlim=c(min.z,max.z),...)
+      contour(m1,m2,z,col=contour.col,zlim=c(min.z,max.z),add=TRUE,...)
+    } else
     persp(m1,m2,z,xlab=view[1],ylab=view[2],zlab=zlab,col=col,zlim=c(min.z,max.z),...)
   } else # add standard error surfaces
   { subs<-paste("red/green are +/-",se,"s.e.")
@@ -3057,6 +3159,7 @@ vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo
     }
     zlim<-c(z.min,z.max)
     z<-fv$fit-fv$se.fit*se;z<-matrix(z,n.grid,n.grid)
+    if (plot.type=="contour") warning("sorry no option for contouring with errors: try plot.gam")
     persp(m1,m2,z,xlab=view[1],ylab=view[2],col=col,zlab=zlab,zlim=zlim,border="green",sub=subs,...)
     par(new=TRUE) # don't clean device
     z<-fv$fit;z<-matrix(z,n.grid,n.grid)
@@ -3226,12 +3329,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.0-5 \n")
+.onAttach <- function(...) cat("This is mgcv 1.0-7 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.0-5 \n")
+    cat("This is mgcv 1.0-7 \n")
 }
 
 

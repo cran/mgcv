@@ -3,18 +3,25 @@
 \alias{persp.gam}
 \title{Visualization of GAM objects}
 \usage{
-vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,
-        color="topo",se=-1,type="link",zlim=NULL,...)
+vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
+      contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,...)
 }
 
 \arguments{
   \item{x}{a \code{gam} object, produced by \code{gam()}}
+
   \item{view}{an array containing the names of the two predictor variables to be displayed on the 
-   x and y dimensions of the plot. If omitted the first two suitable variables will be used}
+   x and y dimensions of the plot. If omitted the first two suitable variables
+   will be used. Names must be names from \code{names(x$model)}.
+}
+
   \item{cond}{a named list of the values to use for the other predictor variables (not in \code{view}). Variables omitted from 
-this list will have their values set to their mean for continuous variables, or first level for factors.}
+this list will have their values set to their mean for continuous variables,
+or first level for factors. Names must correspond to \code{names(x$model)}.
+}
   \item{n.grid}{The number of grid nodes in each direction used for calculating the 
    plotted surface.} 
+
  \item{too.far}{ plot grid nodes that are too far from the points defined by the variables given in \code{view} 
 can be excluded from the plot. \code{too.far} determines what is too far. The grid is scaled into the unit 
 square along with the \code{view} variables and then grid nodes more than \code{too.far} from the predictor variables 
@@ -24,17 +31,19 @@ otherwise the colour scheme specified in \code{color} is used. If \code{col} is 
 colour.}
  \item{color}{ the colour scheme to use for plots when \code{se}<=0. One of \code{"topo"}, \code{"heat"}, \code{"cm"} or 
 \code{"terrain"}.}
+\item{contour.col}{sets the colour of contours when using \code{plot.type="contour"}. Default scheme used if \code{NULL}.}
 \item{se}{if less than or equal to zero then only the predicted surface is plotted, but if greater than zero, then 3 
 surfaces are plotted, one at the predicted values minus \code{se} standard errors, one at the predicted values and one at
 the predicted values plus \code{se} standard errors.}
 \item{type}{\code{"link"} to plot on linear predictor scale and \code{"response"} to plot on the response scale.}
+\item{plot.type}{one of \code{"contour"} or \code{"persp"}.}
 \item{zlim}{a two item array giving the lower and upper limits for the z-axis scale. \code{NULL} to choose automatically.}
 \item{...}{other options to pass on to \code{\link{persp}}. In particular \code{ticktype="detailed"} will add proper axes 
 labelling to the plots.}
 }
 \value{Simply produces a plot.}
 
-\description{ Produces perspective plot views of \code{gam} model predictions, fixing all but the values in \code{view} to the 
+\description{ Produces perspective or contour plot views of \code{gam} model predictions, fixing all but the values in \code{view} to the 
 values supplied in \code{cond}. 
 }
 \details{ The x and y limits are determined by the ranges of the variables supplied in \code{view}. If \code{se}<=0 then 
@@ -62,6 +71,12 @@ vis.gam(g,ticktype="detailed",color="heat",theta=-35)
 vis.gam(g,se=2,theta=-35) # with twice standard error surfaces
 vis.gam(g, view=c("x1","x2"),cond=list(x0=0.75)) # different view 
 vis.gam(g, view=c("x1","x2"),cond=list(x0=0.75),theta=210,phi=40,too.far=0.07)
+# contour examples....
+vis.gam(g, view=c("x1","x2"),plot.type="contour",color="heat")
+vis.gam(g, view=c("x1","x2"),plot.type="contour",color="terrain")
+vis.gam(g, view=c("x1","x2"),plot.type="contour",color="topo")
+vis.gam(g, view=c("x1","x2"),plot.type="contour",color="cm")
+
 # ..... areas where there is no data are not plotted
 par(old.par)
 

@@ -4,6 +4,7 @@
 \alias{pdFactor.pdTens}
 \alias{pdMatrix.pdTens}
 \alias{coef.pdTens}
+\alias{summary.pdTens}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Functions implementing a pdMat class for tensor product smooths}
 \description{This set of functions implements an \code{nlme} library \code{pdMat} class to allow

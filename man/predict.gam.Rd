@@ -15,8 +15,11 @@ predict.gam(object,newdata,type="link",se.fit=FALSE,...)
  \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{newdata}{ A data frame containing the values of the model covariates at which predictions
-  are required. If this is not provided then predictions corresponding to the original data are returned. 
- 
+  are required. If this is not provided then predictions corresponding to the
+                original data are returned. If \code{newdata} is provided then
+                it should contain all the variables needed for prediction: a
+                warning is generated if not.
+
  } 
  
  
@@ -29,8 +32,11 @@ standard errors). When \code{type="lpmatrix"} then a matrix is returned
 which yields the values of the linear predictor (minus any offset) when applied to the
 parameter vector (in this case \code{se.fit} is ignored). The latter
 option is most useful for getting variance estimates for integrated quantities. }
+
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
+
  \item{...}{ other arguments.}
+
 }
 
 \value{ If \code{type=="lpmatrix"} then a matrix is returned which will
@@ -43,6 +49,10 @@ array of predictions is returned. The dimensions of the returned arrays depends 
 term in the linear predictor separate, otherwise the array is 1 dimensional and contains the 
 linear predictor/predicted values (or corresponding s.e.s). The linear predictor returned termwise will 
 not include the offset.
+
+\code{newdata} can be a data frame, list or model.frame: if it's a model frame
+then all variables must be supplied.
+
 }
 
 \references{
@@ -60,7 +70,10 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
-\code{predict.gam()} in Splus.} 
+\code{predict.gam()} in Splus.
+
+Note that the 
+} 
 
 \seealso{  \code{\link{gam}}, \code{\link{gamm}}, \code{\link{plot.gam}}}
 
