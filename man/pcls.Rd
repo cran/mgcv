@@ -93,7 +93,7 @@ set.seed(0)
 n<-100
 x<-runif(n);y<-x-0.2+rnorm(n)*0.1
 M<-list(X=matrix(0,n,2),p=c(0.1,0.5),off=array(0,0),S=list(),
-Ain=matrix(0,1,2),bin=0,C=matrix(0,0,0),sp=0,y=y,w=y*0+1)
+Ain=matrix(0,1,2),bin=0,C=matrix(0,0,0),sp=array(0,0),y=y,w=y*0+1)
 M$X[,1]<-1;M$X[,2]<-x;M$Ain[1,]<-c(1,0)
 pcls(M)->M$p
 plot(x,y);abline(M$p,col=2);abline(coef(lm(y~x)),col=3)
@@ -121,9 +121,9 @@ lines(x,fv,col=2)
 
 f.ug<-gam(y~s(x,k=10));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-sm<-smooth.construct(s(x,k=10,bs="tp"),dat,knots=NULL)
-nc<-40         # number of constraints
-xc<-0:nc/nc # points on [0,1]  
+sm<-smooth.construct(s(x,k=10,bs="tp"),dat,knots=NULL)       
+xc<-0:39/39 # points on [0,1]  
+nc<-length(xc)  # number of constraints
 xc<-xc*4-1  # points at which to impose constraints
 A0<-Predict.matrix(sm,data.frame(x=xc)) 
 # ... A0%*%p evaluates spline at xc points

@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.1-7
+Version: 1.1-8
 Author: Simon Wood <simon@stats.gla.ac.uk>
 Maintainer: Simon Wood <simon@stats.gla.ac.uk>
 Title: GAMs with GCV smoothness estimation and GAMMs by REML/PQL
@@ -12,4 +12,4 @@ Imports: graphics, stats
 Suggests: nlme (>= 3.1-52), MASS (>= 7.2-2)
 LazyLoad: yes
 License: GPL version 2 or later
-Packaged: Wed Oct 20 13:36:49 2004; simon
+Packaged: Fri Nov 12 11:58:50 2004; simon
