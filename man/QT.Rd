@@ -20,10 +20,9 @@ QT(A)
 }
 \details{ This function is primarily useful for providing the null space of the 
 linear constraint matrix \eqn{\bf C}{C}, from the linear constraints 
-\eqn{ {\bf Cp} = {\bf 0} }{ Cp=0 } applying to a genralized ridge regression problem to be
-solved by 
-\code{mgcv()}. The format of the null space as provided by the returned matrix is 
-as expected by \code{mgcv()}. 
+\eqn{ {\bf Cp} = {\bf 0} }{ Cp=0 }, as a series of Householder rotations of the form 
+used internally by \code{mgcv()}. It does not need to be called to set up a problem 
+for solution by mgcv. 
 
    
 }
@@ -49,3 +48,4 @@ A<-matrix(y,2,6)
 B<-QT(A)
 }
 \keyword{ QT orthogonal factorisation }%-- one or more ...
+

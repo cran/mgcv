@@ -2,12 +2,12 @@
 \alias{predict.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction from fitted GAM model}
-\description{ Takes a fitted \code{gam} object prodced by \code{gam()} 
+\description{ Takes a fitted \code{gam} object produced by \code{gam()} 
 and produces predictions given a new set of values for the model covariates.
 All predictions are on the scale of the linear predictor.}
 }
 \usage{
-predict.gam(object,newdata,type,se.fit)
+predict.gam(object,newdata,type="link",se.fit=F,plot.call=FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -26,7 +26,8 @@ linear predictor is returned seperately (possibly with standard errors): this in
 parametric model components, followed by each smooth component.}
 
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
- 
+ \item{plot.call}{used to signal a call from plot.gam, to avoid having to construct a data frame containing all
+ the parametric model components.}
 }
 
 \value{ If \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}

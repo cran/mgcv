@@ -1183,7 +1183,7 @@ void OrthoMult(matrix *Q,matrix *A,int off,int rows,int t,int pre,int o_pre)
    The transformation is applied to A.
 */
 
-{ double au,*u,*a,**AtM,**AM,**QM;
+{ double au,*u,*a,**AtM=NULL,**AM,**QM;
   long i,j,k,Ar,Qc,kk;
   matrix At;
   if (o_pre) t=1-t; /* default assumption is that creation was for post mult. */

@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{ Set up GAM using penalized cubic regression splines} 
 \description{ Sets up design matrix \eqn{\bf X}{X}, penalty matrices \eqn{ {\bf
-S}_i }{S_i} and constraint matrix null space \eqn{\bf Z}{Z} for a GAM defined in terms of 
+S}_i }{S_i} and linear equality constraint matrix \eqn{\bf C}{C} for a GAM defined in terms of 
 penalized regression splines, as well as returning the locations of the knots of these 
 regression splines \code{xp[][]}. The output is such that the model can be fitted and 
 smoothing parameters estimated by the method of Wood (2000) as implemented in routine
@@ -27,9 +27,8 @@ term.}
 columns. The first \code{G$nsdf} elements of \code{G$x} should contain the elements of 
 the columns of the design matrix corresponding to the parametric part of the model. The 
 remaining \code{G$m} elements of \code{G$x} are the values of the covariates that are 
-arguments of the spline terms. Note that the user should not supply a column of 1's in 
-the design matrix, corresponding to the mean response as this will be added 
-automatically.}
+arguments of the spline terms. Note that the smooths will be centred and no intercept term 
+will be added unless an array of 1's is supplied as part of in \code{G$x}}
 }
 \value{
   A list \code{H}, containing the elements of \code{G} (the input list) plus the 
@@ -44,7 +43,8 @@ S}_i }{S_i}, and so on.}
 \item{off}{is an array of offsets, used to facilitate efficient storage of the penalty 
 matrices and to indicate where in the overall parameter vector the parameters of the ith 
 spline reside (e.g. first parameter of ith spline is at \code{p[off[i]]}).}
-\item{Z}{null space of constraints stored as series of Householder rotations.}  
+\item{C}{ a matrix defining the linear equality constraints on the parameters used to define the
+the model (i.e. \eqn{\bf C}{C} in \eqn{ {\bf Cp } = { \bf 0 } }{ Cp=0}). }  
 \item{xp}{matrix whose rows contain the covariate values corresponding to the 
 parameters  of each spline - the splines are parameterized using their \eqn{y}{y}- 
 values at a series of \eqn{x}{x} values - these vectors contain those \eqn{x}{x} 
@@ -60,22 +60,23 @@ quadratic penalties" JRSSB 62(2):413-428 }
     # This example modified from routine SANtest()
 
     n<-100 # number of observations to simulate
-    x <- runif(4 * n, 0, 1) # simulate covariates
-    x <- array(x, dim = c(4, n)) # put into array for passing to GAMsetup
+    x <- runif(5 * n, 0, 1) # simulate covariates
+    x <- array(x, dim = c(5, n)) # put into array for passing to GAMsetup
     pi <- asin(1) * 2  # begin simulating some data
-    y <- 2 * sin(pi * x[1, ])
-    y <- y + exp(2 * x[2, ]) - 3.75887
-    y <- y + 0.2 * x[3, ]^11 * (10 * (1 - x[3, ]))^6 + 10 * (10 * 
-        x[3, ])^3 * (1 - x[3, ])^10 - 1.396
+    y <- 2 * sin(pi * x[2, ])
+    y <- y + exp(2 * x[3, ]) - 3.75887
+    y <- y + 0.2 * x[4, ]^11 * (10 * (1 - x[4, ]))^6 + 10 * (10 * 
+        x[4, ])^3 * (1 - x[4, ])^10 - 1.396
     sig2<- -1    # set magnitude of variance 
     e <- rnorm(n, 0, sqrt(abs(sig2)))
     y <- y + e          # simulated data
     w <- matrix(1, n, 1) # weight matrix
     par(mfrow = c(2, 2)) # scatter plots of simulated data
-    plot(x[1, ], y)
     plot(x[2, ], y)
     plot(x[3, ], y)
     plot(x[4, ], y)
+    plot(x[5, ], y)
+    x[1,]<-1
     G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15), 
         x = x) # creat list for passing to GAMsetup
     H <- GAMsetup(G)

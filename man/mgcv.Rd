@@ -17,11 +17,8 @@ mgcv(M)
  \item{M$X}{The design matrix for the problem, note that \code{ncol(M$X)}
             must give the number of model parameters, while \code{nrow(M$X)} 
             should give the number of data.}
-\item{M$Z}{Matrix containing the null space of the linear equality constraints 
-            on the problem, stored as Householder rotations as produced by 
-routine
-            \code{QT()}. Number of rows of \code{M$Z} must be number of 
-constraints.}
+\item{M$C}{Matrix containing any linear equality constraints 
+            on the problem (i.e. \eqn{\bf C}{C} in \eqn{ {\bf Cp}={\bf 0} }{Cp=0}).}
  \item{M$S}{ A 3 dimensional array. \code{M$S[i]} is a 2 dimensional array 
              containing the elements of the ith penalty matrix. Note that to
              economize on storage space, rows and columns containing only zeroes 
@@ -30,7 +27,7 @@ constraints.}
              \eqn{ {\bf S}_i}{S_i}. It is also assumed that only the first 
             \code{M$df[i]} rows and columns of \code{M$S[i]} contain non-zero
             elements. \code{dim(M$S)[1]} must evaluate to the number of 
-penalties.}
+            penalties, or (only if there are no penalties) to \code{NULL}.}
  \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct
                location within each penalty coefficient matrix.}
  \item{M$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
@@ -143,7 +140,8 @@ especially in contexts where the weights vary wildly. }
 	H$sp <-array(-1,H$m)
 	H$fix<-array(FALSE,H$m)
     H$w <- w       # add weights to H
-    H <- mgcv(H)  # select smoothing parameters and fit model
+    H <- mgcv(H)  # select smoothing parameters and fit model (no constant)
  
 }
 \keyword{GCV, AIC, UBRE, GAM }%-- one or more ...
+

@@ -5,7 +5,7 @@
 \description{ This is an internal function of package \code{mgcv}. It is called 
 by \code{gam} to obtain the design matrix and penalty matrices for a GAM
 set up using penalized regression splines. This is done by calling a mixture of
-R routines and comppiled C code.  For further information on usuage see code for \code{gam}.
+R routines and compiled C code.  For further information on usuage see code for \code{gam}.
 }
 }
 
@@ -31,6 +31,9 @@ with Multiple
 \seealso{   \code{\link{gam}} \code{\link{mgcv}}}
 
 \keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
+
+
+
 
 
 
