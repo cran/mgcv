@@ -743,7 +743,9 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
     { if (nsdf>=0)  # set G$nsdf to supplied value, but deal with X later
       { G$nsdf<-nsdf
       } else 
-      { mf<-model.frame(split$pf,data,drop.unused.levels=FALSE) # mudt be false or can end up with wrong prediction matrix!
+      { if (is.null(attr(data,"terms"))) # then data is not a model frame
+        mf<-model.frame(split$pf,data,drop.unused.levels=FALSE) # mudt be false or can end up with wrong prediction matrix!
+        else mf<-data # data is already a model frame
         # ... evaluates in data  
         G$offset <- model.offset(mf)   # get the model offset (if any)
         if (!is.null(G$offset) && length(attr(terms(split$pf),"variables"))<=2) # offset exists, but no more terms except "+1" or "-1"
@@ -761,7 +763,8 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
   }
   if (!predict) # obtain the "y variable"  
   { # evaluates rhs of model using data and failing that the calling environment...
-    G$y<-eval(parse(text=split$v.names[1]),data)#,p.env)
+    G$y<-eval(parse(text=paste("data$\"",split$v.names[1],"\"",sep=""))) # works if data is model frame
+    if (is.null(G$y)) G$y<-eval(parse(text=split$v.names[1]),data)       # otherwise evaluate in data
     # checks that this has worked.....
     if (is.null(G$y)) stop(paste("Failed to find variable for",split$v.names[1]))
   }
@@ -797,6 +800,7 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
   n.by<-0 # use to count through by's
   kk<-k<-G$nsdf+1
   v.off<-2  # must be 2 to avoid response!!
+  if (G$nsdf>0) G$vnames<-colnames(X) 
   if (m>0)
   for (jj in 1:m)  # loop through smooths
   { if (G$by.exists[jj]) # first deal with by-variables 
@@ -808,12 +812,13 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
     # now deal with variables that smooth depends on
     vlist<-v.names[v.off:(v.off+G$dim[jj]-1)];v.off<-v.off+G$dim[jj];
     if (jj==1) 
-    {  if (G$nsdf>0) G$vnames<-c(colnames(X),vlist) else
+    {  if (G$nsdf>0) G$vnames<-c(G$vnames,vlist) else
        G$vnames<-vlist 
     } else G$vnames<-c(G$vnames,vlist)
     G$names[kk]<-"s("
     for (i in 1:G$dim[jj]) # produces a column for each variable in this smooth
-    { z<-eval(parse(text=vlist[i]),data)#,p.env)
+    { z<-eval(parse(text=paste("data$\"",vlist[i],"\"",sep=""))) # is term in model frame ?
+      if (is.null(z)) z<-eval(parse(text=vlist[i]),data)#,p.env) # if not, evaluate in data frame
       if (is.null(z)) stop(paste("Failed to find variable",vlist[i]))  
       if (length(z)!=G$n) stop("variable lengths don't all match")
       G$x[k,]<-z
@@ -2189,6 +2194,11 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
       X<-w*X # use recycling rule to form diag(w)%*%X cheaply
     }
   }
+  if (is.null(dim(X))) # lost dimensions as result of being single columned! 
+  { n<-length(y)
+    if (n!=length(X)) stop("X lost dimensions in magic!!")
+    dim(X)<-c(n,1)
+  }
   # call real mgcv engine...
   Si<-array(0,0);cS<-0
   if (n.p>0) for (i in 1:n.p) 
@@ -2229,7 +2239,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.9-1 \n")
+    cat("This is mgcv 0.9-2 \n")
 }
 
 

@@ -7,7 +7,9 @@
 \code{gam()} attempts to find the appropriate smoothness for each applicable model 
 term using Generalized Cross Validation (GCV) or an Un-Biased Risk Estimator (UBRE),
 the latter being used in cases in which the scale parameter is assumed known. GCV and 
-UBRE are covered in Craven and Wahba (1979) and Wahba (1990). The method used alternates 
+UBRE are covered in Craven and Wahba (1979) and Wahba (1990). Fit method \code{"magic"}
+uses Newton or failing that steepest descent updates of the smoothing parameters and is particularly numerically robust.
+Fit method \code{"mgcv"} alternates 
 grid searches for the correct overall level of smoothness for the whole model, given the 
 relative smoothness of terms, with Newton/Steepest descent updates of the relative smoothness 
 of terms, given the overall amount of smoothness. 
@@ -17,8 +19,7 @@ multiple terms to be selected. The methods can also fail to find the real minimu
 score if the model contains many smooth terms that should really be completely smooth, or close to it (e.g. a straight line 
 for a default 1-d smooth). The problem is that in this circumstance the optimal overall smoothness given the relative
 smoothness of terms may make all terms completely smooth - but this will tend to move the smoothing parameters 
-to a location where the GCV/UBRE score is nearly completely flat with respect to the smoothing parameters so that Newton and steepest 
-descent are both ineffective. These problems can usually be overcome by replacing some completely smooth terms with purely
+to a location where the GCV/UBRE score is nearly completely flat with respect to the smoothing parameters so that Newton and steepest  descent are both ineffective. These problems can usually be overcome by replacing some completely smooth terms with purely
 parametric model terms. 
 
 A good example of where smoothing parameter selection can ``fail'', but in an unimportant manner is provided by the 
