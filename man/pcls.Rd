@@ -13,6 +13,7 @@ pcls(M)
 \arguments{
   \item{M}{is the single list argument to \code{pcls}. It should have  the 
   following elements (last 3 are not in argument for \link{mgcv}) :
+\itemize{
  \item{y}{The response data vector.}
  \item{w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
@@ -45,7 +46,8 @@ constraints as equality constraints.}
 \item{Ain}{Matrix for the inequality constraints \eqn{ {\bf A}_{in}
     {\bf p} > {\bf b}_{in}}{A_in p > b}. }
 \item{bin}{vector in the inequality constraints. }
-}
+} % end itemize
+} % end M
 }
 \details{ 
 
@@ -108,12 +110,14 @@ plot(x,y);abline(M$p,col=2);abline(coef(lm(y~x)),col=3)
 # Generate data from a monotonic truth.
 x<-runif(100)*4-1;x<-sort(x);
 f<-exp(4*x)/(1+exp(4*x));y<-f+rnorm(100)*0.1;plot(x,y)
+dat<-data.frame(x=x,y=y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-gam.setup(y~s(x,k=10,bs="cr")-1)->G;GAMsetup(G)->G;F<-mono.con(G$xp);
+gam.setup(y~s(x,k=10,bs="cr")-1,dat,fit.method="mgcv")->G;
+GAMsetup(G)->G;F<-mono.con(G$xp);
 G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
-G$p<-G$xp;G$y<-y;G$w<-y*0+1
+G$p<-G$xp;G$y<-y;G$w<-y*0+1;
 
 p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 
@@ -121,6 +125,36 @@ p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 # for predicting and plotting constrained fit. 
 p<-c(0,p);f.ug$coefficients<-p; 
 lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=2)
+
+# now a tprs example of the same thing....
+
+f.ug<-gam(y~s(x,k=10));lines(x,fitted(f.ug))
+# Create Design matrix, constriants etc. for monotonic spline....
+gam.setup(y~s(x,k=10),dat,fit.method="mgcv")->G;
+GAMsetup(G)->G;
+nc<-40         # number of constraints
+xc<-0:nc/nc # points on [0,1]  
+xc<-xc*4-1  # points at which to impose constraints
+A0<-predict.gam(f.ug,data.frame(x=xc),type="lpmatrix") 
+# ... A0%*%p evaluates spline at xc points
+A1<-predict.gam(f.ug,data.frame(x=xc+1e-6),type="lpmatrix") 
+A<-(A1-A0)/1e-6    
+# ... approx. constraint matrix (A%*%p is -ve spline gradient at points xc)
+G$Ain<-A;    # constraint matrix
+G$bin<-rep(0,nc);  # constraint vector
+G$sp<-f.ug$sp; # use smoothing parameters from un-constrained fit
+G$p<-rep(0,11);G$p[11]<-0.1  
+# ... monotonic start params, got by setting coefs of polynomial part
+G$p[10]<- -mean(0.1*x) 
+# ... must meet gam side conditions: sum of smooth over x's is zero 
+G$y<-y;G$w<-y*0+1
+p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
+
+# now modify the gam object from unconstrained fit a little, to use it
+# for predicting and plotting constrained fit. 
+f.ug$coefficients<-p; 
+lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=3)
+
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

@@ -12,9 +12,10 @@ gam.check(b)
 \arguments{ 
 \item{b}{ a fitted \code{gam} object as produced by \code{gam()}.}
 }
-\details{ This function plots 4 standard diagnostic plots, and some other convergence diagnostics. 
+\details{ This function plots 4 standard diagnostic plots, and some other convergence diagnostics. Output differs depending on whether the 
+underlying fitting method was \code{"mgcv"} or \code{"magic"} (see \code{\link{gam.control}}).
 
-The first plot shows the GCV or UBRE score against model 
+For fit method \code{"mgcv"}, the first plot shows the GCV or UBRE score against model 
 degrees of freedom given the final estimates of the relative smoothing parameters for the model. This is a slice through the 
 GCV/UBRE score function that passes through the minimum found during fitting. Although not conclusive (except in the single 
 smoothing parameter case), a lack of multiple local minima on this plot is suggestive of a lack of multiple local minima in the 
@@ -43,20 +44,23 @@ estimation of the effective degrees of freedom: this usually reflects problems w
 In this circumstance reported estimated degrees of freedom can not be trusted, although the fitted model and term estimates are likely to be quite 
 acceptable. 
 
+If the fit method is \code{"magic"} then there is no global search and the problems with phantom local minima are much reduced. The first plot in this case will simply be a normal QQ plot of the standardixed residuals.
+
 The other 3 plots are two residual plots and plot of fitted values against original data.
 
 The function also prints out information about the convergence of the GCV minimization algorithm, indicating how 
 many iterations  were required to minimise the GCV/UBRE score. A message is printed if the minimization terminated by 
 failing to improve the score with a steepest descent step: otherwise minimization terminated by meeting convergence criteria.
-The mean absolute gradient of the GCV/UBRE function at the minimum is given (compare this to the range of the score shown on the GCV/UBRE 
-plot). An indication of whether or not the Hessian of the GCV/UBRE function is positive definite is given. If some smoothing parameters 
-are not well defined (effectively zero, or infinite) then it may not be, although this is not usually a problem. A message is printed 
+The mean absolute gradient or RMS gradient of the GCV/UBRE function at the minimum is given. An indication of whether or not the Hessian of the GCV/UBRE function is positive definite is given. If some smoothing parameters 
+are not well defined (effectively zero, or infinite) then it may not be, although this is not usually a problem. If the fit method is 
+\code{"mgcv"}, a message is printed 
 if the second guess smoothing parameters did not improve on the first guess - this is primarily there for the developers. 
+For fit method \code{"magic"} the estimated rank of the model is printed.
+
 
 The ideal results from this function have a smooth, single minima GCV/UBRE plot, good residual plots, and convergence to small 
 gradients with a positive definite Hessian. However, failure to meet some of these criteria 
-is often  acceptable, 
-and the information provided is primarily of use in diagnosing suspected problems. 
+is often  acceptable,  and the information provided is primarily of use in diagnosing suspected problems. 
 High gradients at convergence  are a clear indication of problems, however.
 
 Fuller data can be extracted from \code{mgcv.conv} part of the \code{gam} object.  
@@ -65,16 +69,13 @@ Fuller data can be extracted from \code{mgcv.conv} part of the \code{gam} object
 
 \references{
 
-Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
-the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
-
-Wood (2000) Modelling and Smoothing Parameter Estimation 
-with Multiple 
-   Quadratic Penalties. JRSSB 62(2):413-428
-
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
+
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
@@ -93,7 +94,7 @@ x3 <- runif(n, 0, 1)
 pi <- asin(1) * 2
 y <- 2 * sin(pi * x0)
 y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+y <- y+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))

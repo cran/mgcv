@@ -39,6 +39,7 @@ Press, London.
 Wood, S.N. (1994) Monotonic smoothing splines fitted by cross validation SIAM
 Journal on Scientific Computing 15(5):1126-1133
 
+
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk} } 
@@ -51,10 +52,12 @@ Journal on Scientific Computing 15(5):1126-1133
 # Generate data from a monotonic truth.
 set.seed(10);x<-runif(100)*4-1;x<-sort(x);
 f<-exp(4*x)/(1+exp(4*x));y<-f+rnorm(100)*0.1;plot(x,y)
+dat<-data.frame(x=x,y=y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-gam.setup(y~s(x,k=10,bs="cr")-1)->G;GAMsetup(G)->G;F<-mono.con(G$xp);
+gam.setup(y~s(x,k=10,bs="cr")-1,dat,fit.method="mgcv")->G;
+GAMsetup(G)->G;F<-mono.con(G$xp);
 G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
 G$p<-G$xp;G$y<-y;G$w<-y*0+1
 

@@ -497,7 +497,7 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *UZ,matrix *Xu,matrix *xp,
   np=nsdf;nsm=0;for (i=0;i<m;i++) {np+=df[i];nsm+=dim[i];}
   if (m) T=initmat((long)m,np);T.r=0L;
   *X=initmat((long)n,(long)np);
-  knt=(double **)calloc((size_t)nsm+1,sizeof(double *)); /* knt[i][j] is jth knot value for ith variable */
+  knt=(double **)calloc((size_t)(nsm+1),sizeof(double *)); /* knt[i][j] is jth knot value for ith variable */
   k=1;knt[0]=knots;for (i=0;i<m;i++) for (j=0;j<dim[i];j++) { knt[k]=knt[k-1]+n_knots[i];k++;}
   off[0]=nsdf;
   for (j=0;j<nsdf;j++) for (i=0;i<n;i++) X->M[i][j]=x[j][i];
@@ -1456,7 +1456,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   RUnpackSarray(*m,S,Sd);
   
   if (nar[4]) H=initmat(y.r,y.r); else H.r=H.c=0L;
-  active=(int *)calloc((size_t)p.r+1,sizeof(int)); /* array for active constraints at best fit active[0] will be  number of them */
+  active=(int *)calloc((size_t)(p.r+1),sizeof(int)); /* array for active constraints at best fit active[0] will be  number of them */
   /* call routine that actually does the work */
  
   PCLS(&X,&p,&y,&w,&Ain,&b,&Af,&H,S,off,theta,*m,active);

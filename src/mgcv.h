@@ -13,5 +13,15 @@ void RuniqueCombs(double *X,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,
 	    int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
-
+void mgcv_AtA(double *AA,double *A,int *q,int *n);
+/* Test routines for direct access to linpack and lapack */
+void mgcv_chol(double *a,int *pivot,int *n,int *rank);
+void mgcv_svd(double *x,double *u, double *d,int *r,int *c);
+void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
+void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau);
+void update_qr(double *Q,double *R,int *n, int *q,double *lam, int *k);
+void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
+void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c);
+void mgcv_symeig(double *A,double *ev,int *n);
+void mroot(double *A,int *rank,int *n);
 
