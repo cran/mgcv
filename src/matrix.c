@@ -1663,7 +1663,7 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
 
 { double wnorm=0.0,x,y,s,c,m,r,a,b,sig,**VM,**UM,*wV,*wsV,*p1,*p2,tol; 
   int finished=0,end,start,i,j,k,maxreps=100;
-  tol=2*DOUBLE_EPS; /* convergence tolerance */
+  tol=DOUBLE_EPS; /* convergence tolerance */
   VM=V->M;UM=U->M;wV=w->V;wsV=ws->V;
   for (i=0;i<ws->r;i++) /* get something against which to judge zero */
   { x=fabs(wV[i]);y=fabs(wsV[i]);if (x<y) x=y;if (wnorm<x) wnorm=x;}
@@ -2425,7 +2425,7 @@ matrix svdroot(matrix A,double reltol)
   w=initmat(A.r,1L);
   svd(&a,&w,&v);   /*a * diag(w) * v' */
   for (i=0;i<w.r;i++) { w.V[i]=sqrt(w.V[i]);if (w.V[i]>tol) tol=w.V[i];}
-  tol*=reltol;
+  tol*=sqrt(reltol);
   for (i=0;i<w.r;i++)
   { if (w.V[i]>tol)
     { for (j=0;j<a.c;j++) v.M[j][k]=a.M[j][i]*w.V[i];k++;
@@ -3102,7 +3102,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
         err[k]=fabs(err[k]);
       }
       /* and check for termination ..... */
-      if (j>m+lm)
+      if (j>=m+lm)
       { max_err=normTj*eps_stop;
         if (biggest) 
 	{ low_conv=0;i=j; while (i>=0&&err[i]<max_err&&d[i]<0.0) { low_conv++;i--;}
@@ -3144,7 +3144,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
     for (i=0;i<n;i++) 
     { V->M[i][k]=0.0; for (l=0;l<j;l++) V->M[i][k]+=q[l][i]*v[kk][l];}
   }
-
+ 
   /* clean up..... */
   free(a);
   free(b);
@@ -3275,6 +3275,9 @@ void fprintmat(matrix A,char *fname,char *fmt)
       in R.h, which can be included there.   
   20. 5/5/02 One convergence test in svd had been left unchanged - fixed this and loosened
       convergence criteria by 2 bits.
+  21. 6/9/02 lanczos_spd() now checks for convergence when (j>=m+lm), rather than when (j>m+lm)
+      - the old code could drop the wrong eigenvalue/vector if m==n-1 (resulting e.g. in lousy 
+      performance of tprs of basis dimension 1 less than the number of data!)
 */
 
 

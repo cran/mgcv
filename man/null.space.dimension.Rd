@@ -66,7 +66,7 @@ basis terms.
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
 \references{
-Wood (Submitted) Thin plate regression splines.
+Wood (2003) Thin plate regression splines. JRSSB in press.
 }
 
 \section{WARNING}

@@ -619,7 +619,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
           double *pd, double *sp,int *offd,int *dimd,int *md,
           int *nd,int *qd,int *rd,double *sig2d,double *Vpd,double *edf,
           double *conv_tol,int *ms_max_half,double *ddiag, int *idiag,double *sdiag,
-          int *direct_mesh,double *min_edf,double *gcvubre,double *target_edf)
+          int *direct_mesh,double *min_edf,double *gcvubre,double *target_edf,
+          int *fixed_sp)
 
 
 /* Solves :
@@ -641,7 +642,9 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
           overall penalty matrix which will contain S[i][0][0]
    Vp the q by q cov matrix for p set Vpd[0]<= 0.0 for now cov matrix calc
       and to > 0.0 for cov matrix to be returned
-   edf is an array of estimated degrees of freedom for each smooth
+   edf is an array of estimated degrees of freedom for each smooth - need 
+       Vp to be calculated to work these out.
+
    The routine is an interface routine suitable for calling from the
    R and Splus.
 
@@ -652,6 +655,10 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
    min_edf is the minimum possible estimated degrees of freedom - useful
    for setting limits on overall smoothing parameter: <=0 => ignore.
 
+   fixed_sp should be set to 1 if the supplied smoothing parameters are to be 
+            treated as fixed, in which case model is fitted as an augmented 
+            least squares problem. 
+  
    gcvubre is the minimum GCV or UBRE score achieved.
 
    There are 3 arrays of convergence diagnostics returned:
@@ -672,8 +679,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   int m,i,j,k,gcv;
   msctrl_type msctrl;
   msrep_type msrep;
-  matrix *S,y,X,p,C,Z,w,Vp,L;
-  double sig2,xx;
+  matrix *S,y,X,p,C,rS,Z,w,Vp,L,ya,wa;
+  double sig2,xx,trA;
   /*char msg[100]; */
   sig2= *sig2d;
   if (sig2<=0) gcv=1; else gcv=0;
@@ -694,15 +701,12 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   if (r) C=Rmatrix(Cd,r,q); else C.r=C.c=0L;
   dimmax=0;for (i=0;i<m;i++) if (dim[i]>dimmax) dimmax=dim[i];
   
-  for (k=0;k<m;k++)
-  { S[k]=initmat(dim[k],dim[k]);
-  /*for (i=0;i<dim[k];i++) for (j=0;j<dim[k];j++) S[k].M[i][j]=Sd[k+i*m+j*m*dimmax]; - old wasteful code*/
-  }
+  for (k=0;k<m;k++) S[k]=initmat(dim[k],dim[k]);
   RUnpackSarray(m,S,Sd);  
 
   if (C.r) {Z=initmat(q,q);QT(Z,C,0);}
   Z.r=C.r; /* finding null space of constraints */
-  if (m)
+  if (m&&!*fixed_sp) /* then there are some penalties with unknown smoothing parameters */
   { init_msrep(&msrep,m,*direct_mesh);
     msctrl.conv_tol= *conv_tol;
     msctrl.max_step_half= *ms_max_half;
@@ -722,27 +726,73 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     free_msrep(&msrep);
     if (gcv) *sig2d=sig2;
   } else /* no penalties, just solve the least squares problem */
-  { L=initmat(X.r,X.c); 
-    mcopy(&X,&L);
-    HQmult(L,Z,0,0);  /* L=XZ */
-    L.c -= Z.r;
-    for (i=0;i<w.r;i++) w.V[i]=sqrt(w.V[i]);
+  { if (m&& *fixed_sp) /* then there are penalties with fixed smoothing parameters to contend with */
+    { Vp=initmat(p.r,p.r); /* temporary storage for sum of smooths */     
+      for (k=0;k<m;k++) /* add up penalty terms */
+      { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
+        Vp.M[i+off[k]][j+off[k]]+=sp[k]*S[k].M[i][j];
+      }
+      /* now project into null space */
+      HQmult(Vp,Z,1,1);
+      HQmult(Vp,Z,0,0);  
+      Vp.r -=Z.r;Vp.c -= Z.r;
+      /* Now find square root of total penalty: rS */
+      root(&Vp,&rS,8*DOUBLE_EPS);
+      freemat(Vp);
+      L=initmat(X.r+rS.c,X.c); /* augmented design matrix */
+      L.r=X.r;
+      mcopy(&X,&L);     /* design matrix part */ 
+      HQmult(L,Z,0,0);  /* L=XZ */
+      L.c -= Z.r;
+      /* now add on penalty */
+      for (i=X.r;i<X.r+rS.c;i++) for (j=0;j<L.c;j++) L.M[i][j]=rS.M[j][i-X.r];
+      L.r=X.r+rS.c;freemat(rS);
+      /* create augmented y and w vectors */
+      ya=initmat(L.r,1L);wa=initmat(ya.r,1L);
+      for (i=0;i<y.r;i++) { ya.V[i]=y.V[i];wa.V[i]=sqrt(w.V[i]);}
+      for (i=y.r;i<L.r;i++) { wa.V[i]=1.0;ya.V[i]=0.0;}
+      /* get tr(A) */
+      Vp=initmat(X.c,X.c);Vp.c=Vp.r=L.c;
+      matmult(Vp,L,L,1,0); /* X'X+S, basically */
+      rS=initmat(Vp.r,Vp.c); /* dummy */
+      if (!chol(Vp,rS,1,1)) /* try cheap inversion by choleski */  
+      { pinv(&Vp,0.0);     /* but use svd if this fails */
+      }
+      Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
+      HQmult(Vp,Z,1,0);HQmult(Vp,Z,0,1);  
+      freemat(rS);
+      rS=initmat(Vp.r,X.r);
+      matmult(rS,Vp,X,0,1); /* basically (X'X+S)^{-1}X' */
+      freemat(Vp); 
+      for (i=0;i<rS.r;i++) for (j=0;j<rS.c;j++) rS.M[i][j]*=w.V[j]; /* (X'X+S)^{-1}X'W */
+      trA=0.0;for (j=0;j<X.r;j++) for (k=0;k<X.c;k++) trA+=X.M[j][k]*rS.M[k][j];
+      freemat(rS);
+    } else /* no penalties to consider */
+    { L=initmat(X.r,X.c); 
+      mcopy(&X,&L);
+      HQmult(L,Z,0,0);  /* L=XZ */
+      L.c -= Z.r;
+      wa=initmat(w.r,1L);
+      for (i=0;i<w.r;i++) wa.V[i]=sqrt(w.V[i]);
+      ya=y;
+      trA=p.r-Z.r;
+    }
     p.r -= Z.r;        /* solving in null space */
-    leastsq(L,p,y,w);  /* Solve min ||w(Lp-y)||^2 */
-    Vp=initmat(y.r,1L);/* temp for fitted values */
-    matmult(Vp,L,p,0,0);
-    sig2=0.0;for (i=0;i<y.r;i++) { xx=(Vp.V[i]-y.V[i])*w.V[i];sig2+=xx*xx;}
-    if (n==p.r) sig2=0.0; else sig2/=(n-p.r);
+    leastsq(L,p,ya,wa);  /* Solve min ||wa(Lp-ya)||^2 */
+    Vp=initmat(ya.r,1L); /* temp for fitted values */
+    matmult(Vp,L,p,0,0); /* oversized if penalties used, but latter elements ignored below */
+    sig2=0.0;for (i=0;i<y.r;i++) { xx=(Vp.V[i]-y.V[i])*wa.V[i];sig2+=xx*xx;}
+    if (n==p.r) sig2=0.0; else sig2/=(n-trA);
     if (gcv) 
     { *sig2d=sig2;
-      *gcvubre=n*sig2/(n-p.r);
+      *gcvubre=n*sig2/(n-trA);
     } else /* UBRE */
-    { *gcvubre = sig2 / n * (n-p.r)-2.0 / n * *sig2d  * ( n - p.r) + *sig2d;  
+    { *gcvubre = sig2 / n * (n-trA)-2.0 / n * *sig2d  * ( n - trA) + *sig2d;  
     } 
-    for (i=0;i<w.r;i++) w.V[i] *=w.V[i];
     p.r+=Z.r;
     HQmult(p,Z,1,0); /* back out of null space */
-    freemat(L);freemat(Vp);
+    freemat(L);freemat(Vp);freemat(wa);
+    if (m&& *fixed_sp) freemat(ya);
   }
   for (i=0;i<q;i++) pd[i]=p.V[i];
   if (Vpd[0]>0.0)
@@ -766,7 +816,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     Vp.r -=Z.r;Vp.c -= Z.r;
     L=initmat(Vp.r,Vp.c);
     if (!chol(Vp,L,1,1)) /* try cheap inversion by choleski */  
-    { pinv(&Vp,8*DOUBLE_EPS);     /* but use svd if this fails */
+    { Rprintf("rank of Vp = %ld\n",pinv(&Vp,DOUBLE_EPS));     /* but use svd if this fails */
+      Rprintf("using pinv\n");
     }
     Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
     HQmult(Vp,Z,1,0);
@@ -780,7 +831,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     { edf[i]=0.0;
       for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
       edf[i]+=X.M[j][k]*L.M[k][j];
-    }
+    } 
     /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */
     for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j] *= *sig2d;
     freemat(L);
@@ -1103,16 +1154,19 @@ void gam_map(matrix tm, matrix *t, double *x,double *by,matrix *UZ,matrix *Xu,in
       offset++;
     }
     else  /* it's a thin plate regression spline  */
-    { b.r=UZ[j].r; /*  - don't forget null space dimension */
-      tps_g(Xu+j,&p,x+offset,dim[j],p_order[j],&b,1);
-      UZjM=UZ[j].M;bV=b.V;     
-      for (i=0;i<UZ[j].c;i++) 
-      { tmVk=tm.V+k;*tmVk=0.0; 
-        for (l=0;l<b.r;l++) *tmVk += bV[l]*UZjM[l][i]; /* forming b'UZ */
-        *tmVk *= by_mult;
-        k++;
+    { if (by_mult==0.0)         /* then don't waste flops on calculating stuff that will only be zeroed */
+      { for (i=0;i<UZ[j].c;i++) {tm.V[k]=0.0;k++;}
+      } else                    /* proceed as normal */
+      { b.r=UZ[j].r; /*  - don't forget null space dimension */
+        tps_g(Xu+j,&p,x+offset,dim[j],p_order[j],&b,1);
+        UZjM=UZ[j].M;bV=b.V;     
+        for (i=0;i<UZ[j].c;i++) 
+        { tmVk=tm.V+k;*tmVk=0.0; 
+          for (l=0;l<b.r;l++) *tmVk += bV[l]*UZjM[l][i]; /* forming b'UZ */
+          *tmVk *= by_mult;
+          k++;
+        }
       }
-     
       offset+=dim[j];
     }
   } 
@@ -1422,6 +1476,8 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
               splines.
 14. 5/2/02: GAMsetup and RGAMsetup modified to deal with "by" variables - covariates that multiply a 
             whole smooth term. The centering conditions have not been changed.
+15. 6/9/02: Slight modification to gam_map() - terms are not calculated if corresponding by variable 
+            is zero. This can save flops in fairly advanced use (e.g. posum package)
 
 */
 

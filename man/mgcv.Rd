@@ -8,7 +8,9 @@ Ridge Regression Problem with multiple (quadratic) penalties, by GCV
 or UBRE. The function uses Newton's method in multi-dimensions, backed up by steepest descent to iteratively 
 adjust a set of relative smoothing parameters for each penalty. To ensure that the overall level of smoothing
 is optimal, and to guard against trapping by local minima, a highly efficient global minimisation with respect to 
-one overall smoothing parameter is also made at each iteration. 
+one overall smoothing parameter is also made at each iteration.
+
+The other functions in the \code{mgcv} package are listed under `See Also'.
 }
 \usage{
 mgcv(M)
@@ -33,8 +35,8 @@ mgcv(M)
    derived into an appropriate matrix of zeroes with it's 1,1 element at
    \code{M$off[k],M$off[k]}
  }
- \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct
-               location within each penalty coefficient matrix.}
+\item{M$m}{The number of penalty terms that are to be applied.}
+ \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct location within each penalty coefficient matrix. indexing starts at zero.}
  \item{M$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
 is to be estimated, or TRUE if it is to be fixed at zero.}
  \item{M$df}{ \code{M$df[i]} gives the number of rows and columns of
@@ -47,7 +49,9 @@ given
                 by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}   
 \item{M$sp}{ An array of initial smoothing parameter estimates if any of 
 these is not strictly positive then automatic generation of initial values
-is used.}
+is used. If \code{M$fixed.sp} is non-zero then these parameters will used as known smoothing parameters.}
+\item{M$fixed.sp}{Non-zero to indicate that all smoothing parameters are supplied as known, and are not 
+      to be estimated.}
 \item{M$conv.tol}{The convergence tolerence to use for the multiple
   smoothing parameter search. 1e-6 is usually ok.}
 \item{M$max.half}{Each step of the GCV minimisation is repeatedly halved if it fails to
@@ -150,10 +154,35 @@ with Multiple
 X}}{X}
 especially in contexts where the weights vary wildly. } 
 
-\seealso{  \code{\link{GAMsetup}} \code{\link{gam}}}
+\seealso{  
+\code{\link{gam}},
+\code{\link{s}},
+\code{\link{plot.gam}},
+\code{\link{print.gam}},
+\code{\link{summary.gam}},
+\code{\link{predict.gam}},
+\code{\link{persp.gam}},
+\code{\link{residuals.gam}},
+\code{\link{gam.models}},
+\code{\link{gam.selection}},
+\code{\link{gam.control}}
+\code{\link{gam.check}}
+\code{\link{pcls}},
+\code{\link{mono.con}}
+\code{\link{GAMsetup}},
+\code{\link{gam.parser}},
+\code{\link{gam.fit}},
+\code{\link{gam.nbut}},
+\code{\link{gam.setup}},
+\code{\link{QT}},
+\code{\link{get.family}},
+\code{\link{neg.binom}},
+\code{\link{null.space.dimension}},
+\code{\link{theta.maxl}},
+\code{\link{uniquecombs}}
+}
 
 \examples{
- # This example modified from routine SANtest()
 set.seed(0)    
 n<-100 # number of observations to simulate
 x <- runif(4 * n, 0, 1) # simulate covariates
@@ -181,10 +210,11 @@ H$w <- w       # add weights to H
 H$sp<-array(-1,H$m)
 H$fix<-array(FALSE,H$m)
 H$conv.tol<-1e-6;H$max.half<-15
-H$min.edf<-5
+H$min.edf<-5;H$fixed.sp<-0
 H <- mgcv(H)  # select smoothing parameters and fit model 
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
 
 
 

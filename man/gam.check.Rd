@@ -38,6 +38,11 @@ In the presence of local minima in the GCV/UBRE score, this method selects the m
 model estimated degrees of freedom. This approach is usually sufficient to deal with phantom minima. Setting \code{trace} to \code{TRUE} in 
 \code{gam.control} will allow you to check exactly what is happening. 
 
+If the location of the point indicating the minimum is not on the curve showing the GCV/UBRE function then there are numerical problems with the 
+estimation of the effective degrees of freedom: this usually reflects problems with  the relative scaling of covariates that are arguments of a single smooth. 
+In this circumstance reported estimated degrees of freedom can not be trusted, although the fitted model and term estimates are likely to be quite 
+acceptable. 
+
 The other 3 plots are two residual plots and plot of fitted values against original data.
 
 The function also prints out information about the convergence of the GCV minimization algorithm, indicating how 

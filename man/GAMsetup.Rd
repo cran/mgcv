@@ -98,8 +98,12 @@ parameters  of each cubic regression spline - the cubic regression splines are p
 values at a series of \eqn{x}{x} values - these vectors contain those \eqn{x}{x} 
 values! Note that these will be covariate shifted.}
 }
-\references{ Wood, S.N. (2000) "Modelling and smoothing parameter estimation with multiple
-quadratic penalties" JRSSB 62(2):413-428 }
+\references{ Wood, S.N. (2000) Modelling and smoothing parameter estimation with multiple
+quadratic penalties JRSSB 62(2):413-428 
+
+Wood, S.N. (2003) Thin plate regression splines. JRSSB in press.
+}
+
 \author{Simon N. Wood \email{snw@st-and.ac.uk}}
 
 \seealso{ \code{\link{mgcv}} \code{\link{gam}} }
@@ -133,7 +137,7 @@ H$w <- w       # add weights to H
 H$sp<-array(-1,H$m)
 H$fix<-array(FALSE,H$m)
 H$conv.tol<-1e-6;H$max.half<-15
-H$min.edf<-5
+H$min.edf<-5;H$fixed.sp<-0
 H <- mgcv(H)  # select smoothing parameters and fit model    
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...

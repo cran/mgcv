@@ -333,6 +333,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
 */
 
 { matrix X1,E,U,v,TU,T,Z,p;
+ 
   int l,i,j,M,*yxindex,pure_knot=0;
   double w,*xc,*XMi,**UZM,*X1V;
   if (n_knots<k) /* then use the covariate points as knots */
@@ -374,7 +375,9 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   } else
   { U=initmat(E.r,(long)k); /* eigen-vector matrix for E */
     v=initmat((long)k,1L);      /* eigen-value matrix for E */
+
     i=lanczos_spd(&E,&U,&v,k,-1);      /* get k largest magnitude  eigen-values/vectors of E */
+    
     /* Now form the constraint matrix for the truncated problem T'U */
     TU=initmat((long)M,k);
     matmult(TU,T,U,1,0);

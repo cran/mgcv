@@ -75,6 +75,8 @@ options spelled out explicitly.}
 
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
+\references{ Wood (2003) Thin plate regression splines. JRSSB in press.
+}
 
 \seealso{   \code{\link{gam}}}
 

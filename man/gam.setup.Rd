@@ -21,6 +21,7 @@ Wood (2000) Modelling and Smoothing Parameter Estimation
 with Multiple 
    Quadratic Penalties. JRSSB 62(2):413-428
 
+Wood (2003) Thin plate regression splines. JRSSB in press
 
 \url{http://www.ruwpa.st-and.ac.uk/simon.html}
 }

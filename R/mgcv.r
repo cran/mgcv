@@ -1,4 +1,4 @@
-# These are the R routines for the package mgcv (c) Simon Wood 2000-2001
+# These are the R routines for the package mgcv (c) Simon Wood 2000-2002
 
 QT<-function(A) {
 
@@ -12,7 +12,8 @@ QT<-function(A) {
 # the null space of a constraint matrix C, as used in mgcv().
 # The return value is the over-written A. The factorization is performed
 # using compiled code.
-
+if (!is.matrix(A)) stop("Argument to QT must be a matrix.")
+if (nrow(A)>ncol(A)) stop("Matrix argument to QT has more rows than columns.")
 oo<-.C("RQT",as.double(A),as.integer(nrow(A)),as.integer(ncol(A)),PACKAGE="mgcv")
 A<-matrix(oo[[1]],nrow(A),ncol(A))
 A
@@ -31,6 +32,7 @@ mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
   if (up) inc<-1 else inc<-0
   control<-4*inc+2*lo+hi
   n<-length(x)
+  if (n<4) stop("At least three knots required in call to mono.con.")
   A<-matrix(0,4*(n-1)+lo+hi,n)
   b<-array(0,4*(n-1)+lo+hi)
   if (lo*hi==1&&lower>=upper) stop("lower bound >= upper bound in call to mono.con()")
@@ -44,7 +46,10 @@ mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
 
 uniquecombs<-function(x) {
 # takes matrix x and counts up unique rows
-res<-.C("RuniqueCombs",as.double(x),as.integer(nrow(x)),as.integer(ncol(x)))
+if (is.null(x)) stop("x is null")
+if (is.null(nrow(x))) stop("x has no row attribute")
+if (is.null(ncol(x))) stop("x has no col attribute")
+res<-.C("RuniqueCombs",as.double(x),as.integer(nrow(x)),as.integer(ncol(x)),PACKAGE="mgcv")
 n<-res[[2]]*res[[3]]
 x<-matrix(res[[1]][1:n],res[[2]],res[[3]])
 x
@@ -55,7 +60,8 @@ null.space.dimension<-function(d,m)
 # vectorized function for calculating null space dimension for penalties of order m
 # for dimension d data M=(m+d+1)!/(d!(m-d)!). Any m not satisfying 2m>d is reset so 
 # that 2m>d+1 (assuring "visual" smoothness) 
-{ ind<-2*m<d+1
+{ if (d<1) stop("d must be positive in call to null.space.dimension().")
+  ind<-2*m<d+1
   if (sum(ind)) # then default m required for some elements
   { m[ind]<-1;ind<-2*m<d+2
     while (sum(ind)) { m[ind]<-m[ind]+1;ind<-2+m<d+2;}
@@ -76,7 +82,8 @@ null.space.basis.powers<-function(m,d)
 # generates the sequence of powers required to specify the M polynomials spanning the 
 # null space of the penalty of a d-dimensional tps with wiggliness penalty order d 
 # So, if x_i are the co-ordinates the kth polynomial is x_1^pi[k][1]*x_2^pi[k][2] ....
-{ M<-null.space.dimension(d=d,m=m)
+{ if (d<1) stop("d must be positive in call to null.space.basis.powers()")
+  M<-null.space.dimension(d=d,m=m)
   if (2*m<=d) {m<-1;while (2*m<d+2) m<-m+1;}
   index<-array(0,d)
   pi<-array(0,c(M,d))
@@ -354,6 +361,7 @@ mgcv<-function(M) {
 # M is a list which must containing the following named elements:
 #
 # M$y  - the response variable vector
+# M$m  - number of penalties
 # M$X  - the design matrix (declared as a matrix, with correct numbers of rows and columns,
 #        as number of data and number of parameters are read from this)
 # M$C  - matrix defining linear equality constraints on parameters (Cp=0). 
@@ -382,6 +390,7 @@ mgcv<-function(M) {
 #                is to be used in mgcv searching. If this is non-negative then the local 
 #                minimum closest to the target edf will be returned (which can be the global
 #                optimum). Designed for use with non-convergent gams.
+# M$fixed.sp - set to 1 to treat smoothing parameters as fixed.
 #
 # The routine returns M with the following elements added (or reset):
 #
@@ -431,6 +440,12 @@ mgcv<-function(M) {
       j<-j+1
     }  
   }
+  # check smoothing parameters if fixed....
+  if (M$fixed.sp)
+  { if (sum(M$sp<0)) stop("mgcv called with fixed negative smoothing parameter(s).")
+    if (sum(is.na(M$sp))) stop("mgcv called with fixed NA smoothing parameter(s).")
+  }
+
   # deal with quantities that will be estimated
   p<-matrix(0,q,1)      # set up parameter vector
   Vp<-matrix(0.0,q,q)   # estimated covariance matrix
@@ -448,7 +463,7 @@ mgcv<-function(M) {
          as.integer(n),as.integer(q),as.integer(C.r),as.double(M$sig2),as.double(Vp),
 		 as.double(edf),as.double(M$conv.tol),as.integer(M$max.half),as.double(ddiag),
                  as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(M$min.edf),
-                 as.double(M$gcv.ubre),as.double(M$target.edf),PACKAGE="mgcv")
+                 as.double(M$gcv.ubre),as.double(M$target.edf),as.integer(M$fixed.sp),PACKAGE="mgcv")
    
   p<-matrix(oo[[6]],q,1);
   sig2<-oo[[14]]
@@ -484,69 +499,6 @@ mgcv<-function(M) {
   M    # return list
 }
 
-
-SANtest<-function(n=100,sig2=-1) { 
-
-# Example function that simulates data from a simple additive normal truth and then attempts
-# to reconstruct it using a GAM constructed from penalized regression splines. 
-# n is number of data. Magnitude of sig2 is error variance used for simulation.
-# sig2<=0 => use GCV, otherwise use UBRE for smoothing parameter estimation.
-
-  if (sig2<=0) noquote("GCV used") else noquote("UBRE used")
-  if (n<60) 
-  { n<-60
-    warning("n reset to 60")
-  }
-# simulate some data to which GAM can be fitted......
-
-  x<-runif(5*n,0,1)      # simulate covariates
-  x<-array(x,dim=c(5,n)) # load into array
-  pi<-asin(1)*2          
-  y<-2*sin(pi*x[2,])  
-  y<-y+exp(2*x[3,])-3.75887
-  y<-y+0.2*x[4,]^11*(10*(1-x[4,]))^6+10*(10*x[4,])^3*(1-x[4,])^10-1.396 # simulate truth
-  e<-rnorm(n,0,sqrt(abs(sig2)))  # noise to add to truth
-  y<-y+e              # create data from truth + noise   
-  w<-matrix(1,n,1)    # weight matrix
-  
-
-# display scatter plots of data against covariates.....
-
-  par(mfrow=c(2,2))   # set display environment to 2 by 2
-  plot(x[2,],y)      
-  plot(x[3,],y)
-  plot(x[4,],y)
-  plot(x[5,],y)
-
-# set up input list for GAMsetup and call GAMsetup.......
-
-  x[1,]<-1 # set up dummy variable for intercept term
-  G<-list(m=4,n=n,nsdf=1,df=c(15,15,15,15),dim=c(1,1,1,1),s.type=c(0,0,0,0),
-          by=0,by.exists=c(FALSE,FALSE,FALSE,FALSE),p.order=c(0,0,0,0),x=x,n.knots=rep(0,4)) # input list for GAMsetup
-  H<-GAMsetup(G)  
-  H$fix<-array(FALSE,H$m)
-  H$y<-y;H$sig2<-sig2;H$w<-w # add data, variance and weights to mgcv input list
-  H$sp<-array(-1,H$m)
-  H$conv.tol<-1e-6;H$max.half<-15
-  H$min.edf<-5
-  H<-mgcv(H)   # fit model
-  xp<-H$xp
-  p<-H$p;
-  sig2<-H$sig2
-
-  readline("Hit return to see fitted model and truth")
-# plot reconstruction and truth....
-  i<-c((H$off[1]+1):H$off[2]);yy<-p[i];yy<-yy-mean(yy);i<-i-H$off[1];xx<-xp[1,i]+H$covariate.shift[1];
-  plot(xx,yy,type="l");t1<-2*sin(pi*xx);t1<-t1-mean(t1);lines(xx,t1); # t1 is truth
-  i<-c((H$off[2]+1):H$off[3]);yy<-p[i];yy<-yy-mean(yy);i<-i-H$off[2];xx<-xp[2,i]+H$covariate.shift[2];
-  plot(xx,yy,type="l");t2<-exp(2*xx)-3.75887;t2<-t2-mean(t2);lines(xx,t2);
-  i<-c((H$off[3]+1):H$off[4]);yy<-p[i];yy<-yy-mean(yy);i<-i-H$off[3];xx<-xp[3,i]+H$covariate.shift[3];
-  plot(xx,yy,type="l"); 
-  t3<-0.2*xx^11*(10*(1-xx))^6+10*(10*xx)^3*(1-xx)^10-1.396;t3<-t3-mean(t3); lines(xx,t3);
-  i<-c((H$off[4]+1):ncol(H$X));yy<-p[i];yy<-yy-mean(yy);i<-i-H$off[4];xx<-xp[4,i]+H$covariate.shift[4];
-  plot(xx,yy,type="l");t4<-xx*0.0;lines(xx,t4);
-  sig2 # the return value
-}
 
 
 
@@ -701,7 +653,7 @@ gam.parser<-function (gf,parent.level=1)
 
 
 
-gam.setup<-function(formula,data=list(),gam.call=NULL,predict=TRUE,parent.level=1,nsdf=-1,knots=NULL)
+gam.setup<-function(formula,data=list(),gam.call=NULL,predict=TRUE,parent.level=1,nsdf=-1,knots=NULL,sp=NULL)
 
 # This gets the data referred to in the model formula, either from data frame "data"
 # or from the level parent.level parent (e.g. when called from gam() this will be
@@ -732,7 +684,16 @@ gam.setup<-function(formula,data=list(),gam.call=NULL,predict=TRUE,parent.level=
   else  m<-length(split$df) # number of smooth terms
   G<-list(m=m,df=split$df,full.formula=split$full.formula)
   G$fix<-split$fix
- 
+  
+  if (!is.null(sp)) # then user has supplied fixed smoothing parameters
+  { ok<-TRUE
+    if (length(sp)!=m) { ok<-FALSE;warning("Fixed smoothing parameter vector is too short - ignored.")}
+    if (sum(is.na(sp))) { ok<-FALSE;warning("NA's in fixed smoothing parameter vector - ignoring.")}
+    if (sum(sp<0)) { ok<-FALSE;warning("Negative values in fixed smoothing parameter vector  - ignoring.")}
+    if (ok) { G$sp<-sp; G$fixed.sp<-1} else { G$fixed.sp<-0;G$sp<-rep(-1,m)}
+  } else # set up for auto-initialization
+  { G$fixed.sp<-0;G$sp<-rep(-1,m)}
+  
   add.constant<-FALSE
   if (split$pfok)   # deal with the strictly parametric part of the model 
   { if (length(attr(terms(split$pf),"variables"))==1) # then the formula is ~ 1 and model.frame(), etc can't cope 
@@ -890,7 +851,7 @@ gam.setup<-function(formula,data=list(),gam.call=NULL,predict=TRUE,parent.level=
 }
 
 
-gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.control(),scale=0,knots=NULL)
+gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.control(),scale=0,knots=NULL,sp=NULL)
 
 # Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 # parsed to figure out which bits relate to smooth terms and which to parametric terms.
@@ -900,8 +861,8 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
 
   family<-get.family(family) # deals with -ve binomial handling as well as any coercion
 
-  if (missing(data)) G<-gam.setup(formula,gam.call=gam.call,parent.level=2,predict=FALSE,knots=knots)
-  else G<-gam.setup(formula,data,gam.call=gam.call,parent.level=2,predict=FALSE,knots=knots)
+  if (missing(data)) G<-gam.setup(formula,gam.call=gam.call,parent.level=2,predict=FALSE,knots=knots,sp=sp)
+  else G<-gam.setup(formula,data,gam.call=gam.call,parent.level=2,predict=FALSE,knots=knots,sp=sp)
   # ... note weights evaluated using gam.call in gam.setup
   G<-GAMsetup(G) 
   
@@ -916,7 +877,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
   }
   
   G$sig2<-scale
-  G$sp<-array(-1,G$m) # set up smoothing parameters for autoinitialization at first run
+#  G$sp<-array(-1,G$m) # set up smoothing parameters for autoinitialization at first run - now done in gam.setup()
   G$conv.tol<-control$mgcv.tol      # tolerence for mgcv
   G$max.half<-control$mgcv.half # max step halving in Newton update mgcv
   G$min.edf<-G$nsdf+sum(null.space.dimension(G$dim,G$p.order))-dim(G$C)[1]
@@ -964,20 +925,26 @@ gam.check<-function(b)
 # takes a fitted gam object and produces some standard diagnostic plots
 { old.par<-par(mfrow=c(2,2))
   if (b$gcv.used) sc.name<-"GCV" else sc.name<-"UBRE"
-  plot(b$mgcv.conv$edf,b$mgcv.conv$score,xlab="Estimated Degrees of Freedom",ylab=paste(sc.name,"Score"),main=paste(sc.name,"w.r.t. model EDF"),type="l")
-  points(b$nsdf+sum(b$edf),b$gcv.ubre,col=2,pch=20)
+  if (b$mgcv.conv$iter>0)
+  { plot(b$mgcv.conv$edf,b$mgcv.conv$score,xlab="Estimated Degrees of Freedom",
+         ylab=paste(sc.name,"Score"),main=paste(sc.name,"w.r.t. model EDF"),type="l")
+    points(b$nsdf+sum(b$edf),b$gcv.ubre,col=2,pch=20)
+  }
   plot(fitted(b),residuals(b),main="Residuals vs. Fitted",xlab="Fitted Values",ylab="Residuals");
   hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
   plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
+  if (b$mgcv.conv$iter>0)   
   cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")
+  else 
+  cat("\nModel required no smoothing parameter selection")
   if (b$mgcv.conv$iter>1) cat("s")
   if (b$mgcv.conv$step.fail) cat(" by steepest\ndescent step failure.\n") else cat(".\n")
-  if (length(b$df)>1)
+  if (length(b$df)>1&&b$mgcv.conv$iter>0)
   { cat("The mean absolute",sc.name,"score gradient at convergence was ",mean(abs(b$mgcv.conv$g)),".\n")
     if (sum(b$mgcv.conv$e<0)) cat("The Hessian of the",sc.name ,"score at convergence was not positive definite.\n")
     else cat("The Hessian of the",sc.name,"score at convergence was positive definite.\n")
   }
-  if (!b$mgcv.conv$init.ok) cat("Note: the default second smoothing parameter guess failed.\n")
+  if (!b$mgcv.conv$init.ok&&(b$mgcv.conv$iter>0)) cat("Note: the default second smoothing parameter guess failed.\n")
   cat("\n")
   par(old.par)
 }
@@ -1003,7 +970,11 @@ print.gam<-function (x,...)
 }
 
 gam.control<-function (epsilon = 1e-04, maxit = 20,globit = 20,mgcv.tol=1e-6,mgcv.half=15, trace = FALSE) 
-# control structure for a gam
+# control structure for a gam. epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
+# of IRLS iterations to use with local search for optimal s.p. after globit iterations have used global 
+# searches. mgcv.tol is the tolerance to use in the mgcv call within each IRLS. mgcv.half is the 
+# number of step halvings to employ in the mgcv search for the optimal GCV score, before giving up 
+# on a search direction. trace turns on or off some de-bugging information. 
 {   if (!is.numeric(epsilon) || epsilon <= 0) 
         stop("value of epsilon must be > 0")
     if (!is.numeric(maxit) || maxit <= 0) 
@@ -1130,7 +1101,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
         ncols <- as.integer(1)
         # must set G$sig2 to scale parameter or -1 here....
         G$sig2<-scale
-        if (G$m>0&&sum(!G$fix>0)) # check that smoothing parameters haven't drifted too far apart
+        if (G$m>0&&sum(!G$fix)>0&&!G$fixed.sp) # check that smoothing parameters haven't drifted too far apart
         { temp.sp<-G$sp[!G$fix];temp.S.size<-S.size[!G$fix]*temp.sp
           # check if there is a danger of getting stuck on a flat section of gcv/ubre score...
           if (min(temp.sp)>0 && min(temp.S.size)<Machine()$double.eps^0.5*max(temp.S.size)) 
@@ -1573,7 +1544,8 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,p
     j<-1
     for (i in 1:m)
     if (is.null(select)||i==select)
-	{ if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+    { if (!is.null(select)&&i==select) j<-select
+      if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
       if (x$dim[i]==1)
       { ul<-pl1$fit[x$nsdf+i,]+pl1$se.fit[x$nsdf+i,]
         ll<-pl1$fit[x$nsdf+i,]-pl1$se.fit[x$nsdf+i,]
@@ -1615,8 +1587,9 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,p
     }
     j<-1
     for (i in 1:m)
-	if (is.null(select)||i==select)
-    { if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+    if (is.null(select)||i==select)
+    { if (!is.null(select)&&i==select) j<-select 
+      if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
       if (x$dim[i]==1)
       { title<-paste("s(",rownames(x$x)[j+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
         if (scale==0) ylim<-range(pl1[x$nsdf+i,])
@@ -1643,7 +1616,7 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,p
 }
 
 
-residuals.gam <-function(object, type = c("deviance", "pearson", "working", "response"),...)
+residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
 # calculates residuals for gam object - defualt for glm (from which this is adapted) seems to be buggy
 { type <- match.arg(type)
   y <- object$y
@@ -1651,7 +1624,8 @@ residuals.gam <-function(object, type = c("deviance", "pearson", "working", "res
   family <- object$family
   wts <- object$prior.weights
   switch(type,working = object$residuals,
-              pearson = (y-mu)/sqrt(object$sig2*object$family$variance(mu)),
+       scaled.pearson = (y-mu)*sqrt(wts)/sqrt(object$sig2*object$family$variance(mu)),
+              pearson = (y-mu)*sqrt(wts)/sqrt(object$family$variance(mu)),
               deviance = { d.res<-sqrt(pmax(object$family$dev.resids(y,mu,wts),0))
                            ifelse(y>mu , d.res, -d.res)             
                          },
@@ -1661,12 +1635,12 @@ residuals.gam <-function(object, type = c("deviance", "pearson", "working", "res
 summary.gam<-function (object,...) 
 # summary method for gam object - provides approximate p values for terms + other diagnostics
 { pinv<-function(V,M)
-  { D<-svd(V)
+  { D<-La.svd(V)
     M1<-length(D$d[D$d>1e-12*D$d[1]]);if (M>M1) M<-M1 # avoid problems with zero eigen-values
     D$d[(M+1):length(D$d)]<-1
     D$d<- 1/D$d
     D$d[(M+1):length(D$d)]<-0
-    D$u%*%diag(D$d)%*%t(D$v)
+    D$u%*%diag(D$d)%*%D$v
   } 
   se<-0;for (i in 1:length(object$coefficients)) se[i]<-object$Vp[i,i]^0.5
   residual.df<-length(object$y)-object$nsdf-sum(object$edf)
@@ -1696,8 +1670,10 @@ summary.gam<-function (object,...)
     }
   }
   r.sq<- 1 - var(object$y-object$fitted.values)*(object$df.null-1)/(var(object$y)*residual.df) 
+  dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
   ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,edf=object$edf,
-       s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=object$df.null)
+       s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=object$df.null,
+       dev.expl=dev.expl)
   if (is.null(object$gcv.used))  # then it's an old object
   {  ret$gcv<-object$df.null*object$sig2/residual.df
   } else # new object
@@ -1728,10 +1704,11 @@ print.summary.gam<-function(x,...)
     cat(formatC(names(x$chi.sq)[i],width=width)," ",formatC(x$edf[i],width=10,digits=4),"   ",
     formatC(x$chi.sq[i],width=10,digits=5),"     ",format.pval(x$s.pv[i]),"\n",sep="")
   }
-  cat("\nAdjusted r-sq. = ",formatC(x$r.sq,digits=3,width=5))
-  if (is.null(x$ubre)) cat("    GCV score = ",formatC(x$gcv,digits=5))
-  else cat("   UBRE score = ",formatC(x$ubre,digits=5))
-   cat("\nScale estimate = ",formatC(x$scale,digits=5,width=8,flag="-"),"         n = ",x$n,"\n",sep="")
+  cat("\nR-sq.(adj) = ",formatC(x$r.sq,digits=3,width=5),
+      "   Deviance explained = ",formatC(x$dev.expl*100,digits=3,width=4),"%",sep="")
+  if (is.null(x$ubre)) cat("\nGCV score = ",formatC(x$gcv,digits=5)," ",sep="")
+  else cat("\nUBRE score = ",formatC(x$ubre,digits=5),sep="")
+   cat("  Scale est. = ",formatC(x$scale,digits=5,width=8,flag="-"),"  n = ",x$n,"\n",sep="")
 }
 
 
@@ -2062,7 +2039,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8.1\n")
+    cat("This is mgcv 0.8.2 \n")
 }
 
 
