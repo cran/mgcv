@@ -479,7 +479,7 @@ void invert(matrix *A)
  */
 
 { double **AM,*p,*p1,max,x;
-  int *c,*rp,*cp,i,j,k,pr,pc,*d,cj,ck;
+  int *c,*rp,*cp,i,j,k,pr=0,pc=0,*d,cj,ck;
   if (A->r!=A->c) ErrorMessage("Attempt to invert() non-square matrix",1);
   c=(int *)calloc((size_t)A->c,sizeof(int)); /* index of columns, used for column pivoting */
   d=(int *)calloc((size_t)A->c,sizeof(int));
@@ -1562,7 +1562,7 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
 }   
 
 
-svdcheck(matrix *U,matrix *w,matrix *ws,matrix *wl,matrix *V)
+void svdcheck(matrix *U,matrix *w,matrix *ws,matrix *wl,matrix *V)
 
 /* this is a debugging routine for checking that svd() has not messed up the decomposition,
    by checking that the bidiagonal decomposition is still ok. */
@@ -2364,7 +2364,21 @@ void printmat(matrix A,char *fmt)
   printf("\n");
 }
 
+void fprintmat(matrix A,char *fname,char *fmt)
 
+{ int i,j;
+  double n;
+  FILE *f;
+  f=fopen(fname,"wt");
+  n=matrixnorm(A);
+  for (i=0;i<A.r;i++)
+  { fprintf(f,"\n");
+    for (j=0;j<A.c;j++) 
+    if (fabs(A.M[i][j])>1e-14*n) fprintf(f,fmt,A.M[i][j]);
+    else fprintf(f,fmt,0.0);
+  }
+  fclose(f);
+}
 
 /*********************************************************************************/
 /* Update Log (started Jan 2000)                                                 */
@@ -2401,7 +2415,7 @@ void printmat(matrix A,char *fmt)
       convergence problems AND occasional imaginary eigenvalues for the shift. Fixing
       this fixed the convergence problem.
 
-   9. svd() bug fixed -  division by zero was possible while trying to avoid over/
+   9. svd() bug fixed - it division by zero was possible while trying to avoid over/
       underflow in Givens rotations - check added to fix problem. 15/5/00
 
 */

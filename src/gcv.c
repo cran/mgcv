@@ -518,8 +518,10 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
 /* Does f.d. estimation of gradient and Hessian dt is interval to use for
    differencing  */
 
-{ double f,v,v1,v2,v3,v4,tr,rss,tr1,rss1,
-         r1,r2,r3,r4,t1,t2,t3,t4,t,r;
+{ double f,v,v1,v2,tr,rss,tr1,rss1,
+        // v3,v4,r3,r4,t3,t4,
+         t1,t2,r1,r2,t,r;
+         
   int i,j,k;
   matrix a,M,p;
   printf("\nHit Return ... ");getc(stdin);
@@ -622,7 +624,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
    Problem must have datapoints >= to null space dimension (parameter vector
    length, or columns of Z) - I'm not sure if this restriction is fundamental.
 
-   If any of the m elements of theta[] are -ve then automatic initialisation
+   If any of the m elements of theta[] are <=0 then automatic initialisation
    of smoothing parameters takes place. Otherwise the supplied theta[i]s are
    used as initial estimates. On exit theta[i] contains best estimates of
    theta[i]/rho.
@@ -766,7 +768,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
     { x=0.0;for (i=0;i<m;i++) { trial[i]=eta[i]+del[i];x+=trial[i];}
       x/=m;
       for (i=0;i<m;i++) trial[i] -= x; /* normalising smooths */
-      if (iter>1||!autoinit)   /* check smoothing parameters won't lead to overflow */
+      if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
       for (i=0;i<m;i++)
       if (trial[i]<ninf[i])
       trial[i]=ninf[i];
@@ -791,7 +793,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       if (!iter||v<vmin) /* accept current step */
       { reject=0;
         /* test for convergence */
-        tol=1e-4;ok=0;
+        tol=1e-6;ok=0;
         if (vmin-v>tol*(1+v)) ok=1;
         xx1=0.0;for (i=0;i<m;i++) { xx2=eta[i]-trial[i];xx1+=xx2*xx2;}
         xx1=sqrt(xx1);
@@ -805,8 +807,8 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       } else   /* contract step */
       { reject++;
         for (i=0;i<m;i++) del[i]*=0.5;
-        if (reject==8) for (i=0;i<m;i++) del[i]=0.0;
-        if (reject==9)
+        if (reject==14) for (i=0;i<m;i++) del[i]=0.0;
+        if (reject==15)
         reject=0;
         if (!reject&&iter>3) ok=0;
       }
@@ -1209,7 +1211,7 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
       for (i=0;i<m;i++) eta[i] -= x; /* normalising smooths */
       if (transform) ft(-2,m,mp,eta,trial,0,0,0); // making trial consistent with eta
       else for (i=0;i<m;i++) trial[i] -= x;
-      if (iter>1||!autoinit)   /* check smoothing parameters won't lead to overflow */
+      if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
       for (i=0;i<m;i++)
       if (eta[i]<ninf[i])
       eta[i]=ninf[i];

@@ -33,6 +33,8 @@ constraints.}
 penalties.}
  \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct
                location within each penalty coefficient matrix.}
+ \item{M$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
+is to be estimated, or TRUE if it is to be fixed at zero.}
  \item{M$df}{ \code{M$df[i]} gives the number of rows and columns of
                \code{M$S[i]} that are non-zero.}
  \item{M$sig2}{ This serves 2 purposes. If it is strictly positive then UBRE is 
@@ -43,12 +45,15 @@ non-positive
 returned).
                 Note that it is assumed that the variance of \eqn{y_i}{y_i} is 
 given
-                by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}            
+                by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}   
+\item{M$sp}{ An array of initial smoothing parameter estimates if any of 
+these is not strictly positive then automatic generation of initial values
+is used.}				         
 }
 \details{ 
 
 This is documentation for the code implementing the method described in section 
-4. of 
+4 of 
 Wood (2000) . The method is a computationally efficient means of applying GCV to 
 the 
 problem of smoothing parameter selection in generalized ridge regression problems 
@@ -58,17 +63,15 @@ the form:
 \theta_i {\bf p^\prime S}_i{\bf p} }{ minimise || W^0.5 (Xp-y) ||^2 rho + 
 lambda_1 p'S_1 p + lambda_1 p'S_2 p + . . .}
 possibly subject to constraints \eqn{ {\bf Cp}={\bf 0}}{Cp=0}. 
-\eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf p}{p} a parameter vector, \eqn{\bf 
-y}{y}
- a data vector, \eqn{\bf W}{W} a diagonal weight matrix, \eqn{ {\bf S}_i}{S_i} a 
-matrix 
- of coefficients defining the ith penalty and \eqn{\bf C}{C} a matrix of 
-coefficients
-defining any linear equality constraints on the problem. The smoothing parameters 
-are
-the \eqn{\lambda_i}{lambda_i} but there is an overall smoothing parameter 
-\eqn{\rho}{rho}
-as well. 
+\eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf p}{p} a parameter vector, 
+\eqn{\bf y}{y} a data vector, \eqn{\bf W}{W} a diagonal weight matrix,
+\eqn{ {\bf S}_i}{S_i} a positive semi-definite matrix  of coefficients
+defining the ith penalty and \eqn{\bf C}{C} a matrix of coefficients 
+defining any linear equality constraints on the problem. The smoothing
+parameters are the \eqn{\lambda_i}{lambda_i} but there is an overall
+smoothing parameter \eqn{\rho}{rho} as well. Note that \eqn{ {\bf X}}{X}
+must be of full column rank, at least when projected  into the null space
+of any equality constraints.  
 
 The method operates by alternating very efficient direct searches for 
 \eqn{\rho}{rho}
@@ -98,7 +101,7 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 Wood (2000) Modelling and Smoothing Parameter Estimation 
 with Multiple 
-   Quadratic Penalties. JRSSB 62(2)
+   Quadratic Penalties. JRSSB 62(2):413-428
 
 
 \url{http://www.ruwpa.st-and.ac.uk/simon.html}
@@ -137,6 +140,8 @@ especially in contexts where the weights vary wildly. }
     H <- GAMsetup(G)
     H$y <- y    # add data to H
     H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H
+	H$sp <-array(-1,H$m)
+	H$fix<-array(FALSE,H$m)
     H$w <- w       # add weights to H
     H <- mgcv(H)  # select smoothing parameters and fit model
  

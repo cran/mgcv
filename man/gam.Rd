@@ -39,11 +39,14 @@ formula, and the l.h.s. must contain only the names of a variable, and
 not some transformation function applied to a named variable.
 Smooth terms are specified by expressions of the form:
 \code{s(var,knots)} where \code{var} is the covariate which the smooth
-is a function of and \code{var} is the number of knots for the spline
-representing this smooth.}
- \item{data}{ A data frame containing the model covariates required by the
-formula. If this is missing the searth list is used to try and find the
-variables needed.} 
+is a function of and \code{knots} is the number of knots for the spline
+representing this smooth. \code{knots} must be a number, and not a variable 
+(i.e 10, 45, 13 are all ok, \code{n} is not. The formula may also include terms like
+\code{s(x,12|f)}, which specifies a regression spline which is not to be penalized
+and has 12 knots and a fixed number of degrees of freedom (11 in this example).
+\item{data}{ A data frame containing the model covariates required by the
+formula. If this is missing then the frame from which \code{gam} was called is 
+searched for the variables specified in the formula.} 
 \item{weights}{ 
 prior weights on the data.
 }
@@ -60,57 +63,56 @@ parameter/variance and UBRE is used, otherwise GCV is used.} }
 \value{ 
  The function returns an object of class \code{"gam"}. 
 
-\item{coefficients}{ the coefficients of the fitted model. parametric
+\item{coefficients}{the coefficients of the fitted model. Parametric
           coefficients are  first followed  by coefficients for each
           spline term in turn.}
 
-\item{residuals}{ the deviance residuals for the fitted model.}
+\item{residuals}{the deviance residuals for the fitted model.}
 
-\item{fitted.values}{ fitted model predictions of expected value for each
+\item{fitted.values}{fitted model predictions of expected value for each
           datum.}
 \item{family}{family object specifying distribution and link used.
 }
 \item{linear.predictor}{fitted model prediction of link function of
-expected
-          value for  each datum.}
+expected value for  each datum.}
 \item{deviance}{(unpenalized)}
 
-\item{null.deviance:} 
+\item{null.deviance}{deviance for single parameter model.} 
 
-\item{df.null}{} 
+\item{df.null}{null degrees of freedom} 
 
 \item{iter}{number of iterations of IRLS taken to get convergence.}
 
 \item{weights}{final weights used in IRLS iteration.}
 
-\item{prior.weights}{} 
+\item{prior.weights}{prior weights on observations.} 
 
 \item{y}{response data.}
 
-\item{converged:}{} 
+\item{converged}{indicates whether or not the iterative fitting method converged.} 
 
 \item{sig2}{estimated or supplied variance/scale parameter.}
 
 \item{edf}{estimated degrees of freedom for each smooth.}
 
-\item{boundary}{} 
-\item{sp}{ smoothing parameter for each smooth.}
+\item{boundary}{did parameters end up at boundary of parameter space?} 
+\item{sp}{smoothing parameter for each smooth.}
 
-\item{df}{ number of knots for each smooth (one more than maximum
+\item{df}{number of knots for each smooth (one more than maximum
           degrees of freedom).}
 
 \item{nsdf}{number of parametric, non-smooth, model terms excluding the
           intercept.}
 
-\item{Vp}{ estimated covariance matrix for parameters.}
+\item{Vp}{estimated covariance matrix for parameters.}
 
 \item{xp}{knot locations for each smooth. xp[i,] are the locations for
           the ith smooth.}
 
-\item{formula}{ the model formula.}
+\item{formula}{the model formula.}
 
 \item{x}{parametric design matrix columns (excluding intercept)
-          followed by the data that form arguments of the smooth.}
+          followed by the data that form arguments of the smooths.}
 
 }
 
@@ -122,7 +124,7 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 Wood (2000) Modelling and Smoothing Parameter Estimation 
 with Multiple 
-   Quadratic Penalties. JRSSB 62(2)
+   Quadratic Penalties. JRSSB 62(2):413-428
 
 
 \url{http://www.ruwpa.st-and.ac.uk/simon.html}
@@ -138,7 +140,7 @@ model matrix -
 
 \examples{
 
- library(mgcv)
+library(mgcv)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)
