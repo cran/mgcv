@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
 USA. */
 
 
-//#include <windows.h>   // useful to turn this on and alter infobox for Windows debugging
+/* #include <windows.h>   - useful to turn this on and alter infobox for Windows debugging */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,14 +34,14 @@ USA. */
 
 void ErrorMessage(char *msg,int fatal)
 
-{ //MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK);
+{ /* MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK); */
   if (fatal) error("%s",msg);
   else warning("%s",msg);
 }
 
 void infobox(char *msg)
 
-{ //MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK);
+{ /* MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK); */
   warning("%s",msg);
 }
 
@@ -344,7 +344,6 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
 { long np,anp,l,i,j,lp,k;
   double xx,dx;
   matrix my,mg,T,y;
-//  char *msg[200];
   np=nsdf+df[0];for (i=1;i<m;i++) np+=df[i];
   T=initmat((long)m,np);
   *X=initmat((long)n,(long)np);
@@ -357,19 +356,18 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
     /* get knot sequence */
     lp=l+nsdf;
    
-    // arrange knots by spreading them roughly every dx x values
+    /* arrange knots by spreading them roughly every dx x values */
     for (j=0;j<n;j++) y.V[j]=x[lp][j];
     y.r=(long)n;
-    sort(y); // next reduce to list of unique values.....
+    sort(y); /* next reduce to list of unique values..... */
     k=0;for (i=0;i<n;i++) if (y.V[k]!=y.V[i]) { k++;y.V[k]=y.V[i];} y.r=(long)k+1;
     dx=(y.r-1)/(df[l]-1.0);
     xp[l]=initmat((long)df[l],1L);   /* knot vector */
    
     xp[l].V[0]=y.V[0];
-    for (i=1;i<df[l]-1;i++)  // place knots
+    for (i=1;i<df[l]-1;i++)  /* place knots */
     { xx=dx*i;
       k=(int)floor(xx);
-      //if (xx-k>0.5) k++;
       xx -= k;
       xp[l].V[i]=(1-xx)*y.V[k]+xx*y.V[k+1];
     } 
@@ -377,9 +375,7 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
 
     getSmooth(S+l,xp[l],0);
     my=initmat(xp[l].r,1L);mg=initmat(xp[l].r,1L);
-   /* tmap(my,mg,xp[l],x[lp][0],0);*/
     anp=my.r;
-/*    for (i=0;i<anp;i++) X->M[0][off[l]+i]=my.V[i];*/
     for (j=0;j<n;j++)
     { tmap(my,mg,xp[l],x[lp][j],0);
       for (i=0;i<anp;i++) X->M[j][off[l]+i]=my.V[i];
@@ -392,11 +388,11 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
   }
  
   freemat(y);
-  if (getZ)  // obtain null space of T
+  if (getZ)  /* obtain null space of T */
   { *Z=initmat(np,np);
     QT(*Z,T,0);Z->r = T.r;
     freemat(T);
-  } else     // return T itself
+  } else     /* return T itself */
   { *Z=T;}
 }
 
@@ -460,7 +456,6 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   int m,i,j,k;
   matrix *S,y,X,p,C,Z,w,Vp,L;
   double sig2,xx,gcvubre;
-  //char msg[100];
   sig2= *sig2d;
   m=(int)*md;
   n=(long)*nd;
@@ -473,7 +468,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   } 
   for (i=0;i<m;i++) off[i]=(long)offd[i];
   for (i=0;i<m;i++) dim[i]=(long)dimd[i];
-  // set up matrices for MultiSmooth
+  /* set up matrices for MultiSmooth..... */
 
   X=Rmatrix(Xd,n,q);p=Rmatrix(pd,q,1L);y=Rmatrix(yd,n,1L);w=Rmatrix(wd,n,1L);
   C=Rmatrix(Cd,r,q);
@@ -484,22 +479,22 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     for (i=0;i<dim[k];i++) for (j=0;j<dim[k];j++) S[k].M[i][j]=Sd[k+i*m+j*m*dimmax];
   }
 
-  Z=initmat(q,q);QT(Z,C,0);Z.r=C.r; // finding null space of constraints
+  Z=initmat(q,q);QT(Z,C,0);Z.r=C.r; /* finding null space of constraints */
 
   if (m)
   { 
     gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2);
    
     *sig2d=sig2;
-  } else // no penalties, just solve the least squares problem
+  } else /* no penalties, just solve the least squares problem */
   { L=initmat(X.r,X.c); 
     mcopy(&X,&L);
-    HQmult(L,Z,0,0);  // L=XZ
+    HQmult(L,Z,0,0);  /* L=XZ */
     L.c -= Z.r;
     for (i=0;i<w.r;i++) w.V[i]=sqrt(w.V[i]);
-    p.r -= Z.r;        // solving in null space
-    leastsq(L,p,y,w);  // Solve min ||w(Lp-y)||^2
-    Vp=initmat(y.r,1L);// temp for fitted values
+    p.r -= Z.r;        /* solving in null space */
+    leastsq(L,p,y,w);  /* Solve min ||w(Lp-y)||^2 */
+    Vp=initmat(y.r,1L);/* temp for fitted values */
     matmult(Vp,L,p,0,0);
     sig2=0.0;for (i=0;i<y.r;i++) { xx=(Vp.V[i]-y.V[i])*w.V[i];sig2+=xx*xx;}
     
@@ -507,38 +502,38 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     gcvubre=sig2/(n-p.r);
     for (i=0;i<w.r;i++) w.V[i] *=w.V[i];
     p.r+=Z.r;
-    HQmult(p,Z,1,0); // back out of null space
+    HQmult(p,Z,1,0); /* back out of null space */
     freemat(L);freemat(Vp);
   }
   for (i=0;i<q;i++) pd[i]=p.V[i];
   if (Vpd[0]>0.0)
-  // calculate an estimate of the cov. matrix for the parameters:
-  // Z[Z'(X'WX + \sum_i sp_i S[i])Z]^{-1}Z'
+  /* calculate an estimate of the cov. matrix for the parameters:
+     Z[Z'(X'WX + \sum_i sp_i S[i])Z]^{-1}Z' */
   { Vp=initmat(p.r,p.r);
-    for (i=0;i<p.r;i++) for (j=0;j<=i;j++) // form X'WX
+    for (i=0;i<p.r;i++) for (j=0;j<=i;j++) /* form X'WX */
     { xx=0.0;
       for (k=0;k<X.r;k++) xx+=X.M[k][i]*w.V[k]*X.M[k][j];
       Vp.M[i][j]=Vp.M[j][i]=xx;
     }
-    for (k=0;k<m;k++) // add on penalty terms
+    for (k=0;k<m;k++) /* add on penalty terms */
     { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
       Vp.M[i+off[k]][j+off[k]]+=sp[k]*S[k].M[i][j];
     }
-    // now project into null space
+    /* now project into null space */
     HQmult(Vp,Z,1,1);
     HQmult(Vp,Z,0,0);  
     for (j=0;j<Z.r;j++)
     for (i=0;i<p.r;i++) Vp.M[p.r-j-1][i]=Vp.M[i][p.r-j-1]=0.0;
     Vp.r -=Z.r;Vp.c -= Z.r;
     L=initmat(Vp.r,Vp.c);
-    if (chol(Vp,L,1,1)) // invert
-    { Vp.r+=Z.r;Vp.c+=Z.r;    // image in full space
+    if (chol(Vp,L,1,1)) /* invert */
+    { Vp.r+=Z.r;Vp.c+=Z.r;    /* image in full space */
       HQmult(Vp,Z,1,0);
       HQmult(Vp,Z,0,1);  
     } else
-    { Vp.M[0][0]=-1.0; // signals failure to find cov - matrix - co-linearity problem
+      { Vp.M[0][0]=-1.0; /* signals failure to find cov - matrix - co-linearity problem */
     }
-    if (Vp.M[0][0]>-0.5) // work out edf per term
+    if (Vp.M[0][0]>-0.5) /* work out edf per term */
     { freemat(L);
       L=initmat(Vp.r,X.r);
       matmult(L,Vp,X,0,1);
@@ -552,11 +547,11 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j]*=sig2;
       freemat(L);
     }
-    RArrayFromMatrix(Vpd,Vp.r,&Vp); // convert to R format
+    RArrayFromMatrix(Vpd,Vp.r,&Vp); /* convert to R format */
     freemat(Vp);
   } else Vpd[0]=0.0;
 
-  // tidy up
+  /* tidy up */
 
   freemat(y);freemat(X);freemat(p);freemat(w);freemat(C);
 
@@ -626,8 +621,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *xpd,
 
 */
 
-{ //char msg[200];
-  matrix X,C,*S,*xp;
+{ matrix X,C,*S,*xp;
   long mdf,*off,*df;
   int m,n,nsdf,i,j,k;
   double **x;
@@ -641,7 +635,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *xpd,
   x=(double **)calloc((size_t)m+nsdf,sizeof(double *));
   for (i=0;i<m+nsdf;i++) 
   { x[i]=(double *)calloc((size_t)n,sizeof(double));
-    for (j=0;j<n;j++) x[i][j]=xd[i+(m+nsdf)*j]; // loading data passed by R into x[][]
+    for (j=0;j<n;j++) x[i][j]=xd[i+(m+nsdf)*j]; /* loading data passed by R into x[][] */
   }
   df=(long *)calloc((size_t)m,sizeof(long));
   for (i=0;i<m;i++) df[i]=(long)dfd[i];
@@ -695,9 +689,9 @@ void gam_map(matrix tm, matrix *t, double *x, int m,int nsdf, int kill)
     } 
     terms=m;
   }
-  // deal with the  parametric terms first....
+  /* deal with the  parametric terms first.... */
   for (k=0;k<nsdf;k++) tm.V[k]=x[k];
-  // now the splines.....
+  /* now the splines..... */
   for (j=0;j<m;j++) 
   { xx=x[nsdf+j];
     i=0L;while((xx>t[j].V[i+1])&&(i<t[j].r-2)) i++; 
@@ -750,22 +744,22 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
   int i,j,k,nb,kk,l; 
   double **x,z,Vt;
   char info[200];
-  // perform bits of unpacking ......
+  /* perform bits of unpacking ...... */
   x=(double **)calloc((size_t) *np,sizeof(double *));
   for (i=0;i<*np;i++) 
   { x[i]=(double *)calloc((size_t)*m+*nsdf,sizeof(double));
     for (j=0;j< *m + *nsdf;j++) 
-    { x[i][j]=xd[j+(*m + *nsdf)*i]; // loading data passed by R into x[][]
+    { x[i][j]=xd[j+(*m + *nsdf)*i]; /* loading data passed by R into x[][] */
     } 
   }
-  nb =  *nsdf;  // number of parameters
+  nb =  *nsdf;  /* number of parameters */
   for (i=0;i < *m;i++) nb += df[i];
-  Vp=Rmatrix(Vpd,(long)nb,(long)nb); // param cov matrix
-  // initialise a couple of storage matrices
-  if (*control<2) k=1;else k=  *nsdf + *m;  // don't allocate more than is needed
+  Vp=Rmatrix(Vpd,(long)nb,(long)nb); /* param cov matrix */
+  /* initialise a couple of storage matrices */
+  if (*control<2) k=1;else k=  *nsdf + *m;  /* don't allocate more than is needed */
   eta=initmat((long)k,(long)*np); 
   se=initmat((long)k,(long)*np);
-  // need to unpack xpd into xp here .....
+  /* need to unpack xpd into xp here ..... */
   xp=(matrix *)calloc((size_t) *m,sizeof(matrix));
   for (k=0;k< *m;k++)
   { xp[k]=initmat((long)df[k],1L);
@@ -774,12 +768,12 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
 
   tm=initmat((long)nb,1L);
 
-  // the constant...... 
-  for (k=0;k< *np;k++) // loop through the predictions
+  /* the constant...... */ 
+  for (k=0;k< *np;k++) /* loop through the predictions */
   { gam_map(tm,xp,x[k],*m,*nsdf,0);
-    if (*control<2) // then linear predictor required
+    if (*control<2)   /* then linear predictor required */
     { z=0.0;for (i=0;i<tm.r;i++) z+=tm.V[i]*p[i];eta.M[0][k]=z;
-      if (*control==1) // get s.e.
+      if (*control==1) /* get s.e. */
       { z=0.0;
         for (i=0;i<tm.r;i++) 
         { Vt=0.0; for (j=0;j<tm.r;j++) Vt+=Vp.M[i][j]*tm.V[j];
@@ -787,16 +781,13 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
         }
         se.M[0][k]=sqrt(z);
       }
-    } else // individual predictors wanted
-    { // the constant .....
-      //eta.M[0][k]=p[0];
-      //if (*control==3) se.M[0][k]=sqrt(Vp.M[0][0]); 
-      // other parametric terms .....
+    } else /* individual predictors wanted */
+      { /* parametric terms ..... */
       for (i=0;i< *nsdf;i++) 
       { eta.M[i][k]=p[i]*x[k][i];
       if (*control==3) se.M[i][k]=sqrt(x[k][i]*x[k][i]*Vp.M[i][i]); 
       }
-      // and now the splines .....
+      /* and now the splines ..... */
       kk= *nsdf;
       for (l=0;l< *m;l++)
       { z=0.0;for (i=0;i<df[l];i++) { z+=tm.V[kk+i]*p[kk+i];}
@@ -816,12 +807,12 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
       }
     } 
   } 
-  // convert results for o/p
-  gam_map(tm,xp,x[0],*m,*nsdf,1);  // free memory in gam_map()
+  /* convert results for o/p */
+  gam_map(tm,xp,x[0],*m,*nsdf,1);  /* free memory in gam_map() */
   freemat(tm);
   RArrayFromMatrix(etad,eta.r,&eta);
   if ((*control)%2) RArrayFromMatrix(sed,se.r,&se);
-  // tidy up....
+  /* tidy up.... */
   for (i=0;i< *np;i++) free(x[i]);free(x);
   freemat(Vp);freemat(eta);freemat(se);
   for (k=0;k< *m;k++) freemat(xp[k]);free(xp);

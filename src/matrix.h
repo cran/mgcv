@@ -79,3 +79,10 @@ void rtsolve(matrix T,matrix p,matrix z);
 long pinv(matrix *A,double trunc);
 matrix svdroot(matrix A,double reltol);
 #endif
+
+
+
+
+
+
+

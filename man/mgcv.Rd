@@ -11,8 +11,8 @@ or UBRE. The function uses Newton's method in multi-dimensions.
 mgcv(M)
 }
 %- maybe also `usage' for other objects documented here.
-\arguments{ The function takes list argument \code{M} with the 
-  following elements:
+\arguments{ 
+\item{M}{is the single list argument to this function. It has the following elements:}
  \item{M$y}{The response data vector.}
  \item{M$w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
@@ -147,4 +147,14 @@ especially in contexts where the weights vary wildly. }
  
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+
+
+
+
+
+
+
 

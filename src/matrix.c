@@ -495,7 +495,7 @@ void invert(matrix *A)
     k=c[j];c[j]=c[pc];c[pc]=k;   /* columns exchanged */
     rp[j]=pr;  /* stores row pivoted with */
     cp[j]=pc;  /* stores column pivoted with */
-    cj=c[j]; // save time
+    cj=c[j]; /* save time */
     /* Now reduce the column */
     x=AM[j][cj];
     if (x==0.0) ErrorMessage("Singular Matrix passed to invert()",1);
@@ -514,13 +514,13 @@ void invert(matrix *A)
     }
   } 
  
-  for (i=A->r-1;i>=0;i--) //work down through column re-ordering 
+  for (i=A->r-1;i>=0;i--) /* work down through column re-ordering */ 
   { if (cp[i]!=i)
-    { p=AM[i];AM[i]=AM[cp[i]];AM[cp[i]]=p; // row exchange
+    { p=AM[i];AM[i]=AM[cp[i]];AM[cp[i]]=p; /* row exchange */
     }
   }
   
-  for (j=0;j<A->c-1;j++) // implement column exchange
+  for (j=0;j<A->c-1;j++) /* implement column exchange */
   if (c[j]!=j)
   { if (c[j]<j) k=c[c[j]]; else k=c[j]; 
     for (i=0;i<A->r;i++)
@@ -529,10 +529,10 @@ void invert(matrix *A)
     c[d[k]]=k;
   } 
   
-  for (i=A->r-1;i>=0;i--) // column exchange implied by row re-ordering
+  for (i=A->r-1;i>=0;i--) /* column exchange implied by row re-ordering */
   if (rp[i]!=i)
   { for (k=0;k<A->r;k++) 
-    { p=AM[k];x=p[i];p[i]=p[rp[i]];p[rp[i]]=x;} // column exchange 
+    { p=AM[k];x=p[i];p[i]=p[rp[i]];p[rp[i]]=x;} /* column exchange */ 
   }
    
   free(c);free(rp);free(cp);free(d);
@@ -627,8 +627,8 @@ void tricholeski(matrix *T,matrix *l0,matrix *l1)
   l0V[0]=sqrt(TM[0][0]);tr1=T->r-1;
   for (k=1;k<T->r;k++)
   { k1=k-1;
-    if (z>0.0) l1V[k1]=TM[k][k1]/l0V[k1];   // no problem
-    else l1V[k1]=0.0; // assume TM[k][k1]=0, so no problem
+    if (z>0.0) l1V[k1]=TM[k][k1]/l0V[k1];   /* no problem */
+    else l1V[k1]=0.0; /* assume TM[k][k1]=0, so no problem */
     z=l1V[k1];z=TM[k][k]-z*z;
     if (z>0.0) l0V[k]=sqrt(z);
     else 
@@ -738,7 +738,7 @@ matrix choleskiupdate(L,a) matrix L,a;
     for (p=RM[i];p<(RM[i]+i);p++) rr+=(*p)*(*p1++);
     if (i!=Lr) RM[Lr][i]=(aV[i]-rr)/RM[i][i];
     else
-    { if (aV[i]-rr<0.0) RM[Lr][i]=2e-15; // ERROR condition!
+    { if (aV[i]-rr<0.0) RM[Lr][i]=2e-15; /* ERROR condition! */
       else RM[Lr][i]=sqrt(aV[i]-rr);
     }
   }
@@ -941,7 +941,7 @@ double enorm(d) matrix d;
   long i;
   if (d.vec) for (p=d.V;p<d.V+d.r*d.c;p++) { y=fabs(*p); if (y>m) m=y; }
   else for (i=0;i<d.r;i++) for (p=d.M[i];p<d.M[i]+d.c;p++) 
-  { y=fabs(*p);if (y>m) m=y;}// m=max(m,fabs(*p));
+  { y=fabs(*p);if (y>m) m=y;}
   if (!m) return(0.0);
   if (d.vec) for (p=d.V;p<d.V+d.r*d.c;p++)
   { y= *p / m; e+=y*y;} else
@@ -1112,33 +1112,33 @@ void QT(Q,A,fullQ) matrix Q,A;int fullQ;
   }
   if (Ar>0)
   { for (i=0;i<Ar;i++)
-    { // rotate elements 0 to A.c-i-1 row i of A into element A.c-i-1 of that row 
+    { /* rotate elements 0 to A.c-i-1 row i of A into element A.c-i-1 of that row */
       p=AM[i];
-      m=0.0;for (j=0;j<Ac-i;j++) { x=p[j];x=fabs(x);if (x>m) m=x;} // scale factor
-      if (m) for (j=0;j<Ac-i;j++) p[j]/=m; // avoid over/underflow
+      m=0.0;for (j=0;j<Ac-i;j++) { x=p[j];x=fabs(x);if (x>m) m=x;} /* scale factor */
+      if (m) for (j=0;j<Ac-i;j++) p[j]/=m; /* avoid over/underflow */
       lsq=0.0;for (j=0;j<Ac-i;j++) lsq+=p[j]*p[j];
       lsq=sqrt(lsq);
       if (p[Ac-i-1]<0.0) lsq= -lsq;
       p[Ac-i-1]+=lsq;
       if (lsq)
-      g=1/(lsq*p[Ac-i-1]); // multiplier for HH rotation (I-g*uu')
+      g=1/(lsq*p[Ac-i-1]); /* multiplier for HH rotation (I-g*uu') */
       else g=0.0;
-      lsq*=m; // Element to end up on A.M[i][A.c-i-1]
-      for (j=i+1;j<Ar;j++) // Apply rotation down through the rows of A
+      lsq*=m; /* Element to end up on A.M[i][A.c-i-1] */
+      for (j=i+1;j<Ar;j++) /* Apply rotation down through the rows of A */
       { x=0.0;p1=AM[j];
         for (k=0;k<Ac-i;k++) x+=p[k]*p1[k];
         x*=g;
         for (k=0;k<Ac-i;k++) p1[k] += -x*p[k];
       } 
       if (fullQ)
-      for (j=0;j<Q.r;j++) // down through rows of Q
+      for (j=0;j<Q.r;j++) /* down through rows of Q */
       { x=0.0;p=AM[i];p1=QM[j];
         for (k=0;k<Ac-i;k++) x+=p[k]*p1[k];
         x*=g;
         for (k=0;k<Ac-i;k++) p1[k] += -x*p[k];
       } else
       { g=sqrt(g);
-        p=QM[i];p1=AM[i]; // address saving
+        p=QM[i];p1=AM[i]; /* address saving */
         for (j=0;j<Ac-i;j++) p[j]=p1[j]*g;
         for (j=Ac-i;j<Ac;j++) p[j]=0.0;  
       }
@@ -1248,14 +1248,13 @@ int QR(matrix *Q,matrix *R)
   u=(double *)calloc((size_t)Rr,sizeof(double));
   for (k=0;k<n;k++)
   { m=0.0;for (i=k;i<Rr;i++) { z=RM[i][k];z=fabs(z);if (z>m) m=z;}
-    if (m) for (i=k;i<Rr;i++) RM[i][k]/=m; // avoid over/underflow problems
+    if (m) for (i=k;i<Rr;i++) RM[i][k]/=m; /* avoid over/underflow problems */
     t=0.0;for (i=k;i<Rr;i++) { z=RM[i][k];t+=z*z;} /* get euclidean length of column */
     if (RM[k][k]>0.0) t = -sqrt(t);else t= sqrt(t);  /* value of new RM[k][k] (stable) */
     for (i=k+1;i<Rr;i++) { u[i]=RM[i][k];RM[i][k]=0.0;}
     z=RM[k][k]; 
     u[k]=RM[k][k]-t;RM[k][k]=t*m;
-    t=t*t;t+=u[k]*u[k]-z*z; // efficient t calculation
-    // t=0.0;for (p=u+k;p<u+Rr;p++) t+= *p * *p; - old inefficient calculation
+    t=t*t;t+=u[k]*u[k]-z*z; /* efficient t calculation */
     t=sqrt(t/2);
     if (t==0.0) {free(u);return(0);} /* singular matrix */
     for (p=u+k;p<u+Rr;p++) *p /= t;
@@ -1308,11 +1307,11 @@ void UTU(matrix *T,matrix *U)
   double *u,*t,lt,x,m;
   for (i=0;i<T->r-2;i++)
   { u=U->M[i];t=T->M[i];lt=0.0;
-    m=0.0;for (j=i+1;j<T->c;j++) { x=fabs(t[j]); if (m<x) m=x;} // find max_j(|t_j|) for scaling
-    if (m) for (j=i+1;j<T->c;j++) t[j]/=m; // avoid over/underflow
+    m=0.0;for (j=i+1;j<T->c;j++) { x=fabs(t[j]); if (m<x) m=x;} /* find max_j(|t_j|) for scaling */
+    if (m) for (j=i+1;j<T->c;j++) t[j]/=m; /* avoid over/underflow */
     for (j=i+1;j<T->c;j++) lt+=t[j]*t[j];
     if (t[i+1]>0.0) lt= -sqrt(lt);else lt=sqrt(lt);  /* ensures stability (by maximising element i+1 of u) */
-    x=t[i+1]; // stored for altering lt efficiently
+    x=t[i+1]; /* stored for altering lt efficiently */
     u[i+1]=lt-t[i+1];T->M[i+1][i]=t[i+1]=lt*m;
     lt*=lt;lt+= -x*x+u[i+1]*u[i+1];
     for (j=i+2;j<T->c;j++)
@@ -1370,7 +1369,7 @@ void root(matrix *M,matrix *C,double tol)
   U=initmat(M->r,M->c);
   for (i=0;i<T.r;i++) for (j=0;j<T.c;j++) T.M[i][j]=M->M[i][j];
   UTU(&T,&U);
-  // make absolutely symmetric
+  /* make absolutely symmetric */
   for (i=0;i<T.r-1;i++) T.M[i][i+1]=T.M[i+1][i]=(T.M[i+1][i]+T.M[i][i+1])*0.5;
   rows=T.r;
   u0=initmat(T.r,1L);u1=initmat(T.r-1,1L);
@@ -1398,7 +1397,7 @@ void root(matrix *M,matrix *C,double tol)
   T=initmat(U.r,u0.r);  
   
   /* now apply householder rotations from the left to obtain C=UL */
-  for (i=0;i<u0.r;i++) // row counter
+  for (i=0;i<u0.r;i++) /* row counter */
   { T.M[i][i]=u0.V[i];
     if (i<u0.r-1) T.M[i+1][i]=u1.V[i];
   }
@@ -1409,7 +1408,7 @@ void root(matrix *M,matrix *C,double tol)
       for (k=i+1;k<U.c;k++) T.M[k][j] -= u[k]*uc;
     }
   }
-  // now remove zero columns
+  /* now remove zero columns */
   *C=initmat(U.r,u0.r);
   k=0;
   for (j=0;j<T.c;j++)
@@ -1419,7 +1418,7 @@ void root(matrix *M,matrix *C,double tol)
     { if ((T.M[i][j]+max!=max)||(T.M[i][j]+max!=max)) {ok=1;break;}}
     else
     { if ((fabs(T.M[i][j])>tol*max)||(fabs(T.M[i][j])>tol*max)) {ok=1;break;}}
-    if (ok) // then include this column
+    if (ok) /* then include this column */
     { for (i=0;i<C->r;i++) C->M[i][k]=T.M[i][j]; 
       k++;
     } 
@@ -1460,54 +1459,53 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
 
 { double m,s,g,temp,**AM,**VM,*p,*p1;
   int i,j,k,nv,nu;
-  nv=0; // counts up number of v_i's
+  nv=0; /* counts up number of v_i's */
   AM=A->M;VM=V->M;
   for (i=0;i<A->c;i++)
   { wl->V[i]=0.0;if (i<A->c-1) ws->V[i]=0.0;
     if (i<A->r) /* zero subdiagonal column i */
-	{ m=0.0;for (j=i;j<A->r;j++) { s=fabs(AM[j][i]); if (s>m) m=s;} // max of column for scaling 
+    { m=0.0;for (j=i;j<A->r;j++) { s=fabs(AM[j][i]); if (s>m) m=s;} /* max of column for scaling */ 
       if (m==0.0) g=0.0; 
-	  else /* work out reflector elements */
-	  { s=0.0;for (j=i;j<A->r;j++) { AM[j][i]/=m;s+=AM[j][i]*AM[j][i];} // scale reflector etc. 
-	    s=sqrt(s);
-	    if (AM[i][i]<0.0) s = -s; // avoid cancellation error
+      else /* work out reflector elements */
+      { s=0.0;for (j=i;j<A->r;j++) { AM[j][i]/=m;s+=AM[j][i]*AM[j][i];} /* scale reflector etc. */ 
+	s=sqrt(s);
+	if (AM[i][i]<0.0) s = -s; /* avoid cancellation error */
         AM[i][i]+=s;
-	    g=1/(AM[i][i]*s);
-	    s*=m;
-	  } // Now u is stored in rows i to A.r of column i of A
-	  wl->V[i] = -s;
-	  VM[i][i] = g; // temporary storage for g, for use in later assembly of U 
-	  // must apply reflector to remaining columns
+	g=1/(AM[i][i]*s);
+	s*=m;
+      } /* Now u is stored in rows i to A.r of column i of A */
+      wl->V[i] = -s;
+      VM[i][i] = g; /* temporary storage for g, for use in later assembly of U */ 
+      /* must apply reflector to remaining columns */
       for (j=i+1;j<A->c;j++)
       { s=0.0;for (k=i;k<A->r;k++) s+=AM[k][i]*AM[k][j];
 	    s*=g;for (k=i;k<A->r;k++) AM[k][j] += -s*AM[k][i];
       }
     } 
-
-	/* zero elements i+2 to A.c of row i ..... */
+    /* zero elements i+2 to A.c of row i ..... */
     if ((i<A->r) && (i<A->c-1))
-    { m=0.0;//for (j=i+1;j<A->c;j++) { s=fabs(AM[i][j]); if (s>m) m=s;} // max for scaling
-      for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s=fabs(*p);if (s>m) m=s;} // max for scaling
+    { m=0.0;
+      for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s=fabs(*p);if (s>m) m=s;} /* max for scaling */
       if (m==0.0) g=0.0;
       else
-      { s=0.0;//for (j=i+1;j<A->c;j++) { AM[i][j]/=m;s+=AM[i][j]*AM[i][j];}
+      { s=0.0;
         for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { *p/=m;s+=(*p)*(*p);}
         s=sqrt(s);
-        if (AM[i][i+1]<0.0) s = -s; // avoid cancellation error
+        if (AM[i][i+1]<0.0) s = -s; /* avoid cancellation error */
         AM[i][i+1] += s;
         g=1.0/(AM[i][i+1]*s);
         s*=m; 
       }
       ws->V[i] = -s;
-      VM[i][i+1]=g; // temporary storage
-      // Now apply reflector to remaining rows
+      VM[i][i+1]=g; /* temporary storage */
+      /* Now apply reflector to remaining rows */
       for (j=i+1;j<A->r;j++)
-      { s=0.0;//for (k=i+1;k<A->c;k++) s+=AM[i][k]*AM[j][k];
+      { s=0.0;
         p1=AM[j]+i+1;for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s+=(*p)*(*p1);p1++;}
-        s*=g;//for (k=i+1;k<A->c;k++) AM[j][k] += -s*AM[i][k];
+        s*=g;
         p1=AM[j]+i+1;for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { *p1 += -s*(*p);p1++;}
       } 
-      nv++; // number of v_i's
+      nv++; /* number of v_i's */
     }  
   } 
   /* At this point wl and ws are complete, but U and V are stored in A as reflector 
@@ -1520,39 +1518,38 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
      v_i is zero until element i+1, with remaining elements stored in columns i+1 to A.c 
      of row i of A. */
   /* first form V in order to free up space in A */
-  // initialize rows nv to A->c of V
-  nu=A->c; if (A->r<nu) nu=A->r; // number of U_i's
+  /* initialize rows nv to A->c of V
+  nu=A->c; if (A->r<nu) nu=A->r; /* number of U_i's */
   for (i=nv+1;i<A->c;i++) 
   for (p=VM[i];p<VM[i]+A->c;p++) *p=0.0;
   for (i=A->c-1;i>nv;i--) { if (i<nu) AM[i-1][i]=VM[i][i];VM[i][i]=1.0;}
-  for (i=nv-1;i>=0;i--) // working down through the V_i's
+  for (i=nv-1;i>=0;i--) /* working down through the V_i's */
   { temp=VM[i+1][i+1];
-    // for (j=0;j<A->c;j++) VM[i+1][j]=0.0;
     for (p=VM[i+1];p<VM[i+1]+A->c;p++) *p=0.0;
-    VM[i+1][i+1]=1.0; // initialize row of V
-    for (j=A->c-1;j>i;j--) // columns affected by V_i
+    VM[i+1][i+1]=1.0; /* initialize row of V */
+    for (j=A->c-1;j>i;j--) /* columns affected by V_i */
     { s=0.0;p=AM[i]+i+1;for (k=i+1;k<A->c;k++) { s+=VM[k][j]*(*p);p++;}
       s*=VM[i][i+1];
       p=AM[i]+i+1;for (k=i+1;k<A->c;k++) { VM[k][j] += -s*(*p);p++;}
     }
-    AM[i][i+1]=temp; // temporary storage for g_i's 
+    AM[i][i+1]=temp; /* temporary storage for g_i's */ 
   }        
   /* Now all but first row and column of V are formed, but V->M[0][0] still contains
      g_0, while g_i is in AM[i-1][i] otherwise, so form U now and then finish off V */
   
-  for (i=nu-1;i>=0;i--) // work down through the u_i's
+  for (i=nu-1;i>=0;i--) /* work down through the u_i's */
   { if (i>0) g=AM[i-1][i]; else g=VM[0][0];
-    for (j=0;j<i;j++) AM[j][i]=0.0; // zeroing column above the diagonal
-    for (j=A->c-1;j>i;j--) // columns above i are affected
+    for (j=0;j<i;j++) AM[j][i]=0.0; /* zeroing column above the diagonal */
+    for (j=A->c-1;j>i;j--) /* columns above i are affected */
     { s=0.0;for (k=i;k<A->r;k++) s+= AM[k][i]*AM[k][j];
       s*=g;
       for (k=i;k<A->r;k++) AM[k][j] += -s*AM[k][i]; 
     } 
-    // as is column i itself....
+    /* as is column i itself.... */
     for (j=A->r-1;j>i;j--) AM[j][i]*= -g*AM[i][i];
     AM[i][i] = 1 - g*AM[i][i]*AM[i][i]; 
   }
-  // now finish off V
+  /* now finish off V */
   p=VM[0];for (i=0;i<A->c;i++) { *p=VM[i][0]=0.0;p++;}
   VM[0][0]=1.0; 
 }   
@@ -1635,59 +1632,56 @@ void svd(matrix *A, matrix *w, matrix *V)
   matrix ws,*U; 
   int finished=0,end,start,i,j,k,maxreps=100;
   ws=initmat(w->r-1,1L);
-  bidiag(A,w,&ws,V); // bi-diagonalize A....
+  bidiag(A,w,&ws,V); /* bi-diagonalize A.... */
   U=A;
   VM=V->M;UM=U->M;wV=w->V;wsV=ws.V;
-  for (i=0;i<ws.r;i++) // get something against which to judge zero
+  for (i=0;i<ws.r;i++) /* get something against which to judge zero */
   { x=fabs(wV[i]);y=fabs(wsV[i]);if (x<y) x=y;if (wnorm<x) wnorm=x;}
   end=w->r-1;
   while (!finished)
-  { for (k=0;k<maxreps;k++) // QR iteration loop
-    { if (wV[end]+wnorm==wnorm) // zero singular value - can deflate
-      { if (wsV[end-1]+wnorm!=wnorm) // need to zero wsV[end-1] before deflating
+  { for (k=0;k<maxreps;k++) /* QR iteration loop */
+    { if (wV[end]+wnorm==wnorm) /* zero singular value - can deflate */
+      { if (wsV[end-1]+wnorm!=wnorm) /* need to zero wsV[end-1] before deflating */
         { /* Series of rotators (Givens rotations from right) zero this element */
           y=wsV[end-1];wsV[end-1]=0.0;
-          for (i=end-1;i>=0;i--) // work out sequence of rotations
+          for (i=end-1;i>=0;i--) /* work out sequence of rotations */
           { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
             x=wV[i];
             if (m>0.0) 
-            { y/=m;x/=m; // now rotate y into x
+	    { y/=m;x/=m; /* now rotate y into x */
               r=sqrt(y*y+x*x);
               c=x/r;s=y/r;
             } else {r=0.0;c=1.0;s=0.0;}
-            wV[i]=r*m; // rotation zeros y (implicitly)
-            if (i>0) // propagate the problem element!
+            wV[i]=r*m; /* rotation zeros y (implicitly) */
+            if (i>0) /* propagate the problem element! */
             { y= -wsV[i-1]*s;
               wsV[i-1]*=c;
             } 
             /* Need to update V as well V -> V G where G is the rotation just applied.... */ 
-            for (j=0;j<V->r;j++) // work down the rows
-            { p2=VM[j]+end;p1=VM[j]+i;x=*p1; //x=VM[j][i];
-              //VM[j][i]=c*x+s*VM[j][end];
+            for (j=0;j<V->r;j++) /* work down the rows */
+            { p2=VM[j]+end;p1=VM[j]+i;x=*p1;
               *p1=c*x+s*(*p2);
-              //VM[j][end]*=c;VM[j][end] += -s*x;
               *p2 *= c; *p2 += -s*x;
             }
           }
         }
-        end--; //  
-       // Check here for termination ..... 
+        end--;   
+	/* Check here for termination ..... */ 
         if (end<=0) finished=1;
-        break; // successfully deflated, so start new QR iteration cycle or finish
+        break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      //if (fabs(wsV[end-1])<=1e-15*wnorm) // condition slacker than below
-      if  (wsV[end-1]+wnorm==wnorm) //too restrictive??/* wV[end] is a singular value => deflate */
+      if  (wsV[end-1]+wnorm==wnorm) /* too restrictive?? wV[end] is a singular value => deflate */
       { end--;
-        if (end==0) finished=1; // all elements of ws are zeroed so we're done
-        break; // deflated so start new QR cycle or finish
-      } else // no deflation possible, search for start of sub-matrix 
+        if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
+        break; /* deflated so start new QR cycle or finish */
+      } else /* no deflation possible, search for start of sub-matrix */ 
       { start=end-1;
         while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--;
-        start++; // this is now the row and column starting the sub-matrix
+        start++; /* this is now the row and column starting the sub-matrix */
         if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) 
-        { // ws.V[start-1] must be zeroed....
+	{ /* ws.V[start-1] must be zeroed.... */
           y=wsV[start-1];wsV[start-1]=0.0;
-          for (i=start;i<=end;i++) // get sequence of rotators from left....
+          for (i=start;i<=end;i++) /* get sequence of rotators from left.... */
           { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
             x=wV[i];
             if (m>0.0)
@@ -1695,17 +1689,17 @@ void svd(matrix *A, matrix *w, matrix *V)
               r=sqrt(x*x+y*y);
               c=x/r;s=y/r;
             } else {r=1.0;c=1.0;s=0.0;}
-            wV[i]=r*m; // y zeroed implicitly
-            if (i<end) // propagate the problem element now at (start-1,i)
+            wV[i]=r*m; /* y zeroed implicitly */
+            if (i<end) /* propagate the problem element now at (start-1,i) */
             { y= -s*wsV[i];
               wsV[i]*=c;
             }  
             /* Now U must be updated, by transposed rotators - from the right */
-            for (j=0;j<U->r;j++) // work down the rows
-            { p1=UM[j]+start-1;x = *p1;p2=UM[j]+i;//x=UM[j][start-1];
-              // UM[j][start-1] = c*x-s*UM[j][i];
+            for (j=0;j<U->r;j++) /* work down the rows */
+            { p1=UM[j]+start-1;x = *p1;p2=UM[j]+i;
+	      /* UM[j][start-1] = c*x-s*UM[j][i]; */
               *p1 = c*x - s*(*p2);
-              // UM[j][i]*=c; UM[j][i] += +s*x;
+              /* UM[j][i]*=c; UM[j][i] += +s*x; */
               *p2 *= c; *p2 += s*x; 
             } 
           }
@@ -1720,57 +1714,57 @@ void svd(matrix *A, matrix *w, matrix *V)
       a=wV[end-1]*wV[end-1]+wsV[end-1]*wsV[end-1];b=wV[end];b*=b;
       c=wV[end]*wsV[end-1];
       y=sqrt((a-b)*(a-b)+4*c*c)/2;
-      x=(a+b)/2+y;y=(a+b)/2-y; // x and y are the eigenvalues
+      x=(a+b)/2+y;y=(a+b)/2-y; /* x and y are the eigenvalues */
       if (fabs(x-b)<fabs(y-b)) sig=x; else sig=y;
      
-      // ...... this could be improved!!
+      /* ...... this could be improved!! */
       /* Now apply first step and then chase the bulge ...... */
     
       x=wV[start];
       y=wsV[start]*x;
-      x=x*x-sig; // x and y are the first and second elements of the rotator starting implicit QR step
+      x=x*x-sig; /* x and y are the first and second elements of the rotator starting implicit QR step */
       m=fabs(x);if (fabs(y)>m) m=fabs(y);
       if (m>0.0)
-      { y/=m;x/=m; // avoid over/underflow
+      { y/=m;x/=m; /* avoid over/underflow */
         r=sqrt(y*y+x*x);
-        c=x/r;s=y/r; // elements of rotator to apply from right operating in start,start+1 plane
+        c=x/r;s=y/r; /* elements of rotator to apply from right operating in start,start+1 plane */
       } else { r=1.0;c=1.0;s=0.0;}
       for (i=start;i<end;i++) 
-      { // start with post-multiplication
-        if (start<i) // then rotator needs to be calculated to remove element at (i-1,i+1) (stored in y)
-        { x=wsV[i-1]; // location y rotated into
+      { /* start with post-multiplication */
+        if (start<i) /* then rotator needs to be calculated to remove element at (i-1,i+1) (stored in y) */
+	{ x=wsV[i-1]; /* location y rotated into */
           m=fabs(y);if (fabs(x)>m) m=fabs(x);
           if (m>0.0)
-          { x/=m;y/=m;   // avoiding overflow
+	  { x/=m;y/=m;   /* avoiding overflow */
             r=sqrt(x*x+y*y);
             c=x/r;s=y/r;
-          } else {r=1.0;c=1.0;s=0.0;} // rotator for zeroing y (at i-1,i+1) int x at (i-1,i)
+          } else {r=1.0;c=1.0;s=0.0;} /* rotator for zeroing y (at i-1,i+1) int x at (i-1,i) */
           wsV[i-1]=r*m;y=0.0;
         }
-        // now apply rotator from right to rows i and i+1....
+        /* now apply rotator from right to rows i and i+1.... */
         x=wV[i];
         wV[i]=c*x+s*wsV[i];
         wsV[i]=c*wsV[i]-s*x;
-        y=s*wV[i+1];wV[i+1]*=c; // y contains the bulge at (i+1,i)
-        // and also apply from right to V....
-        for (j=0;j<V->r;j++) // work down the rows
-        { p1=VM[j]+i;x= *p1;p2=VM[j]+i+1; //x=VM[j][i];
-          //VM[j][i]=c*x+s*VM[j][i+1];
+        y=s*wV[i+1];wV[i+1]*=c; /* y contains the bulge at (i+1,i) */
+        /* and also apply from right to V.... */
+        for (j=0;j<V->r;j++) /* work down the rows */
+	{ p1=VM[j]+i;x= *p1;p2=VM[j]+i+1; /* x=VM[j][i]; */
+	  /* VM[j][i]=c*x+s*VM[j][i+1]; */
           *p1=c*x + s* (*p2);
-          //VM[j][i+1]*=c;VM[j][i+1] += -s*x;
+          /* VM[j][i+1]*=c;VM[j][i+1] += -s*x; */
           *p2 *= c; *p2 += -s*x;
         }  
-          /* Obtain rotator from left to zero element at (i+1,i) into element at (i,i) 
+        /* Obtain rotator from left to zero element at (i+1,i) into element at (i,i) 
            thereby creating new bulge at (i,i+2) */ 
         x=wV[i];
         m=fabs(y);if (fabs(x)>m) m = fabs(x);
         if (m>0.0)
-        { x/=m;y/=m; // avoid overflow
+	{ x/=m;y/=m; /* avoid overflow */
           r=sqrt(x*x+y*y);
           c=x/r;s=y/r;
-        } else {r=1.0;c=1.0;s=0.0;} // transform to zero y into x (i+1,i) into (i,i)
+        } else {r=1.0;c=1.0;s=0.0;} /* transform to zero y into x (i+1,i) into (i,i) */
         wV[i]=r*m;y=0.0; 
-        // apply from left....
+        /* apply from left.... */
         x=wsV[i];
         wsV[i]=c*x+s*wV[i+1];
         wV[i+1]=c*wV[i+1]-s*x;
@@ -1778,12 +1772,12 @@ void svd(matrix *A, matrix *w, matrix *V)
         { y=wsV[i+1]*s;
           wsV[i+1]*=c;
         } 
-        // and apply transposed rotator from right to U 
-        for (j=0;j<U->r;j++) // work down the rows
-        { p1=UM[j]+i;x= *p1;p2=UM[j]+i+1;//x=UM[j][i];
-          //UM[j][i]=c*x+s*UM[j][i+1];
+        /* and apply transposed rotator from right to U */ 
+        for (j=0;j<U->r;j++) /* work down the rows */
+        { p1=UM[j]+i;x= *p1;p2=UM[j]+i+1;
+	  /* UM[j][i]=c*x+s*UM[j][i+1]; */
           *p1=c*x+s*(*p2);
-          //UM[j][i+1]*=c; UM[j][i+1] += -s*x;
+          /* UM[j][i+1]*=c; UM[j][i+1] += -s*x; */
           *p2 *= c; *p2 += -s*x;
         } 
       }
@@ -1861,7 +1855,7 @@ void symproduct(A,B,C,trace,chol) matrix A,B,C;int trace,chol;
 	     { temp=0.0;p1=AM[i]+j+1;
 	       for (p=BM[j]+j+1;p<(BM[j]+Bc);p++)
 	       temp += (*p)*(*p1++);
-          CM[i][i]+=temp*AM[i][j];
+               CM[i][i]+=temp*AM[i][j];
 	     }
 	     CM[i][i]*=2.0;
 	     p2=CM[i]+i;p=AM[i];
@@ -2034,11 +2028,11 @@ void updateLS(T,z,x,y,w) matrix T,z,x;double y,w;
   for (i=0;i<x.r;i++) xx.V[i]=w*x.V[i];y*=w;
   for (i=0;i<T.r;i++) /* work through the columns of x rows of T */
   { xi=xx.V[i];ti=T.M[i][T.r-i-1];
-    m=fabs(xi);r=fabs(ti);if (r>m) m=r; // scale factor
-    if (m) { xi/=m;ti/=m;} // avoid over/underflow
+    m=fabs(xi);r=fabs(ti);if (r>m) m=r; /* scale factor */
+    if (m) { xi/=m;ti/=m;} /* avoid over/underflow */
     r=sqrt(xi*xi+ti*ti);
     if (r) { s=xi/r;c= -ti/r;} else {s=0.0;c=1.0;}
-   /* T.M[i][T.r-i-1]=r;*/
+    /* T.M[i][T.r-i-1]=r;*/
     for (j=i;j<T.r;j++)
     { xp=xx.V+j;tp=T.M[j]+T.r-i-1;
       xi=c*(*xp)+s*(*tp);
@@ -2120,7 +2114,7 @@ matrix svdroot(matrix A,double reltol)
   a=initmat(A.r,A.c);mcopy(&A,&a);
   v=initmat(A.r,A.c);
   w=initmat(A.r,1L);
-  svd(&a,&w,&v);   //a * diag(w) * v'
+  svd(&a,&w,&v);   /* a * diag(w) * v' */
   for (i=0;i<w.r;i++) { w.V[i]=sqrt(w.V[i]);if (w.V[i]>tol) tol=w.V[i];}
   tol*=reltol;
   for (i=0;i<w.r;i++)
@@ -2196,7 +2190,6 @@ double condition(a) matrix a;
   b=initmat(a.r,a.c);
   for (i=0;i<a.r;i++) for (j=0;j<a.c;j++) b.M[i][j]=a.M[i][j];
   c=initmat(a.c,1L);d=initmat(a.c,a.c);svd(&b,&c,&d);
-  //for (i=0;i<c.r;i++) { printf("%g",c.V[i]); getc(stdin);} // comment out usually
   min=max=c.V[0];
   for (i=1;i<c.r;i++)
   { if (c.V[i]<min) min=c.V[i]; else if (c.V[i]>max) max=c.V[i];}
@@ -2420,6 +2413,11 @@ void fprintmat(matrix A,char *fname,char *fmt)
       checking mechanism uses some elements when switched on). This restriction has 
       now been removed.
 */
+
+
+
+
+
 
 
 

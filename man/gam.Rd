@@ -195,3 +195,27 @@ plot(b2,pages=1)
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
