@@ -43,7 +43,7 @@ effect covariance matrix or its factor, the \code{pdConstruct} function is initi
 scaled covariance matrix itself.
 
 }
-\value{ A class \code{pdTens} object, or it's coefficients or the matrix it represents or the factor of that matrix.}
+\value{ A class \code{pdTens} object, or its coefficients or the matrix it represents or the factor of that matrix.}
 
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}

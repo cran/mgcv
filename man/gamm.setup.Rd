@@ -9,8 +9,12 @@ by \code{gamm} to set up a generalized additive mixed model in a form suitable f
 
 \references{
 
-Wood, S.N. (manuscript) Tensor product smooth interactions in Generalized Additive Mixed Models.
+Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. Journal of the American Statistical Association.
 
+Wood, S.N. (2004b) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Technical Report of the Department of
+Statistics, University of Glasgow, UK.
 
 
 \url{http://www.stats.gla.ac.uk/~simon/}

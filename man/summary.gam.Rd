@@ -69,6 +69,15 @@ explained is probably more appropriate for non-normal errors.}
 \item{scale}{estimated (or given) scale parameter.}
 \item{family}{the family used.}
 \item{formula}{the original GAM formula.}
+\item{dispersion}{the scale parameter.}
+\item{pTerms.df}{the degrees of freedom associated with each parameteric term
+(excluding the constant).}
+\item{pTerms.chi.sq}{a Wald statistic for testing the null hypothesis that the
+each parametric term is zero.}
+\item{pTerms.pv}{p-values associated with the tests that each term is
+zero. For penalized fits these are approximate, being conditional on the smoothing
+parameters. The reference distribution is an appropriate chi-squared when the
+scale parameter is known, and is based on an F when it is not.}
 }
 
 \references{
@@ -81,14 +90,24 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
+Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass.
+
+Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
+regression splines. Technical Report 04-12 Department of Statistics,
+University of Glasgow.
+
+
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
-\section{WARNING }{ The supplied p-values are only approximate and should be treated with scepticism.
+\section{WARNING }{ The supplied p-values are only approximate and should be
+treated with scepticism, particularly for the smooth terms.
 } 
 
-\seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{gam.check}} }
+\seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
+\code{\link{gam.check}}, \code{\link{anova.gam}} }
 
 \examples{
 library(mgcv)

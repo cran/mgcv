@@ -36,6 +36,17 @@ for models with and without the term. More generally the score for the model wit
 the smooth term replaced by appropriate parametric terms. Candidates for removal can be identified by reference to the approximate p-values provided by \code{summary.gam}. Candidates for replacement by parametric terms are smooth terms with estimated degrees of freedom close to their 
 minimum possible.
 
+One appealing approach to model selection is via shrinkage. Smooth classes
+\code{cs.smooth} and \code{tprs.smooth} (specified by \code{"cs"} and
+\code{"ts"} respectively) have smoothness penalties which include a small
+shrinkage component, so that for large enough smoothing parameters the smooth 
+becomes identically zero. This allows automatic smoothing parameter selection
+methods to effectively remove the term from the model altogether. The
+shrinkage component of the penalty is set at a level that usually makes negligable
+contribution to the penalization of the model, only becoming effective when
+the term is effectively `completely smooth' according to the conventional penalty.
+
+
 }
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
@@ -53,6 +64,28 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
+}
+
+\examples{
+## an example of GCV based model selection
+library(mgcv)
+set.seed(0) 
+n<-400;sig<-2
+x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
+x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
+x4 <- runif(n, 0, 1);x5 <- runif(n, 0, 1)
+f <- 2 * sin(pi * x0)
+f <- f + exp(2 * x1) - 3.75887
+f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
+e <- rnorm(n, 0, sig)
+y <- f + e
+## Note the increased gamma parameter below to favour
+## slightly smoother models...
+b<-gam(y~s(x0,bs="ts")+s(x1,bs="ts")+s(x2,bs="ts")+
+   s(x3,bs="ts")+s(x4,bs="ts")+s(x5,bs="ts"),gamma=1.4)
+summary(b)
+plot(b,pages=1)
+
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..

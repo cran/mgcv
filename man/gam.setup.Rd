@@ -7,8 +7,6 @@ by \code{gam} to obtain the design matrix and penalty matrices for a GAM
 set up using penalized regression splines. This is done by calling a mixture of
 R routines and compiled C code.  For further information on usuage see code for \code{gam}.
 }
-}
-
 
 
 \references{

@@ -319,6 +319,68 @@ void tmap(matrix tm,matrix t,double time,int kill)
 
 { static matrix D;static char first=1;
   matrix h;
+  double **DM,*dum,*tmV,*DMi,*DMi1,tVi,tVi1,d0v,d1v,x,xx0,xx1,xx02,xx12,h1,h2,h3,b0v,b1v,x0,x1;
+  long i,k,tr;
+  if (first)
+  { first=0;h=initmat(t.r-1,1L);
+    for (i=0L;i<t.r-1;i++) h.V[i]=t.V[i+1]-t.V[i];
+    D=getD(h,0); /* time trajectories always have natural end conditions */
+    freemat(h);
+  }
+  if (t.r==1L)
+  { tm.V[0]=1.0;}
+  else
+  { DM=D.M;dum=t.V;
+    i=0L;tr=t.r-2;dum++;
+    while ((time > *dum)&&(i<tr)) {i++;dum++;}
+    tr=t.r;tmV=tm.V;
+    DMi=DM[i];DMi1=DM[i+1];
+    x0=t.V[i];x1=t.V[i+1];
+    x=time;
+    h1=x1-x0;h2=h1*h1;h3=h2*h1;
+    xx0=x-x0;xx1=x-x1;
+    xx02=xx0*xx0;xx12=xx1*xx1;
+   
+    if (x<x0) 
+    { d0v=xx0;  
+      d1v=0.0;
+      b0v=1.0;
+      b1v=0.0;
+    }
+    else if (x>x1) 
+    { d0v=0.0;  
+      d1v=xx1;
+      b0v=0.0;
+      b1v=1.0;
+    }else                /* within interval */
+    { d0v=xx0*xx12/h2;d1v=xx02*xx1/h2;
+      b0v=2.0*(xx0+0.5*h1)*xx12/h3;
+      b1v= -2.0*(xx1-0.5*h1)*xx02/h3;
+    }
+    
+    for (k=0;k<t.r;k++,tmV++,DMi++,DMi1++)
+    { *tmV = *DMi * d0v + *DMi1 * d1v;
+    }
+    tm.V[i] += b0v;
+    tm.V[i+1] += b1v;
+   
+  }
+  if (kill)
+  { first=1;
+   freemat(D);
+  }
+}
+
+void tmap2(matrix tm,matrix t,double time,int kill)
+ /* to release static matrix allocation set kill to 1 otherwise 0 and
+	     prepare for a new sequence of knot positions in t*/
+
+/* tm maps values of a function at the t values contained in vector t to
+   the value of a spline through those points at 'time' ;tgm does the same
+   for the gradient of the spline */
+
+{ static matrix D;static char first=1;
+  matrix h;
   long i,k;
   if (first)
   { first=0;h=initmat(t.r-1,1L);

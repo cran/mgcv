@@ -1,0 +1,59 @@
+\name{formXtViX}
+\alias{formXtViX}
+%- Also NEED an `\alias' for EACH other topic documented here.
+\title{ Form component of GAMM covariance matrix}
+\description{ This is a service routine for \code{\link{gamm}}. Given,
+\eqn{V}{V}, an estimated covariance matrix obtained using \code{\link{extract.lme.cov2}} this
+routine forms \eqn{ X^TV^{-1}X}{X'inv(V)X} as efficiently as possible, given
+the structure of \eqn{V}{V} (usually sparse).
+}
+\usage{
+formXtViX(V,X)
+}
+
+%- maybe also `usage' for other objects documented here.
+\arguments{
+\item{V}{ A data covariance matrix list returned from \code{\link{extract.lme.cov2}}}
+
+\item{X}{ A model matrix.}
+
+}
+
+\details{ The covariance matrix returned by \code{\link{extract.lme.cov2}} may
+be in a packed and re-ordered format, since it is usually sparse. Hence a
+special service routine is required to form the required products involving
+this matrix. 
+}
+
+
+
+\value{ A matrix.
+}
+
+\references{
+
+For \code{lme} see:
+
+Pinheiro J.C. and Bates, D.M. (2000) Mixed effects Models in S and S-PLUS. Springer
+
+For details of how GAMMs are set up here for estimation using \code{lme} see:
+ 
+Wood, S.N. (2004) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Technical report of the statistics
+department, University of Glasgow.
+
+\url{http://www.stats.gla.ac.uk/~simon/}
+}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+
+
+\seealso{  
+\code{\link{gamm}}, \code{\link{extract.lme.cov2}} 
+}
+
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+
+

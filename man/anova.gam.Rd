@@ -1,0 +1,85 @@
+\name{anova.gam}
+\alias{anova.gam}
+\alias{print.anova.gam}
+%- Also NEED an `\alias' for EACH other topic documented here.
+\title{Hypothesis tests related to  GAM fits}
+\description{ Performs hypothesis tests relating to one or more fitted
+\code{gam} objects. For a single fitted \code{gam} object, Wald tests of
+the significance of each parametric and smooth term are performed. Otherwise
+the fitted models are compared using an analysis of deviance table. The tests
+are usually approximate, unless the models are un-penalized.
+
+}
+\usage{
+anova.gam(object, ..., dispersion = NULL, test = NULL)
+print.anova.gam(x,...)
+}
+%- maybe also `usage' for other objects documented here.
+\arguments{ 
+\item{object,...}{ fitted model objects of class \code{gam} as produced by \code{gam()}.}
+\item{x}{an \code{anova.gam} object produced by a single model call to \code{anova.gam()}.} 
+\item{dispersion}{ a value for the dispersion parameter: not normally used.}
+\item{test}{what sort of test to perform for a multi-model call. One of
+\code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
+}
+\details{ If more than one fitted model is provided than \code{anova.glm} is
+used. If only one model is provided then the significance of each model term
+is assessed using Wald tests: see \code{\link{summary.gam}} for details of the
+actual computations. In the latter case \code{print.anova.gam} is used as the
+printing method.
+}
+
+\value{In the multi-model case \code{anova.gam} produces output identical to
+\code{\link{anova.glm}}, which it in fact uses.
+
+In the single model case an object of class \code{anova.gam} is produced,
+which is in fact an object returned from \code{\link{summary.gam}}.
+
+\code{print.anova.gam} simply produces tabulated output.
+
+}
+
+\references{
+For details of the calculation of the covariance matrix used for the Wald
+tests see:
+
+Wood (2004) On confidence intervals for GAMs based on penalized regression
+splines. Technical report of the Statistics department, University of Glasgow, UK.
+
+}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+
+\section{WARNING }{ Unless the models have no penalized terms then these
+methods are only approximate. 
+} 
+
+\seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
+\code{\link{gam.check}}, \code{\link{summary.gam}} }
+
+\examples{
+library(mgcv)
+set.seed(0)
+n<-200
+sig<-2
+x0 <- rep(1:4,50)
+x1 <- runif(n, 0, 1)
+x2 <- runif(n, 0, 1)
+x3 <- runif(n, 0, 1)
+y <- 2 * x0
+y <- y + exp(2 * x1) - 3.75887
+y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+e <- rnorm(n, 0, sig)
+y <- y + e
+x0<-as.factor(x0)
+b<-gam(y~x0+s(x1)+s(x2)+s(x3))
+anova(b)
+b1<-gam(y~x0+s(x1)+s(x2))
+anova(b,b1,test="F")
+}
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
+
+
+
+
+
+

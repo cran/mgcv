@@ -16,9 +16,10 @@ from library \code{nlme}. The modification is to replace the log parameterizatio
 with a \code{\link{notLog}} parameterization, since the latter is much less susceptible to overflow 
 and underflow of the parameters on the original scale. The functions are particularly useful for
 working with Generalized Additive Mixed Models where variance parameters/smoothing parameters can
-be very large or very small, so that overflow or underflow can be a problem.} 
+be very large or very small, so that overflow or underflow can be a problem.
 
-These functions would not normally be called directly, although unlike the \code{\link{pdTens}} class it is easy to do so.
+These functions would not normally be called directly, although unlike the 
+\code{\link{pdTens}} class it is easy to do so.
 }
 
 \usage{

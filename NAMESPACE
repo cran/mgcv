@@ -1,17 +1,20 @@
 useDynLib(mgcv)
 
-export(coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
-       exclude.too.far,extract.lme.cov, full.score, 
+export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
+       exclude.too.far,extract.lme.cov, extract.lme.cov2,
+       formXtViX, full.score, 
        gam, gamm, gam.check, gam.control,
-       gam.fit, gamm.setup , interpret.gam, gam.setup, gam.side.conditions,
-       get.var,logDet.pdIdnot,
+       gam.fit, gamm.setup , influence.gam, interpret.gam, gam.setup, 
+       gam.side.conditions,
+       get.var,logDet.pdIdnot,logLik.gam,
        magic, magic.post.proc, mgcv, mgcv.control, mgcv.find.theta, 
        mgcv.get.scale, mono.con, mroot, new.name, 
        notExp,notLog,null.space.basis.labels,
        null.space.basis.powers, null.space.dimension, pcls, 
        pdConstruct.pdIdnot,pdFactor.pdIdnot,pdMatrix.pdIdnot,pdIdnot,
        pdConstruct.pdTens,pdFactor.pdTens,pdMatrix.pdTens,pdTens,
-       place.knots, plot.gam, print.gam,print.summary.gam,predict.gam,
+       place.knots, plot.gam, print.anova.gam,
+       print.gam,print.summary.gam,predict.gam,
        Predict.matrix,
        Predict.matrix.cr.smooth,
        Predict.matrix.cyclic.smooth,
@@ -30,8 +33,12 @@ export(coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
 importFrom(graphics, plot)
 importFrom(stats, predict, residuals)
 
+
+S3method(influence, gam)
+S3method(logLik, gam)
 S3method(plot, gam)
 S3method(predict, gam)
+S3method(print, anova.gam)
 S3method(print, gam)
 S3method(print, summary.gam)
 S3method(residuals, gam)

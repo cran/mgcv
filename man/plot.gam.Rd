@@ -3,12 +3,14 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Default GAM plotting}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} and plots the 
-   component smooth functions that make it up, on the scale of the linear predictor.}
-}
+   component smooth functions that make it up, on the scale of the linear
+   predictor. Optionally produces term plots for parametric model components
+   as well.}
 \usage{
 plot.gam(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,
          scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,
-         xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,...)
+         xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
+         all.terms=FALSE,shade=FALSE,col.shade="gray80",...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -34,7 +36,8 @@ estimates fixed (i.e. the estimates for the term plus the residuals).}
 	2-d plots, surfaces at +1 and -1 standard errors are contoured
 	and overlayed on the contour plot for the estimate. If a
 	positive number is supplied then this number is multiplied by
-	the standard errors when calculating standard error curves or surfaces.}
+	the standard errors when calculating standard error curves or
+  surfaces. See also \code{shade}, below. }
 
 \item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
 if \code{pages=1} then all terms will be plotted on one page with the layout performed automatically. 
@@ -75,11 +78,21 @@ far from data to be plotted when plotting 2-D smooths. This is useful since smoo
 The data are scaled into the unit square before deciding what to exclude, and \code{too.far} is a distance 
 within the unit square.}
 
+\item{all.terms}{if set to \code{TRUE} then the partial effects of parametric
+model components are also plotted, via a call to \code{\link{termplot}}. Only
+terms of order 1 can be plotted in this way.}
+
+\item{shade}{Set to \code{TRUE} to produce shaded regions as confidence bands
+for smooths (not avaliable for parametric terms, which are plotted using \code{termplot}).}
+
+\item{col.shade}{define the color used for shading confidence bands.}
+
 \item{...}{ other graphics parameters to pass on to plotting commands.}
 
 }
 \details{ Produces default plot showing the smooth components of a
-  fitted GAM.
+  fitted GAM, and optionally parametric terms as well, when these can be
+  handled by \code{\link{termplot}}.
 
   For plots of 1-d smooths, the x axis of each plot is labelled 
    with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
@@ -96,17 +109,21 @@ by the s.e. Contour levels are chosen to try and ensure reasonable
 separation of the contours of the different plots, but this is not
 always easy to achieve. Note that these plots can not be modified to the same extent as the other plot. 
    
-   Within the function, the data for the plots is obtained by direct
-   calls to the compiled C code that \code{predict.gam} uses.   
 
    Smooths of more than 2 variables are not currently dealt with, but
    simply generate a warning, but see \code{\link{vis.gam}}.
+
+Fine control of plots for parametric terms can be obtained by calling
+\code{\link{termplot}} directly, taking care to use its \code{terms} argument.
+
    }
 
 \value{ The function simply generates plots.
 }
 
 \references{
+
+Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
 
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
@@ -119,7 +136,14 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}
+
+Henric Nilsson \email{henric.nilsson@statisticon.se} donated the code for the \code{shade} option.
+
+The design is inspired by the S function of the same name described in
+Chambers and Hastie (1993) (but is not a clone).
+
+}
 
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
 \code{plot.gam()} in S-PLUS.
@@ -136,22 +160,24 @@ library(mgcv)
 set.seed(0)
 n<-200
 sig2<-4
-x0 <- runif(n, 0, 1)
+x0 <- rep(1:4,50)
 x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
-pi <- asin(1) * 2
-y <- 2 * sin(pi * x0)
+y <- 2 * x0
 y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+y <- y+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
-b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b,pages=1,residuals=TRUE)
+x0 <- factor(x0)
+b<-gam(y~x0+s(x1)+s(x2)+s(x3))
+plot(b,pages=1,residuals=TRUE,all.terms=TRUE,shade=TRUE,col.shade=2)
+# just parametric term alone
+termplot(b,terms="x0",se=TRUE)
 # example with 2-d plots
-b1<-gam(y~s(x0,x1)+s(x2)+s(x3))
+b1<-gam(y~x0+s(x1,x2)+s(x3))
 op<-par(mfrow=c(2,2))
-plot(b1)
+plot(b1,all.terms=TRUE)
 par(op) 
 }
 \keyword{models} \keyword{smooth} \keyword{regression} \keyword{hplot}%-- one or more ...

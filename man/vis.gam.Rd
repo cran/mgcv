@@ -4,7 +4,7 @@
 \title{Visualization of GAM objects}
 \usage{
 vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
-      contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,...)
+      contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,nCol=50,...)
 }
 
 \arguments{
@@ -29,17 +29,22 @@ are excluded.}
 \item{col}{The colours for the facets of the plot. If this is \code{NA} then if \code{se}>0 the facets are transparent, 
 otherwise the colour scheme specified in \code{color} is used. If \code{col} is not \code{NA} then it is used as the facet 
 colour.}
- \item{color}{ the colour scheme to use for plots when \code{se}<=0. One of \code{"topo"}, \code{"heat"}, \code{"cm"} or 
-\code{"terrain"}.}
+ \item{color}{ the colour scheme to use for plots when \code{se}<=0. One of \code{"topo"}, \code{"heat"}, \code{"cm"}, 
+\code{"terrain"}, \code{"gray"} or \code{"bw"}. Schemes \code{"gray"} and
+\code{"bw"} also modify the colors used when \code{se}>0.}
 \item{contour.col}{sets the colour of contours when using \code{plot.type="contour"}. Default scheme used if \code{NULL}.}
 \item{se}{if less than or equal to zero then only the predicted surface is plotted, but if greater than zero, then 3 
 surfaces are plotted, one at the predicted values minus \code{se} standard errors, one at the predicted values and one at
 the predicted values plus \code{se} standard errors.}
 \item{type}{\code{"link"} to plot on linear predictor scale and \code{"response"} to plot on the response scale.}
 \item{plot.type}{one of \code{"contour"} or \code{"persp"}.}
-\item{zlim}{a two item array giving the lower and upper limits for the z-axis scale. \code{NULL} to choose automatically.}
-\item{...}{other options to pass on to \code{\link{persp}}. In particular \code{ticktype="detailed"} will add proper axes 
-labelling to the plots.}
+\item{zlim}{a two item array giving the lower and upper limits for the z-axis
+scale. \code{NULL} to choose automatically.}
+\item{nCol}{The number of colors to use in color schemes.}
+
+\item{...}{other options to pass on to \code{\link{persp}},
+\code{\link{image}} or \code{\link{contour}}. In particular \code{ticktype="detailed"} will add proper axes 
+labelling to the plots. }
 }
 \value{Simply produces a plot.}
 
@@ -48,7 +53,13 @@ values supplied in \code{cond}.
 }
 \details{ The x and y limits are determined by the ranges of the variables supplied in \code{view}. If \code{se}<=0 then 
 a single (height colour coded, by default) surface is produced, otherwise three (by default see-through) meshes are produced at 
-mean and +/- \code{se} standard errors. Parts of the x-y plane too far from data can be excluded by setting \code{too.far}}
+mean and +/- \code{se} standard errors. Parts of the x-y plane too far from
+data can be excluded by setting \code{too.far}
+
+All options to the underlying graphics functions can be reset by passing them
+as extra arguments \code{...}: such supplied values will always over-ride the
+defualt values used by \code{vis.gam}. 
+}
 
 \author{Simon Wood \email{simon@stats.gla.ac.uk}
 
@@ -70,7 +81,8 @@ old.par<-par(mfrow=c(2,2))
 vis.gam(g,ticktype="detailed",color="heat",theta=-35)  
 vis.gam(g,se=2,theta=-35) # with twice standard error surfaces
 vis.gam(g, view=c("x1","x2"),cond=list(x0=0.75)) # different view 
-vis.gam(g, view=c("x1","x2"),cond=list(x0=0.75),theta=210,phi=40,too.far=0.07)
+vis.gam(g, view=c("x1","x2"),cond=list(x0=.75),theta=210,phi=40,
+        too.far=.07)
 # contour examples....
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="heat")
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="terrain")

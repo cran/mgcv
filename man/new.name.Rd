@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Obtain a name for a new variable that is not already in use}
 \description{ \code{\link{gamm}} works by transforming a GAMM into something 
-that can be estimated by \code{\link{lme}}, but this involves creating new 
+that can be estimated by \code{\link[nlme]{lme}}, but this involves creating new 
 variables, the names of which should not clash with the names of other 
 variables on which the model depends. This simple service routine checks a 
 suggested name against a list of those in use, and if neccesary modifies it 

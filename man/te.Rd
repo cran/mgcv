@@ -21,8 +21,10 @@
     the dimensions of the component (marginal) bases of the tensor product.}
 
 \item{bs}{array (or single character string) specifying the type for each 
-marginal basis. \code{"cr"} for cubic regression spline; \code{"cc"} for periodic/cyclic 
-cubic regression spline; \code{"tp"} for thin plate regression spline. User defined bases can 
+marginal basis. \code{"cr"} for cubic regression spline; \code{"cs"} for cubic
+regression spline with shrinkage; \code{"cc"} for periodic/cyclic 
+cubic regression spline; \code{"tp"} for thin plate regression spline;
+\code{"ts"} for t.p.r.s. with extra shrinkage. User defined bases can 
 also be used here (see \code{\link{smooth.construct}} for an example). If only one 
 identifier is given then this is used for all bases.}
 
@@ -63,6 +65,11 @@ will have rather high estimated degrees of freedom.
 Tensor product smooths are especially useful for representing functions of covariates measured in different units, 
 although they are typically not quite as nicely behaved as t.p.r.s. smooths for well scaled covariates.
 
+Note also that GAMs constructed from lower rank tensor product smooths are
+nested within GAMs constructed from higher rank tensor product smooths if the
+same marginal bases are used in both cases (the marginal smooths themselves
+are just special cases of tensor product smooths.)
+
 The function does not evaluate the variable arguments.
 }
 \value{ A class \code{tensor.smooth.spec} object defining a tensor product smooth
@@ -96,10 +103,12 @@ options spelled out explicitly.}
 
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+\references{
 
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+Wood, S.N. (2004) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Technical Report of the Department of
+Statistics, University of Glasgow, UK.
+
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 
