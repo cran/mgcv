@@ -12,18 +12,18 @@ pcls(M)
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{M}{is the single list argument to \code{pcls}. It should have  the 
-  following elements (last 3 are not in argument for \link{mgcv}) :}
- \item{M$y}{The response data vector.}
- \item{M$w}{A vector of weights for the data (often proportional to the 
+  following elements (last 3 are not in argument for \link{mgcv}) :
+ \item{y}{The response data vector.}
+ \item{w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
- \item{M$X}{The design matrix for the problem, note that \code{ncol(M$X)}
+ \item{X}{The design matrix for the problem, note that \code{ncol(M$X)}
             must give the number of model parameters, while \code{nrow(M$X)} 
             should give the number of data.}
-\item{M$C}{Matrix containing any linear equality constraints 
+\item{C}{Matrix containing any linear equality constraints 
             on the problem (i.e. \eqn{ \bf C}{C} in \eqn{ {\bf Cp}={\bf
 		0} }{Cp=0}). If you have no equality constraints
 	    initialize this to a zero by zero matrix.}
- \item{M$S}{ A one dimensional array containing the non-zero elements of the
+ \item{S}{ A one dimensional array containing the non-zero elements of the
    penalty matrices. Let \code{start<-sum(M$df[1:(k-1)]^2)} or
    \code{start<-0} if \code{k==1}. Then penalty matrix \code{k} has
    \code{M$S[start+i+M$df[i]*(j-1)} on its ith row and jth column.
@@ -31,20 +31,21 @@ pcls(M)
    derived into an appropriate matrix of zeroes with it's 1,1 element at
    \code{M$off[k],M$off[k]}
  }
- \item{M$off}{ Offset values locating the elements of \code{M$S[]} in
+ \item{off}{ Offset values locating the elements of \code{M$S[]} in
    the correct location within each penalty coefficient matrix. (Zero
    offset implies starting in first location)}
 
- \item{M$df}{ \code{M$df[i]} gives the number of rows and columns of
+ \item{df}{ \code{M$df[i]} gives the number of rows and columns of
                \code{M$S[i]} that are non-zero.}
   
-\item{M$sp}{ An array of  smoothing parameter estimates.}
-\item{M$p}{An array of feasible initial parameter estimates - these must
+\item{sp}{ An array of  smoothing parameter estimates.}
+\item{p}{An array of feasible initial parameter estimates - these must
 satisfy the constraints, but should avoid satisfying the inequality
 constraints as equality constraints.}
-\item{M$Ain}{Matrix for the inequality constraints \eqn{ {\bf A}_{in}
+\item{Ain}{Matrix for the inequality constraints \eqn{ {\bf A}_{in}
     {\bf p} > {\bf b}_{in}}{A_in p > b}. }
-\item{M$bin}{vector in the inequality constraints. }
+\item{bin}{vector in the inequality constraints. }
+}
 }
 \details{ 
 

@@ -17,17 +17,17 @@ mgcv(M)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
-  \item{M}{ is the single argument to \code{mgcv} and should be a list
-    with the elements listed below:}
- \item{M$y}{The response data vector.}
- \item{M$w}{A vector of weights for the data (often proportional to the 
+\item{M}{ is the single argument to \code{mgcv} and should be a list
+    with the elements listed below:
+\item{M\$y}{The response data vector.}
+\item{M\$w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
- \item{M$X}{The design matrix for the problem, note that \code{ncol(M$X)}
+\item{M\$X}{The design matrix for the problem, note that \code{ncol(M$X)}
             must give the number of model parameters, while \code{nrow(M$X)} 
             should give the number of data.}
-\item{M$C}{Matrix containing any linear equality constraints 
+\item{M\$C}{Matrix containing any linear equality constraints 
             on the problem (i.e. \eqn{\bf C}{C} in \eqn{ {\bf Cp}={\bf 0} }{Cp=0}).}
- \item{M$S}{ A one dimensional array containing the non-zero elements of the
+\item{M\$S}{ A one dimensional array containing the non-zero elements of the
    penalty matrices. Let \code{start<-sum(M$df[1:(k-1)]^2)} or
    \code{start<-0} if \code{k==1}. Then penalty matrix \code{k} has
    \code{M$S[start+i+M$df[i]*(j-1)} on its ith row and jth column.
@@ -35,36 +35,36 @@ mgcv(M)
    derived into an appropriate matrix of zeroes with it's 1,1 element at
    \code{M$off[k],M$off[k]}
  }
-\item{M$m}{The number of penalty terms that are to be applied.}
- \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct location within each penalty coefficient matrix. indexing starts at zero.}
- \item{M$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
+\item{M\$m}{The number of penalty terms that are to be applied.}
+ \item{M\$off}{ Offset values locating the elements of \code{M$S[]} in the correct location within each penalty coefficient matrix. indexing starts at zero.}
+ \item{M\$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
 is to be estimated, or TRUE if it is to be fixed at zero.}
- \item{M$df}{ \code{M$df[i]} gives the number of rows and columns of
+ \item{M\$df}{ \code{M$df[i]} gives the number of rows and columns of
                \code{M$S[i]} that are non-zero.}
- \item{M$sig2}{ This serves 2 purposes. If it is strictly positive then UBRE is 
+ \item{M\$sig2}{ This serves 2 purposes. If it is strictly positive then UBRE is 
 used with sig2 taken as the known error variance. If it is 
 non-positive then GCV is used (and on return it will contain an estimate of the error variance). 
 Note that it is assumed that the variance of \eqn{y_i}{y_i} is 
 given
                 by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}   
-\item{M$sp}{ An array of initial smoothing parameter estimates if any of 
+\item{M\$sp}{ An array of initial smoothing parameter estimates if any of 
 these is not strictly positive then automatic generation of initial values
 is used. If \code{M$fixed.sp} is non-zero then these parameters will used as known smoothing parameters.}
-\item{M$fixed.sp}{Non-zero to indicate that all smoothing parameters are supplied as known, and are not 
+\item{M\$fixed.sp}{Non-zero to indicate that all smoothing parameters are supplied as known, and are not 
       to be estimated.}
-\item{M$conv.tol}{The convergence tolerence to use for the multiple
+\item{M\$conv.tol}{The convergence tolerence to use for the multiple
   smoothing parameter search. 1e-6 is usually ok.}
-\item{M$max.half}{Each step of the GCV minimisation is repeatedly halved if it fails to
+\item{M\$max.half}{Each step of the GCV minimisation is repeatedly halved if it fails to
   improve the GCV score. This is the maximum number of halvings to try
   at each step. 15 is usually enough.}
-\item{M$min.edf}{The minimum estimated degrees of freedom for the model: set to less than or equal to 0 to ignore.
+\item{M\$min.edf}{The minimum estimated degrees of freedom for the model: set to less than or equal to 0 to ignore.
                  Supplying this quantity helps to maintain numerical stability in cases in which the best model is 
                  actually very smooth. }
-\item{M$target.edf}{Set this to negative for it to be ignored. If it is positive then this is taken as the target edf
+\item{M\$target.edf}{Set this to negative for it to be ignored. If it is positive then this is taken as the target edf
 to use for the model - if the GCV/UBRE function has multiple minima w.r.t. the overall smoothing parameter then the 
 minimum closest to the target edf will be selected. This feature is primarily useful when selecting smoothing parameters as part 
 of iterative least squares methods - the GCV/UBRE score can develop spurious minima in these cases that are 
-not representative of the problem being approximated.
+not representative of the problem being approximated.}
 }
 }
 \details{ 
@@ -114,14 +114,14 @@ wildly between observations.
   The function returns a list of the same form as the input list with the 
 following
   elements added/modified:
-  \item{M$p}{The best fit parameters given the estimated smoothing parameters.}
-  \item{M$sp}{The estimated smoothing parameters 
+  \item{M\$p}{The best fit parameters given the estimated smoothing parameters.}
+  \item{M\$sp}{The estimated smoothing parameters 
 (\eqn{\lambda_i/\rho}{lambda_i/rho})}
-  \item{M$sig2}{The estimated (GCV) or supplied (UBRE) error variance.}
-  \item{M$edf}{The estimated degrees of freedom associated with each penalized term. If \eqn{ {\bf p}_i}{p_i} is the vector of parameters penalized by the ith penalty then we can write \eqn{ {\bf p}_i = {\bf P}_i {\bf y}}{p_i = P_i y}, and the edf for the ith term is \eqn{ tr({\bf XP}_i)}{tr(XP_i)}... while this is sensible in the non-overlapping penalty case (e.g. GAMs) it makes alot less sense if penalties overlap!}
-  \item{M$Vp}{Estimated covariance matrix of model parameters.}
-\item{M$gcv.ubre}{The minimized GCV/UBRE score.}
-  \item{M$conv}{A list of convergence diagnostics, with the following elements:
+  \item{M\$sig2}{The estimated (GCV) or supplied (UBRE) error variance.}
+  \item{M\$edf}{The estimated degrees of freedom associated with each penalized term. If \eqn{ {\bf p}_i}{p_i} is the vector of parameters penalized by the ith penalty then we can write \eqn{ {\bf p}_i = {\bf P}_i {\bf y}}{p_i = P_i y}, and the edf for the ith term is \eqn{ tr({\bf XP}_i)}{tr(XP_i)}... while this is sensible in the non-overlapping penalty case (e.g. GAMs) it makes alot less sense if penalties overlap!}
+  \item{M\$Vp}{Estimated covariance matrix of model parameters.}
+\item{M\$gcv.ubre}{The minimized GCV/UBRE score.}
+  \item{M\$conv}{A list of convergence diagnostics, with the following elements:
 \item{edf}{Array of whole model estimated degrees of freedom.}
 \item{hat}{Array of elements from leading diagonal of `hat' matrix (`influence' matrix). Same length as \code{M$y}.}
 \item{score}{Array of ubre/gcv scores at the edfs for the final set of relatinve smoothing parameters.}
@@ -133,7 +133,6 @@ following
 where this is \code{FALSE})}
 \item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by "converging". 
 Not necessarily a problem, but check the above derivative information quite carefully.}
-
 }
 }
 \references{

@@ -16,7 +16,7 @@ GAMsetup(G)
 %- maybe also `usage' for other objects documented here.
 \arguments{
 \item{G}{ is the single argument to this function: it is a list
-  containing at least the elements listed below:}
+  containing at least the elements listed below:
 \item{m}{the number of smooth terms in the model}
 \item{df}{an array of \code{G$m} integers specifying the maximum d.f. for each spline 
   term.}
@@ -52,6 +52,7 @@ to the  row order in \code{G$x}. There are \code{G$dim[i]} arrays of length \cod
          smooth - all these arrays are packed end to end in 1-d array \code{G$knots} - 
         zero length 1 for no knots.}
 \item{n.knots}{ array giving number of user supplied knots of basis for each smooth term 0's for none supplied.}
+}
 }
 \value{
   A list \code{H}, containing the elements of \code{G} (the input list) plus the 
