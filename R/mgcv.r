@@ -60,7 +60,7 @@ null.space.dimension<-function(d,m)
 # vectorized function for calculating null space dimension for penalties of order m
 # for dimension d data M=(m+d+1)!/(d!(m-d)!). Any m not satisfying 2m>d is reset so 
 # that 2m>d+1 (assuring "visual" smoothness) 
-{ if (d<0) stop("d can not be negative in call to null.space.dimension().")
+{ if (sum(d<0)) stop("d can not be negative in call to null.space.dimension().")
   ind<-2*m<d+1
   if (sum(ind)) # then default m required for some elements
   { m[ind]<-1;ind<-2*m<d+2
@@ -958,7 +958,7 @@ print.gam<-function (x,...)
 { print(x$family)
   cat("Formula:\n")
   print(x$formula)
-  if (x$dim==0)
+  if (x$dim[1]==0)
   cat("Total model degrees of freedom",x$nsdf,"\n")
   else
   cat("\nEstimated degrees of freedom:\n",x$edf,"  total = ",sum(x$edf)+x$nsdf,"\n")
@@ -1390,7 +1390,7 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,p
 
   # start of main function
 
-  if (x$dim==0) stop("Model has no smooth terms - nothing for plot.gam() to do.")
+  if (x$dim[1]==0) stop("Model has no smooth terms - nothing for plot.gam() to do.")
   if (se)
   { if (is.numeric(se)) se2.mult<-se1.mult<-se else { se1.mult<-2;se2.mult<-1} 
     if (se1.mult<0) se1.mult<-0;if (se2.mult<0) se2.mult<-0
@@ -2043,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8-7 \n")
+    cat("This is mgcv 0.8-8 \n")
 }
 
 

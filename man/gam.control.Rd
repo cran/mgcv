@@ -31,6 +31,7 @@ See \code{\link{glm.control}} for more information.
 
 \references{
 
+
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
@@ -40,9 +41,9 @@ with Multiple
    Quadratic Penalties. JRSSB 62(2):413-428
 
 
-\url{http://www.ruwpa.st-and.ac.uk/simon.html}
+\url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 
 \seealso{   \code{\link{gam}} \code{\link{gam.fit}}}

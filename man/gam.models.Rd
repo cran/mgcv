@@ -105,7 +105,7 @@ There are no identifiability checks made between the smooth and
 parametric parts of a gam formula.
 }
 
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \examples{
 set.seed(10)

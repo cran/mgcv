@@ -26,7 +26,7 @@ A matrix consisting of the unique rows of \code{x} (in arbitrary order).
  
 }
 
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 
 \examples{
