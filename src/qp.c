@@ -477,12 +477,12 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
       LSQPaddcon(Ain,&Q,&T,&Rf,&Py,&PX,&s,&c,k);tk++;
       if (delog[k]>maxdel)
       fixed[tk-1]=1;
-      /*printf("+");*/
+      /*Rprintf("+");*/
     } else   /* it's a minimum - check lagrange multipliers */
     { k=LSQPlagrange(X,&Q,&T,p,&Xy,&p1,&y1,fixed,(int)Af->r);
       if (k>-1) /* then a constraint must be deleted */
       { LSQPdelcon(&Q,&T,&Rf,&Py,&PX,k+(int)Af->r);  /* the Af.r added to k ensures that correct row of T deleted */
-      /* printf("-");*/
+        /*Rprintf("-");*/
         /* update the fixed constraint list */
         { for (i=k;i<tk-1;i++)
           fixed[i]=fixed[i+1];
@@ -568,7 +568,7 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
     B.M[i+off[k]][j+off[k]]+=theta[k]*S[k].M[i][j];
     /* and find a square root of B..... */
 
-    root(&B,&C,0.0);
+    root(&B,&C,8*DOUBLE_EPS);
 
     /* copy C' into the last p->r rows of F */
     for (i=0;i<C.r;i++) for (j=0;j<C.c;j++) F.M[j+X->r][i]=C.M[i][j];
@@ -597,5 +597,14 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
 /* Update and bug fix notes.                                               */
 /***************************************************************************/
 /* 9/11/01 - This version cut down for use with mgcv
-
+   21/5/02 - root finding in pcls() used zero for tolerance! fixed.
 */
+
+
+
+
+
+
+
+
+

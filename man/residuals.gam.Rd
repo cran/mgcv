@@ -8,7 +8,7 @@
 }
 
 \usage{
-residuals.gam(object, type = c("deviance", "pearson", "working", "response"),...)
+residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -17,11 +17,13 @@ residuals.gam(object, type = c("deviance", "pearson", "working", "response"),...
    \item{...}{other arguments.}
 }
 \details{Response residuals are the raw residuals (data minus fitted
-  values). Pearson residuals are raw residuals divided by the standard
+  values). Scaled Pearson residuals are raw residuals divided by the standard
   deviation of the data according to the model mean variance
-  relationship (\eqn{(y-\mu)/\sqrt{V(\mu)}}{(y-m)/V(m)^0.5}, where
-  \eqn{y}{y} is data \eqn{\mu}{m} is model fitted value and \eqn{V}{V}
-  is model mean-variance relationship.). Deviance residuals simply
+  relationship and estimated scale parameter. Pearson residuals are the same, but multiplied by the square root 
+  of the scale parameter (so they are independent of the scale parameter):
+  (\eqn{(y-\mu)/\sqrt{V(\mu)}}{(y-m)/V(m)^0.5}, where  \eqn{y}{y} is data \eqn{\mu}{m} 
+  is model fitted value and \eqn{V}{V} is model mean-variance relationship.). Both are provided since not all texts 
+  agree on the definition of Pearson residuals. Deviance residuals simply
   return the deviance residuals defined by the model family. Working
   residuals are the residuals returned from model fitting at convergence.
 

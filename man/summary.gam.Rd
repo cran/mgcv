@@ -58,7 +58,9 @@ methods such as backwards elimination.
 \item{se}{array of standard error estimates for all parameter estimates.}
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
 residual variance are both estimated using unbiased estimators. This quantity can be negative if your model is worse than a one 
-parameter constant model, and can be higher for the smaller of two nested models!}
+parameter constant model, and can be higher for the smaller of two nested models! Note that proportion null deviance 
+explained is probably more appropriate for non-normal errors.}
+\item{dev.expl}{The proportion of the null deviance explained by the model.}
 \item{edf}{array of estimated degrees of freedom for the model terms.}
 \item{residual.df}{estimated residual degrees of freedom.}
 \item{n}{number of data.}

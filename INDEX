@@ -1,7 +1,5 @@
 GAMsetup                Set up GAM using penalized regression splines
 QT                      QT factorisation of a matrix 
-SANtest                 Example of simple additive GAM using penalized
-                        regression splines.
 gam                     Generalized Additive Models using penalized
                         regression splines and GCV
 gam.check               Some diagnostics for a fitted gam model.
@@ -14,6 +12,7 @@ gam.nbut                Generalized Additive Models using Negative
                         Binomial errors with unknown theta
 gam.parser              Generalized Additive Model fitting using
                         penalized regression splines and GCV
+gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
 gam.side.conditions     Identifiability side conditions for a GAM.
 get.family              Identifies families

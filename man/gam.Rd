@@ -16,7 +16,7 @@ selection see \code{\link{gam.selection}}.
 }
 \usage{
 gam(formula,family=gaussian(),data=list(),weights=NULL,
-    control=gam.control,scale=0,knots=NULL)
+    control=gam.control,scale=0,knots=NULL,sp=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \details{ Two alternative bases are available for representing model
@@ -35,7 +35,7 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,
   Thin plate regression splines are constructed by starting with the
   basis for a full thin plate spline and then truncating this basis in
   an optimal manner, to obtain a low rank smoother. Details are given in
-  Wood (MS submitted). One key advantage of the approach is that it avoids
+  Wood (2003). One key advantage of the approach is that it avoids
   the knot placement problems of conventional regression spline
   modelling, but it also has the advantage that smooths of lower rank
   are nested within smooths of higher rank, so that it is legitimate to
@@ -155,6 +155,8 @@ this will happen if the number of knots supplied matches the basis dimension, \c
 faster, but gives poorer results (and the user must be quite careful in choosing knot locations). Different terms can use different 
 numbers of knots, unless they share a covariate.
 }
+\item{sp}{A vector of smoothing parameters for each term can be provided here, if smoothing parameters are not to be estimated. 
+At the moment it is not possible to supply some smoothing parameters and estimate others.}
 }
 
 \value{ 
@@ -281,7 +283,7 @@ with Multiple
 
 Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
    
-Wood (MS submitted) Thin Plate Regression Splines
+Wood (2003) Thin Plate Regression Splines JRSSB in press.
 
 Wahba (1990) Spline Models of Observational Data. SIAM 
 
@@ -312,7 +314,7 @@ shown in the examples. Alternatively, for 1-d smooths  you can use the \code{"cr
 
 \seealso{\code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},
   \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side.conditions}},
-\code{\link{gam.selection}}
+\code{\link{gam.selection}},\code{\link{mgcv}}
  }
 
 \examples{
