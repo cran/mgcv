@@ -3,11 +3,11 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction from fitted GAM model}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} 
-and produces predictions given a new set of values for the model covariates.
-All predictions are on the scale of the linear predictor.}
+and produces predictions given a new set of values for the model covariates 
+or the original values used for the model fit.}
 }
 \usage{
-predict.gam(object,newdata,type="link",se.fit=F,plot.call=FALSE)
+predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -15,7 +15,7 @@ predict.gam(object,newdata,type="link",se.fit=F,plot.call=FALSE)
  \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{newdata}{ A data frame containing the values of the model covariates at which predictions
-  are required. This must be provided.
+  are required. If this is not provided then predictions corresponding to the original data are returned. 
  
  } 
  
@@ -23,7 +23,8 @@ predict.gam(object,newdata,type="link",se.fit=F,plot.call=FALSE)
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
-parametric model components, followed by each smooth component.}
+parametric model components, followed by each smooth component. When \code{type="response"} predictions 
+on the scale of the response are returned (possibly with approximate standard errors).}
 
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
  \item{plot.call}{used to signal a call from plot.gam, to avoid having to construct a data frame containing all
@@ -35,9 +36,7 @@ and \code{se.fit} containing predictions and associated standard error estimates
 array of predictions is returned. The dimensions of the returned arrays depends on whether 
 \code{type} is \code{"terms"} or not: if it is then the array is 2 dimensional with each 
 term in the linear predictor separate, otherwise the array is 1 dimensional and contains the 
-linear predictor itself (or s.e.s). 
-
-
+linear predictor/predicted values (or corresponding s.e.s). 
 
 
 }

@@ -242,7 +242,6 @@ gam.parser<-function(formula)
 # include any model offsets.
 # Smooth terms may include a max df as last argument e.g. s(x1,x2,x3,45).
 #
-# Simon Wood 19/8/00 
 
 
 { ft<-as.character(formula)  # array of model formula components
@@ -338,9 +337,9 @@ gam.parser<-function(formula)
   options(warn=0) # turn warnings back on 
   if (param.started)
   { if (length(attr(terms(as.formula(pf)),"variables"))==1) # then formula contains only "1"'s or "-1"'s
-    { if (grep("-",pf)>=1) # then no intercept
+    { if (length(grep("-",pf))>=1) # then no intercept
       param.started<-0  # there should be no parametric terms
-      else pf <- ~ 1    # make sure formula is unambiguous - there is an intercept only!
+      else pf <- "~ 1"    # make sure formula is unambiguous - there is an intercept only!
     } 
   } else # an intercept term is required
   { param.started<-1
@@ -371,7 +370,7 @@ gam.setup<-function(formula,data=list(),gam.call,predict=TRUE,parent.level=2,nsd
 # 
 # NOTE: all.vars(formula) will return the names of all the variables refered to by 
 # a formula...... use of this could make some of the code in this function somewhat
-# simpler!!!!!
+# simpler!
 
 { # now split the formula
   split<-gam.parser(formula) 
@@ -432,8 +431,11 @@ gam.setup<-function(formula,data=list(),gam.call,predict=TRUE,parent.level=2,nsd
   label<-term.labels[1]
 
   vlist<-xvars[as.logical(xfacs[, label])]
-  if (dmiss||is.null(data[[vlist[1]]])) z<-get(vlist[1],envir=sys.frame(sys.parent(n=parent.level)))
-  else z<-data[[vlist[1]]] 
+ 
+  # need to know numer of rows in design matrix .....
+  z<-eval(parse(text=vlist[1]),data,sys.frame(sys.parent(n = parent.level))) 
+  #if (dmiss||is.null(data[[vlist[1]]])) z<-get(vlist[1],envir=sys.frame(sys.parent(n=parent.level)))
+  #else z<-data[[vlist[1]]] code changed 22/2/01 
 
   G$n<-NROW(z)
   
@@ -460,9 +462,10 @@ gam.setup<-function(formula,data=list(),gam.call,predict=TRUE,parent.level=2,nsd
   { vlist<-xvars[as.logical(xfacs[, label])]
 	G$names[kk]<-"s("
     for (i in 1:length(vlist)) # produces a column for each variable in this smooth
-    { if (dmiss||is.null(data[[vlist[i]]]))  # then search the user's calling environment  
-      z<-get(vlist[i],envir=sys.frame(sys.parent(n=parent.level)))
-      else z<-data[[vlist[i]]]     # data should be in data frame
+    { z<-eval(parse(text=vlist[i]),data,sys.frame(sys.parent(n = parent.level)))
+      #if (dmiss||is.null(data[[vlist[i]]]))  # then search the user's calling environment  
+      #z<-get(vlist[i],envir=sys.frame(sys.parent(n=parent.level)))
+      #else z<-data[[vlist[i]]]     # data should be in data frame  - old code changed 22/2/01
       if (is.null(z)) stop(paste("Failed to find variable",vlist[i]))  
       G$x[k,]<-z
       if (i<length(vlist)) G$names[kk]<-paste(G$names[kk],vlist[i],",",sep="")
@@ -548,7 +551,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
   object$formula<-formula
   object$x<-G$x
   object$call<-gam.call
-  row.names(object$x)<-G$vnames
+  rownames(object$x)<-G$vnames
   names(object$x)<-NULL
   #object$X<-G$X
   class(object)<-"gam"
@@ -557,11 +560,13 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
 }
 
 print.gam<-function (b) 
-# default print function for gam onbjects
+# default print function for gam objects
 { print(b$family)
   cat("Formula:\n")
   print(b$formula)
-  cat("\nEstimated degrees of freedom:\n",b$edf,"\n\n")
+  cat("\nEstimated degrees of freedom:\n",b$edf,"  total = ",sum(b$edf)+b$nsdf,"\n")
+  gcv<-b$df.null*b$sig2/(b$df.null-sum(b$edf)-b$nsdf)
+  cat("\nGCV score: ",gcv,"\n")
 }
 
 gam.control<-function (epsilon = 1e-04, maxit = 30, trace = FALSE) 
@@ -648,10 +653,11 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
    
         z<-G$y <- (eta - offset)[good] + (y - mu)[good]/mu.eta.val[good]
         w<-G$w <- sqrt((weights[good] * mu.eta.val[good]^2)/variance(mu)[good])
+        G$w<-G$w^2 # this line is somewhat important
         G$X<-X[good,]  # truncated design matrix       
         ngoodobs <- as.integer(nobs - sum(!good))
         ncols <- as.integer(1)
- ##### must set G$sig2 to scale parameter or -1 here!!!!
+        # must set G$sig2 to scale parameter or -1 here....
         G$sig2<-scale
         G<-mgcv(G) 
 		
@@ -764,10 +770,18 @@ predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
 #  5. Use eta and se to construct the returned vector, matrix or list.
 #  6. Tidy up and return.  
 
-# first extract the covariate values from which to predict.......
+  if (type!="link"&&type!="terms"&&type!="response")  
+  { warning("Unknown type, reset to terms.")
+    type<-"terms"
+  }
+  if (class(object)!="gam") stop("predict.gam can only be used to predict from gam objects")
+
+  # get data from which to predict.....  
+  
   if (missing(newdata)) 
-  { stop("There's no new data from which to predict")
-    no.data<-TRUE
+  { m<-length(object$sp);n<-length(object$y)
+    G<-list(x=object$x,nsdf=object$nsdf,m=m,n=n)
+    no.data<-FALSE
   }
   else 
   { if (plot.call) # then it's a call from plot, and only spline parts are to be evaluated
@@ -776,7 +790,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
     no.data<-FALSE
   }
   np<-G$n
-
+  
   # now set up the other information for prediction.....
   control<-0
   if (type=="terms") 
@@ -805,19 +819,23 @@ predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
   } else
   { eta<-array(o[[9]],c(np));
     se<-array(o[[10]],c(np));
+    if (type=="response") # transform onto scale of data
+    { fam<-object$family;linkinv<-fam$linkinv;dmu.deta<-fam$mu.eta
+      se<-se*abs(dmu.deta(eta)) 
+      eta<-linkinv(eta)
+    }
   }
   if (se.fit)
   { H<-list(fit=eta,se.fit=se) }
   else
   { H<-eta}
-  if (type!="link"&&type!="terms")  
-  warning("Only terms or link options are currently implemented in predict.gam")
+ 
   # tidy up? 
    
   H # ... and return
 }
 
-plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
+plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -829,7 +847,42 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
 #        0 for different y scales for each plot
 # n - number of x axis points to use for plotting each term
 
-{ m<-length(x$df) # number of smooth terms
+{ 
+  fix.form<-function(formula)
+  # internal function to replace "$" on rhs of formula with ".", to allow construction of 
+  # data frame for prediction.....  
+  { ft<-as.character(formula)
+    work.around<-as.character(deparse(formula[3]))
+    ft[3]<-""
+    for (i in 1:length(work.around)) ft[3]<-paste(ft[3],work.around[i],sep="")
+    form<-paste(ft[2],ft[1])
+    for (i in 1:(nchar(ft[3])-2))
+    { c<-substring(ft[3],i,i)
+      if (c=="$") c<-"."
+      form<-paste(form,c,sep="")
+    }
+    as.formula(form)
+  }
+  
+  rename<-function (x)
+  # internal function for renaming rows of x$x
+  { nm<-rownames(x)
+    for (j in 1:length(nm))
+    { tmp<-nm[j]
+      nm[j]<-""
+      for (i in 1:nchar(tmp))
+      { c<-substring(tmp,i,i)
+        if (c=="$") c<-"."
+        nm[j]<-paste(nm[j],c,sep="")
+      }
+    }
+    nm
+  }
+
+  x$formula<-fix.form(x$formula)  # replace all "$" characters on rhs of formula
+  rownames(x$x)<-rename(x$x)     # replace all "$" characters in row names of x$x
+  
+  m<-length(x$df) # number of smooth terms
   if (se && x$Vp[1,1]<=0) 
   { se<-FALSE
     warning("No variance estimates available")
@@ -868,7 +921,7 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
     dx<-(x1-x0)/(n-1) 
 	xx[i+x$nsdf]<-seq(x0,x1,dx)
   }
-  names(xx)<-row.names(x$x)
+  names(xx)<-rownames(x$x)
   pl<-predict.gam(x,xx,type="terms",se,plot.call=TRUE)
  
   if (se)   # pl$fit and pl$se.fit
@@ -886,9 +939,9 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
     { ul<-pl$fit[x$nsdf+i,]+2*pl$se.fit[x$nsdf+i,]
       ll<-pl$fit[x$nsdf+i,]-2*pl$se.fit[x$nsdf+i,]
 	  if (scale==0) { ylim<-c(min(ll),max(ul))}
-	  title<-paste("s(",row.names(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
-      if (i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
-plot(xx[[x$nsdf+i]],pl$fit[x$nsdf+i,],type="l",xlab=row.names(x$x)[i+x$nsdf],ylim=ylim,ylab=title)
+	  title<-paste("s(",rownames(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
+      if (interactive()&&i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+      plot(xx[[x$nsdf+i]],pl$fit[x$nsdf+i,],type="l",xlab=rownames(x$x)[i+x$nsdf],ylim=ylim,ylab=title)
 	  lines(xx[[x$nsdf+i]],ul,lty=2)
       lines(xx[[x$nsdf+i]],ll,lty=2)
 	  rug(as.numeric(x$x[x$nsdf+i,]))
@@ -903,10 +956,10 @@ plot(xx[[x$nsdf+i]],pl$fit[x$nsdf+i,],type="l",xlab=row.names(x$x)[i+x$nsdf],yli
 	  }
 	}
     for (i in 1:m)
-    { if (i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
-	  title<-paste("s(",row.names(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
+    { if (interactive() && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+	  title<-paste("s(",rownames(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
       if (scale==0) ylim<-range(pl[x$nsdf+i,])
-	  plot(xx[[x$nsdf+i]],pl[x$nsdf+i,],type="l",,xlab=row.names(x$x)[i+x$nsdf],ylab=title,ylim=ylim)
+	  plot(xx[[x$nsdf+i]],pl[x$nsdf+i,],type="l",,xlab=rownames(x$x)[i+x$nsdf],ylab=title,ylim=ylim)
       rug(as.numeric(x$x[x$nsdf+i,]))
     } 
   }
@@ -916,6 +969,7 @@ plot(xx[[x$nsdf+i]],pl$fit[x$nsdf+i,],type="l",xlab=row.names(x$x)[i+x$nsdf],yli
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
+    cat("This is mgcv 0.5.0\n")
 }
 
 
