@@ -5,7 +5,8 @@
 GCV}
 \description{ Fits the specified  generalized additive model to data.
 The GAM is represented  using one dimensional penalized regression splines
- with smoothing parameters selected by GCV.
+ with smoothing parameters selected by GCV (and/or ordinary regression 
+splines with fixed degrees of freedom).
 }
 }
 \usage{
@@ -13,8 +14,9 @@ The GAM is represented  using one dimensional penalized regression splines
 }
 %- maybe also `usage' for other objects documented here.
 \details{
- Each smooth model terms is represented using a cubic penalized
-     regression spline. Knots  of the spline are placed evenly
+ Each smooth model term is represented using a cubic penalized
+     regression spline, or optionally an unpenalized regression spline. 
+     Knots  of the spline are placed evenly
      throughout the covariate values to which the term refers:  For
      example, if fitting 101 data with a 10 knot spline of \code{x} then
      there would be a knot at every 10th (ordered)  \code{x} value. The
@@ -137,14 +139,15 @@ with Multiple
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
 \section{WARNING }{The code does not check for rank defficiency of the
-model matrix -
-      it will likely just fail instead!
+model matrix -it will likely just fail instead!
+
+Automatic smoothing parameter selection is not likely to work well when 
+fitting models to very few response data. 
  } 
 
 \seealso{  \code{\link{predict.gam}} \code{\link{plot.gam}}}
 
 \examples{
-
 library(mgcv)
 n<-200
 sig2<-4
@@ -153,14 +156,21 @@ x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
 pi <- asin(1) * 2
-y <- 2 * sin(pi * x0)
-y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+f <- 2 * sin(pi * x0)
+f <- f + exp(2 * x1) - 3.75887
+f <- f + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
 e <- rnorm(n, 0, sqrt(abs(sig2)))
-y <- y + e
+y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b) 
 # now fit GAM with 3df regression spline term and two penalized terms
-b<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
+b1<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
+plot(b1)
+# now simulate poisson data
+g<-exp(f/5)
+for (i in  1:length(f)) y[i]<-rpois(1,f[i])
+b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
+plot(b2)
 }
 \keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
+

@@ -442,7 +442,16 @@ gam<-function(formula,data=list(),weights=NULL,family=gaussian(),scale=0)
 # parsed to figure out which bits relate to smooth terms and which to parametric terms.
 # 
 
-{ if (missing(data)) G<-gam.setup(formula,get.y=TRUE)
+{ # coerce family to correct type
+  if (is.character(family)) 
+  family <- get(family)
+  if (is.function(family)) 
+  family <- family()
+  if (is.null(family$family)) 
+  { print(family)
+    stop("`family' not recognized")
+  }
+  if (missing(data)) G<-gam.setup(formula,get.y=TRUE)
   else G<-gam.setup(formula,data,get.y=TRUE)
  
   G<-GAMsetup(G) 
@@ -837,7 +846,6 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
     } 
   }
   if (pages>0) par(oldpar)
-
 }
 
 

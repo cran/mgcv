@@ -26,10 +26,6 @@ with Multiple
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\section{WARNING }{The code does not check for rank defficiency of the
-model matrix -
-      it will likely just fail instead!
- } 
 
 \seealso{   \code{\link{gam}} \code{\link{gam.fit}}}
 
