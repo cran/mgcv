@@ -1565,7 +1565,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
       Vz <- list()
       for (i in 1:n.cg) {
         j1 <- size.cg[i] + j0 -1
-        Zi <- Z[j0:j1,]
+        if (j0==j1) Zi <- t(as.matrix(Z[j0,])) else Zi <- Z[j0:j1,]
         Vz[[i]] <- Zi %*% Vr %*% t(Zi) 
         j0 <- j1+1
       }
@@ -1574,8 +1574,9 @@ extract.lme.cov2<-function(b,data,start.level=1)
       } else { 
         j0 <-1
         for (i in 1:n.cg) {
-          j1 <- size.cg[i] + j0 -1
-          Vz[[i]] <- Vz[[i]] + diag(V[j0:j1])
+          kk <- size.cg[i]
+          j1 <- kk + j0 -1
+          Vz[[i]] <- Vz[[i]] + diag(x=V[j0:j1],nrow=kk,ncol=kk)
           j0 <- j1+1
         }
         V <- Vz
@@ -1678,7 +1679,7 @@ formXtViX <- function(V,X)
     for (i in 1:length(V$V))
     { Cv <- chol(V$V[[i]])
       j1 <- j0+nrow(V$V[[i]])-1
-      Z[j0:j1,]<-backsolve(Cv,X[j0:j1,],transpose=TRUE)
+      Z[j0:j1,]<-backsolve(Cv,as.matrix(X[j0:j1,]),transpose=TRUE)
       j0 <- j1 + 1
     }
     res <- t(Z)%*%Z
@@ -3860,12 +3861,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-2 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-3 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-2 \n")
+    cat("This is mgcv 1.1-3 \n")
 }
 
 
