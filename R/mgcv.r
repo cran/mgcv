@@ -199,7 +199,7 @@ gam.side.conditions<-function(G)
       # parameters and updating the null basis stack.....
       for (j in 1:n.d) # work through all n.d d-dimensional terms 
       { #cat(d.vnames[j,]," ",d.p.order[j]," ")
-        by<-by.names[j]
+        by<-d.by.names[j]
         bs.label<-null.space.basis.labels(d.vnames[j,],d.p.order[j],by=by) # get unique null basis vector names
         bs.label<-bs.label[bs.label!="1"] # constants already constrained by sum to zero constraints
         #print(bs.label)
@@ -2043,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8-6 \n")
+    cat("This is mgcv 0.8-7 \n")
 }
 
 
