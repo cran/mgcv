@@ -1456,8 +1456,9 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
   else 
   { # check that factor levels match for prediction and original fit 
     names(newdata)->nn # new data names
-    for (i in 1:dim(newdata)[2]) 
-    if (is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
+    colnames(object$model)->mn # original names
+    for (i in 1:ncol(newdata)) 
+    if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
     { newdata[[i]]<-factor(newdata[[i]],levels=levels(object$model[,nn[i]])) # set prediction levels to fit levels
     }
     G<-gam.setup(object$full.formula,newdata,predict=TRUE)    
@@ -2246,7 +2247,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.9-5 \n")
+    cat("This is mgcv 0.9-6 \n")
 }
 
 
