@@ -1,4 +1,4 @@
-/* New header file for matrix routines. Last revision  23/10/94*/
+/* matrix.h : header file for matrix routines.*/
 
 #ifndef MATRIX_HEADER_IN
 #define MATRIX_HEADER_IN
@@ -10,6 +10,8 @@ typedef struct
 { int vec;long r,c,mem,original_r,original_c;double **M,*V;} matrix;
 
 extern matrix null_mat;
+
+extern long matrallocd;
 
 /* The user routines */
 
@@ -78,11 +80,12 @@ void fullLS(matrix A,matrix p,matrix y,matrix w,matrix T,matrix zo,int TZout);
 void rtsolve(matrix T,matrix p,matrix z);
 long pinv(matrix *A,double trunc);
 matrix svdroot(matrix A,double reltol);
+void fprintmat(matrix A,char *fname,char *fmt);
+void old_svd(matrix *A, matrix *w, matrix *V);    /* NOTE: delete eventually */
+void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V);
+int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm);
+void eigenvv_tri(double *d,double *g,double **v, int n);
+void eigen_tri(double *d,double *g,int n);
+void lu_tri(double *d,double *g,double *u,int n);
+void msort(matrix a);
 #endif
-
-
-
-
-
-
-

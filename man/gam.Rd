@@ -3,67 +3,105 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Generalized Additive Models using penalized regression splines and 
 GCV}
-\description{ Fits the specified  generalized additive model to data.
-The GAM is represented  using one dimensional penalized regression splines
-with smoothing parameters selected by GCV (and/or ordinary regression 
-splines with fixed degrees of freedom).
+\description{ Fits the specified  generalized additive model (GAM) to
+  data. \code{gam()} is not a clone of what Splus provides.
+Smooth terms are represented using penalized regression splines
+with smoothing parameters selected by GCV or by regression splines with
+fixed degrees of freedom (mixtures of the two are
+permitted). Multi-dimensional smooths are available using penalized thin plate
+regression splines, but the user must make sure that covariates are sensibly scaled
+relative to each other when using such terms. For a general overview see
+Wood (2001).
 }
 }
 \usage{
  gam(formula,family=gaussian(),data=list(),weights=NULL,control=gam.control,scale=0)
 }
 %- maybe also `usage' for other objects documented here.
-\details{
- Each smooth model term is represented using a cubic penalized
-     regression spline, or optionally an unpenalized regression spline. 
-     Knots  of the spline are placed evenly
-     throughout the covariate values to which the term refers:  For
-     example, if fitting 101 data with an 11 knot spline of \code{x} then
-     there would be a knot at every 10th (ordered)  \code{x} value. The
-     use of penalized regression splines turns  the gam fitting problem
-     into  a penalized glm fitting problem, which can be fitted using a
- slight modification of  \code{glm.fit} : \code{gam.fit}.  The penalized
-glm
-     approach also allows smoothing parameters for all smooth terms to
-     be  selected  simultaneously by GCV or UBRE. This is achieved as
-     part of fitting by calling \code{mgcv}  within \code{gam.fit}.
-     
-     The parameterization used represents the spline in terms of its
-     values at the knots. Connection of these values at neighbouring knots
-     by sections of 
-     cubic polynomial constrainted to join at the knots so as to be 
+\details{ Two alternative bases are available for representing model
+  terms. Univariate smooth terms can be represented using conventional
+  cubic regression splines - which are very efficient
+  computationally - or thin plate regression splines. Multivariate terms
+  must be represented using thin plate regression splines. For either
+  basis the user specifies the dimension of the basis for each smooth
+  term. The dimension of the basis is one more than the maximum degrees of freedom that the 
+  term can have, but usually the term will be fitted by penalized
+  maximum likelihood estimation and the actual degrees of freedom will be
+  chosen by GCV. However, the user can choose to fix the degrees of
+  freedom of a term, in which case the actual degrees of freedom will be
+  one less than the basis dimension.
+
+  Thin plate regression splines are constructed by starting with the
+  basis for a full thin plate spline and then truncating this basis in
+  an optimal manner, to obtain a low rank smoother. Details are given in
+  Wood (MS submitted). One key advantage of the approach is that it avoids
+  the knot placement problems of conventional regression spline
+  modelling, but it also has the advantage that smooths of lower rank
+  are nested within smooths of higher rank, so that it is legitimate to
+  use conventional hypothesis testing methods to compare models based on
+  pure regression splines.  
+  
+  In the case of the cubic regression spline basis, knots  of the spline are placed evenly
+  throughout the covariate values to which the term refers:  For
+  example, if fitting 101 data with an 11 knot spline of \code{x} then
+  there would be a knot at every 10th (ordered)  \code{x} value. The
+  parameterization used represents the spline in terms of its
+   values at the knots. Connection of these values at neighbouring knots
+     by sections of  cubic polynomial constrainted to join at the knots so as to be 
      continuous up to and including second derivative yields a natural cubic 
-spline through the values at the knots (given two extra
-conditions specifying 
+spline through the values at the knots (given two extra conditions specifying 
      that the second derivative of the curve should be zero at the two end 
-     knots). Other parameterizations, such as b-splines or the basis that 
-     arises naturally from r.k.h.s. representation of the spline smoothing 
-     problem are equivalent, but the basis used here has the advantage that 
-     the parameters of the each spline term are easily interpretable.        
+     knots). This parameterization gives the parameters a nice interpretability. 
+
+  Given a basis for each smooth term, it easy to obtain a wiggliness
+  penalty for each, and to construct a penalized likelihood, which
+  balances the fit of the overall model against it's
+  complexity. This consists of the log likelihood for the model minus a
+  sum of wiggliness penalties (one for each smooth) each multiplied by a
+  smoothing parameter. The smoothing parameters control the trade-off
+  between fit and smoothness. 
+     
+  So, the gam fitting problem has become  a penalized glm fitting problem, which can be fitted using a
+ slight modification of  \code{glm.fit} : \code{gam.fit}.  The penalized
+glm approach also allows smoothing parameters for all smooth terms to
+     be  selected  simultaneously by GCV or UBRE. This is achieved as
+     part of fitting by calling \code{mgcv}  within \code{gam.fit}.        
      
      Details of the GCV/UBRE minimization method are given in Wood (2000).
  }
 
 \arguments{ 
-
 \item{formula}{ A GAM formula. This is exactly like the formula for a
 glm except that smooth terms can be added to the right hand side of the
 formula (and a formula of the form \code{y ~ .} is not allowed).
 Smooth terms are specified by expressions of the form:
-\code{s(var,knots)} where \code{var} is the covariate which the smooth
-is a function of and \code{knots} is the number of knots for the spline
-representing this smooth. \code{knots} must be a number, and not a variable
-(i.e 10, 45, 13 are all ok, \code{n} is not). If the number of knots is not
- specified then 10 are used. 
+\code{s(var1,var2,...,k=12,fx=FALSE,bs="tp")} where \code{var1},
+\code{var2}, etc. are the covariates which the smooth
+is a function of and \code{k} is the dimension of the basis used to
+represent the smooth term. If \code{k} is not
+ specified then \code{k=10*3^(d-1)} is used where \code{d} is the number
+ of covariates for this term. \code{fx} is used to indicate whether or
+ not this term has a fixed muber of degrees of freedom (\code{fx=FALSE}
+ to select d.f. by GCV/UBRE). \code{bs} indicates the basis to use, with
+ \code{"cr"} indicating cubic regression spline, and \code{"tp"}
+ indicating thin plate regression spline: \code{"cr"} can only be used
+ with 1-d smooths.
 
-The formula may also include terms like 
+For backwards compatibility the formula may also include terms like 
 \code{s(x,12|f)}, which specifies a regression spline which is not to be penalized
-and has 12 knots. Such regression splines obviously have a fixed number of degrees of freedom 
-(11 in this example).}
+and has 12 knots, or \code{s(x,z,25)} indicating a rank 25 penalized
+t.p.r.s. In such cases arguements \code{k}, \code{fx} and \code{bs} are
+ignored if supplied and a one dimensional term will always use a cubic
+regression spline basis. Note that a term of the form \code{s(x)} will
+result in a term with a \code{"tp"} basis.} 
  \item{family}{
 This is a family object specifying the distribution and link to use on
 fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
-details. 
+details. Where the family is \code{neg.bin} then a negative binomial
+family is used based on the implementation in the MASS library.
+In this case, if the value of \code{theta} is not given, a version of
+\code{glm.nb} :\code{\link{gam.nbut}} is used to estimate theta iteratively, starting from a 
+Poisson distribution. This extra layer of iteration  slows  down fitting.
 } 
 \item{data}{ A data frame containing the model response variable and covariates required by the
 formula. If this is missing then the frame from which \code{gam} was called is
@@ -71,11 +109,18 @@ searched for the variables specified in the formula.}
 \item{weights}{ 
 prior weights on the data.
 }
-\item{control}{A list as returned by \code{gam.control}, with three user controllable elements:
-              \code{maxit} controls maximum iterations, convergence tolerance is controlled by \code{epsilon}  
-              and the third item is \code{trace}.}
+\item{control}{A list as returned by \code{gam.control}, with five user controllable elements:
+              \code{maxit} controls maximum iterations in
+	      \code{gam.fit}, convergence tolerance in \code{gam.fit} is controlled by \code{epsilon}  
+              and the third item is \code{trace}. The smoothing
+	      parameter selection method is controlled by two further
+	      items: \code{mgcv.tol} controls the convergence tolerance
+	      to use in smoothing parameter estimation, while
+	      \code{mgcv.half.max} controls the maximum number of step
+	      halvings to try in each Newton step if the step fails to
+	      reduce the GCV score.}
 \item{scale}{ If this is zero then GCV is used for all distributions
-except Poisson and binomial where UBRE is used with scale parameter
+except Poisson binomial and negative binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
 parameter/variance and UBRE is used. If \code{scale} is negative  GCV 
 is always used (for binomial models in particular, it is probably worth 
@@ -110,6 +155,8 @@ expected value for  each datum.}
 
 \item{prior.weights}{prior weights on observations.} 
 
+\item{df.null}{number of data}
+
 \item{y}{response data.}
 
 \item{converged}{indicates whether or not the iterative fitting method converged.} 
@@ -129,13 +176,33 @@ expected value for  each datum.}
 
 \item{Vp}{estimated covariance matrix for parameters.}
 
-\item{xp}{knot locations for each smooth. \code{xp[i,]} are the locations for
-          the ith smooth.}
+\item{covariate.shift}{covariates get shifted so that they are centred
+  around zero - this is by how much.}
+
+\item{xp}{knot locations for each cubic regression spline based smooth.
+  \code{xp[i,]} are the locations for the ith smooth.}
+
+\item{UZ}{array storing the matrices for transforming from t.p.r.s. basis to
+  equivalent t.p.s. basis - see \link{GAMsetup} for details of how the
+  matrices are packed in this array.}
+\item{Xu}{The set of unique covariate locations used to define t.p.s. from which
+  t.p.r.s. basis was derived. Again see \link{GAMsetup} for details of
+  the packing algorithm.}
+\item{xu.length}{The number of unique covariate combinations in the
+  data. }
 
 \item{formula}{the model formula.}
 
+\item{full.formula}{the model formula with each smooth term fully
+  expanded and with option arguments given explicitly (i.e. not with reference
+  to other variables) - useful for later prediction from the model.}
+
 \item{x}{parametric design matrix columns (including intercept)
           followed by the data that form arguments of the smooths.}
+\item{s.type}{type of spline basis used: 0 for cubic, 1 for t.p.r.s.}
+\item{p.order}{the order of the penalty used for each term. 0 signals
+  auto-selection.}
+\item{dim}{number of covariates of which term is a function}
 \item{call}{a mode \code{call} object containing the call to \code{gam()} that produced 
             this \code{gam} object (useful for constructing model frames).}
 
@@ -143,6 +210,13 @@ expected value for  each datum.}
 
 \references{
 
+  Hastie and Tibshirani (1990) Generalized Additive Models. Chapman and
+  Hall.
+
+  Green and Silverman (1994) Nonparametric Regression and Generalized
+  Linear Models. Chapman and Hall.
+  
+  
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
@@ -151,8 +225,12 @@ Wood (2000) Modelling and Smoothing Parameter Estimation
 with Multiple 
    Quadratic Penalties. JRSSB 62(2):413-428
 
+Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
+   
+   Wood (MS submitted) Thin Plate Regression Splines
 
-\url{http://www.ruwpa.st-and.ac.uk/simon.html}
+  Wahba (1990) Spline Models of Observational Data. SIAM 
+
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
@@ -164,13 +242,25 @@ parameters. (Total parameters is sum of knots plus sum of non-spline terms
 less the number of spline terms). 
 
 Automatic smoothing parameter selection is not likely to work well when 
-fitting models to very few response data. 
+fitting models to very few response data.
+
+Relative scaling of covariates to a multi-dimensional smooth term has an
+affect on the results: make sure that relative scalings are
+sensible. For example, measuring one spatial co-ordinate in millimetres
+and the other in lightyears will usually produce poor results.   
+
+With large datasets (more than a few thousand data) the \code{"tp"}
+basis gets very slow to use. In this case use \code{"cr"} for 1-d
+smooths. If you need to use multi-dimensional terms with large datasets
+and find \code{gam} too slow, please let me know - and I'll up the
+priority for fixing this!
  } 
 
 \seealso{  \code{\link{predict.gam}} \code{\link{plot.gam}}}
 
 \examples{
 library(mgcv)
+set.seed(8)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)
@@ -185,37 +275,25 @@ e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b,pages=1) # now fit GAM with 3df regression spline term and two penalized terms
-b1<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
+b1<-gam(y~s(x0,k=4,fx=T,bs="tp")+s(x1,k=12)+s(x2,15))
 plot(b1,pages=1)
+# now fit a 2-d term to x0,x1
+b3<-gam(y~s(x0,x1)+s(x2)+s(x3))
+par(mfrow=c(2,2))
+plot(b3)
+par(mfrow=c(1,1))
 # now simulate poisson data
+set.seed(3)
 g<-exp(f/5)
-for (i in  1:length(f)) y[i]<-rpois(1,f[i])
+y<-rpois(rep(1,n),g)
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
 plot(b2,pages=1)
+# negative binomial data
+set.seed(7) 
+y<-rnbinom(g,size=2,mu=g)
+b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=neg.bin)
+plot(b3,pages=1)
+
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

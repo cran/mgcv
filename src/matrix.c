@@ -31,6 +31,9 @@ USA.*/
 #define RANGECHECK
 #define PAD 1L
 
+#define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
+
+
 matrix null_mat; /* matrix for passing when you don't actually need to */
 #define PADCON (-1.234565433647588392902028934e270)
 
@@ -514,7 +517,7 @@ void invert(matrix *A)
     }
   } 
  
-  for (i=A->r-1;i>=0;i--) /* work down through column re-ordering */ 
+  for (i=A->r-1;i>=0;i--) /*work down through column re-ordering  */
   { if (cp[i]!=i)
     { p=AM[i];AM[i]=AM[cp[i]];AM[cp[i]]=p; /* row exchange */
     }
@@ -532,7 +535,7 @@ void invert(matrix *A)
   for (i=A->r-1;i>=0;i--) /* column exchange implied by row re-ordering */
   if (rp[i]!=i)
   { for (k=0;k<A->r;k++) 
-    { p=AM[k];x=p[i];p[i]=p[rp[i]];p[rp[i]]=x;} /* column exchange */ 
+    { p=AM[k];x=p[i];p[i]=p[rp[i]];p[rp[i]]=x;} /* column exchange  */
   }
    
   free(c);free(rp);free(cp);free(d);
@@ -941,7 +944,7 @@ double enorm(d) matrix d;
   long i;
   if (d.vec) for (p=d.V;p<d.V+d.r*d.c;p++) { y=fabs(*p); if (y>m) m=y; }
   else for (i=0;i<d.r;i++) for (p=d.M[i];p<d.M[i]+d.c;p++) 
-  { y=fabs(*p);if (y>m) m=y;}
+  { y=fabs(*p);if (y>m) m=y;}/* m=max(m,fabs(*p)); */
   if (!m) return(0.0);
   if (d.vec) for (p=d.V;p<d.V+d.r*d.c;p++)
   { y= *p / m; e+=y*y;} else
@@ -1028,10 +1031,11 @@ void HQmult(C,U,p,t) matrix C,U;int p,t;
    series of vectors of the type u defined in routine householder above.
    If ui is ith row of U, then Hi=(I-ui ui') = Hi'. Let Q = H1 H2 H3 ....
    then Q' = .... H3 H2 H1.
-   Returned in C: p==0,t==0 => CQ; p==0,t==1 => CQ'; p==1,t==0 => QC;
-		  p==1,t==1 => Q'C
-   Tested for premultiplication by untransposed matrix (p==1, t==0) other
-   combinations untested 15/8/96 (speed up awesome!)
+   Returned in C: p==0,t==0 => CQ; 
+                  p==0,t==1 => CQ'; 
+                  p==1,t==0 => QC;
+		          p==1,t==1 => Q'C
+   
    NOTE that the routine expects C to be compatible with the Hi's - if
    this routine is being used for projection in and out of Null spaces, then
    make sure that C is appropriately packed with zeroes.
@@ -1112,7 +1116,7 @@ void QT(Q,A,fullQ) matrix Q,A;int fullQ;
   }
   if (Ar>0)
   { for (i=0;i<Ar;i++)
-    { /* rotate elements 0 to A.c-i-1 row i of A into element A.c-i-1 of that row */
+    { /* rotate elements 0 to A.c-i-1 row i of A into element A.c-i-1 of that row  */
       p=AM[i];
       m=0.0;for (j=0;j<Ac-i;j++) { x=p[j];x=fabs(x);if (x>m) m=x;} /* scale factor */
       if (m) for (j=0;j<Ac-i;j++) p[j]/=m; /* avoid over/underflow */
@@ -1255,6 +1259,7 @@ int QR(matrix *Q,matrix *R)
     z=RM[k][k]; 
     u[k]=RM[k][k]-t;RM[k][k]=t*m;
     t=t*t;t+=u[k]*u[k]-z*z; /* efficient t calculation */
+    /* t=0.0;for (p=u+k;p<u+Rr;p++) t+= *p * *p; - old inefficient calculation */
     t=sqrt(t/2);
     if (t==0.0) {free(u);return(0);} /* singular matrix */
     for (p=u+k;p<u+Rr;p++) *p /= t;
@@ -1464,31 +1469,32 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
   for (i=0;i<A->c;i++)
   { wl->V[i]=0.0;if (i<A->c-1) ws->V[i]=0.0;
     if (i<A->r) /* zero subdiagonal column i */
-    { m=0.0;for (j=i;j<A->r;j++) { s=fabs(AM[j][i]); if (s>m) m=s;} /* max of column for scaling */ 
+	{ m=0.0;for (j=i;j<A->r;j++) { s=fabs(AM[j][i]); if (s>m) m=s;} /* max of column for scaling  */
       if (m==0.0) g=0.0; 
-      else /* work out reflector elements */
-      { s=0.0;for (j=i;j<A->r;j++) { AM[j][i]/=m;s+=AM[j][i]*AM[j][i];} /* scale reflector etc. */ 
-	s=sqrt(s);
-	if (AM[i][i]<0.0) s = -s; /* avoid cancellation error */
+	  else /* work out reflector elements */
+	  { s=0.0;for (j=i;j<A->r;j++) { AM[j][i]/=m;s+=AM[j][i]*AM[j][i];} /* scale reflector etc.  */
+	    s=sqrt(s);
+	    if (AM[i][i]<0.0) s = -s; /* avoid cancellation error */
         AM[i][i]+=s;
-	g=1/(AM[i][i]*s);
-	s*=m;
-      } /* Now u is stored in rows i to A.r of column i of A */
-      wl->V[i] = -s;
-      VM[i][i] = g; /* temporary storage for g, for use in later assembly of U */ 
-      /* must apply reflector to remaining columns */
+	    g=1/(AM[i][i]*s);
+	    s*=m;
+	  } /* Now u is stored in rows i to A.r of column i of A */
+	  wl->V[i] = -s;
+	  VM[i][i] = g; /* temporary storage for g, for use in later assembly of U  */
+	  /* must apply reflector to remaining columns */
       for (j=i+1;j<A->c;j++)
       { s=0.0;for (k=i;k<A->r;k++) s+=AM[k][i]*AM[k][j];
 	    s*=g;for (k=i;k<A->r;k++) AM[k][j] += -s*AM[k][i];
       }
     } 
-    /* zero elements i+2 to A.c of row i ..... */
+
+	/* zero elements i+2 to A.c of row i ..... */
     if ((i<A->r) && (i<A->c-1))
-    { m=0.0;
+    { m=0.0;/*for (j=i+1;j<A->c;j++) { s=fabs(AM[i][j]); if (s>m) m=s;} // max for scaling */
       for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s=fabs(*p);if (s>m) m=s;} /* max for scaling */
       if (m==0.0) g=0.0;
       else
-      { s=0.0;
+      { s=0.0;/*for (j=i+1;j<A->c;j++) { AM[i][j]/=m;s+=AM[i][j]*AM[i][j];} */
         for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { *p/=m;s+=(*p)*(*p);}
         s=sqrt(s);
         if (AM[i][i+1]<0.0) s = -s; /* avoid cancellation error */
@@ -1500,9 +1506,9 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
       VM[i][i+1]=g; /* temporary storage */
       /* Now apply reflector to remaining rows */
       for (j=i+1;j<A->r;j++)
-      { s=0.0;
+      { s=0.0;/*for (k=i+1;k<A->c;k++) s+=AM[i][k]*AM[j][k]; */
         p1=AM[j]+i+1;for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s+=(*p)*(*p1);p1++;}
-        s*=g;
+        s*=g;/*for (k=i+1;k<A->c;k++) AM[j][k] += -s*AM[i][k]; */
         p1=AM[j]+i+1;for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { *p1 += -s*(*p);p1++;}
       } 
       nv++; /* number of v_i's */
@@ -1518,13 +1524,14 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
      v_i is zero until element i+1, with remaining elements stored in columns i+1 to A.c 
      of row i of A. */
   /* first form V in order to free up space in A */
-  /* initialize rows nv to A->c of V
+  /* initialize rows nv to A->c of V */
   nu=A->c; if (A->r<nu) nu=A->r; /* number of U_i's */
   for (i=nv+1;i<A->c;i++) 
   for (p=VM[i];p<VM[i]+A->c;p++) *p=0.0;
   for (i=A->c-1;i>nv;i--) { if (i<nu) AM[i-1][i]=VM[i][i];VM[i][i]=1.0;}
   for (i=nv-1;i>=0;i--) /* working down through the V_i's */
   { temp=VM[i+1][i+1];
+    /* for (j=0;j<A->c;j++) VM[i+1][j]=0.0; */
     for (p=VM[i+1];p<VM[i+1]+A->c;p++) *p=0.0;
     VM[i+1][i+1]=1.0; /* initialize row of V */
     for (j=A->c-1;j>i;j--) /* columns affected by V_i */
@@ -1532,7 +1539,7 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
       s*=VM[i][i+1];
       p=AM[i]+i+1;for (k=i+1;k<A->c;k++) { VM[k][j] += -s*(*p);p++;}
     }
-    AM[i][i+1]=temp; /* temporary storage for g_i's */ 
+    AM[i][i+1]=temp; /* temporary storage for g_i's  */
   }        
   /* Now all but first row and column of V are formed, but V->M[0][0] still contains
      g_0, while g_i is in AM[i-1][i] otherwise, so form U now and then finish off V */
@@ -1576,12 +1583,262 @@ void svdcheck(matrix *U,matrix *w,matrix *ws,matrix *wl,matrix *V)
   getc(stdin);
 }
 
+void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
 
+
+/* This routine produces a singular value decomposition of the matrix UWV', where:
+   1. W is a di-diagonal matrix with leading diagonal w, and leading super diagonal ws.
+   2. U and V are orthogonal.
    
+   Because W is not always properly bi-diagonal the following steps are needed:
+
+   i) Deflate the problem if possible, which may involve zeroing an element of the
+      super-diagonal.
+   ii) Check whether (deflated) bi-diagonal matrix can be partioned, if so find 
+       start of final partition (again may need to zero an element on the super 
+       diagonal)
+   iii) Apply iteration of implicit QR algorithm (p405 Watkins) to the sub matrix 
+        identified above.
+   iv) Return to (i) assuming that there are singular values left to find.
+
+   Note that the Givens Rotators used here are calculated as follows to avoid rounding problems:
+
+   assume xj to be zeroed into xi:
+   m = max(fabs(xi),fabs(xj));
+   xi/=m;xj/=m
+   r=sqrt(xi*xi+xj*xj);
+   c=xi/r;s=xj/r;
+   xi=m*r;xj=0.0;
+
+   (c and s can obviously be applied to other vectors without needing to know m.)
+
+   See page 271 of Watkins, for suggestion of how to test for zeroes.
+
+   Most important address optimization has been done (stopped when it was as efficient as
+   Numerical Recipes code). (Commented out code is pre-optimization, left in for readability)
+
+   Tested against NR routine for a variety of random matrices and matrices that are rank 
+   deficient in various ways.
+
+   Check for m>0.0 added 15/5/00 - otherwise division by zero is possible, leading to failure
+   of routine!
+
+*/
+
+{ double wnorm=0.0,x,y,s,c,m,r,a,b,sig,**VM,**UM,*wV,*wsV,*p1,*p2; 
+  int finished=0,end,start,i,j,k,maxreps=100;
+  
+  VM=V->M;UM=U->M;wV=w->V;wsV=ws->V;
+  for (i=0;i<ws->r;i++) /* get something against which to judge zero */
+  { x=fabs(wV[i]);y=fabs(wsV[i]);if (x<y) x=y;if (wnorm<x) wnorm=x;}
+  end=w->r-1;
+  while (!finished)
+  { for (k=0;k<maxreps;k++) /* QR iteration loop */
+    { if (wV[end]+wnorm==wnorm) /* zero singular value - can deflate */
+      { if (wsV[end-1]+wnorm!=wnorm) /* need to zero wsV[end-1] before deflating */
+        { /* Series of rotators (Givens rotations from right) zero this element */
+          y=wsV[end-1];wsV[end-1]=0.0;
+          for (i=end-1;i>=0;i--) /* work out sequence of rotations */
+          { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
+            x=wV[i];
+            if (m>0.0) 
+            { y/=m;x/=m; /* now rotate y into x */
+              r=sqrt(y*y+x*x);
+              c=x/r;s=y/r;
+            } else {r=0.0;c=1.0;s=0.0;}
+            wV[i]=r*m; /* rotation zeros y (implicitly) */
+            if (i>0) /* propagate the problem element! */
+            { y= -wsV[i-1]*s;
+              wsV[i-1]*=c;
+            } 
+            /* Need to update V as well V -> V G where G is the rotation just applied.... */ 
+            for (j=0;j<V->r;j++) /* work down the rows */
+            { p2=VM[j]+end;p1=VM[j]+i;x=*p1; /*x=VM[j][i]; */
+              /*VM[j][i]=c*x+s*VM[j][end]; */
+              *p1=c*x+s*(*p2);
+              /*VM[j][end]*=c;VM[j][end] += -s*x; */
+              *p2 *= c; *p2 += -s*x;
+            }
+          }
+        }
+        end--; /*   */
+       /* Check here for termination .....  */
+        if (end<=0) finished=1;
+        break; /* successfully deflated, so start new QR iteration cycle or finish */
+      } else 
+      /*if (fabs(wsV[end-1])<=1e-15*wnorm) // condition slacker than below */
+      if  (wsV[end-1]+wnorm==wnorm) /*too restrictive?? wV[end] is a singular value => deflate  */
+      { end--;
+        if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
+        break; /* deflated so start new QR cycle or finish */
+      } else /* no deflation possible, search for start of sub-matrix  */
+      { start=end-1;
+        while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--;
+        start++; /* this is now the row and column starting the sub-matrix */
+        if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) 
+        { /* ws.V[start-1] must be zeroed.... */
+          y=wsV[start-1];wsV[start-1]=0.0;
+          for (i=start;i<=end;i++) /* get sequence of rotators from left.... */
+          { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
+            x=wV[i];
+            if (m>0.0)
+            { x/=m;y/=m;
+              r=sqrt(x*x+y*y);
+              c=x/r;s=y/r;
+            } else {r=1.0;c=1.0;s=0.0;}
+            wV[i]=r*m; /* y zeroed implicitly */
+            if (i<end) /* propagate the problem element now at (start-1,i) */
+            { y= -s*wsV[i];
+              wsV[i]*=c;
+            }  
+            /* Now U must be updated, by transposed rotators - from the right */
+            for (j=0;j<U->r;j++) /* work down the rows */
+            { p1=UM[j]+start-1;x = *p1;p2=UM[j]+i;/*x=UM[j][start-1]; */
+              /* UM[j][start-1] = c*x-s*UM[j][i]; */
+              *p1 = c*x - s*(*p2);
+              /* UM[j][i]*=c; UM[j][i] += +s*x; */
+              *p2 *= c; *p2 += s*x; 
+            } 
+          }
+        }
+      }  
+      /* iterate QR algorithm on sub-matrix */
+      /* First find the Wilkinson shift which is given by the eigenvalue of the 
+         bottom right 2 by 2 submatrix, closest to the final matrix element. 
+         The required eigenvalues are found directly from the characteristic equation.
+         See page 405 of Watkins.*/
+      
+      a=wV[end-1]*wV[end-1]+wsV[end-1]*wsV[end-1];b=wV[end];b*=b;
+      c=wV[end]*wsV[end-1];
+      y=sqrt((a-b)*(a-b)+4*c*c)/2;
+      x=(a+b)/2+y;y=(a+b)/2-y; /* x and y are the eigenvalues */
+      if (fabs(x-b)<fabs(y-b)) sig=x; else sig=y;
+     
+      /* ...... this could be improved!! */
+      /* Now apply first step and then chase the bulge ...... */
+    
+      x=wV[start];
+      y=wsV[start]*x;
+      x=x*x-sig; /* x and y are the first and second elements of the rotator starting implicit QR step */
+      m=fabs(x);if (fabs(y)>m) m=fabs(y);
+      if (m>0.0)
+      { y/=m;x/=m; /* avoid over/underflow */
+        r=sqrt(y*y+x*x);
+        c=x/r;s=y/r; /* elements of rotator to apply from right operating in start,start+1 plane */
+      } else { r=1.0;c=1.0;s=0.0;}
+      for (i=start;i<end;i++) 
+      { /* start with post-multiplication */
+        if (start<i) /* then rotator needs to be calculated to remove element at (i-1,i+1) (stored in y) */
+        { x=wsV[i-1]; /* location y rotated into */
+          m=fabs(y);if (fabs(x)>m) m=fabs(x);
+          if (m>0.0)
+          { x/=m;y/=m;   /* avoiding overflow */
+            r=sqrt(x*x+y*y);
+            c=x/r;s=y/r;
+          } else {r=1.0;c=1.0;s=0.0;} /* rotator for zeroing y (at i-1,i+1) int x at (i-1,i) */
+          wsV[i-1]=r*m;y=0.0;
+        }
+        /* now apply rotator from right to rows i and i+1.... */
+        x=wV[i];
+        wV[i]=c*x+s*wsV[i];
+        wsV[i]=c*wsV[i]-s*x;
+        y=s*wV[i+1];wV[i+1]*=c; /* y contains the bulge at (i+1,i) */
+        /* and also apply from right to V.... */
+        for (j=0;j<V->r;j++) /* work down the rows */
+        { p1=VM[j]+i;x= *p1;p2=VM[j]+i+1; /*x=VM[j][i]; */
+          /*VM[j][i]=c*x+s*VM[j][i+1]; */
+          *p1=c*x + s* (*p2);
+          /*VM[j][i+1]*=c;VM[j][i+1] += -s*x; */
+          *p2 *= c; *p2 += -s*x;
+        }  
+          /* Obtain rotator from left to zero element at (i+1,i) into element at (i,i) 
+           thereby creating new bulge at (i,i+2) */ 
+        x=wV[i];
+        m=fabs(y);if (fabs(x)>m) m = fabs(x);
+        if (m>0.0)
+        { x/=m;y/=m; /* avoid overflow */
+          r=sqrt(x*x+y*y);
+          c=x/r;s=y/r;
+        } else {r=1.0;c=1.0;s=0.0;} /* transform to zero y into x (i+1,i) into (i,i) */
+        wV[i]=r*m;y=0.0; 
+        /* apply from left.... */
+        x=wsV[i];
+        wsV[i]=c*x+s*wV[i+1];
+        wV[i+1]=c*wV[i+1]-s*x;
+        if (i<end-1)
+        { y=wsV[i+1]*s;
+          wsV[i+1]*=c;
+        } 
+        /* and apply transposed rotator from right to U  */
+        for (j=0;j<U->r;j++) /* work down the rows */
+        { p1=UM[j]+i;x= *p1;p2=UM[j]+i+1;/*x=UM[j][i]; */
+          /*UM[j][i]=c*x+s*UM[j][i+1]; */
+          *p1=c*x+s*(*p2);
+          /*UM[j][i+1]*=c; UM[j][i+1] += -s*x; */
+          *p2 *= c; *p2 += -s*x;
+        } 
+      }
+    }  
+    if (k==maxreps) 
+    ErrorMessage("svd() not converged",1);
+  }
+  /* make all singular values  non-negative */
+  for (i=0;i<w->r;i++) 
+  if (wV[i]<0.0)
+  { wV[i]= -wV[i];
+    for (j=0;j<V->r;j++) VM[j][i]= -VM[j][i];
+  } 
+}
+
+  
+
 void svd(matrix *A, matrix *w, matrix *V)
 
 
 /* This routine produces a singular value decomposition of A. On exit V will be 
+   an A.c by A.c orthogonal matrix, w will be a vector of A.c singular values 
+   and A will contain U of the same dimension as A such that U'U=I. If W is
+   the diagonal matrix with w as its leading diagonal then: 
+                        A=UWV'   - the singluar value decomposition.
+   This routine is based on:
+   Watkins (1991) Fundamentals of Matrix Computations, Wiley. (see section 7.2)
+   The algorithm has 2 steps:
+   1. Bi-diagonalise A using reflectors (Householder transformations) from left 
+      and right - this is achieved by routine bidiag(), above.
+   2. Find singular values of Bi-diagonal matrix. This is achieved by routine 
+      svd_bidiag(), above.
+
+*/
+
+{ matrix *U,ws;
+  int i;
+  if (A->c==1) /* then the svd is trivial to compute */
+  { w->V[0]=0.0;
+    for (i=0;i<A->r;i++) w->V[0]+=A->M[i][0]*A->M[i][0];
+    w->V[0]=sqrt(w->V[0]);
+    for (i=0;i<A->r;i++) A->M[i][0]/=w->V[0]; 
+    V->M[0][0]=1.0;
+    return;
+  }
+  ws=initmat(w->r-1,1L);
+  /* bi-diagonalize A, so A=UWV', w = l.diag(W), ws=l.super.diag(W), A contains U   */
+  bidiag(A,w,&ws,V);  
+  U=A;
+  /* Now call svd_bidiag() for a result..... */
+  svd_bidiag(U,w,&ws,V);
+  freemat(ws);
+}
+
+
+
+
+ 
+void old_svd(matrix *A, matrix *w, matrix *V)
+
+
+/* OLD CODE: before restructuring.
+
+   This routine produces a singular value decomposition of A. On exit V will be 
    an A.c by A.c orthogonal matrix, w will be a vector of A.c singular values 
    and A will contain U of the same dimension as A such that U'U=I. If W is
    the diagonal matrix with w as its leading diagonal then: 
@@ -1631,8 +1888,16 @@ void svd(matrix *A, matrix *w, matrix *V)
 { double wnorm=0.0,x,y,s,c,m,r,a,b,sig,**VM,**UM,*wV,*wsV,*p1,*p2;
   matrix ws,*U; 
   int finished=0,end,start,i,j,k,maxreps=100;
+  if (A->c==1) /* then the svd is trivial to compute */
+  { w->V[0]=0.0;
+    for (i=0;i<A->r;i++) w->V[0]+=A->M[i][0]*A->M[i][0];
+    w->V[0]=sqrt(w->V[0]);
+    for (i=0;i<A->r;i++) A->M[i][0]/=w->V[0]; 
+    V->M[0][0]=1.0;
+    return;
+  }
   ws=initmat(w->r-1,1L);
-  bidiag(A,w,&ws,V); /* bi-diagonalize A.... */
+  bidiag(A,w,&ws,V); /* bi-diagonalize A, so A=UWV', w = l.diag(W), ws=l.super.diag(W), A contians U  */
   U=A;
   VM=V->M;UM=U->M;wV=w->V;wsV=ws.V;
   for (i=0;i<ws.r;i++) /* get something against which to judge zero */
@@ -1648,7 +1913,7 @@ void svd(matrix *A, matrix *w, matrix *V)
           { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
             x=wV[i];
             if (m>0.0) 
-	    { y/=m;x/=m; /* now rotate y into x */
+            { y/=m;x/=m; /* now rotate y into x */
               r=sqrt(y*y+x*x);
               c=x/r;s=y/r;
             } else {r=0.0;c=1.0;s=0.0;}
@@ -1659,27 +1924,30 @@ void svd(matrix *A, matrix *w, matrix *V)
             } 
             /* Need to update V as well V -> V G where G is the rotation just applied.... */ 
             for (j=0;j<V->r;j++) /* work down the rows */
-            { p2=VM[j]+end;p1=VM[j]+i;x=*p1;
+            { p2=VM[j]+end;p1=VM[j]+i;x=*p1; /*x=VM[j][i]; */
+              /*VM[j][i]=c*x+s*VM[j][end]; */
               *p1=c*x+s*(*p2);
+              /*VM[j][end]*=c;VM[j][end] += -s*x; */
               *p2 *= c; *p2 += -s*x;
             }
           }
         }
-        end--;   
-	/* Check here for termination ..... */ 
+        end--; /*   */
+       /* Check here for termination .....  */
         if (end<=0) finished=1;
         break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      if  (wsV[end-1]+wnorm==wnorm) /* too restrictive?? wV[end] is a singular value => deflate */
+      /*if (fabs(wsV[end-1])<=1e-15*wnorm) // condition slacker than below */
+      if  (wsV[end-1]+wnorm==wnorm) /*too restrictive?? wV[end] is a singular value => deflate  */
       { end--;
         if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
         break; /* deflated so start new QR cycle or finish */
-      } else /* no deflation possible, search for start of sub-matrix */ 
+      } else /* no deflation possible, search for start of sub-matrix  */
       { start=end-1;
         while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--;
         start++; /* this is now the row and column starting the sub-matrix */
         if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) 
-	{ /* ws.V[start-1] must be zeroed.... */
+        { /* ws.V[start-1] must be zeroed.... */
           y=wsV[start-1];wsV[start-1]=0.0;
           for (i=start;i<=end;i++) /* get sequence of rotators from left.... */
           { m=fabs(y);x=fabs(wV[i]); if (x>m) m=x;
@@ -1696,8 +1964,8 @@ void svd(matrix *A, matrix *w, matrix *V)
             }  
             /* Now U must be updated, by transposed rotators - from the right */
             for (j=0;j<U->r;j++) /* work down the rows */
-            { p1=UM[j]+start-1;x = *p1;p2=UM[j]+i;
-	      /* UM[j][start-1] = c*x-s*UM[j][i]; */
+            { p1=UM[j]+start-1;x = *p1;p2=UM[j]+i;/*x=UM[j][start-1]; */
+              /* UM[j][start-1] = c*x-s*UM[j][i]; */
               *p1 = c*x - s*(*p2);
               /* UM[j][i]*=c; UM[j][i] += +s*x; */
               *p2 *= c; *p2 += s*x; 
@@ -1732,10 +2000,10 @@ void svd(matrix *A, matrix *w, matrix *V)
       for (i=start;i<end;i++) 
       { /* start with post-multiplication */
         if (start<i) /* then rotator needs to be calculated to remove element at (i-1,i+1) (stored in y) */
-	{ x=wsV[i-1]; /* location y rotated into */
+        { x=wsV[i-1]; /* location y rotated into */
           m=fabs(y);if (fabs(x)>m) m=fabs(x);
           if (m>0.0)
-	  { x/=m;y/=m;   /* avoiding overflow */
+          { x/=m;y/=m;   /* avoiding overflow */
             r=sqrt(x*x+y*y);
             c=x/r;s=y/r;
           } else {r=1.0;c=1.0;s=0.0;} /* rotator for zeroing y (at i-1,i+1) int x at (i-1,i) */
@@ -1748,18 +2016,18 @@ void svd(matrix *A, matrix *w, matrix *V)
         y=s*wV[i+1];wV[i+1]*=c; /* y contains the bulge at (i+1,i) */
         /* and also apply from right to V.... */
         for (j=0;j<V->r;j++) /* work down the rows */
-	{ p1=VM[j]+i;x= *p1;p2=VM[j]+i+1; /* x=VM[j][i]; */
-	  /* VM[j][i]=c*x+s*VM[j][i+1]; */
+        { p1=VM[j]+i;x= *p1;p2=VM[j]+i+1; /*x=VM[j][i]; */
+          /*VM[j][i]=c*x+s*VM[j][i+1]; */
           *p1=c*x + s* (*p2);
-          /* VM[j][i+1]*=c;VM[j][i+1] += -s*x; */
+          /*VM[j][i+1]*=c;VM[j][i+1] += -s*x; */
           *p2 *= c; *p2 += -s*x;
         }  
-        /* Obtain rotator from left to zero element at (i+1,i) into element at (i,i) 
+          /* Obtain rotator from left to zero element at (i+1,i) into element at (i,i) 
            thereby creating new bulge at (i,i+2) */ 
         x=wV[i];
         m=fabs(y);if (fabs(x)>m) m = fabs(x);
         if (m>0.0)
-	{ x/=m;y/=m; /* avoid overflow */
+        { x/=m;y/=m; /* avoid overflow */
           r=sqrt(x*x+y*y);
           c=x/r;s=y/r;
         } else {r=1.0;c=1.0;s=0.0;} /* transform to zero y into x (i+1,i) into (i,i) */
@@ -1772,12 +2040,12 @@ void svd(matrix *A, matrix *w, matrix *V)
         { y=wsV[i+1]*s;
           wsV[i+1]*=c;
         } 
-        /* and apply transposed rotator from right to U */ 
+        /* and apply transposed rotator from right to U  */
         for (j=0;j<U->r;j++) /* work down the rows */
-        { p1=UM[j]+i;x= *p1;p2=UM[j]+i+1;
-	  /* UM[j][i]=c*x+s*UM[j][i+1]; */
+        { p1=UM[j]+i;x= *p1;p2=UM[j]+i+1;/*x=UM[j][i]; */
+          /*UM[j][i]=c*x+s*UM[j][i+1]; */
           *p1=c*x+s*(*p2);
-          /* UM[j][i+1]*=c; UM[j][i+1] += -s*x; */
+          /*UM[j][i+1]*=c; UM[j][i+1] += -s*x; */
           *p2 *= c; *p2 += -s*x;
         } 
       }
@@ -1855,7 +2123,7 @@ void symproduct(A,B,C,trace,chol) matrix A,B,C;int trace,chol;
 	     { temp=0.0;p1=AM[i]+j+1;
 	       for (p=BM[j]+j+1;p<(BM[j]+Bc);p++)
 	       temp += (*p)*(*p1++);
-               CM[i][i]+=temp*AM[i][j];
+          CM[i][i]+=temp*AM[i][j];
 	     }
 	     CM[i][i]*=2.0;
 	     p2=CM[i]+i;p=AM[i];
@@ -2032,7 +2300,7 @@ void updateLS(T,z,x,y,w) matrix T,z,x;double y,w;
     if (m) { xi/=m;ti/=m;} /* avoid over/underflow */
     r=sqrt(xi*xi+ti*ti);
     if (r) { s=xi/r;c= -ti/r;} else {s=0.0;c=1.0;}
-    /* T.M[i][T.r-i-1]=r;*/
+   /* T.M[i][T.r-i-1]=r;*/
     for (j=i;j<T.r;j++)
     { xp=xx.V+j;tp=T.M[j]+T.r-i-1;
       xi=c*(*xp)+s*(*tp);
@@ -2114,7 +2382,7 @@ matrix svdroot(matrix A,double reltol)
   a=initmat(A.r,A.c);mcopy(&A,&a);
   v=initmat(A.r,A.c);
   w=initmat(A.r,1L);
-  svd(&a,&w,&v);   /* a * diag(w) * v' */
+  svd(&a,&w,&v);   /*a * diag(w) * v' */
   for (i=0;i<w.r;i++) { w.V[i]=sqrt(w.V[i]);if (w.V[i]>tol) tol=w.V[i];}
   tol*=reltol;
   for (i=0;i<w.r;i++)
@@ -2190,6 +2458,7 @@ double condition(a) matrix a;
   b=initmat(a.r,a.c);
   for (i=0;i<a.r;i++) for (j=0;j<a.c;j++) b.M[i][j]=a.M[i][j];
   c=initmat(a.c,1L);d=initmat(a.c,a.c);svd(&b,&c,&d);
+  /*for (i=0;i<c.r;i++) { printf("%g",c.V[i]); getc(stdin);} // comment out usually */
   min=max=c.V[0];
   for (i=1;i<c.r;i++)
   { if (c.V[i]<min) min=c.V[i]; else if (c.V[i]>max) max=c.V[i];}
@@ -2206,13 +2475,18 @@ void specd(U,W) matrix U,W;
    for correctness - not exactly the most efficient method!! */
 
 { matrix V;
-  double dot;
-  long i,j;
+  double dot,max,dum;
+  long i,j,k;
   V=initmat(U.r,U.r);
   svd(&U,&W,&V);
   for (j=0;j<U.c;j++) /* work through eigenvectors */
   { dot=0.0;for (i=0;i<U.r;i++) dot+=U.M[i][j]*V.M[i][j]; /* have to do all elements to avoid round off near zero problems */
     if (dot<0.0) W.V[j]= -W.V[j];
+  }
+  for (i=0;i<W.r-1;i++) /* sorting into decending order */
+  { k=i;max=W.V[k];for (j=i;j<W.r;j++) if (W.V[j]>=max) { max=W.V[j];k=j;}
+    dum=W.V[i];W.V[i]=W.V[k];W.V[k]=dum;
+    if (i!=k) for (j=0;j<W.r;j++) { dum=U.M[j][i];U.M[j][i]=U.M[j][k];U.M[j][k]=dum;}
   }
   freemat(V);
 }
@@ -2339,6 +2613,414 @@ void sort(matrix a)
 }
 
 
+
+
+
+int real_elemcmp(const void *a,const void *b,int el)
+
+{ static int k=0;
+  int i;
+  double *na,*nb;
+  if (el>=0) { k=el;return(0);}
+  na=(*(double **)a);nb=(*(double **)b);
+  for (i=0;i<k;i++) 
+  { if (na[i]<nb[i]) return(-1);
+    if (na[i]>nb[i]) return(1);
+  }
+  return(0);
+}
+
+int melemcmp(const void *a,const void *b)
+
+{ return(real_elemcmp(a,b,-1));
+}
+
+
+void msort(matrix a)
+
+/* sorts a matrix, in situ, using standard routine qsort so 
+   that its first col is in ascending order, its second col
+   is in ascending order for any ties in the first col, and 
+   so on.....
+*/
+
+{ double *zz;
+  real_elemcmp(zz,zz,a.c); 
+  qsort(a.M,(size_t)a.r,sizeof(a.M[0]),melemcmp);
+}
+
+
+void lu_tri(double *d,double *g,double *u,int n)
+
+/* Let T be an n by n tri-diagonal symmetric matrix, with leading diagonal 
+   d and leading sub (=super) diagonal matrix g. This routine uses LU 
+   decomposition to solve:
+                           Tv=u 
+   for v, and returns v in u. Note that d gets overwritten by this routine,
+   while g remains unchanged.
+
+   No restriction on T beyond full rank and symmetry.
+*/
+
+{ double *dg,*dd,*du,*dd1,*du1;
+  /* LU decomposition .... */
+  dd=d;dd1=d+1;du=u;du1=u+1;
+  for (dg=g;dg<g+n-1;dg++)
+  { *dd1 -= *dg * *dg / *dd;
+    *du1 -= *du * *dg / *dd;
+    dd++;du++;dd1++;du1++;
+   }
+  /* Backsubstitution ..... */
+  u[n-1]/=d[n-1];
+  dd=d+n-2;du1=u+n-1;dg=g+n-2;
+  for (du=u+n-2;du>=u;du--) 
+  { *du = ( *du - *dg * *du1 )/ *dd;dd--;du1--;dg--;}
+}
+
+void eigen_tri(double *d,double *g,int n)
+
+/* Routine to find the eigenvalues of a symmetric tri-diagonal matrix, A, using the
+   implicit QR algorithm with Wilkinson shifts. Eigen-vectors should be found by
+   
+   a) Using the QR algortihm in conjunction with the ultimate shift strategy.
+   or
+   b) Using inverse iteration.
+
+   The latter is O(n^2), but less stable than the former which is O(n^3). 
+ 
+   d contains the leading diagonal of the matrix. 
+   g contains the leading sub(=super) diagonal
+   n is the length of d.
+   
+   on exit d contains the eigen values of the matrix A, and g is altered. 
+
+   A assumed full rank at present.
+
+*/
+
+{ int end,start=0,finished=0,os,oe,counter=0,iter_limit=100,ok,k;
+  double big,small,d1,d2,g1,g2,sig,x,y,z,b,s,c,s2,c2,cs,r,*dg,*dg1,*dg2,*dd1,*dd2;
+  end=n-1;
+  if (n==1) finished=1;
+  while (!finished)
+  { oe=end;os=start;
+    /* locate the end.... */
+    ok=1;
+    while (ok)
+    { big=fabs(d[end])+fabs(d[end-1]);small=g[end-1]+big;
+      if (big==small) end--; else ok=0;
+      if (end==0) { finished=1;ok=0;}  /* matrix is diagonal */
+    }
+    if (!finished)
+    { /* locate the start ..... */
+      start=end-1;ok=0;
+      if (start>0) ok=1;
+      while (ok)
+      { big=fabs(d[start])+fabs(d[start-1]);small=g[start-1]+big;
+        if (big==small) ok=0; else start--;
+        if (start==0) ok=0;
+      } 
+      /* check whether iteration limit exceeded.... */
+      if (os==start&&oe==end)
+      { counter++; if (counter>iter_limit) ErrorMessage("eigen_tri() failed to converge",1);
+      } else counter=0;
+      /* calculate the Wilkinson shift, sig ...... */
+      d1=d[end-1];d2=d[end];g1=g[end-1];
+      x=(d1+d2)/2;y=(d1-d2)/2;y*=y;z=sqrt(y+g1*g1);
+      big=x+z;small=x-z;
+      if (fabs(big-d2)<fabs(small-d2)) sig=big; else sig=small;
+      /* now form the implicit QR step rotator V..... */
+      x=d[start]-sig;y=g[start];
+      z=sqrt(x*x+y*y);
+      c=x/z;s=y/z;
+      /* Apply implicit QR step rotator: VAV'.... */
+      c2=c*c;s2=s*s;cs=c*s;
+      g1=g[start];d1=d[start];d2=d[start+1];
+      d[start]=c2*d1+2*cs*g1+s2*d2;
+      d[start+1]=s2*d1+c2*d2-2*cs*g1;
+      g[start]=g1*(c2-s2)+cs*(d2-d1);
+      if (start+1<end) /* then a bulge will be created and must be chased... */
+      { g2=g[start+1];
+        g[start+1]*=c;
+        b=g2*s;
+        /* now need to chase bulge off end of matrix..... */
+        dd1=d+start+1;dd2=dd1+1;dg=g+start;dg1=dg+1;dg2=dg1+1;
+        for (k=start;k<end-1;k++)
+        { x = *dg;/* x=g[k]; */
+          r=sqrt(x*x+b*b);
+          c=x/r;s=b/r;
+          *dg = r;   /* g[k]=r; */
+          d1 = *dd1; /* d1=d[k+1]; */
+          d2 = *dd2; /* d2=d[k+2]; */
+          g1 = *dg1; /*g1=g[k+1]; */
+          c2=c*c;s2=s*s;cs=c*s;
+          *dd1 = c2*d1+2*cs*g1+s2*d2; /*d[k+1] */
+          *dd2 = s2*d1+c2*d2-2*cs*g1; /*d[k+2]  */
+          *dg1 = g1*(c2-s2)+cs*(d2-d1); /*g[k+1] */
+          if (k+2<end) /* then end of matrix not reached and bulge propagates */
+          { g2 = *dg2; /*g2=g[k+2]; */
+            b=g2*s;
+            *dg2 *= c;           /*g[k+2]*=c;  */
+          } 
+          dd1++;dd2++;dg1++;dg2++;dg++;
+        }           
+      } 
+    }    
+  }
+}
+
+
+int elcomp(const void *a,const void *b)
+
+/* comparison function to get quicksort to sort into descending order */
+
+{
+  if (*(double *)a>*(double *)b) return(-1);
+  if (*(double *)a<*(double *)b) return(1);
+  return(0);
+}
+
+void eigenvv_tri(double *d,double *g,double **v, int n)
+
+/* Routine to find the eigen values and eigen vectors of symmetric tri-diagonal
+   n by n matrix A. d is the leading diagonal of A. g if the leading sub(=super)
+   diagonal of A.
+   
+   The routine first uses implicit QR with Wilkinson shifts to find the eigenvalues 
+   of A, by calling eigen_tri(). This is 0(n^2).
+
+   Given the eigenvalues of A  the eigenvectors can be found most efficiently by
+   inverse iteration - a process that is also O(n^2), given the tri-diagonal 
+   structure of A.
+
+   * The eigen-values are supplied in decreasing order in d.
+   
+   * The ith eigenvector of A is returned in v[i].
+
+   * g is returned unchanged.
+
+   - inner loops have been optimized.
+
+*/
+
+{ double *vo,*d1,*d2,*g1,vnorm,x,*dum,*dum1,*dum2,*dum4;
+  int i,k,ok,ok1,iter,iter_max=1000; 
+  char msg[200];
+  if (n==1) { v[0][0]=1;return;}
+  d1=(double *)calloc((size_t)n,sizeof(double));
+  d2=(double *)calloc((size_t)n,sizeof(double));
+  vo=(double *)calloc((size_t)n,sizeof(double));
+  g1=(double *)calloc((size_t)n-1,sizeof(double));
+  for (i=0;i<n;i++) d1[i]=d[i];  /* keep a copy of A */
+  for (i=0;i<n-1;i++) g1[i]=g[i];
+  eigen_tri(d,g1,n);   /* get eigenvalues */
+  
+  free(g1);
+  qsort(d,(size_t)n,sizeof(d[0]),elcomp); /* sort into descending order */
+  /* work through eigen-vectors */
+  for (k=0;k<n;k++)
+  { v[k][0]=1.0;dum1=v[k];for (dum=v[k]+1;dum<v[k]+n;dum++) { *dum = - *dum1;dum1++;}
+    ok=1;iter=0;
+    while (ok)
+    { dum1=d2;dum2=d1;dum4=vo;x=d[k];
+      for (dum=v[k];dum<v[k]+n;dum++) 
+      { *dum1 = *dum2 - x; /* forming A - \lambda_k I d2[i]=d1[i]-d[k] */
+        *dum4 = *dum;     /* vo[i]=v[k][i] */
+        dum1++;dum2++;dum4++;
+      } 
+      lu_tri(d2,g,v[k],n);
+
+      vnorm=0.0;for (dum=v[k];dum<v[k]+n;dum++) { x = *dum;vnorm+=x*x;}
+      vnorm=sqrt(vnorm);
+      for (dum=v[k];dum<v[k]+n;dum++) *dum/=vnorm;
+      ok=0; /* test for convergence.... */
+      dum1=vo;
+      for (dum=v[k];dum<v[k]+n;dum++) 
+      { x = *dum1 - *dum;dum1++;x=fabs(x);if (x>1e-14) { ok=1;break;}}
+      ok1=0;dum1=vo;
+      for (dum=v[k];dum<v[k]+n;dum++) 
+      { x = *dum1 + *dum;dum1++;x=fabs(x);if (x>1e-14) { ok1=1;break;}}
+      if (ok==0||ok1==0) ok=0; else ok=1;
+      iter++;
+      if (iter>iter_max) 
+	  {sprintf(msg,"eigenvv_tri() Eigen vector %d of %d failure. Error = %g > 1e-14",k,n,x);
+           ErrorMessage(msg,1); 
+           /*ErrorMessage("Eigen vector convergence failure in eigenvv_tri()",1); */
+          }
+    }
+  }
+  free(vo);free(d1);free(d2);
+  for (i=0;i<n;i++)
+  { x=0.0;for (dum=v[i];dum<v[i]+n;dum++) x += *dum;
+    if (x<0.0) for (dum=v[i];dum<v[i]+n;dum++) *dum = - *dum;
+  } 
+}
+
+int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
+
+/* Routine to find trunctated spectral decomposition of a symmetric matrix, A,  using Lanczos 
+   iteration. This is most useful for finding some of the largest and smallest eigen-values 
+   of large matrices. Basic idea is to iteratively construct a (k by k) tri-diagonal matrix 
+   T_k, whose eigenvalues/vectors  will well approximate the eigen values/vectors of A.
+
+   m is the number of eigenvalues/vectors required at high end. Let A be n by n.
+   lm is number of eigenvalues/vectors that must converge at low end.
+
+   V must be initialised to be an n by (lm+m) matrix and va an (m+lm) vector. 
+
+   On exit V diag(va) V' is a somewhat odd truncated approximation to A
+
+   Algorithm:
+
+   1. Set q[0] to b/||b|| where b is a random n-vector.
+   2. Repeat the following steps for j=0,1,2..... until convergence
+   3. Form z=Aq[i]
+   4. Form a[j]=q[j]'z
+   5. Form z=z-a[j]*q[j]-b[i-1]q[j-1] (last term only for j>0)
+   6. Re-orthogonalize against previous q[j]'s
+   7. Find b[j]=||z||
+   8. q[j+1]=z/b[j]
+   9. Tj is tri-diagonal j+1 by j+1 matrix with a as leading diagonal
+      and b as leading sub=super diagonal. Find its spectral decomposition,
+      with eigen values d and ith eigenvector v[i].
+   10. Error on d[i] is magnitude of b[j]*v[i][j].
+   
+   Note that some further optimization of the eigen-value step should be possible.
+   At present implicit QR with Wilkinson shifts is used for the eigen values and
+   then eigen vectors are found by inverse iteration. This is order j^2. However,
+   it might be worth using previous eigen-values as shifts, and only finding the 
+   eigenvectors corresponding to the eigenvalues just below (above) the eigenvalues
+   already converged. The eigenvalues step would still be order j^2 (although should 
+   be faster than before), but the eigen vector step would drop to order j. 
+
+*/
+
+{ double **v,*d,*b,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
+         *z,*zd,*err,normTj,eps=1e-7,*dum,eps_stop=1e-14,max_err;
+  int i,j,k,n,ok,l,kk,vlength=0;
+  unsigned long jran=151,ia=106,ic=1283,im=6075;
+  AM=A->M;
+  n=(int)A->r;
+  q=(double **)calloc((size_t)n+1,sizeof(double *));
+  /* initialize first q vector */
+  q[0]=(double *)calloc((size_t)n,sizeof(double));
+  b=q[0];bt=0.0;
+  for (i=0;i<n;i++)   /* somewhat randomized start vector!  */
+  { jran=(jran*ia+ic) % im;   /* quick and dirty generator to avoid too regular a starting vector */
+    xx=(double) jran / (double) im -0.5; 
+    b[i]=xx;xx=-xx;bt+=b[i]*b[i];
+  } 
+  bt=sqrt(bt); 
+  for (i=0;i<n;i++) b[i]/=bt;
+  /* initialise vectors a and b - a is leading diagonal of T, b is sub/super diagonal */
+  a=(double *)calloc((size_t)n,sizeof(double));
+  b=(double *)calloc((size_t)n,sizeof(double));
+  d=(double *)calloc((size_t)n,sizeof(double)); 
+  z=(double *)calloc((size_t)n,sizeof(double));
+  zd=(double *)calloc((size_t)n,sizeof(double));
+ 
+  err=(double *)calloc((size_t)n,sizeof(double));
+  for (i=0;i<n;i++) err[i]=1e300;
+  /* The main loop. Will break out on convergence. */
+  for (j=0;j<n;j++) 
+  { /* form z=Aq[j]......  */
+    qj=q[j];
+    for (i=0;i<n;i++) 
+    { z[i]=0.0;zz=z+i;dum=qj;
+      for (AMi=AM[i];AMi<AM[i]+n;AMi++) { *zz += *AMi * *dum;dum++;}
+    }
+    /* Now form a[j].... */
+    zz=a+j;*zz=0.0;for (i=0;i<n;i++) *zz += qj[i]*z[i];
+    /* Update z..... */
+    if (!j)
+    { xx=*zz;
+      for (i=0;i<n;i++) z[i] -= xx*qj[i];
+    } else
+    { xx=*zz;yy=b[j-1];qj1=q[j-1];
+      for (i=0;i<n;i++) z[i] -= xx*qj[i]+yy*qj1[i];
+      
+      /* Now stabilize by full re-orthogonalization.... */
+      
+      for (i=0;i<n;i++) zd[i]=z[i];
+      for (i=0;i<j;i++) 
+      { xx=0.0;zz=zd; /* actually z here works jusat as well!! */
+        for (dum=q[i];dum<q[i]+n;dum++) { xx+= *dum * *zz;zz++;}
+        zz=z;
+        for (dum=q[i];dum<q[i]+n;dum++) { *zz -= xx * *dum;zz++;}
+      } 
+      for (i=0;i<n;i++) zd[i]=z[i];
+      for (i=0;i<j;i++) 
+      { xx=0.0;zz=zd; /*zd */
+        for (dum=q[i];dum<q[i]+n;dum++) { xx+= *dum * *zz;zz++;}
+        zz=z;
+        for (dum=q[i];dum<q[i]+n;dum++) { *zz -= xx * *dum;zz++;}
+       
+      }
+    } 
+    /* calculate b[j].... */
+    zz=b+j;*zz = 0.0;for (i=0;i<n;i++) { xx=z[i];*zz+=xx*xx;}*zz=sqrt(*zz);
+    if (b[j]==0.0&&j<n-1) ErrorMessage("Lanczos failed",1);
+    /* get q[j+1]      */
+    if (j<n-1)
+    { q[j+1]=(double *)calloc((size_t)n,sizeof(double));
+      zz=q[j+1];xx=b[j];for (i=0;i<n;i++) zz[i]=z[i]/xx; /* forming q[j+1] */
+    }
+    /* Now get the spectral decomposition of T_j.  */
+
+    for (i=0;i<j+1;i++) d[i]=a[i]; /* copy leading diagonal of T_j */
+    /* set up storage for eigen vectors */
+    if (vlength) /* free up first */
+    { for (i=0;i<vlength;i++) free(v[i]);free(v); 
+    } 
+    v=(double **)calloc((size_t)j+1,sizeof(double *));
+    vlength=j+1;
+    for (i=0;i<j+1;i++) v[i]=(double *)calloc((size_t)j+1,sizeof(double));
+    /* obtain eigen values/vectors of T_j in O(j^2) flops */
+    eigenvv_tri(d,b,v,j+1);
+    /* v[i] is ith  eigenvector, d[i] corresponding eigenvalue */
+    /* Evaluate ||Tj|| .... */
+    normTj=fabs(d[0]);if (fabs(d[j])>normTj) normTj=fabs(d[j]);
+    for (k=0;k<j+1;k++) /* calculate error in each d[i] */
+    { err[k]=b[j]*v[k][j];
+      err[k]=fabs(err[k]);
+    }
+    /* and check for termination ..... */
+    if (j>m+lm)
+    { ok=1;
+      max_err=normTj*eps_stop;
+      for (i=0;i<m;i++) if (err[i]>max_err) ok=0;
+      for (i=j;i>j-lm;i--) if (err[i]>max_err) ok=0;
+      if (ok) 
+      { j++;break;}
+    }
+  }
+  /* At this stage, complete construction of the eigen vectors etc. */
+  
+  /* Do final polishing of Ritz vectors and load va and V..... */
+  for (k=0;k<m;k++) /* create any necessary new Ritz vectors */
+  { va->V[k]=d[k];
+    for (i=0;i<n;i++) 
+    { V->M[i][k]=0.0; for (l=0;l<j;l++) V->M[i][k]+=q[l][i]*v[k][l];}
+  }
+  for (k=m;k<lm+m;k++) /* create any necessary new Ritz vectors */
+  { kk=j-(lm+m-k); /* index for d and v */
+    va->V[k]=d[kk];
+    for (i=0;i<n;i++) 
+    { V->M[i][k]=0.0; for (l=0;l<j;l++) V->M[i][k]+=q[l][i]*v[kk][l];}
+  }
+
+  /* clean up..... */
+  free(a);
+  free(b);
+  free(d);
+  free(z);
+  free(err);
+  if (vlength) /* free up first */
+  { for (i=0;i<vlength;i++) free(v[i]);free(v);}
+  for (i=0;i<n+1;i++) if (q[i]) free(q[i]);free(q);  
+  return(j);
+}
+
 void printmat(matrix A,char *fmt)
 
 { int i,j;
@@ -2412,12 +3094,34 @@ void fprintmat(matrix A,char *fname,char *fmt)
       if they were larger than about 8192 elements ("about" because the out of bound write 
       checking mechanism uses some elements when switched on). This restriction has 
       now been removed.
+
+  11. 21/5/01 svd() could not cope with single column matrices. Fixed.
+  12. 23/5/01 svd() re-structured so that svd on bi-diagonal matrix is now done in a separate
+      service routine. This allows efficient svd of matrices with special structure, by allowing 
+      different versions of svd() with special bi-diagonalization steps, which can then call 
+      the new routine svd_bidiag(). 
+  13. 5/01 lanczos_spd() added to get truncated spectral decomposition of a matrix
+      by stabilized lanczos iteration.
+  14. 5/01 lu_tri(), eigen_tri() and eigenvv_tri() added to get eigen-values and vectors
+      of symmetric tri-diagonal matrices (in O(n^2)).
+  15. msort() added, to sort the rows of a matrix so that the first column is in 
+      ascending order, entries in 2nd col are ascending if corresponding 1st col 
+      entries are tied, etc.  
+  16. 28/6/01 lanczos_spd() simplified to always perform full re-orthogonalization - 
+      The selective scheme taken from Demmel (1997) doesn't seem to work in practice. 
+      The problem is that you get small error estimates before convergence on occasion, 
+      and these seem to mess up the re-orthogonalisation process. The difficulty was 
+      most apparent on when working with the E matrix for 1d smoothing splines. Full
+      orthogonalization actually required fewer iterates to converge - and hence is 
+      really not that bad. (Old code moved to mtest.c)
+  17. 18/12/01: convergence tolerance tightened massively in lanczos_spd() otherwise there are
+      serious problems in particular with repeated eigenvalues. iter_max increased
+      in eigenvv_tri() otherwise can fail on repeated eigenvalues. 
+  
+issue: should check that eigenvectors for repeated eigenvalues are being estimated correctly
+      - This means checking that both are a linear combination of "true"
+ 
 */
-
-
-
-
-
 
 
 

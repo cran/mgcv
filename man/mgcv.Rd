@@ -11,8 +11,9 @@ or UBRE. The function uses Newton's method in multi-dimensions.
 mgcv(M)
 }
 %- maybe also `usage' for other objects documented here.
-\arguments{ 
-\item{M}{is the single list argument to this function. It has the following elements:}
+\arguments{
+  \item{M}{ is the single argument to \code{mgcv} and should be a list
+    with the elements listed below:}
  \item{M$y}{The response data vector.}
  \item{M$w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
@@ -21,15 +22,14 @@ mgcv(M)
             should give the number of data.}
 \item{M$C}{Matrix containing any linear equality constraints 
             on the problem (i.e. \eqn{\bf C}{C} in \eqn{ {\bf Cp}={\bf 0} }{Cp=0}).}
- \item{M$S}{ A 3 dimensional array. \code{M$S[i]} is a 2 dimensional array 
-             containing the elements of the ith penalty matrix. Note that to
-             economize on storage space, rows and columns containing only zeroes 
-             need not be stored. It is assumed that \code{M$S[i][j][k]} contains
-             element \code{j+M$off[i],k+M$off[i]} of the ith penalty matrix, 
-             \eqn{ {\bf S}_i}{S_i}. It is also assumed that only the first 
-            \code{M$df[i]} rows and columns of \code{M$S[i]} contain non-zero
-            elements. \code{dim(M$S)[1]} must evaluate to the number of 
-            penalties, or (only if there are no penalties) to \code{NULL}.}
+ \item{M$S}{ A one dimensional array containing the non-zero elements of the
+   penalty matrices. Let \code{start<-sum(M$df[1:(k-1)]^2)} or
+   \code{start<-0} if \code{k==1}. Then penalty matrix \code{k} has
+   \code{M$S[start+i+M$df[i]*(j-1)} on its ith row and jth column.
+   The kth full penalty matrix is constructed by placing the matrix just
+   derived into an appropriate matrix of zeroes with it's 1,1 element at
+   \code{M$off[k],M$off[k]}
+ }
  \item{M$off}{ Offset values locating the elements of \code{M$S[]} in the correct
                location within each penalty coefficient matrix.}
  \item{M$fix}{ \code{M$fix[i]} is FALSE if the corresponding smoothing parameter 
@@ -47,7 +47,12 @@ given
                 by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}   
 \item{M$sp}{ An array of initial smoothing parameter estimates if any of 
 these is not strictly positive then automatic generation of initial values
-is used.}				         
+is used.}
+\item{M$conv.tol} {The convergence tolerence to use for the multiple
+  smoothing parameter search. 1e-6 is usually ok.}
+\item{M$max.half}{Each Newton step of the GCV minimisation is halved if it fails to
+  improve the GCV score. This is the maximum number of halvings to try
+  at each step. 15 is usually enough.}
 }
 \details{ 
 
@@ -108,7 +113,7 @@ with Multiple
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\section{WARNING }{ The method may not behave well with near column rank defficient \eqn{ {\bf
+\section{WARNING }{ The method may not behave well with near column rank deficient \eqn{ {\bf
 X}}{X}
 especially in contexts where the weights vary wildly. } 
 
@@ -135,25 +140,19 @@ especially in contexts where the weights vary wildly. }
     plot(x[2, ], y)
     plot(x[3, ], y)
     plot(x[4, ], y)
-    G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15),
-        x = x) # creat list for passing to GAMsetup
+    G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15),dim=c(1,1,1,1),s.type=c(0,0,0,0), 
+       p.order=c(0,0,0,0), x = x) # creat list for passing to GAMsetup
     H <- GAMsetup(G)
     H$y <- y    # add data to H
     H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H
-	H$sp <-array(-1,H$m)
-	H$fix<-array(FALSE,H$m)
     H$w <- w       # add weights to H
-    H <- mgcv(H)  # select smoothing parameters and fit model (no constant)
+    H$sp<-array(-1,H$m)
+    H$fix<-array(FALSE,H$m)
+    H$conv.tol<-1e-6;H$max.half<-15
+    H <- mgcv(H)  # select smoothing parameters and fit model
  
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
-
-
-
-
-
-
-
 
 
 
