@@ -2187,7 +2187,7 @@ formula.gam <- function(x, ...)
 
 
 
-gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,
+gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
                 control=gam.control(),
                 scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
 
@@ -2806,10 +2806,11 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         "newdata is a model.frame it should contain all required variables\n")
       } else
       { ff <- interpret.gam(object$full.formula)$fake.formula[-2]
+        ff <- reformulate(all.vars(ff)) # completely plain formula e.g. no offset()
         if (sum(!(all.vars(ff)%in%names(newdata)))) { 
-        warning("not all required variables have been supplied in newdata: bad practice!\n")}
+        warning("not all required variables have been supplied in newdata!\n")}
         newdata <-
-        eval(model.frame(ff,data=newdata),parent.frame()) 
+        eval(model.frame(ff,data=newdata,xlev=object$xlevels),parent.frame()) 
       }
     }
   }
@@ -2873,8 +2874,11 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     if (new.data.ok)
     { mf <- model.frame(Terms,data,xlev=object$xlevels)
       if (!is.null(cl <- attr(object$pterms,"dataClasses"))) .checkMFClasses(cl,mf)
-      Xp <- model.matrix(Terms,mf,contrasts=object$contrasts)
-    } else Xp <- model.matrix(Terms,object$model)
+      Xp <- model.matrix(Terms,mf,contrasts=object$contrasts) 
+    } else 
+    { Xp <- model.matrix(Terms,object$model)
+      mf <- newdata # needed in case of offset, below
+    }
     
     if (object$nsdf) X[,1:object$nsdf]<-Xp
     if (n.smooth) for (k in 1:n.smooth) 
@@ -2947,7 +2951,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
 
 plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
                    pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
-                   ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,col.shade="gray80",...)
+                   ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -2961,7 +2965,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 # n2 is the square root of the number of grid points to use for contouring
 # 2-d terms.
 
-{ sp.contour<-function (x,y,z,zse,xlab="",ylab="",zlab="main",se.plot=TRUE,se.mult=1,...)   
+{ sp.contour <- function(x,y,z,zse,xlab="",ylab="",zlab="",titleOnly=FALSE,se.plot=TRUE,se.mult=1,...)   
   # internal function for contouring 2-d smooths with 1 s.e. limits
   { gap<-median(zse,na.rm=TRUE)  
     zr<-max(z+zse,na.rm=TRUE)-min(z-zse,na.rm=TRUE) # plotting range  
@@ -2977,28 +2981,53 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     cw<-par()$cxy[1]  
     tl<-strwidth(zlab);  
     if (tl*cs>3*xr/10) cs<-(3*xr/10)/tl  
-    contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
+    args <- as.list(substitute(list(...)))[-1]
+    n.args <- names(args)
+    args$x<-substitute(x);args$y<-substitute(y);args$z<-substitute(z)
+    if (!"levels"%in%n.args) args$levels<-substitute(zlev)
+    if (!"lwd"%in%n.args) args$lwd<-2
+    if (!"labcex"%in%n.args) args$labcex<-cs*.65
+    if (!"axes"%in%n.args) args$axes <- FALSE
+    if (!"add"%in%n.args) args$add <- TRUE
+    do.call("contour",args)
+    #contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
+    if (titleOnly) title(zlab) else 
+    { xpos<-xrange[1]+3*xr/10  
+      xl<-c(xpos,xpos+xr/10); yl<-c(ypos,ypos)   
+      lines(xl,yl,xpd=TRUE,lwd=args$lwd)  
+      text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+    }
     axis(1,cex.axis=cs);axis(2,cex.axis=cs);box();  
     mtext(xlab,1,2.5,cex=cs);mtext(ylab,2,2.5,cex=cs)  
-    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
-    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
-    
-    xpos<-xrange[1]  
-    xl<-c(xpos,xpos+xr/10);yl<-c(ypos,ypos)  
-    lines(xl,yl,xpd=TRUE,lty=3,col=3)  
-    text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
-  
-    xpos<-xpos+3*xr/10  
-    xl<-c(xpos,xpos+xr/10);  
-    lines(xl,yl,xpd=TRUE,lwd=2)  
-    text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
-    
-    xpos<-xrange[2]-xr/5  
-    xl<-c(xpos,xpos+xr/10);  
-    lines(xl,yl,xpd=TRUE,lty=2,col=2)  
-    text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
-  }   
+    if (!"lwd"%in%n.args) args$lwd<-1
+    if (!"lty"%in%n.args) args$lty<-2
+    if (!"col"%in%n.args) args$col<-2
+    if (!"labcex"%in%n.args) args$labcex<-cs*.5
+    args$z<-substitute(z+zse)
 
+    do.call("contour",args)
+#    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
+
+    if (!titleOnly) {
+      xpos<-xrange[1]  
+      xl<-c(xpos,xpos+xr/10)#;yl<-c(ypos,ypos)  
+      lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
+      text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+    }
+
+    if (!"lty"%in%n.args) args$lty<-3
+    if (!"col"%in%n.args) args$col<-3
+    args$z<-substitute(z-zse)
+    do.call("contour",args)
+#    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
+    
+    if (!titleOnly) {
+      xpos<-xrange[2]-xr/5  
+      xl<-c(xpos,xpos+xr/10);  
+      lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
+      text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+    }
+  }   
 
   # start of main function
   w.resid<-NULL
@@ -3174,7 +3203,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
           { plot(pd[[i]]$x,pd[[i]]$fit,type="n",xlab=pd[[i]]$xlab,ylim=ylimit,
                  xlim=xlim,ylab=pd[[i]]$ylab,main=main,...)
             polygon(c(pd[[i]]$x,pd[[i]]$x[n:1],pd[[i]]$x[1]),
-                     c(ul,ll[n:1],ul[1]),col = col.shade,border = NA)
+                     c(ul,ll[n:1],ul[1]),col = shade.col,border = NA)
             lines(pd[[i]]$x,pd[[i]]$fit)
           } else
           { plot(pd[[i]]$x,pd[[i]]$fit,type="l",xlab=pd[[i]]$xlab,ylim=ylimit,xlim=xlim,
@@ -3204,8 +3233,13 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
                   zlab=pd[[i]]$title,ylim=pd[[i]]$ylim,xlim=pd[[i]]$xlim,theta=theta,phi=phi,...)
           } else
           { sp.contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),matrix(pd[[i]]$se,n2,n2),
-                     xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,zlab=pd[[i]]$title,se.mult=se2.mult,...)
-            if (rug) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...)
+                     xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,zlab=pd[[i]]$title,titleOnly=!is.null(main),
+                     se.mult=se2.mult,...)
+            if (rug) { 
+              if (is.null(list(...)[["pch"]]))
+              points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
+              points(pd[[i]]$raw$x,pd[[i]]$raw$y,...) 
+            }
           } 
         } else
         { warning("no automatic plotting for smooths of more than one variable")
@@ -3860,12 +3894,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-4 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-5 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-4 \n")
+    cat("This is mgcv 1.1-5 \n")
 }
 
 
