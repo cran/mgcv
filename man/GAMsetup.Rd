@@ -101,10 +101,10 @@ values! Note that these will be covariate shifted.}
 \references{ Wood, S.N. (2000) Modelling and smoothing parameter estimation with multiple
 quadratic penalties JRSSB 62(2):413-428 
 
-Wood, S.N. (2003) Thin plate regression splines. JRSSB in press.
+Wood, S.N. (2003) Thin plate regression splines. JRSSB 65(1):95-114.
 }
 
-\author{Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \seealso{ \code{\link{mgcv}} \code{\link{gam}} }
 

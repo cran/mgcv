@@ -39,7 +39,7 @@ H_r }.
 \references{Gill, Murray and Wright (1981) Practical Optimization, Academic %%@
 Press}
 
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 
 \examples{

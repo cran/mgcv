@@ -82,9 +82,9 @@ with Multiple
    Quadratic Penalties. JRSSB 62(2):413-428
 
 
-\url{http://www.ruwpa.st-and.ac.uk/simon.html}
+\url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNING }{ The supplied p-values are only approximate: they are
   conditional on the smoothing and scale parameters, which will usually

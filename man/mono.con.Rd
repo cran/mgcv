@@ -39,9 +39,9 @@ Press, London.
 Wood, S.N. (1994) Monotonic smoothing splines fitted by cross validation SIAM
 Journal on Scientific Computing 15(5):1126-1133
 
-\url{http://www.ruwpa.st-and.ac.uk/simon.html}
+\url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{snw@st-and.ac.uk} } 
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk} } 
 
 \seealso{  \code{\link{mgcv} } \code{\link{pcls}}  }
 

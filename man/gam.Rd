@@ -285,13 +285,13 @@ with Multiple
 
 Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
    
-Wood (2003) Thin Plate Regression Splines JRSSB in press.
+Wood (2003) Thin Plate Regression Splines JRSSB 65(1):95-114.
 
 Wahba (1990) Spline Models of Observational Data. SIAM 
 
-  \url{http://www.ruwpa.st-and.ac.uk/simon.html}
+  \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNINGS }{The code does not check for rank defficiency of the
 model matrix that may result from lack of identifiability between the

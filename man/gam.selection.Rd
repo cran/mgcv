@@ -37,7 +37,7 @@ minimum possible.
 
 }
 
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \references{
 Craven and Wahba (1979) Smoothing Noisy Data with Spline Functions. Numer. Math. 31:377-403
@@ -49,6 +49,7 @@ Wahba (1990) Spline Models of Observational Data. SIAM.
 Wood (2000) Modelling and Smoothing Parameter Estimation 
 with Multiple 
    Quadratic Penalties. JRSSB 62(2):413-428
+
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..

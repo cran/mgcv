@@ -56,10 +56,10 @@ parameter vector. \code{C} includes the original sum to zero constraints from
   \code{G$C} and is hence suitable for directly replacing that matrix. 
 }
 
-\author{ Simon N. Wood \email{snw@st-and.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \references{
-Wood (2003) Thin plate regression splines JRSSB in press. 
+Wood (2003) Thin plate regression splines JRSSB 65(1):95-114. 
 }
 
 
