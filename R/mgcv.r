@@ -969,7 +969,7 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100)
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.5.0\n")
+    cat("This is mgcv 0.5.1\n")
 }
 
 

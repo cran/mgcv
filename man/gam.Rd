@@ -184,8 +184,7 @@ f <- f + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b,pages=1) 
-# now fit GAM with 3df regression spline term and two penalized terms
+plot(b,pages=1) # now fit GAM with 3df regression spline term and two penalized terms
 b1<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
 plot(b1,pages=1)
 # now simulate poisson data
@@ -194,5 +193,5 @@ for (i in  1:length(f)) y[i]<-rpois(1,f[i])
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
 plot(b2,pages=1)
 }
-\keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
 
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

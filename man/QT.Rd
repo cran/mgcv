@@ -47,5 +47,6 @@ y<-rnorm(12,1,1)
 A<-matrix(y,2,6)
 B<-QT(A)
 }
-\keyword{ QT orthogonal factorisation }%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
 

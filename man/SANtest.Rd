@@ -35,7 +35,7 @@ SANtest(300,-1) # use GCV with 300 data point example, variance 1
 SANtest(300,0.5) # use UBRE 300 data, variance 0.5
 
 }
-\keyword{ GAM spline}%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
 
 

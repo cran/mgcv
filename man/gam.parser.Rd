@@ -37,5 +37,5 @@ model matrix that may result from including the same covariates in the smooth an
 
 \seealso{   \code{\link{gam}} \code{\link{mgcv}}}
 
-\keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
