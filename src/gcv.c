@@ -34,7 +34,7 @@ double svdopt(B,S,X,W,y,f,r,method,outcv) matrix B,S,X,W,y,f;double r,*outcv;int
 
 { matrix e,XU,U,E;
   int gridpoints=25,i,ok;
-  double range=100000.0,rmin,cv,cvmin,dr,c1,c2,c3,cnew,r1,r2,r3,rnew,tau;
+  double range=100000.0,rmin,cv,cvmin,dr,c1,c2,c3,cnew=0.0,r1,r2,r3,rnew=0.0,tau;
   tau=2.0/(1.0+sqrt(5.0));
 
   /* Now find the decomposition of (B+rS) that allows quick inversion */
@@ -156,7 +156,7 @@ double zsvdopt(Z,B,S,X,W,f,y,r,method,outcv) matrix Z,B,S,X,W,f,y;double r,*outc
 
 { matrix e,ZU,BZ,ZSZ,ZBZ,U,E;
   int gridpoints=25,i,j,k,ok;
-  double range=100000.0,rmin,cv,cvmin,dr,c1,c2,c3,cnew,r1,r2,r3,rnew,tau;
+  double range=100000.0,rmin,cv,cvmin,dr,c1,c2,c3,cnew=0.0,r1,r2,r3,rnew=0.0,tau;
   tau=2.0/(1.0+sqrt(5.0));
   /* form Z'BZ and Z'SZ these are symmetric matrices, so the op count isn't too bad */
   BZ=initmat(B.r,Z.c);
@@ -769,11 +769,12 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       x/=m;
       for (i=0;i<m;i++) trial[i] -= x; /* normalising smooths */
       if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
-      for (i=0;i<m;i++)
-      if (trial[i]<ninf[i])
-      trial[i]=ninf[i];
-      else if (trial[i]>pinf[i])
-      trial[i]=pinf[i];
+      { for (i=0;i<m;i++)
+        if (trial[i]<ninf[i])
+        trial[i]=ninf[i];
+        else if (trial[i]>pinf[i])
+        trial[i]=pinf[i];
+      } 
       /* form S the combined smooth measure */
       for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
       T.M[i][j]=exp(trial[0])*LZSZL[0].M[i][j];
@@ -1212,11 +1213,12 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
       if (transform) ft(-2,m,mp,eta,trial,0,0,0); // making trial consistent with eta
       else for (i=0;i<m;i++) trial[i] -= x;
       if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
-      for (i=0;i<m;i++)
-      if (eta[i]<ninf[i])
-      eta[i]=ninf[i];
-      else if (eta[i]>pinf[i])
-      eta[i]=pinf[i];
+      { for (i=0;i<m;i++)
+        if (eta[i]<ninf[i])
+        eta[i]=ninf[i];
+        else if (eta[i]>pinf[i])
+        eta[i]=pinf[i];
+      } 
       /* form S the combined smooth measure */
       for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
       T.M[i][j]=exp(eta[0])*LZSZL[0].M[i][j];

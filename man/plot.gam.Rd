@@ -2,8 +2,8 @@
 \alias{plot.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Default GAM plotting}
-\description{ Takes a fitted \code{gam} object prodced by \code{gam()} and plots the 
-   component smooth functions that make it up on the scale of the linear predictor.}
+\description{ Takes a fitted \code{gam} object produced by \code{gam()} and plots the 
+   component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
 plot.gam(object,rug,se,pages,scale,n)
@@ -21,13 +21,13 @@ plot.gam(object,rug,se,pages,scale,n)
  \item{pages}{ (default 1) the number of pages over which to spread the output. Set to 0 to 
  have the routine leave all graphics settings as they are.}
 \item{scale}{ set to -1 (default) to have the same y-axis scale for each plot, and to 0 for a 
-          different y axis for eaxh plot.  }
+          different y axis for each plot.  }
 \item{n}{ number of points used for each plot - for a nice smooth plot this needs to be several times the estimated 
     degrees of freedom for the smooth. Default value 100.}
 }
 \details{ Produces default plot showing the smooth components of a fitted GAM. The x axis of each plot is labelled 
    with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
-   is the covariate name, and \code{edf} the estimated degrees of freedom of the smooth.
+   is the covariate name, and \code{edf} the estimated (or user defined for regression splines) degrees of freedom of the smooth.
    Within the function, the data for the plots is obtained by a call to \code{predict.gam()} with a 
    suitably constructed data frame. A rug plot along the bottom of each frame shows the covariate values.}
    }

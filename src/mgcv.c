@@ -324,7 +324,7 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
    S[i].
    x[i][j], contains the jth value of the ith covariate.
    The first nsdf x[i]s are columns of the design matrix for the non-spline
-   part of the model.
+   part of the model (including the intercept term) .
    X & Z are initialised in the routine.
    Each S[i] is also initialised in the routine.
    xp[i] is returned containing the vector of knot positions for the ith spline.
@@ -334,7 +334,8 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
      0 - if getZ==0 then Z is returned containing the constraint matrix itself.
 
    All smooths are constrained so that their parameters sum to zero - the first
-   parameter in the model will then be a mean.
+   parameter in the model will then be a mean. Hence for a pure gam() x[1] should
+   be a vector of 1's and nsdf should be equal to one, to allow for a constant.
 
 
 */
@@ -343,15 +344,14 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
   double xx,dx;
   matrix my,mg,T,y;
 //  char *msg[200];
-  np=nsdf+1+df[0];for (i=1;i<m;i++) np+=df[i];
+  np=nsdf+df[0];for (i=1;i<m;i++) np+=df[i];
   T=initmat((long)m,np);
   *X=initmat((long)n,(long)np);
-  off[0]=nsdf+1;
+  off[0]=nsdf;
   y=initmat((long)n,1L);
-  for (i=0;i<n;i++) X->M[i][0]=1.0;
-  for (j=0;j<nsdf;j++) for (i=0;i<n;i++) X->M[i][j+1]=x[j][i];
+  for (j=0;j<nsdf;j++) for (i=0;i<n;i++) X->M[i][j]=x[j][i];
   for (l=0;l<m;l++) /* work through the smooths */
-  { if (l) off[l]=off[l-1]+df[l-1];else off[l]=nsdf+1;
+  { if (l) off[l]=off[l-1]+df[l-1];else off[l]=nsdf;
     /* set up part of design matrix for this smooth */
     /* get knot sequence */
     lp=l+nsdf;
@@ -467,7 +467,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   { dim=(long *)calloc((size_t)m,sizeof(long));
     off=(long *)calloc((size_t)m,sizeof(long));
     S=(matrix *)calloc((size_t)m,sizeof(matrix));
-  }
+  } 
   for (i=0;i<m;i++) off[i]=(long)offd[i];
   for (i=0;i<m;i++) dim[i]=(long)dimd[i];
   // set up matrices for MultiSmooth
@@ -572,13 +572,15 @@ void RQT(double *A,int *r,int*c)
    row of A (A[i,], i>=1) then the last i-1 elements of u_i are zero, while if 
    H_i=(I-u_i u_i') then Q=H_1 H_2 H_3 ...H_r.
    
-   The main purpose of this routine is to provide a suitable representation 
+   The main purpose of this routine *was* to provide a suitable representation 
    of the null space of any equality constraints on the problem addressed by 
-   mgcv(). So if the constraints are Cp=0, call RQT() to get an appropriate
-   null space basis in A. The non-obvious representation usually saves
-   much computing, since there are usually few constraints, resulting in 
+   mgcv(). So if the constraints are Cp=0, RQT() was called to get an 
+   appropriate null space basis in A. The non-obvious representation usually 
+   saves much computing, since there are usually few constraints, resulting in 
    a high dimensional null space - in this case the Householder representation
-   is very efficient.
+   is very efficient. 
+
+   However, the current version of mgcv() expects to get the constraint matrix    itself and not the null space. 
 */
 
 { matrix Q,B;
@@ -600,15 +602,15 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *xpd,
    1. x - in R terms x[i][j] is the jth obs of the ith covariate (corresponding
           to the jth datapoint being modelled i.e. y[j]). Note however that the
           first nsdf x[i]'s are the first nsdf columns of the design matrix
-          corresponding to the parametric part of the model; the remaining
-          x[i]'s are covariates that wil be treated using smooths.
-          dimension (m+nsdf) by n.
-   2. nsdf - the number of parametric terms (excluding the mean/intercept term)
+          corresponding to the parametric part of the model (including the intercept); 
+          the remaining x[i]'s are covariates that will be treated using smooths.
+          Dimension (m+nsdf) by n.
+   2. nsdf - the number of parametric terms (including the mean/intercept term)
    3. df - m terms; df[i] is the max. d.f. for the ith smooth
    4. m - number of smooths
    5. n - number of data to be modelled.
    Ouputs are:
-   1. X - the n by q design matrix where q = \sum_i df[i]+nsdf+1
+   1. X - the n by q design matrix where q = \sum_i df[i]+nsdf
    2. xp - xp[i][j] is the jth knot position for the ith smooth. Dimension must
            be set to m by (max_i df[i]).
    3. S - array containing smoothness matrices. S[k][i][j] is ith row jth col of
@@ -660,7 +662,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *xpd,
 
 void gam_map(matrix tm, matrix *t, double *x, int m,int nsdf, int kill)
 
-/* Consider a gam with a set of parametric terms given by the first 1+nsdf terms of 
+/* Consider a gam with a set of parametric terms given by the first nsdf terms of 
    vector x and m smooth terms    
    represented by splines, each with df[i] parameters. It is assumed the the splines
    are parameterized by the parameter values at the knots, and that the model parameters
@@ -689,8 +691,7 @@ void gam_map(matrix tm, matrix *t, double *x, int m,int nsdf, int kill)
     terms=m;
   }
   // deal with the  parametric terms first....
-  tm.V[0]=1.0; // constant
-  for (k=1;k<nsdf+1;k++) tm.V[k]=x[k-1];
+  for (k=0;k<nsdf;k++) tm.V[k]=x[k];
   // now the splines.....
   for (j=0;j<m;j++) 
   { xx=x[nsdf+j];
@@ -717,16 +718,15 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
    
    xp[i][j] is the jth knot position for the ith smooth (xp[i] dimension must be set to 
             max_i(df[i])...)
-   nsdf     is the number of non spline terms exclusing the constant.
+   nsdf     is the number of non spline terms including the constant.
    df[i]    is the number of parameters for the ith spline
    m        is the number of splines
    x[i][j]  is the ith observation of jth covariate, for which predictions are required - 
             first nsdf are none spline terms
    np       is the number of predictions required (number of obs. per cov.)
-   p[i]     is the ith parameter: 0 is the constant
-                                  1 to nsdf are the none spline terms
-                                  nsdf+1 to nsdf+df[0] is the first spline
-                                  nsdf+1+df[i-1] to nsdf+df[i] is the ith spline 
+   p[i]     is the ith parameter: 0 to nsdf-1 are the none spline terms
+                                  nsdf to nsdf+df[0]-1 is the first spline
+                                  nsdf+df[i-1] to nsdf+df[i]-1 is the ith spline 
    Vp[i][j] is covariance of p[i] and p[j]
    
    mu is the o/p linear predictor
@@ -753,11 +753,11 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
     { x[i][j]=xd[j+(*m + *nsdf)*i]; // loading data passed by R into x[][]
     } 
   }
-  nb = 1 + *nsdf;  // number of parameters
+  nb =  *nsdf;  // number of parameters
   for (i=0;i < *m;i++) nb += df[i];
   Vp=Rmatrix(Vpd,(long)nb,(long)nb); // param cov matrix
   // initialise a couple of storage matrices
-  if (*control<2) k=1;else k= 1 + *nsdf + *m;  // don't allocate more than is needed
+  if (*control<2) k=1;else k=  *nsdf + *m;  // don't allocate more than is needed
   eta=initmat((long)k,(long)*np); 
   se=initmat((long)k,(long)*np);
   // need to unpack xpd into xp here .....
@@ -778,24 +778,24 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
       { z=0.0;
         for (i=0;i<tm.r;i++) 
         { Vt=0.0; for (j=0;j<tm.r;j++) Vt+=Vp.M[i][j]*tm.V[j];
-          z+=tm.V[i]*Vt; // NOTE: why Vt[i]????
+          z+=tm.V[i]*Vt; 
         }
         se.M[0][k]=sqrt(z);
       }
     } else // individual predictors wanted
     { // the constant .....
-      eta.M[0][k]=p[0];
-      if (*control==3) se.M[0][k]=sqrt(Vp.M[0][0]); 
+      //eta.M[0][k]=p[0];
+      //if (*control==3) se.M[0][k]=sqrt(Vp.M[0][0]); 
       // other parametric terms .....
       for (i=0;i< *nsdf;i++) 
-      { eta.M[i+1][k]=p[i+1]*x[k][i];
-        if (*control==3) se.M[i+1][k]=sqrt(p[i+1]*p[i+1]*Vp.M[i+1][i+1]);
+      { eta.M[i][k]=p[i]*x[k][i];
+      if (*control==3) se.M[i][k]=sqrt(x[k][i]*x[k][i]*Vp.M[i][i]); 
       }
       // and now the splines .....
-      kk= 1+ *nsdf;
+      kk= *nsdf;
       for (l=0;l< *m;l++)
       { z=0.0;for (i=0;i<df[l];i++) { z+=tm.V[kk+i]*p[kk+i];}
-        eta.M[1 + *nsdf + l][k] = z;
+        eta.M[ *nsdf + l][k] = z;
         if (*control==3)
         { z=0.0;
           for (i=0;i<df[l];i++) 
@@ -805,7 +805,7 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
           } 
           if (z<0.0) {sprintf(info,"z = %g in RGAMpredict",z);
           infobox(info);}     
-          se.M[1 + *nsdf + l][k]=sqrt(z);
+          se.M[ *nsdf + l][k]=sqrt(z);
         }
         kk+=df[l];
       }
@@ -831,4 +831,10 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
    repeat values of covariates.
 2. 20/10/00: Modified mgcv() to cope with problems with no penalties, by call to leastsq() -
    this is needed to allow gam() to fit models with fixed degrees of freedom.
+3. 5/1/01: Modified RGAMsetup(), GAMsetup(), gam_map() and RGAMpredict() so that nsdf is now
+   total number of non-spline parameters including any constant. Hence R code must now provide 
+   column for constant explicitly.
+4. 5/1/01: fixed bug in RGAMpredict - standard errors of parametric components of linear predictor
+   were wrongly calculated.
 */
+

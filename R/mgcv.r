@@ -26,13 +26,12 @@ GAMsetup<-function(G) {
 # G$m the number of smooth terms in the model
 # G$n the number of data to be modelled
 # G$nsdf the number of user supplied columns of the design matrix for any parametric model parts
+#        including the constant (if any)
 # G$df an array of G$m integers specifying the maximum d.f. for each spline term
 # G$x an array of G$n element arrays of data and (optionally) design matrix columns. The first
 #     G$nsdf elements of G$x should contain the elements of the columns of the design matrix
 #     corresponding to the parametric part of the model. The remaining G$m elements of G$x 
-#     are the values of the covariates that are arguments of the spline terms. Note that the 
-#     user should not supply a column of 1's in the design matrix, corresponding to the mean
-#     response as this will be added automatically.
+#     are the values of the covariates that are arguments of the spline terms.
 #
 # The function returns a list H containing all the above named elements plus the following:
 #
@@ -45,29 +44,28 @@ GAMsetup<-function(G) {
 # H$off is an array of offsets, used to facilitate efficient storage of the penalty matrices
 #       and to indicate where in the overall parameter vector the parameters of the ith 
 #       spline reside (e.g. first parameter of ith spline is at p[off[i]]).
-# H$Z -null space of constraints stored as series of Householder rotations.  
+# H$C - the matrix of linear equality constraints on the parameters .  
 # H$xp -matrix whose rows contain the covariate values corresponding to the parameters
 #      of each spline - the splines are parameterized using their y- values at a series
 #      of x values - these vectors contain those x values!
 
-  q<-G$nsdf+1
+  q<-G$nsdf
   for (i in 1:G$m) { q<-q+G$df[i] }  # q stores total number of parameters
   X<-matrix(0,G$n,q)             # design matrix
   mdf<-max(G$df)
   xp<-matrix(0,G$m,mdf)          # covariate matrix
   S<-array(0,dim=c(G$m,mdf,mdf))   # array of wiggliness penalty matrices
-  Z<-matrix(0,G$m,q)             # fixed constraint matrix (one per spline term)
+  C<-matrix(0,G$m,q)             # fixed constraint matrix (one per spline term)
   off<-array(0,c(G$m))           # array for storing offsets for Wiggliness penalties
-  o<-.C("RGAMsetup",as.double(X),as.double(Z),as.double(S),as.double(xp),
+  o<-.C("RGAMsetup",as.double(X),as.double(C),as.double(S),as.double(xp),
         as.integer(off),as.double(G$x),as.integer(G$m),as.integer(G$n),as.integer(G$df),
         as.integer(G$nsdf)) # compiled code to set up matrices for model
   X<-matrix(o[[1]],G$n,q);
-  Z<-matrix(o[[2]],G$m,q);
+  C<-matrix(o[[2]],G$m,q);
   S<-array(o[[3]],dim=c(G$m,mdf,mdf));
   xp<-matrix(o[[4]],G$m,mdf);
   off<-array(o[[5]],c(G$m));
-  G$X<-X;G$S<-S;G$off<-off;G$Z<-Z;G$xp<-xp
-  #H<-list(m=G$m,n=G$n,nsdf=G$nsdf,df=G$df,x=G$x,X=X,S=S,off=off,Z=Z,xp=xp) # form the return list
+  G$X<-X;G$S<-S;G$off<-off;G$C<-C;G$xp<-xp
   G # ... and return
 }
 
@@ -80,8 +78,8 @@ mgcv<-function(M) {
 # M$y  - the response variable vector
 # M$X  - the design matrix (declared as a matrix, with correct numbers of rows and columns,
 #        as number of data and number of parameters are read from this)
-# M$Z  - Null space of linear equality constraints on parameters, stored as Householder
-#        rotations as returned by QT(). Number of rows is number of constraints.
+# M$C  - matrix defining linear equality constraints on parameters (Cp=0). 
+#        Number of rows is number of constraints.
 # M$w  - weight vector (often proportional to inverse of variance)
 # M$S  - A 3 dimensional array containing the penalty coefficient matrices. dim(M$S)[1], should
 #        be the number of penalties. S[i] is the 2-d array containing the coeffs for the ith
@@ -104,19 +102,23 @@ mgcv<-function(M) {
 # M$sig2 - the estimate of the error variance (if GCV used)
 # M$Vp   - the estimated covariance matrix of the parameters set Vp[1,1] <0 to not calculate
 # M$edf  - the estimated degrees of freedom for the ith smooth term if Vp calculated
-
-  Z.r<-nrow(M$Z)          # number of equality constraints
+  
+  if (is.null(M$sig2)) M$sig2<-0
+  C.r<-nrow(M$C)          # number of equality constraints
+  if (is.null(C.r)) C.r<-0
   q<-ncol(M$X)            # number of parameters
   
   n<-nrow(M$X)            # number of data
-  # need to strip out penalties for fixed df smooths.....
+  # need to strip out penalties for fixed df smooths..... 
   k<-dim(M$S)[1]             # number of penalties (before stripping)
-  m<-0
-  for (i in 1:k) if (M$fix[i]==FALSE) m<-m+1 # count penalty terms to include
+  if (is.null(k)) k<-0
+  if (k!=0)  m<-k-sum(M$fix) # count penalty terms to include
+  else m<-0
   S<-array(0,c(m,dim(M$S)[2],dim(M$S)[3])) # reduced smoothness array
   off<-array(0,m)  # reduced offset array
   df<-array(0,m)   # reduced penalty size array
-  j<-1           
+  j<-1             # element index for off[], df and S[]    
+  if (k!=0)
   for (i in 1:k)   # do actual stripping
   if (M$fix[i]==FALSE) 
   { S[j,,]<-M$S[i,,]
@@ -126,14 +128,13 @@ mgcv<-function(M) {
   }
   # deal with quantities that will be estimated
   p<-matrix(0,q,1)      # set up parameter vector
- # sp<-matrix(0,m,1)     # vector for smoothing parameters
   Vp<-matrix(0.0,q,q)   # estimated covariance matrix
   edf<-array(0,m)       # estimated degrees of freedom
   Vp[1,1]<-1.0
 
-  oo<-.C("mgcv",as.double(M$y),as.double(M$X),as.double(M$Z),as.double(M$w),as.double(S),
+  oo<-.C("mgcv",as.double(M$y),as.double(M$X),as.double(M$C),as.double(M$w),as.double(S),
          as.double(p),as.double(M$sp),as.integer(off),as.integer(df),as.integer(m),
-         as.integer(n),as.integer(q),as.integer(Z.r),as.double(M$sig2),as.double(Vp),
+         as.integer(n),as.integer(q),as.integer(C.r),as.double(M$sig2),as.double(Vp),
 		 as.double(edf))
    
   p<-matrix(oo[[6]],q,1);
@@ -145,6 +146,7 @@ mgcv<-function(M) {
   M$sp<-array(0,k)
   M$edf<-array(0,k)
   j<-1
+  if (k!=0)
   for (i in 1:k)
   { if (M$fix[i]==TRUE)
     { M$sp[i]<-0
@@ -177,27 +179,29 @@ SANtest<-function(n=100,sig2=-1) {
   }
 # simulate some data to which GAM can be fitted......
 
-  x<-runif(4*n,0,1)      # simulate covariates
-  x<-array(x,dim=c(4,n)) # load into array
+  x<-runif(5*n,0,1)      # simulate covariates
+  x<-array(x,dim=c(5,n)) # load into array
   pi<-asin(1)*2          
-  y<-2*sin(pi*x[1,])  
-  y<-y+exp(2*x[2,])-3.75887
-  y<-y+0.2*x[3,]^11*(10*(1-x[3,]))^6+10*(10*x[3,])^3*(1-x[3,])^10-1.396 # simulate truth
+  y<-2*sin(pi*x[2,])  
+  y<-y+exp(2*x[3,])-3.75887
+  y<-y+0.2*x[4,]^11*(10*(1-x[4,]))^6+10*(10*x[4,])^3*(1-x[4,])^10-1.396 # simulate truth
   e<-rnorm(n,0,sqrt(abs(sig2)))  # noise to add to truth
   y<-y+e              # create data from truth + noise   
   w<-matrix(1,n,1)    # weight matrix
   
+
 # display scatter plots of data against covariates.....
 
   par(mfrow=c(2,2))   # set display environment to 2 by 2
-  plot(x[1,],y)      
-  plot(x[2,],y)
+  plot(x[2,],y)      
   plot(x[3,],y)
   plot(x[4,],y)
+  plot(x[5,],y)
 
 # set up input list for GAMsetup and call GAMsetup.......
 
-  G<-list(m=4,n=n,nsdf=0,df=c(15,15,15,15),x=x) # input list for GAMsetup
+  x[1,]<-1 # set up dummy variable for intercept term
+  G<-list(m=4,n=n,nsdf=1,df=c(15,15,15,15),x=x) # input list for GAMsetup
   H<-GAMsetup(G)  
   H$fix<-array(FALSE,H$m)
   H$y<-y;H$sig2<-sig2;H$w<-w # add data, variance and weights to mgcv input list
@@ -332,7 +336,16 @@ gam.parser<-function(formula)
     }
   }
   options(warn=0) # turn warnings back on 
-  if (param.started) pf<-paste(pf,"-1",sep="")  # make sure that intercept removed
+  if (param.started)
+  { if (length(attr(terms(as.formula(pf)),"variables"))==1) # then formula contains only "1"'s or "-1"'s
+    { if (grep("-",pf)>=1) # then no intercept
+      param.started<-0  # there should be no parametric terms
+      else pf <- ~ 1    # make sure formula is unambiguous - there is an intercept only!
+    } 
+  } else # an intercept term is required
+  { param.started<-1
+    pf <- "~ 1"
+  }
   # end of parse loop
   ret<-list(sfok=smooth.started,pfok=param.started,df=ndf,sftext=sf,pftext=pf,fix=fix)
   if (smooth.started) ret$sf<-as.formula(sf)
@@ -340,14 +353,25 @@ gam.parser<-function(formula)
   ret
 }
 
-gam.setup<-function(formula,data=list(),get.y=TRUE,parent.level=2)
+gam.setup<-function(formula,data=list(),gam.call,predict=TRUE,parent.level=2,nsdf=-1)
 
 # This gets the data referred to in the model formula, either from data frame "data"
 # or from the level parent.level parent (e.g. when called from gam() this will be
 # the parent that called gam(). 
 # G$names[i] contains the names associated with each column of the design matrix,
 # followed by the name of each smooth term - the constant is un-named! 
-#
+# Note that it is assumed that the default parent.level assumes that this function
+# is called from the function that was called by the user! i.e. the user's calling 
+# environment is the grandparent of the environment of gam.setup() 
+# if nsdf==-1 then it assumed that the design matrix for the non-spline part of the 
+# model is to be found here. Otherwise it is assumed that nsdf is the known 
+# number of degrees of freedom for the non-spline part (including intercept), but
+# the columns corresponding to the non-spline part of the model and the offset 
+#  are set to zero.
+# 
+# NOTE: all.vars(formula) will return the names of all the variables refered to by 
+# a formula...... use of this could make some of the code in this function somewhat
+# simpler!!!!!
 
 { # now split the formula
   split<-gam.parser(formula) 
@@ -355,39 +379,74 @@ gam.setup<-function(formula,data=list(),get.y=TRUE,parent.level=2)
   if (dmiss) data<-sys.frame(sys.parent(n=parent.level))
   if (split$df[1]==-1) stop("You've got no smooth terms - use another model fitter")
   
-  mt<-terms(split$sf,data=data)
+  mt<-terms(split$sf)
   
   m<-length(split$df) # number of smooth terms
   G<-list(m=m,df=split$df)
   G$fix<-split$fix
-  if (split$pfok) 
-  { mf<-model.frame(split$pf,sys.frame(sys.parent(n=parent.level)))
-    X <- model.matrix(split$pf,mf)
-    G$nsdf <- dim(X)[2]
-    G$offset <- model.offset(mf)
-	
+  add.constant<-FALSE
+  if (split$pfok)   # deal with the strictly parametric part of the model 
+  { if (length(attr(terms(split$pf),"variables"))==1) # then the formula is ~ 1 and model.frame(), etc can't cope 
+    { G$nsdf<-1
+      add.constant<-TRUE  # must construct model matrix later when length of response is known
+    } else
+    { if (nsdf>=0)  # set G$nsdf to supplied value, but deal with X later
+      { G$nsdf<-nsdf
+      } else 
+      { if (predict) # then user MUST have supplied all data in data frame and searching is easy
+        { mf<-model.frame(split$pf,data)
+        } else   # all sorts of stupid practices are allowed and must be catered for.... 
+        { mf<-gam.call # assemble a call to model frame which will allow searching in the calling env. 
+          mf[[1]]<-as.name("model.frame")      # replace "gam" with "model.frame" in call
+          mf$family<-mf$weights<-mf$control<-mf$scale<-NULL
+          mf$formula<-split$pf                 # set formula to parametric only part     
+          # evaluate in the grandparent environment to get model frame......
+          mf<-eval(mf,sys.frame(sys.parent(n = parent.level))) 
+        }
+        G$offset <- model.offset(mf)   # get the model offset (if any)
+        if (!is.null(G$offset) && length(attr(terms(split$pf),"variables"))<=2) # then there is an offest but no terms other than "+1" or "-1"
+        { if (length(grep("-",as.character(split$pf[2])))>=1) # then there is a "-1" term in formula
+          X<-matrix(0,length(G$offset),0)
+          else X <- model.matrix(split$pf,mf)  # then there is a constant in the model and model.matrix() can cope 
+        }
+        else X <- model.matrix(split$pf,mf)       # getting the model matrix
+        G$nsdf <- dim(X)[2]                  # extract the total non- smooth df
+      }        
+    }	
   } else
   G$nsdf<-0
   
   xvars <- as.character(attr(mt, "variables"))[-1]
-  if (get.y) 
-  { if (dmiss) G$y<-get(xvars[1],envir=sys.frame(sys.parent(n=parent.level)))
-    else G$y<-data[[xvars[1]]]
+  if (!predict) # obtain the "y variable"  
+  { # evaluates rhs of model using data and failing that the calling environment...
+    G$y<-eval(terms(split$sf)[[2]],data,sys.frame(sys.parent(n = parent.level)))
+    # checks that this has worked.....
+    if (is.null(G$y)) stop(paste("Failed to find variable for",xvars[1]))
   }
 
   xfacs <- attr(mt, "factors")
   term.labels<-labels(mt)
  
-  # now find number of data without looking at y
+  # now find number of data without looking at y (needed for predicting)
   
   label<-term.labels[1]
 
   vlist<-xvars[as.logical(xfacs[, label])]
-  
-  if (dmiss) z<-get(vlist[1],envir=sys.frame(sys.parent(n=parent.level)))
+  if (dmiss||is.null(data[[vlist[1]]])) z<-get(vlist[1],envir=sys.frame(sys.parent(n=parent.level)))
   else z<-data[[vlist[1]]] 
 
   G$n<-NROW(z)
+  
+  if (add.constant)          # then X must be created by hand for case where parametric model is ~1
+  { X<-matrix(1,G$n,G$nsdf)
+    colnames(X)<-"constant"
+  }
+ 
+  if (nsdf>=0) # then X still needs to be filled
+  { X<-matrix(0,G$n,G$nsdf)
+    colnames(X)<-rep("",G$nsdf)         # don't need them, but will fail below without!  
+    G$offset<-array(0,G$n)
+  }
   G$x<-array(0,dim=c(G$nsdf+m,G$n)) # explanatory data array
   G$names<-array("",G$nsdf+m)
   if (G$nsdf>0) for (k in 1:G$nsdf) 
@@ -401,19 +460,21 @@ gam.setup<-function(formula,data=list(),get.y=TRUE,parent.level=2)
   { vlist<-xvars[as.logical(xfacs[, label])]
 	G$names[kk]<-"s("
     for (i in 1:length(vlist)) # produces a column for each variable in this smooth
-    { if (dmiss) z<-get(vlist[i],envir=sys.frame(sys.parent(n=parent.level)))
-	  else z<-data[[vlist[i]]] 
-	  G$x[k,]<-z
-	  if (i<length(vlist)) G$names[kk]<-paste(G$names[kk],vlist[i],",",sep="")
-	  else G$names[kk]<-paste(G$names[kk],vlist[i],sep="")
+    { if (dmiss||is.null(data[[vlist[i]]]))  # then search the user's calling environment  
+      z<-get(vlist[i],envir=sys.frame(sys.parent(n=parent.level)))
+      else z<-data[[vlist[i]]]     # data should be in data frame
+      if (is.null(z)) stop(paste("Failed to find variable",vlist[i]))  
+      G$x[k,]<-z
+      if (i<length(vlist)) G$names[kk]<-paste(G$names[kk],vlist[i],",",sep="")
+      else G$names[kk]<-paste(G$names[kk],vlist[i],sep="")
       k<-k+1
     }
-	if (length(vlist)>1) stop("Sorry - gam() can parse multidimensional smooths, but can't fit them yer")
-	G$names[kk]<-paste(G$names[kk],")",sep="")
-	kk<-kk+1
+    if (length(vlist)>1) stop("Sorry - gam() can parse multidimensional smooths, but can't fit them yet")
+    G$names[kk]<-paste(G$names[kk],")",sep="")
+    kk<-kk+1
   }
   # now sort out max dfs per term (only if get.y - otherwise call from predict)
-  if (get.y)
+  if (!predict)
   { k<-0
     for (i in 1:G$m)
     { if (G$df[i]==2&&G$fix[i]==FALSE)
@@ -421,7 +482,7 @@ gam.setup<-function(formula,data=list(),get.y=TRUE,parent.level=2)
 	    warning("2 knot natural spline is a straight line, reset to fixed d.f.")
 	  }
 	  if (G$df[i]==1) 
-      stop("You can't have a GAM component with one knot and zero degrees of freedom")
+          stop("You can't have a GAM component with one knot and zero degrees of freedom")
 	  if (G$df[i]==0) G$df[i]<-10;
 	  
 	  if (length(unique(G$x[i+G$nsdf,]))<G$df[i]) # too many knots
@@ -436,13 +497,14 @@ gam.setup<-function(formula,data=list(),get.y=TRUE,parent.level=2)
 }
 
 
-gam<-function(formula,data=list(),weights=NULL,family=gaussian(),scale=0)
+gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.control(),scale=0)
 
 # Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 # parsed to figure out which bits relate to smooth terms and which to parametric terms.
 # 
 
-{ # coerce family to correct type
+{ gam.call<-match.call()  # store the call to facilitate searching in gam.setup()
+  # coerce family to correct type
   if (is.character(family)) 
   family <- get(family)
   if (is.function(family)) 
@@ -451,8 +513,8 @@ gam<-function(formula,data=list(),weights=NULL,family=gaussian(),scale=0)
   { print(family)
     stop("`family' not recognized")
   }
-  if (missing(data)) G<-gam.setup(formula,get.y=TRUE)
-  else G<-gam.setup(formula,data,get.y=TRUE)
+  if (missing(data)) G<-gam.setup(formula,gam.call=gam.call,predict=FALSE)
+  else G<-gam.setup(formula,data,gam.call=gam.call,predict=FALSE)
  
   G<-GAMsetup(G) 
  
@@ -467,16 +529,16 @@ gam<-function(formula,data=list(),weights=NULL,family=gaussian(),scale=0)
   G$sig2<-scale
   G$sp<-array(-1,G$m) # set up smoothing parameters for autoinitialization at first run
 
-  object<-gam.fit(G,family=family)
+  object<-gam.fit(G,family=family,control=control)
   
   object$xp<-G$xp
   # return correct d.f. for fixed d.f. terms
   for (i in 1:G$m) if (G$fix[i]) object$edf[i]<-G$df[i]-1
   # now re-assign variable names to coefficients etc. 
   term.names<-array("",length(object$coefficients))
-  term.names[1]<-"(Intercept)"
-  if (G$nsdf>0) for (i in 1:G$nsdf) term.names[i+1]<-G$names[i]
-  i<-G$nsdf+2
+  #term.names[1]<-"(Intercept)"
+  if (G$nsdf>0) for (i in 1:G$nsdf) term.names[i]<-G$names[i]
+  i<-G$nsdf+1
   for (k in 1:G$m)
   for (j in 1:G$df[k])
   { term.names[i]<-paste(G$names[G$nsdf+k],".",as.character(j),sep="")
@@ -485,6 +547,7 @@ gam<-function(formula,data=list(),weights=NULL,family=gaussian(),scale=0)
   names(object$coefficients)<-term.names  # note - won't work on matrices!!
   object$formula<-formula
   object$x<-G$x
+  object$call<-gam.call
   row.names(object$x)<-G$vnames
   names(object$x)<-NULL
   #object$X<-G$X
@@ -682,7 +745,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
 }
 
 
-predict.gam<-function(object,newdata,type="link",se.fit=F) {
+predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
 
 # This function is used for predicting from a GAM. object is a gam object, newdata a dataframe to
 # be used in prediction..... it's all done via a call to the compiled C routine RGAMpredict().
@@ -707,7 +770,9 @@ predict.gam<-function(object,newdata,type="link",se.fit=F) {
     no.data<-TRUE
   }
   else 
-  { G<-gam.setup(object$formula,newdata,get.y=FALSE)
+  { if (plot.call) # then it's a call from plot, and only spline parts are to be evaluated
+    G<-gam.setup(object$formula,newdata,gam.call=object$call,predict=TRUE,nsdf=object$nsdf)
+    else G<-gam.setup(object$formula,newdata,gam.call=object$call,predict=TRUE)    
     no.data<-FALSE
   }
   np<-G$n
@@ -716,8 +781,8 @@ predict.gam<-function(object,newdata,type="link",se.fit=F) {
   control<-0
   if (type=="terms") 
   { control<-2
-    eta<-array(0,dim=c(G$nsdf+G$m+1,np))
-	se<-array(0,dim=c(G$nsdf+G$m+1,np))
+    eta<-array(0,dim=c(G$nsdf+G$m,np))
+	se<-array(0,dim=c(G$nsdf+G$m,np))
   } else
   { eta<-array(0,dim=c(np))
     se<-array(0,dim=c(np))
@@ -735,8 +800,8 @@ predict.gam<-function(object,newdata,type="link",se.fit=F) {
   # now eta contains linear predictor (terms) and se may contain corresponding standard errors
    
   if (type=="terms")
-  { eta<-array(o[[9]],c(G$nsdf+G$m+1,np));
-    se<-array(o[[10]],c(G$nsdf+G$m+1,np));
+  { eta<-array(o[[9]],c(G$nsdf+G$m,np));
+    se<-array(o[[10]],c(G$nsdf+G$m,np));
   } else
   { eta<-array(o[[9]],c(np));
     se<-array(o[[10]],c(np));
@@ -804,13 +869,13 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
 	xx[i+x$nsdf]<-seq(x0,x1,dx)
   }
   names(xx)<-row.names(x$x)
-  pl<-predict.gam(x,xx,type="terms",se)
+  pl<-predict.gam(x,xx,type="terms",se,plot.call=TRUE)
  
   if (se)   # pl$fit and pl$se.fit
   { if (scale==-1)
     for (i in 1:m)
-    { ul<-pl$fit[1+x$nsdf+i,]+2*pl$se.fit[1+x$nsdf+i,]
-      ll<-pl$fit[1+x$nsdf+i,]-2*pl$se.fit[1+x$nsdf+i,]
+    { ul<-pl$fit[x$nsdf+i,]+2*pl$se.fit[x$nsdf+i,]
+      ll<-pl$fit[x$nsdf+i,]-2*pl$se.fit[x$nsdf+i,]
 	  if (i==1) ylim<-c(min(ll),max(ul))
 	  else
 	  { if (min(ll)<ylim[1]) ylim[1]<-min(ll)
@@ -818,12 +883,12 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
       }
     } 
     for (i in 1:m)
-    { ul<-pl$fit[1+x$nsdf+i,]+2*pl$se.fit[1+x$nsdf+i,]
-      ll<-pl$fit[1+x$nsdf+i,]-2*pl$se.fit[1+x$nsdf+i,]
+    { ul<-pl$fit[x$nsdf+i,]+2*pl$se.fit[x$nsdf+i,]
+      ll<-pl$fit[x$nsdf+i,]-2*pl$se.fit[x$nsdf+i,]
 	  if (scale==0) { ylim<-c(min(ll),max(ul))}
 	  title<-paste("s(",row.names(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
       if (i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
-	  plot(xx[[x$nsdf+i]],pl$fit[1+x$nsdf+i,],type="l",xlab=row.names(x$x)[i+x$nsdf],ylim=ylim,ylab=title)
+plot(xx[[x$nsdf+i]],pl$fit[x$nsdf+i,],type="l",xlab=row.names(x$x)[i+x$nsdf],ylim=ylim,ylab=title)
 	  lines(xx[[x$nsdf+i]],ul,lty=2)
       lines(xx[[x$nsdf+i]],ll,lty=2)
 	  rug(as.numeric(x$x[x$nsdf+i,]))
@@ -831,17 +896,17 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
   } else
   { if (scale==-1)
     for (i in 1:m)
-	{ if (i==1) ylim<-range(pl[1+x$nsdf+i,])
+	{ if (i==1) ylim<-range(pl[x$nsdf+i,])
 	  else
-      { if (min(pl[1+x$nsdf+i,])<ylim[1]) ylim[1]<-min(pl[1+x$nsdf+i,])
-	    if (max(pl[1+x$nsdf+i,])>ylim[2]) ylim[2]<-max(pl[1+x$nsdf+i,])
+      { if (min(pl[x$nsdf+i,])<ylim[1]) ylim[1]<-min(pl[x$nsdf+i,])
+	    if (max(pl[x$nsdf+i,])>ylim[2]) ylim[2]<-max(pl[x$nsdf+i,])
 	  }
 	}
     for (i in 1:m)
     { if (i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
 	  title<-paste("s(",row.names(x$x)[i+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
-      if (scale==0) ylim<-range(pl[1+x$nsdf+i,])
-	  plot(xx[[x$nsdf+i]],pl[1+x$nsdf+i,],type="l",,xlab=row.names(x$x)[i+x$nsdf],ylab=title,ylim=ylim)
+      if (scale==0) ylim<-range(pl[x$nsdf+i,])
+	  plot(xx[[x$nsdf+i]],pl[x$nsdf+i,],type="l",,xlab=row.names(x$x)[i+x$nsdf],ylab=title,ylim=ylim)
       rug(as.numeric(x$x[x$nsdf+i,]))
     } 
   }
@@ -852,3 +917,13 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=1,scale=-1,n=100)
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
 }
+
+
+
+
+
+
+
+
+
+

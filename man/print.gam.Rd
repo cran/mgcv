@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Generalized Additive Model default print statement}
 \description{ This is the default print statement for a GAM object. If you need a list of everything
-that is part of a gam object see \code{\link{gam}}.
+that is part of a gam object see \code{\link{gam}}, or use \code{summary()}.
 
 }
 }

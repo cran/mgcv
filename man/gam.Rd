@@ -5,12 +5,12 @@
 GCV}
 \description{ Fits the specified  generalized additive model to data.
 The GAM is represented  using one dimensional penalized regression splines
- with smoothing parameters selected by GCV (and/or ordinary regression 
+with smoothing parameters selected by GCV (and/or ordinary regression 
 splines with fixed degrees of freedom).
 }
 }
 \usage{
- gam(formula,data,weights,family,scale)
+ gam(formula,family=gaussian(),data=list(),weights=NULL,control=gam.control,scale=0)
 }
 %- maybe also `usage' for other objects documented here.
 \details{
@@ -18,26 +18,37 @@ splines with fixed degrees of freedom).
      regression spline, or optionally an unpenalized regression spline. 
      Knots  of the spline are placed evenly
      throughout the covariate values to which the term refers:  For
-     example, if fitting 101 data with a 10 knot spline of \code{x} then
+     example, if fitting 101 data with an 11 knot spline of \code{x} then
      there would be a knot at every 10th (ordered)  \code{x} value. The
-use
-     of penalized regression splines turns  the gam fitting problem
+     use of penalized regression splines turns  the gam fitting problem
      into  a penalized glm fitting problem, which can be fitted using a
  slight modification of  \code{glm.fit} : \code{gam.fit}.  The penalized
 glm
      approach also allows smoothing parameters for all smooth terms to
      be  selected  simultaneously by GCV or UBRE. This is achieved as
      part of fitting by calling \code{mgcv}  within \code{gam.fit}.
-Details are
-     given in Wood (2000).
+     
+     The parameterization used represents the spline in terms of its
+     values at the knots. Connection of these values at neighbouring knots
+     by sections of 
+     cubic polynomial constrainted to join at the knots so as to be 
+     continuous up to and including second derivative yields a natural cubic 
+spline through the values at the knots (given two extra
+conditions specifying 
+     that the second derivative of the curve should be zero at the two end 
+     knots). Other parameterizations, such as b-splines or the basis that 
+     arises naturally from r.k.h.s. representation of the spline smoothing 
+     problem are equivalent, but the basis used here has the advantage that 
+     the parameters of the each spline term are easily interpretable.        
+     
+     Details of the GCV/UBRE minimization method are given in Wood (2000).
  }
 
 \arguments{ 
 
 \item{formula}{ A GAM formula. This is exactly like the formula for a
 glm except that smooth terms can be added to the right hand side of the
-formula, and the l.h.s. must contain only the name of a variable, and
-not some transformation function applied to a named variable.
+formula (and a formula of the form \code{y ~ .} is not allowed).
 Smooth terms are specified by expressions of the form:
 \code{s(var,knots)} where \code{var} is the covariate which the smooth
 is a function of and \code{knots} is the number of knots for the spline
@@ -49,22 +60,27 @@ The formula may also include terms like
 \code{s(x,12|f)}, which specifies a regression spline which is not to be penalized
 and has 12 knots. Such regression splines obviously have a fixed number of degrees of freedom 
 (11 in this example).}
-
+ \item{family}{
+This is a family object specifying the distribution and link to use on
+fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
+details. 
+} 
 \item{data}{ A data frame containing the model response variable and covariates required by the
 formula. If this is missing then the frame from which \code{gam} was called is
 searched for the variables specified in the formula.} 
 \item{weights}{ 
 prior weights on the data.
 }
- \item{family}{
-This is a family object specifying the distribution and link to use on
-fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
-details. 
-} 
+\item{control}{A list as returned by \code{gam.control}, with three user controllable elements:
+              \code{maxit} controls maximum iterations, convergence tolerance is controlled by \code{epsilon}  
+              and the third item is \code{trace}.}
 \item{scale}{ If this is zero then GCV is used for all distributions
 except Poisson and binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
-parameter/variance and UBRE is used, otherwise GCV is used.} 
+parameter/variance and UBRE is used. If \code{scale} is negative  GCV 
+is always used (for binomial models in particular, it is probably worth 
+comparing UBRE and GCV results; for ``over-dispersed Poisson'' GCV is
+probably more appropriate than UBRE.)} 
 }
 
 \value{ 
@@ -118,8 +134,10 @@ expected value for  each datum.}
 
 \item{formula}{the model formula.}
 
-\item{x}{parametric design matrix columns (excluding intercept)
+\item{x}{parametric design matrix columns (including intercept)
           followed by the data that form arguments of the smooths.}
+\item{call}{a mode \code{call} object containing the call to \code{gam()} that produced 
+            this \code{gam} object (useful for constructing model frames).}
 
 }
 

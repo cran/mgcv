@@ -1,9 +1,9 @@
 Package: mgcv
-Version: 0.3-2
+Version: 0.4-0
 Author: Simon Wood <snw@st-and.ac.uk>
 Title: Multiple smoothing parameter estimation and GAMs by GCV
 Description: Routines for GAMs and other generalized ridge regression problems 
              with multiple smoothing parameter selection by GCV or UBRE.
              Includes an implementation of gam().
-Depends: R (>=0.99)
+Depends: R (>=1.0)
 License: GPL version 2 or later
