@@ -969,7 +969,7 @@ void free_msrep(msrep_type *msrep)
 
 double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
                  double *theta,long *off,int m,double *sig2,msctrl_type *msctrl,
-				 msrep_type *msrep, int direct_mesh)
+				 msrep_type *msrep, int direct_mesh,double *trA)
 
 /* routine for multiple smoothing parameter problems, with influence matrix:
    A=r*JZ(Z'J'WJZ*r + \sum_{i=1}^m \theta_i Z'S_iZ)^{-1} Z'J'W
@@ -1050,7 +1050,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
 
 { double *rw,tr,*eta,*del,*trial,*trdA,**trd2A,*db,**d2b,*da,**d2a,
           rho,v,vmin=0.0,x,**MM,**M1M,tdf,xx1,tol,
-          *pinf,*ninf,*ldt;
+          *pinf,*ninf,*ldt,best_trA=-1.0,best_sig2=-1.0;
   long i,j,l,n,np,nz;
   int iter,reject,ok=1,autoinit=0,op=0,
       ubre=0,accept=0,steepest=0,gwstart=1;
@@ -1132,7 +1132,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
           if (xx1>pow(tol,1.0/3)*(1+v)) ok=1;
         }  
 	for (i=0;i<m;i++) eta[i]=trial[i];reject=0;
-	vmin=v;
+	vmin=v;best_trA= tdf;best_sig2= *sig2; /* record V, TrA and sig2 estimates at best minimum so far */ 
       } else   /* contract step */
       { reject++;
    	if (iter>1&&reject==4&&steepest==0) /* switch from Newton to steepest descent */
@@ -1198,6 +1198,8 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
         } else
         { p->r=np;for (i=0;i<np;i++) p->V[i]=c.V[i];}
         for (l=0;l<m;l++) theta[l]=exp(eta[l])/rho; /* return smoothing parameters */
+        if (best_sig2>0.0) *sig2=best_sig2;
+        if (best_trA>0.0) *trA=best_trA; else *trA=tdf;
       }
     } else /* full  Newton update */
     { /* call routine to do gradient and Hessian calculations */
@@ -1789,6 +1791,8 @@ Bug fix log:
            f.p. equality testing.     
 14/5/02  - Explicit formation of L=R^{-1} and formation of B=LA or B=L'A replaced by calls to Rsolve which solves
            RB=A or R'B=A for B.
+23/10/02 - Because of occasional ill-conditioning problems when calculating term-wise degrees of freedom, tr(A)
+           is now exported from Multismooth, to allow checking.
 
 */
 /*******************************************************************************************************/

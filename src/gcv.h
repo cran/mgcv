@@ -39,7 +39,7 @@ double SingleSmooth(matrix *y,matrix *X,matrix *Z,matrix *w,matrix *S,matrix *p,
 void init_msrep(msrep_type *msrrep,int m,int direct_mesh);
 void free_msrep(msrep_type *msrrep);
 double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
-                 double *theta,long *off,int m,double *sig2,msctrl_type *msctrl,msrep_type *msrep,int direct_mesh);
+                 double *theta,long *off,int m,double *sig2,msctrl_type *msctrl,msrep_type *msrep,int direct_mesh,double *trA);
 void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
              matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
              double *theta,long *off,int m,int mp,double *sig2,int transform);                 
