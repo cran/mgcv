@@ -56,6 +56,12 @@ is used.}
 \item{M$min.edf}{The minimum estimated degrees of freedom for the model: set to less than or equal to 0 to ignore.
                  Supplying this quantity helps to maintain numerical stability in cases in which the best model is 
                  actually very smooth. }
+\item{M$target.edf}{Set this to negative for it to be ignored. If it is positive then this is taken as the target edf
+to use for the model - if the GCV/UBRE function has multiple minima w.r.t. the overall smoothing parameter then the 
+minimum closest to the target edf will be selected. This feature is primarily useful when selecting smoothing parameters as part 
+of iterative least squares methods - the GCV/UBRE score can develop spurious minima in these cases that are 
+not representative of the problem being approximated.
+}
 }
 \details{ 
 

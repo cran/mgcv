@@ -190,7 +190,7 @@ gam.side.conditions<-function(G)
       stop("The smooth part of this model is not identifiable")
       # work through the terms imposing constraints on redundant null basis  
       # parameters and updating the null basis stack.....
-      for (j in 1:n.d)
+      for (j in 1:n.d) # work through all n.d d-dimensional terms 
       { #cat(d.vnames[j,]," ",d.p.order[j]," ")
         by<-by.names[j]
         bs.label<-null.space.basis.labels(d.vnames[j,],d.p.order[j],by=by) # get unique null basis vector names
@@ -199,7 +199,7 @@ gam.side.conditions<-function(G)
         for (i in 1:length(bs.label)) 
         if (length(var.stack[var.stack==bs.label[i]])>0) # already on the stack
         { # locate the parameter for this term 
-          k<-G$nsdf+d.off[j]+d.k[j]-null.space.dimension(d.dim[j],d.p.order[j])+i
+          k<-1+d.off[j]+d.k[j]-null.space.dimension(d.dim[j],d.p.order[j])+i
           rows<-dim(G$C)[1];cols<-dim(G$C)[2]
           CC<-matrix(0,rows+1,cols)
           CC[1:rows,1:cols]<-G$C
@@ -378,6 +378,10 @@ mgcv<-function(M) {
 #              of s.p.'s
 # M$min.edf - minimum possible estimated degrees of freedom for model - useful for setting limits
 #             on overall smoothing parameter. Set to zero or negative to ignore.
+# M$target.edf - set to negative to ignore. This should only be used if cautious optimization
+#                is to be used in mgcv searching. If this is non-negative then the local 
+#                minimum closest to the target edf will be returned (which can be the global
+#                optimum). Designed for use with non-convergent gams.
 #
 # The routine returns M with the following elements added (or reset):
 #
@@ -437,13 +441,14 @@ mgcv<-function(M) {
   M$gcv.ubre<-1.0;
   direct.mesh<-100      # number of points for overall s.p. initial direct search
   sdiag<-array(0.0,2*direct.mesh) # array for gcv/ubre vs edf diagnostics
+  if (is.null(M$target.edf)) M$target.edf<- -1 # set to signal no target edf
 
   oo<-.C("mgcv",as.double(M$y),as.double(M$X),as.double(M$C),as.double(M$w),as.double(S),
          as.double(p),as.double(M$sp),as.integer(off),as.integer(df),as.integer(m),
          as.integer(n),as.integer(q),as.integer(C.r),as.double(M$sig2),as.double(Vp),
 		 as.double(edf),as.double(M$conv.tol),as.integer(M$max.half),as.double(ddiag),
                  as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(M$min.edf),
-                 as.double(M$gcv.ubre),PACKAGE="mgcv")
+                 as.double(M$gcv.ubre),as.double(M$target.edf),PACKAGE="mgcv")
    
   p<-matrix(oo[[6]],q,1);
   sig2<-oo[[14]]
@@ -739,8 +744,7 @@ gam.setup<-function(formula,data=list(),gam.call=NULL,predict=TRUE,parent.level=
       } else 
       { environment(split$pf)<-p.env
         #sys.frame(sys.parent(n = parent.level)) # associate appropriate environment with split formula 
-        mf<-model.frame(split$pf,data) # evaluates in data picking up rest from environment associated with split$pf 
-
+        mf<-model.frame(split$pf,data,drop.unused.levels=TRUE) # evaluates in data picking up rest from environment associated with split$pf 
         G$offset <- model.offset(mf)   # get the model offset (if any)
         if (!is.null(G$offset) && length(attr(terms(split$pf),"variables"))<=2) # offest exists, but no more terms except "+1" or "-1"
         { if (length(grep("-",as.character(split$pf[2])))>=1) # then there is a "-1" term in formula
@@ -914,7 +918,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
   G$sig2<-scale
   G$sp<-array(-1,G$m) # set up smoothing parameters for autoinitialization at first run
   G$conv.tol<-control$mgcv.tol      # tolerence for mgcv
-  G$max.half<-control$mgcv.max.half # max step halving in Newton update mgcv
+  G$max.half<-control$mgcv.half # max step halving in Newton update mgcv
   G$min.edf<-G$nsdf+sum(null.space.dimension(G$dim,G$p.order))-dim(G$C)[1]
 
   if(family$family=="Negative Binomial(NA)") object<-gam.nbut(G, family$link, control, scale)
@@ -961,6 +965,7 @@ gam.check<-function(b)
 { old.par<-par(mfrow=c(2,2))
   if (b$gcv.used) sc.name<-"GCV" else sc.name<-"UBRE"
   plot(b$mgcv.conv$edf,b$mgcv.conv$score,xlab="Estimated Degrees of Freedom",ylab=paste(sc.name,"Score"),main=paste(sc.name,"w.r.t. model EDF"),type="l")
+  points(b$nsdf+sum(b$edf),b$gcv.ubre,col=2,pch=20)
   plot(fitted(b),residuals(b),main="Residuals vs. Fitted",xlab="Fitted Values",ylab="Residuals");
   hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
   plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
@@ -997,13 +1002,15 @@ print.gam<-function (x,...)
   }
 }
 
-gam.control<-function (epsilon = 1e-04, maxit = 30,mgcv.tol=1e-6,mgcv.max.half=15, trace = FALSE) 
+gam.control<-function (epsilon = 1e-04, maxit = 20,globit = 20,mgcv.tol=1e-6,mgcv.half=15, trace = FALSE) 
 # control structure for a gam
 {   if (!is.numeric(epsilon) || epsilon <= 0) 
         stop("value of epsilon must be > 0")
     if (!is.numeric(maxit) || maxit <= 0) 
         stop("maximum number of iterations must be > 0")
-    list(epsilon = epsilon, maxit = maxit, trace = trace, mgcv.tol=mgcv.tol,mgcv.max.half=mgcv.max.half)
+    if (!is.numeric(globit) || globit <= 0) 
+        stop("maximum number of iterations must be > 0")
+    list(epsilon = epsilon, maxit = maxit,globit = globit, trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half)
 }
 
 gam.fit<-function (G, start = NULL, etastart = NULL, 
@@ -1095,7 +1102,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
     boundary <- FALSE
     scale<-G$sig2
     
-    for (iter in 1:control$maxit) {
+    for (iter in 1:(control$maxit+control$globit)) {
         good <- weights > 0
         varmu <- variance(mu)[good]
        
@@ -1123,14 +1130,23 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
         ncols <- as.integer(1)
         # must set G$sig2 to scale parameter or -1 here....
         G$sig2<-scale
-		if (G$m>0&&sum(!G$fix>0)) # check that smoothing parameters haven't drifted too far apart
-		{ temp.sp<-G$sp[!G$fix];temp.S.size<-S.size[!G$fix]*temp.sp
-                  # check if there is a danger of getting stuck on a flat section of gcv/ubre score...
-                  if (min(temp.sp)>0 && max(temp.S.size)>Machine()$double.eps^0.5*min(temp.S.size)) 
-		  G$sp[!G$fix]<- -1.0 # .... if so use use auto-initialization in mgcv
-                }  
+        if (G$m>0&&sum(!G$fix>0)) # check that smoothing parameters haven't drifted too far apart
+        { temp.sp<-G$sp[!G$fix];temp.S.size<-S.size[!G$fix]*temp.sp
+          # check if there is a danger of getting stuck on a flat section of gcv/ubre score...
+          if (min(temp.sp)>0 && min(temp.S.size)<Machine()$double.eps^0.5*max(temp.S.size)) 
+          G$sp[!G$fix]<- -1.0 # .... if so use use auto-initialization in mgcv
+          if (control$trace) cat("Re-initializing smoothing parameters\n")
+        } 
+        if (iter>control$globit) # solution could be cycling - use more cautious optimization approach
+        { G$target.edf<-G$nsdf+sum(G$edf)
+        } else
+        G$target.edf<- -1 # want less cautious optimization - better at local minimum avoidance
         G<-mgcv(G) 
-        
+        if (control$trace)
+        { cat("sp: ",G$sp,"\n")
+          plot(G$conv$edf,G$conv$score,xlab="EDF",ylab="GCV/UBRE score",type="l");
+          points(G$nsdf+sum(G$edf),G$gcv.ubre,pch=20,col=2)
+        }
         if (any(!is.finite(G$p))) {
             conv <- FALSE   
             warning(paste("Non-finite coefficients at iteration",
@@ -1197,9 +1213,9 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
         }
     }
     if (!conv) 
-        { if (is.null(nb.iter)) warning("Algorithm did not converge") 
-		  else warning("gam.fit didn't converge at nb iteration ",nb.iter)
-		}
+    { if (is.null(nb.iter)) warning("Algorithm did not converge") 
+      else warning("gam.fit didn't converge at nb iteration ",nb.iter)
+    }
     if (boundary) 
         warning("Algorithm stopped at boundary value")
     eps <- 10 * .Machine$double.eps
@@ -1270,7 +1286,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
     nc<-0;for (i in 1:m) nc<-nc+object$dim[i]
     for (i in 1:nc) x[i+object$nsdf,] <- x[i+object$nsdf,] + object$covariate.shift[i]
     G<-list(x=x,nsdf=object$nsdf,m=m,n=n,dim=object$dim,by=object$by)
-    no.data<-FALSE
+    no.data<-TRUE # used to signal that no data provided, later
   }
   else 
   { G<-gam.setup(object$full.formula,newdata,gam.call=object$call,parent.level=2,predict=TRUE)    
@@ -1320,8 +1336,15 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
     } else
     { eta<-array(o[[16]],c(np));
       se<-array(o[[17]],c(np));
+      if (no.data) # reconstrunct original offset
+      { link<-object$family$linkfun
+        fv<-fitted(object) # original fitted predictor
+        offset<-link(fv)-eta # offset is original l.p. minus l.p. calculated without offset 
+      } else
+      offset<-G$offset
+      if (!is.null(offset)) eta<-eta+offset # add offset to l.p.
       if (type=="response") # transform onto scale of data
-      { fam<-object$family;linkinv<-fam$linkinv;dmu.deta<-fam$mu.eta
+      { fam<-object$family;linkinv<-fam$linkinv;dmu.deta<-fam$mu.eta  
         se<-se*abs(dmu.deta(eta)) 
         eta<-linkinv(eta)
       }
@@ -2039,7 +2062,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8.0\n")
+    cat("This is mgcv 0.8.1\n")
 }
 
 

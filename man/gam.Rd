@@ -6,12 +6,13 @@ GCV}
 \description{ Fits the specified  generalized additive model (GAM) to
   data. \code{gam()} is not a clone of what Splus provides.
 Smooth terms are represented using penalized regression splines
-with smoothing parameters selected by GCV or by regression splines with
+with smoothing parameters selected by GCV/UBRE or by regression splines with
 fixed degrees of freedom (mixtures of the two are
 permitted). Multi-dimensional smooths are available using penalized thin plate
 regression splines, but the user must make sure that covariates are sensibly scaled
 relative to each other when using such terms. For a general overview see
-Wood (2001). For more on specifying models see \code{\link{gam.models}}.
+Wood (2001). For more on specifying models see \code{\link{gam.models}}. For more on model 
+selection see \code{\link{gam.selection}}.
 }
 \usage{
 gam(formula,family=gaussian(),data=list(),weights=NULL,
@@ -310,7 +311,9 @@ shown in the examples. Alternatively, for 1-d smooths  you can use the \code{"cr
  } 
 
 \seealso{\code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},
-  \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side.conditions}} }
+  \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side.conditions}},
+\code{\link{gam.selection}}
+ }
 
 \examples{
 library(mgcv)

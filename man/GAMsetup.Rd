@@ -25,6 +25,7 @@ GAMsetup(G)
 model parts}
 \item{dim}{An array of dimensions for the smooths. \code{dim[i]} is the
   number of covariates that smooth \code{i} is a function of.}
+\item{fix}{An array of logicals indicating whether each smooth term has fixed degrees of freedom or not.}
 \item{s.type}{An array giving the type of basis used for each term. 0 for
   cubic regression spline, 1 for t.p.r.s }
 \item{p.order}{An array giving the order of the penalty for each term. 0
@@ -36,6 +37,8 @@ remaining \code{G$m} elements of \code{G$x} are the values of the covariates tha
 arguments of the spline terms. Note that the smooths will be centred and no intercept term 
 will be added unless an array of 1's is supplied as part of in
 \code{G$x}}
+\item{vnames}{Array of variable names, including the constant, if present.}
+\item{w}{prior weights on response data.}
 \item{by}{a 2-d array of \code{by} variables (i.e. covariates that multiply a
 smooth term) \code{by[i,j]} is the jth value for the ith \code{by}
 variable. There are only as many rows of this array as there are
