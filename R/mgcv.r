@@ -60,7 +60,7 @@ null.space.dimension<-function(d,m)
 # vectorized function for calculating null space dimension for penalties of order m
 # for dimension d data M=(m+d+1)!/(d!(m-d)!). Any m not satisfying 2m>d is reset so 
 # that 2m>d+1 (assuring "visual" smoothness) 
-{ if (d<1) stop("d must be positive in call to null.space.dimension().")
+{ if (d<0) stop("d can not be negative in call to null.space.dimension().")
   ind<-2*m<d+1
   if (sum(ind)) # then default m required for some elements
   { m[ind]<-1;ind<-2*m<d+2
@@ -82,7 +82,7 @@ null.space.basis.powers<-function(m,d)
 # generates the sequence of powers required to specify the M polynomials spanning the 
 # null space of the penalty of a d-dimensional tps with wiggliness penalty order d 
 # So, if x_i are the co-ordinates the kth polynomial is x_1^pi[k][1]*x_2^pi[k][2] ....
-{ if (d<1) stop("d must be positive in call to null.space.basis.powers()")
+{ if (d<0) stop("d can not be negative in call to null.space.basis.powers()")
   M<-null.space.dimension(d=d,m=m)
   if (2*m<=d) {m<-1;while (2*m<d+2) m<-m+1;}
   index<-array(0,d)
@@ -399,6 +399,7 @@ mgcv<-function(M) {
 # M$sig2 - the estimate of the error variance (if GCV used)
 # M$Vp   - the estimated covariance matrix of the parameters set Vp[1,1] <0 to not calculate
 # M$edf  - the estimated degrees of freedom for the ith smooth term if Vp calculated
+# M$hat  - array of same length as M$y with elements from leading diagonal of hat/influence matrix
 # M$conv - a list of convergence diagnostics
 #          g - gradients of gcv/ubre score at termination, h - leading diagonal of Hessian
 #          e - eigenvalues of Hessian, iter - iterations taken, init.ok - TRUE if second 
@@ -450,6 +451,7 @@ mgcv<-function(M) {
   p<-matrix(0,q,1)      # set up parameter vector
   Vp<-matrix(0.0,q,q)   # estimated covariance matrix
   edf<-array(0,m)       # estimated degrees of freedom
+  hat<-array(0,n)       # elements on leading diagonal of hat matrix
   ddiag<-array(0,3*m)   # array for diagonostics
   idiag<-array(0,3)     # array for diagnostics
   Vp[1,1]<-1.0
@@ -463,7 +465,8 @@ mgcv<-function(M) {
          as.integer(n),as.integer(q),as.integer(C.r),as.double(M$sig2),as.double(Vp),
 		 as.double(edf),as.double(M$conv.tol),as.integer(M$max.half),as.double(ddiag),
                  as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(M$min.edf),
-                 as.double(M$gcv.ubre),as.double(M$target.edf),as.integer(M$fixed.sp),PACKAGE="mgcv")
+                 as.double(M$gcv.ubre),as.double(M$target.edf),as.integer(M$fixed.sp),
+                 as.double(hat),PACKAGE="mgcv")
    
   p<-matrix(oo[[6]],q,1);
   sig2<-oo[[14]]
@@ -474,6 +477,7 @@ mgcv<-function(M) {
   idiag<-oo[[20]]
   sdiag<-oo[[21]]
   M$gcv.ubre<-oo[[24]]
+  M$hat<-oo[[27]]
   conv<-list(edf=sdiag[1:direct.mesh],score=sdiag[direct.mesh+1:direct.mesh],g=ddiag[1:m],h=ddiag[(m+1):(2*m)],
              e=ddiag[(2*m+1):(3*m)],iter=idiag[1],init.ok=as.logical(idiag[2]),step.fail=as.logical(idiag[3]))
   # unpack results back to correct place in output (which includes fixed d.f. and free d.f. terms)
@@ -1217,7 +1221,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
         linear.predictor = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights, 
         #df.residual = resdf, 
-        df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,
+        df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,hat=G$hat,
         boundary = boundary,sp = G$sp,df=G$df,nsdf=G$nsdf,Vp=G$Vp,mgcv.conv=G$conv,gcv.ubre=G$gcv.ubre)
 }
 
@@ -2039,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8.2 \n")
+    cat("This is mgcv 0.8.3 \n")
 }
 
 
