@@ -1,0 +1,45 @@
+Entry: gam
+Alias:
+Keywords: GAM generalized additive model GCV penalized regression spline
+Description: fit GAMs represented as penalized regression spline models using GCV for df selection
+URL: ../../../library/mgcv/html/gam.html
+
+Entry: plot.gam
+Alias:
+Keywords: plot GAM
+Description: plots GAMs fitted by the mgcv package version of gam()
+URL: ../../../library/mgcv/html/plot.gam.html
+
+
+Entry: predict.gam
+Alias:
+Keywords: predict GAM
+Description: predict from GAM fitted by the mgcv package version of gam()
+URL: ../../../library/mgcv/html/gam.html
+
+
+Entry: mgcv
+Alias: 
+Keywords: multiple smoothing parameter estimation GCV GAM
+Description: estimate multiple smoothing parameter by GCV or UBRE
+URL: ../../../library/mgcv/html/mgcv.html
+
+
+Entry: GAMsetup
+Alias: 
+Keywords: multiple smoothing parameter estimation GCV GAM
+Description: set up design and penalty matrices for GAM using penalized regression splines
+URL: ../../../library/mgcv/html/GAMsetup.html
+
+Entry: QT
+Alias: 
+Keywords: QT factorization matrix constraint
+Description: Finds QT factorization of matrix - good for getting null space of constraints on model
+URL: ../../../library/mgcv/html/QT.html
+
+Entry: SANtest
+Alias: 
+Keywords: multiple smoothing parameter estimation GCV GAM
+Description: example of multiple smoothing parameter selection by GCV
+URL: ../../../library/mgcv/html/SANtest.html
+

@@ -1,0 +1,11 @@
+GAMsetup                 Set up GAM using penalized cubic regression
+                         splines
+QT                       QT factorisation of a matrix
+SANtest                  Example of simple additive GAM using penalized
+                         regression splines.
+gam                      Generalized Additive Models using penalized
+                         regression splines and  GCV
+mgcv                     Multiple Smoothing Parameter Estimation by GCV
+                         or UBRE
+plot.gam                 Default GAM plotting
+predict.gam              Prediction from fitted GAM model
