@@ -146,5 +146,5 @@ especially in contexts where the weights vary wildly. }
     H <- mgcv(H)  # select smoothing parameters and fit model (no constant)
  
 }
-\keyword{GCV, AIC, UBRE, GAM }%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

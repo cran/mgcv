@@ -81,6 +81,5 @@ newd<-data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred<-predict.gam(b,newd)
  
 }
-\keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
-
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

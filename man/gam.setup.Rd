@@ -30,12 +30,7 @@ with Multiple
 
 \seealso{   \code{\link{gam}} \code{\link{mgcv}}}
 
-\keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
-
-
-
-
-
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
 
 

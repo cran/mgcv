@@ -4,13 +4,13 @@ QT                       QT factorisation of a matrix
 SANtest                  Example of simple additive GAM using penalized
                          regression splines.
 gam                      Generalized Additive Models using penalized
-                         regression splines and  GCV
+                         regression splines and GCV
 gam.control              Setting Generalized Additive Models fitting
                          defaults
 gam.fit                  Generalized Additive Models fitting using
-                         penalized regression splines and  GCV
+                         penalized regression splines and GCV
 gam.parser               Generalized Additive Models fitting using
-                         penalized regression splines and  GCV
+                         penalized regression splines and GCV
 gam.setup                Generalized Additive Model set up.
 mgcv                     Multiple Smoothing Parameter Estimation by GCV
                          or UBRE

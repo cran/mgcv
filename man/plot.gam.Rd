@@ -6,12 +6,12 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(object,rug=TRUE,se=TRUE,pages=0,scale=-1,n)
+plot.gam(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
   
- \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.
+ \item{x}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
  at the foot of each plot.} 
@@ -76,4 +76,10 @@ plot(b,pages=1)
 
  
 }
-\keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
+
+
+
+
+
+
