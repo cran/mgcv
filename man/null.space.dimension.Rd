@@ -36,7 +36,7 @@ null.space.basis.labels(names,m,by="NA")
  \item{m}{ a non-negative integer giving the order of the penalty
    functional, or signalling that the default order should be used.}
  \item{names}{is an array of \code{d} variable names}
- \item{by}{the name of any \code{by} variable, which mutliplies all the
+ \item{by}{the name of any \code{by} variable, which multiplies all the
    terms in the penalty null space basis.}
 }
 \details{ Thin plate splines are only visually smooth if the order of the

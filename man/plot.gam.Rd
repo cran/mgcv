@@ -6,15 +6,22 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
-         pers=FALSE,theta=30,phi=30,jit=FALSE,...)
+plot.gam(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,
+         scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,
+         xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
   
- \item{x}{ a fitted \code{gam} object as produced by \code{gam()}.
-                }
- \item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
+\item{x}{ a fitted \code{gam} object as produced by \code{gam()}.}
+
+\item{residuals}{If \code{TRUE} then partial residuals are added to plots of 1-D smooths. If \code{FALSE} 
+then no residuals are added. If this is an array of the correct length then it is used as the array of 
+residuals to be used for producing partial residuals. Partial residuals for a smooth term are the working
+residuals that would be obtained by dropping the term concerned from the model, while leaving all other 
+estimates fixed (i.e. the estimates for the term plus the working residuals).}
+
+\item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
  at the foot of each plot of a 1-d smooth, and the locations of the
  covariates are plotted as points on the contour plot representing a 2-d
  smooth.} 
@@ -26,22 +33,48 @@ plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
 	and overlayed on the contour plot for the estimate. If a
 	positive number is supplied then this number is multiplied by
 	the standard errors when calculating standard error curves or surfaces.}
- \item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
+
+\item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
 if \code{pages=1} then all terms will be plotted on one page with the layout performed automatically. 
 Set to 0 to have the routine leave all graphics settings as they are. }
+
 \item{select}{Allows the  plot for a single model term to be selected for printing. e.g. if you just want the plot for the second smooth term set \code{select=2}. }
+
 \item{scale}{ set to -1 (default) to have the same y-axis scale for each plot, and to 0 for a 
-          different y axis for each plot.  }
+          different y axis for each plot. Ignored if \code{ylim} supplied.}
+
 \item{n}{ number of points used for each 1-d plot - for a nice smooth plot this needs to be several times the estimated 
   degrees of freedom for the smooth. Default value 100.}
+
 \item{n2}{Square root of number of points used to grid estimates of 2-d
   functions for contouring.}
+
 \item{pers}{Set to \code{TRUE} if you want perspective plots for 2-d
   terms.}
+
 \item{theta}{One of the perspective plot angles.}
+
 \item{phi}{The other perspective plot angle.}
+
 \item{jit}{Set to TRUE if you want rug plots for 1-d terms to be jittered.}
-\item{...}{ other arguments.}
+
+\item{xlab}{If supplied then this will be used as the x label for all plots.}
+
+\item{ylab}{If supplied then this will be used as the y label for all plots.}
+
+\item{main}{Used as title (or z axis label) for plots if supplied.}
+
+\item{ylim}{If supplied then this pair of numbers are used as the y limits for each plot.}
+
+\item{xlim}{If supplied then this pair of numbers are used as the x limits for each plot.}
+
+\item{too.far}{If greater than 0 then this is used to determine when a location is too
+far from data to be plotted when plotting 2-D smooths. This is useful since smooths tend to go wild away from data.
+The data are scaled into the unit square before deciding what to exclude, and \code{too.far} is a distance 
+within the unit square.}
+
+\item{...}{ other graphics parameters to pass on to plotting commands.}
+
 }
 \details{ Produces default plot showing the smooth components of a
   fitted GAM.
@@ -59,7 +92,7 @@ contour plots at plus and minus 1 s.e. relative to the main
 estimate. If \code{se} is a positive number then contour plots are at plus or minus \code{se} multiplied
 by the s.e. Contour levels are chosen to try and ensure reasonable
 separation of the contours of the different plots, but this is not
-always easy to achieve.  
+always easy to achieve. Note that these plots can not be modified to the same extent as the other plot. 
    
    Within the function, the data for the plots is obtained by direct
    calls to the compiled C code that \code{predict.gam} uses.   
@@ -87,9 +120,11 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
-  \code{plot.gam()} in Splus.
+\code{plot.gam()} in S-PLUS.
 
-  The function can not deal with smooths of more than 2 variables!
+Plots of 2-D smooths with standard error contours shown can not easily be customized.
+
+The function can not deal with smooths of more than 2 variables!
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{vis.gam}}}
@@ -110,7 +145,7 @@ y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b,pages=1)
+plot(b,pages=1,residuals=TRUE)
 # example with 2-d plots
 b1<-gam(y~s(x0,x1)+s(x2)+s(x3))
 op<-par(mfrow=c(2,2))

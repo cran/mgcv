@@ -1,0 +1,52 @@
+useDynLib(mgcv)
+
+export(coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
+       exclude.too.far,extract.lme.cov, full.score, 
+       gam, gamm, gam.check, gam.control,
+       gam.fit, gamm.setup , interpret.gam, gam.setup, gam.side.conditions,
+       get.var,logDet.pdIdnot,
+       magic, magic.post.proc, mgcv, mgcv.control, mgcv.find.theta, 
+       mgcv.get.scale, mono.con, mroot, new.name, 
+       notExp,notLog,null.space.basis.labels,
+       null.space.basis.powers, null.space.dimension, pcls, 
+       pdConstruct.pdIdnot,pdFactor.pdIdnot,pdMatrix.pdIdnot,pdIdnot,
+       pdConstruct.pdTens,pdFactor.pdTens,pdMatrix.pdTens,pdTens,
+       place.knots, plot.gam, print.gam,print.summary.gam,predict.gam,
+       Predict.matrix,
+       Predict.matrix.cr.smooth,
+       Predict.matrix.cyclic.smooth,
+       Predict.matrix.tensor.smooth,
+       Predict.matrix.tprs.smooth,
+       residuals.gam, s,
+       smooth.construct,
+       smooth.construct.cc.smooth.spec,
+       smooth.construct.cr.smooth.spec,
+       smooth.construct.tensor.smooth.spec,
+       smooth.construct.tp.smooth.spec,
+       summary.gam,solve.pdIdnot,summary.pdIdnot,te,
+       tensor.prod.model.matrix,tensor.prod.penalties,
+       uniquecombs, vis.gam)
+
+importFrom(graphics, plot)
+importFrom(stats, predict, residuals)
+
+S3method(plot, gam)
+S3method(predict, gam)
+S3method(print, gam)
+S3method(print, summary.gam)
+S3method(residuals, gam)
+S3method(summary, gam)
+
+S3method(smooth.construct, cc.smooth.spec)
+S3method(smooth.construct, cr.smooth.spec)
+S3method(smooth.construct, tp.smooth.spec)
+S3method(smooth.construct, tensor.smooth.spec)
+
+S3method(Predict.matrix,cr.smooth)
+S3method(Predict.matrix,cyclic.smooth)
+S3method(Predict.matrix,tensor.smooth)
+S3method(Predict.matrix,tprs.smooth)
+
+
+
+

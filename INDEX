@@ -1,38 +1,59 @@
 exclude.too.far         Exclude prediction grid points too far from
                         data
-full.score              GCV/UBRE score for use withn nlm
+extract.lme.cov         Extract the data covariance matrix from an lme
+                        object
+full.score              GCV/UBRE score for use within nlm
+gam                     Generalized Additive Models using penalized
+                        regression splines and GCV
 gam.check               Some diagnostics for a fitted gam model.
 gam.control             Setting GAM fitting defaults
 gam.fit                 Generalized Additive Models fitting using
                         penalized regression splines and GCV
+gamm                    Generalized Additive Mixed Models
 gam.models              Specifying generalized Additive Models.
+gamm.setup              Generalized Additive Mixed Model set up.
 gam.neg.bin             GAMs with the negative binomial distribution
-gam.parser              Generalized Additive Model fitting using
-                        penalized regression splines and GCV
-gam                     Generalized Additive Models using penalized
-                        regression splines and GCV
 gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
-GAMsetup                Set up GAM using penalized regression splines
 gam.side.conditions     Identifiability side conditions for a GAM.
-magic.post.proc         Auxilliary information from magic fit
+get.var                 Get named variable or evaluate expression from
+                        list or data.frame
+interpret.gam           Interpret a GAM formula
 magic                   Stable Multiple Smoothing Parameter Estimation
                         by GCV or UBRE, with optional fixed penalty
+magic.post.proc         Auxilliary information from magic fit
 mgcv                    Multiple Smoothing Parameter Estimation by GCV
                         or UBRE
+mgcv.control            Setting mgcv defaults
 mono.con                Monotonicity constraints for a cubic
                         regression spline.
 mroot                   Smallest square root of matrix
+new.name                Obtain a name for a new variable that is not
+                        already in use
+notExp                  Functions for better-than-log positive
+                        parameterization
 null.space.dimension    The basis of the space of un-penalized
                         functions for a t.p.r.s.
 pcls                    Penalized Constrained Least Squares Fitting
+pdIdnot                 Overflow proof pdMat class for multiples of
+                        the identity matrix
+pdTens                  Functions implementing a pdMat class for
+                        tensor product smooths
+place.knots             Automatically place a set of knots evenly
+                        through covariate values
 plot.gam                Default GAM plotting
 predict.gam             Prediction from fitted GAM model
+Predict.matrix          Prediction methods for smooth terms in a GAM
 print.gam               Generalized Additive Model default print
                         statement
-QT                      QT factorisation of a matrix
 residuals.gam           Generalized Additive Model residuals
 s                       Defining smooths in GAM formulae
+smooth.construct        Constructor functions for smooth terms in a
+                        GAM
 summary.gam             Summary for a GAM fit
+te                      Define tensor product smooths in GAM formulae
+tensor.prod.model.matrix
+                        Utility functions for constructing tensor
+                        product smooths
 uniquecombs             find the unique rows in a matrix
 vis.gam                 Visualization of GAM objects

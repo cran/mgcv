@@ -4,21 +4,20 @@
 \title{Generalized Additive Models using penalized regression splines and 
 GCV}
 \description{ Fits the specified  generalized additive model (GAM) to
-  data. \code{gam()} is not a clone of what Splus provides.
+  data. \code{gam()} is not a clone of what S-PLUS provides.
 Smooth terms are represented using penalized regression splines
 with smoothing parameters selected by GCV/UBRE or by regression splines with
 fixed degrees of freedom (mixtures of the two are
 permitted). Multi-dimensional smooths are available using penalized thin plate
-regression splines, but the user must make sure that covariates are sensibly scaled
-relative to each other when using such terms. For a general overview see
-Wood (2001). For more on specifying models see \code{\link{gam.models}}. For more on model 
+regression splines (isotropic) or tensor product splines (when an isotropic smooth is inappropriate). 
+For more on specifying models see \code{\link{gam.models}}. For more on model 
 selection see \code{\link{gam.selection}}.
 }
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,control=gam.control(),scale=0,knots=NULL,sp=NULL,
-    min.sp=NULL,H=NULL,gamma=1,...)
+    min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \details{ 
@@ -26,7 +25,7 @@ A generalized additive model (GAM) is a generalized linear model (GLM) in which 
 predictor is given by a user specified sum of smooth functions of the covariates plus a 
 conventional parametric component of the linear predictor. A simple example is:
 \deqn{\log(E(y_i)) = f_1(x_{1i})+f_2(x_{2i})}{log(E(y_i))=f_1(x_1i)+f_2(x_2i)}
-where the (idependent) response variables \eqn{y_i \sim {\rm Poi }}{y_i~Poi}, and
+where the (independent) response variables \eqn{y_i \sim {\rm Poi }}{y_i~Poi}, and
 \eqn{f_1}{f_1} and \eqn{f_2}{f_2} are smooth functions of covariates \eqn{x_1}{x_1} and 
 \eqn{x_2}{x_2}. The log is an example of a link function. 
 
@@ -55,8 +54,8 @@ by the \code{mgcv} package is to do this efficiently and reliably. Two alternati
 numerical methods are provided, see \code{\link{mgcv}}, \code{\link{magic}} and 
 \code{\link{gam.control}}. 
 
-Broadly \code{gam} works by first constructing basis functions and a quadratic penalty 
-coefficient matrix for each smooth term in the model formula, obtaining a model matrix for 
+Broadly \code{gam} works by first constructing basis functions and one or more quadratic penalty 
+coefficient matrices for each smooth term in the model formula, obtaining a model matrix for 
 the strictly parametric part of the model formula, and combining these to obtain a 
 complete model matrix (/design matrix) and a set of penalty matrices for the smooth terms. 
 Some linear identifiability constraints are also obtained at this point. The model is 
@@ -75,7 +74,7 @@ possible to find smoothing parameters which actually yield slightly lower GCV/UB
 estimates than those resulting from this `performance iteration'. \code{gam} therefore also 
 allows the user to `improve' the smoothing parameter estimates, by using O'Sullivan's 
 (1986) suggested method, in which for each trial set of smoothing parameters the IRLS is 
-iterated to convergance before the UBRE/GCV score is evaluated. This requires much less 
+iterated to convergence before the UBRE/GCV score is evaluated. This requires much less 
 efficient minimisation of the power iteration based on \code{\link{nlm}}, and is 
 therefore quite slow. 
 
@@ -83,18 +82,28 @@ therefore quite slow.
 
 
 
-Two alternative bases are available for representing model
-  terms. Univariate smooth terms can be represented using conventional
-  cubic regression splines - which are very efficient
-  computationally - or thin plate regression splines. Multivariate terms
-  must be represented using thin plate regression splines. For either
-  basis the user specifies the dimension of the basis for each smooth
-  term. The dimension of the basis is one more than the maximum degrees of freedom that the 
-  term can have, but usually the term will be fitted by penalized
-  maximum likelihood estimation and the actual degrees of freedom will be
-  chosen by GCV. However, the user can choose to fix the degrees of
-  freedom of a term, in which case the actual degrees of freedom will be
-  one less than the basis dimension.
+Three alternative bases are built in for representing model
+smooths, but alternatives can easily be added (see \code{\link{smooth.construct}} which
+uses p-splines to illustrate how to add new smooths). 
+The built in alternatives for univariate smooths terms are: a conventional penalized
+cubic regression spline basis, parameterized in terms of the function values at the knots; 
+a cyclic cubic spline with a similar parameterization and thin plate regression splines. 
+The cubic spline bases are computationally very efficient, but require `knot' locations to be 
+chosen (automatically by default). The thin plate regression splines are optimal low rank 
+smooths which do not have knots, but are more computationally costly to set up. Multivariate terms
+can be represented using thin plate regression splines, or tensor products of any available basis 
+including user defined bases (tensor product penalties are obtained automatically form 
+the marginal basis penalties). The t.p.r.s. basis is isotropic, so if this is not appropriate tensor 
+product terms should be used. Tensor product smooths have one penalty and smoothing parameter per marginal 
+basis, which means that the relative scaling of covariates is essentially determined automatically by GCV/UBRE. 
+
+For any  basis the user specifies the dimension of the basis for each smooth
+term. The dimension of the basis is one more than the maximum degrees of freedom that the 
+term can have, but usually the term will be fitted by penalized
+maximum likelihood estimation and the actual degrees of freedom will be
+chosen by GCV. However, the user can choose to fix the degrees of
+freedom of a term, in which case the actual degrees of freedom will be
+one less than the basis dimension.
 
   Thin plate regression splines are constructed by starting with the
   basis for a full thin plate spline and then truncating this basis in
@@ -106,7 +115,8 @@ Two alternative bases are available for representing model
   use conventional hypothesis testing methods to compare models based on
   pure regression splines. The t.p.r.s. basis can become expensive to
   calculate for large datasets. In this case the user can supply a reduced 
-  set of knots to use in basis construction (see knots, in the argument list).
+  set of knots to use in basis construction (see knots, in the argument list), or 
+use tensor products of cheaper bases.
   
   In the case of the cubic regression spline basis, knots  of the spline are placed evenly
   throughout the covariate values to which the term refers:  For
@@ -114,7 +124,7 @@ Two alternative bases are available for representing model
   there would be a knot at every 10th (ordered)  \code{x} value. The
   parameterization used represents the spline in terms of its
    values at the knots. The values at neighbouring knots
-     are connected by sections of  cubic polynomial constrainted to be 
+     are connected by sections of  cubic polynomial constrained to be 
      continuous up to and including second derivative at the knots. The resulting curve
      is a natural cubic  spline through the values at the knots (given two extra conditions specifying 
      that the second derivative of the curve should be zero at the two end 
@@ -131,7 +141,7 @@ backed up by steepest descent, since the GCV/UBRE score functions are not positi
 
 \arguments{ 
 \item{formula}{ A GAM formula (see also \code{\link{gam.models}}). This is exactly like the formula for a
-glm except that smooth terms can be added to the right hand side of the
+GLM except that smooth terms can be added to the right hand side of the
 formula (and a formula of the form \code{y ~ .} is not allowed).
 Smooth terms are specified by expressions of the form: \cr
 \code{s(var1,var2,...,k=12,fx=FALSE,bs="tp",by=a.var)} where \code{var1},
@@ -140,31 +150,31 @@ is a function of and \code{k} is the dimension of the basis used to
 represent the smooth term. If \code{k} is not
  specified then \code{k=10*3^(d-1)} is used where \code{d} is the number
  of covariates for this term. \code{fx} is used to indicate whether or
- not this term has a fixed muber of degrees of freedom (\code{fx=FALSE}
+ not this term has a fixed number of degrees of freedom (\code{fx=FALSE}
  to select d.f. by GCV/UBRE). \code{bs} indicates the basis to use, with
- \code{"cr"} indicating cubic regression spline, and \code{"tp"}
- indicating thin plate regression spline: \code{"cr"} can only be used
+ \code{"cr"} indicating cubic regression spline, \code{"cc"} a cyclic cubic regression spline, and \code{"tp"}
+ indicating thin plate regression spline: \code{"cr"} and \code{"cc"} can only be used
  with 1-d smooths. \code{by} can be used to specify a variable by which
  the smooth should be multiplied. For example \code{gam(y~z+s(x,by=z))}
    would specify a model \eqn{ E(y) = f(x)z}{E(y)=f(x)z} where
    \eqn{f(\cdot)}{f(.)} is a smooth function (the formula is
-   \code{y~x+s(x,by=z)} rather than \code{y~s(x,by=z)} because in GAMs
+   \code{y~x+s(x,by=z)} rather than \code{y~s(x,by=z)} because
    the smooths are always set up to sum to zero over the covariate
    values). The \code{by} option is particularly useful for models in
    which different functions of the same variable are required for
-   each level of a factor: see \code{\link{s}}.
+   each level of a factor: see \code{\link{s}}. 
 
-For backwards compatibility the formula may also include terms like 
-\code{s(x,12|f)}, which specifies a regression spline which is not to be penalized
-and has 12 knots, or \code{s(x,z,25)} indicating a rank 25 penalized
-t.p.r.s. In such cases arguements \code{k}, \code{fx} and \code{bs} are
-ignored if supplied and a one dimensional term will always use a cubic
-regression spline basis. Note that a term of the form \code{s(x)} will
-result in a term with a \code{"tp"} basis.
+An alternative for specifying smooths of more than one covariate is e.g.: \cr
+\code{te(x,z,bs=c("tp","tp"),m=c(2,3),k=c(5,10))} which would specify a tensor product 
+smooth of the two covariates \code{x} and \code{z} constructed from marginal t.p.r.s. bases 
+of dimension 5 and 10 with marginal penalties of order 2 and 3. Any combination of basis types is 
+possible, as is any number of covariates.
 
-Formulae can involve nested or "overlapping" terms such as \cr
+
+Formulae can involve nested or ``overlapping'' terms such as \cr
 \code{y~s(x)+s(z)+s(x,z)} or \code{y~s(x,z)+s(z,v)}: see
-\code{\link{gam.side.conditions}} for further details and examples. } 
+\code{\link{gam.side.conditions}} for further details and examples. Note that 
+nesting with \code{\link{te}} terms is not supported. } 
  \item{family}{
 This is a family object specifying the distribution and link to use in
 fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
@@ -174,8 +184,8 @@ can be used, with or without known \eqn{\theta}{theta} parameter: see
 } 
 
 \item{data}{ A data frame containing the model response variable and 
-covariates required by the formula.  By default the variables are taken 
-from \code{environment(formula)}, typically the environment from 
+covariates required by the formula. By default the variables are taken 
+from \code{environment(formula)}: typically the environment from 
 which \code{gam} is called.} 
 
 \item{weights}{ prior weights on the data.}
@@ -203,7 +213,7 @@ particular, it is probably worth  comparing UBRE and GCV results; for ``over-dis
 probably more appropriate than UBRE.} 
 
 \item{knots}{this is an optional list containing user specified knot values to be used for basis construction. 
-For the \code{cr} basis the user simply supplies the knots to be used, and there must be the same number as the basis
+For the \code{cr} and \code{cc} bases the user simply supplies the knots to be used, and there must be the same number as the basis
 dimension, \code{k}, for the smooth concerned. For the \code{tp} basis \code{knots} has two uses. Firstly, for large datasets 
 the calculation of the \code{tp} basis can be time-consuming. The user can retain most of the advantages of the t.p.r.s. 
 approach by supplying  a reduced set of covariate values from which to obtain the basis - 
@@ -225,12 +235,12 @@ and \code{\link{magic}}) then negative elements indicate that the
 parameter should be estimated, and hence a mixture of fixed and estimated 
 parameters is possible. With fit method \code{"mgcv"}, if \code{sp} is 
 supplied then all its elements must be positive. Note that \code{fx=TRUE} 
-in a smooth term over-rides what is supplied here exectively setting the 
+in a smooth term over-rides what is supplied here effectively setting the 
 smoothing parameter to zero.}
 
 \item{min.sp}{for fit method \code{"magic"} only, lower bounds can be 
 supplied for the smoothing parameters. Note that if this option is used then
-the smoothing parameters, \code{sp}, in the returned object will need to be added to
+the smoothing parameters \code{sp}, in the returned object, will need to be added to
 what is supplied here to get the actual smoothing parameters. Lower bounds on the smoothing 
 parameters can sometimes help stabilize otherwise divergent P-IRLS iterations.}
 
@@ -244,23 +254,21 @@ defined on the response scale.}
 \item{gamma}{It is sometimes useful to inflate the model degrees of 
 freedom in the GCV or UBRE score by a constant multiplier. This allows 
 such a multiplier to be supplied if fit method is \code{"magic"}.} 
+
+\item{fit}{If this argument is \code{TRUE} then \code{gam} sets up the model and fits it, but if it is
+\code{FALSE} then the model is set up and an object \code{G} is returned which is the output from 
+\code{\link{gam.setup}} plus some extra items required to complete the GAM fitting process.}
+\item{G}{Usually \code{NULL}, but may contain the object returned by a previous call to \code{gam} with 
+\code{fit=FALSE}, in which case all other arguments are ignored except for \code{gamma}, \code{family}, \code{control} and \code{fit}.}
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit}} }
 
 \value{ 
- The function returns an object of class \code{"gam"} which has the following elements: 
+If \code{fit = FALSE} the function returns a list \code{G} of items needed to fit a GAM, but doesn't actually fit it. 
+
+Otherwise the function returns an object of class \code{"gam"} which has the following elements: 
 
 \item{boundary}{did parameters end up at boundary of parameter space?} 
-
-\item{by}{a 2-d array of \code{by} variables (i.e. covariates that multiply a
-smooth term) \code{by[i,j]} is the jth value for the ith \code{by}
-variable. There are only as many rows of this array as there are
-\code{by} variables in the model (often 0). The rownames of \code{by}
-give the \code{by} variable names.}
-
-\item{by.exists}{an array of logicals: \code{by.exists[i]} is
-  \code{TRUE} if the ith smooth has a \code{by} variable associated with
-it, \code{FALSE} otherwise.}
 
 \item{call}{the matched call (allows \code{update} to be used with \code{gam} objects, for example). }
 
@@ -270,20 +278,11 @@ it, \code{FALSE} otherwise.}
 
 \item{converged}{indicates whether or not the iterative fitting method converged.} 
 
-\item{covariate.shift}{covariates get shifted so that they are centred
-  around zero - this is by how much.}
-
 \item{deviance}{(unpenalized)}
-
-\item{df}{The maximum degrees of freedom for each smooth term plus one. In the \code{"cr"} basis case 
-this is the number of knots used. For the \code{"tp"} basis it is the rank of the smooth (one greater than the 
-maximum degrees of freedom because of the centering constraint).}
 
 \item{df.null}{null degrees of freedom.} 
 
-\item{dim}{number of covariates of which term is a function.}
-
-\item{edf}{estimated degrees of freedom for each smooth.}
+\item{edf}{estimated degrees of freedom for each coefficient.}
 
 \item{family}{family object specifying distribution and link used.}
 
@@ -301,16 +300,19 @@ for the new more stable method, \code{"mgcv"} for the Wood (2000) method.}
 
 \item{gcv.ubre}{The minimized GCV or UBRE score.}
 
-\item{gcv.used}{TRUE if GCV used for smoothing parameter selection, FALSE if UBRE used.}
 
-\item{hat}{array of elements from the leading diagonal of the `hat' (or `influence') matrix. Same length as response data vector.}
+\item{hat}{array of elements from the leading diagonal of the `hat' (or `influence') matrix. 
+Same length as response data vector.}
 
 \item{iter}{number of iterations of P-IRLS taken to get convergence.}
 
 \item{linear.predictor}{fitted model prediction of link function of
 expected value for  each datum.}
 
-\item{mgcv.conv}{ A list of covergence diagnostics relating to smoothing
+\item{method}{Either \code{"GCV"} or \code{"UBRE"}, depending on smoothing parameter selection method used 
+(or appropriate, if none used).}
+
+\item{mgcv.conv}{ A list of convergence diagnostics relating to smoothing
 parameter estimation. Differs for method \code{"magic"} and \code{"mgcv"}. Here is 
 the \code{"mgcv"} version:
 
@@ -327,7 +329,7 @@ the \code{"mgcv"} version:
 
 \item{in.ok}{\code{TRUE} if the second smoothing parameter guess improved the GCV/UBRE score.}
 
-\item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by "converging". 
+\item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by `converging'. 
 Not necessarily a problem, but check the above derivative information quite carefully.}
 
 In the case of \code{"magic"} the items are:
@@ -341,7 +343,7 @@ constraints.}
 convergence criteria. \code{FALSE} if method stopped with a steepest descent step 
 failure.}
 
-\item{hess.pos.def}{Was the hessian of the gCV/UBRE score positive definite at 
+\item{hess.pos.def}{Was the hessian of the GCV/UBRE score positive definite at 
 smoothing parameter estimation convergence?}
 
 \item{iter}{How many iterations were required to find the smoothing parameters?}
@@ -362,36 +364,23 @@ convergence.}
 
 \item{null.deviance}{deviance for single parameter model.} 
 
-\item{p.order}{the order of the penalty used for each term. 0 signals
-  auto-selection.}
-
 \item{prior.weights}{prior weights on observations.} 
 
 \item{residuals}{the deviance residuals for the fitted model.}
 
 \item{sig2}{estimated or supplied variance/scale parameter.}
 
+\item{smooth}{list of smooth objects, containing the basis information for each term in the 
+model formula in the order in which they appear. These smooth objects are what gets returned by
+the \code{\link{smooth.construct}} objects.}
+
 \item{sp}{smoothing parameter for each smooth.}
-
-\item{s.type}{type of spline basis used: 0 for conventional cubic regression spline, 1 for t.p.r.s.}
-
-\item{UZ}{array storing the matrices for transforming from t.p.r.s. basis to
-  equivalent t.p.s. basis - see \link{GAMsetup} for details of how the
-  matrices are packed in this array.}
 
 \item{Vp}{estimated covariance matrix for parameter estimators.}
 
 \item{weights}{final weights used in IRLS iteration.}
 
-\item{xp}{knot locations for each cubic regression spline based smooth.
-  \code{xp[i,]+covariate.shift[i]} are the locations for the ith smooth.}
 
-\item{Xu}{The set of unique covariate locations used to define t.p.s. from which
-  t.p.r.s. basis was derived. Again see \link{GAMsetup} for details of
-  the packing algorithm.}
-
-\item{xu.length}{The number of unique covariate combinations in the
-  data. }
 
 \item{y}{response data.}
 
@@ -405,6 +394,9 @@ Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
 with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass.
 
 Background References:
 
@@ -433,7 +425,7 @@ to environmental modelling. Ecological Modelling 157:157-177
 
 \section{WARNINGS }{
 
-The \code{"mgcv"} code does not check for rank defficiency of the
+The \code{"mgcv"} code does not check for rank deficiency of the
 model matrix that may result from lack of identifiability between the
 parametric and smooth components of the model. 
 
@@ -444,17 +436,13 @@ terms less the number of spline terms).
 Automatic smoothing parameter selection is not likely to work well when 
 fitting models to very few response data.
 
-Relative scaling of covariates to a multi-dimensional smooth term has an
-affect on the results: make sure that relative scalings are
-sensible. For example, measuring one spatial co-ordinate in millimetres
-and the other in lightyears will usually produce poor results.   
-
 With large datasets (more than a few thousand data) the \code{"tp"}
 basis gets very slow to use: use the \code{knots} argument as discussed above and 
-shown in the examples. Alternatively, for 1-d smooths  you can use the \code{"cr"} basis.
+shown in the examples. Alternatively, for 1-d smooths  you can use the \code{"cr"} basis and 
+for multi-dimensional smooths use \code{te} smooths.
 
 For data with many  zeroes clustered together in the covariate space it is quite easy to set up 
-GAMs which suffer from identifiability problems, particularly when using poisson or binomial
+GAMs which suffer from identifiability problems, particularly when using Poisson or binomial
 families. The problem is that with e.g. log or logit links, mean value zero corresponds to
 an infinite range on the linear predictor scale. Some regularization is possible in such cases: see 
 \code{\link{gam.control}} for details.
@@ -484,6 +472,9 @@ y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 summary(b)
 plot(b,pages=1)
+# same fit in two parts .....
+G<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE)
+b<-gam(G=G)
 # an extra ridge penalty (useful with convergence problems) ....
 bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),H=diag(0.5,41)) 
 print(b);print(bp);rm(bp)
@@ -495,7 +486,7 @@ bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),min.sp=c(0.001,0.01,0,10))
 print(b);print(bp);rm(bp)
 
 # now a GAM with 3df regression spline term & 2 penalized terms
-b0<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,15))
+b0<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15))
 plot(b0,pages=1)
 # now fit a 2-d term to x0,x1
 b1<-gam(y~s(x0,x1)+s(x2)+s(x3))

@@ -23,7 +23,7 @@ In such circumstances it is possible to apply a ridge regression penalty to the 
 
 \item{epsilon}{This is used for judging conversion of the GLM IRLS loop in \code{gam.fit}.}
 
-\item{maxit}{Maximum number of IRLS iterations to perform using cautious GCV/UBRE opttimization, after \code{globit} 
+\item{maxit}{Maximum number of IRLS iterations to perform using cautious GCV/UBRE optimization, after \code{globit} 
 IRLS iterations with normal GCV optimization have been performed. Note that fit method \code{"magic"} makes no distinction 
 between cautious and global optimization.}
 
@@ -43,7 +43,7 @@ the initial value multiplied by \code{nb.theta.mult}, while the minimum value is
 
 \item{fit.method}{set to \code{"mgcv"} to use the method described in Wood (2000). Set to \code{"magic"} to use a 
 newer numerically more stable method, which allows regularization and mixtures of fixed and estimated smoothing parameters. 
-Set to \code{"fastest"} to use \code{"mgcv"} for one smooth models and \code{"magic"} otherwise.}
+Set to \code{"fastest"} to use \code{"mgcv"} for single penalty models and \code{"magic"} otherwise.}
 
 \item{perf.iter}{set to \code{TRUE} to use Gu's approach to finding smoothing 
 parameters in which GCV or UBRE is
@@ -66,7 +66,7 @@ smoothing parameter at every iteration. If convergence is not achieved within \c
 \code{maxit} steps are taken, in which the overall smoothing parameter estimate is taken as the 
 one locally minimising the GCV/UBRE score and resulting in the lowest EDF change. The difference 
 between the two phases is only significant if the GCV/UBRE function develops more than one minima. 
-The reason for this approach is that the GCV/UBRE score for the IRLS problem can develop "phantom"
+The reason for this approach is that the GCV/UBRE score for the IRLS problem can develop `phantom'
 minimima for some models: these are minima which are not present in the GCV/UBRE score of the IRLS
 problem resulting from moving the parameters to the minimum! Such minima can lead to convergence 
 failures, which are usually fixed by the second phase. 

@@ -1,16 +1,16 @@
 \name{full.score}
 \alias{full.score}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{GCV/UBRE score for use withn nlm}
+\title{GCV/UBRE score for use within nlm}
 \description{ \code{gam} allows the option to `polish' smoothing parameter 
 estimates by minimising the GCV/UBRE score calculated at convergence of the IRLS 
 algorithm, given a set of smoothing parameters, rather than using the `performance 
 iteration' method which estimates smoothing parameters within the IRLS loop. The 
-estimates are often slightly different, since the power iteration effectively 
-neglects the depedence of the iterative weights on the smoothing parameters.
+estimates are often slightly different, since the performance iteration effectively 
+neglects the dependence of the iterative weights on the smoothing parameters.
 
-The `polishing' optimization is fairly crude and numerically costly. 
-\code{\link{nlm}} is used to minimize the scores with respect to the smoothin 
+The `polishing' optimisation is fairly crude and numerically costly. 
+\code{\link{nlm}} is used to minimise the scores with respect to the smoothing 
 parameters, and this routine is designed to be supplied to it as an argument. 
 
 This is basically a service routine for \code{\link{gam}}, and is not usually 
@@ -23,7 +23,7 @@ full.score(sp,G,family,control,gamma)
 \arguments{
 \item{sp}{The logs of the smoothing parameters}
 
-\item{G}{a list reurned by \code{\link{GAMsetup}}}
+\item{G}{a list returned by \code{\link{gam.setup}}}
 
 \item{family}{The family object for the GAM.}
 

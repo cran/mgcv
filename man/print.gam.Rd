@@ -25,7 +25,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 
 
-\seealso{   \code{\link{gam}} \code{\link{mgcv}}}
+\seealso{   \code{\link{gam}},\code{\link{mgcv}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

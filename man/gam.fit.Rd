@@ -26,15 +26,14 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
+Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass.
+
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
-\section{WARNING }{The code does not check for rank defficiency of the
-model matrix -
-      it will likely just fail instead!
- } 
 
-\seealso{   \code{\link{gam}} \code{\link{mgcv}}}
+\seealso{   \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

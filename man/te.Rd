@@ -1,0 +1,157 @@
+\name{te}
+\alias{te}
+%- Also NEED an `\alias' for EACH other topic documented here.
+\title{Define tensor product smooths in GAM formulae}
+\description{ Function used in definition of tensor product smooth terms within
+  \code{gam} model formulae. The function does not evaluate a
+  smooth - it exists purely to help set up a model using tensor product 
+  based smooths.
+}
+
+\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE)
+}
+%- maybe also `usage' for other objects documented here.
+\arguments{
+\item{...}{ a list of variables that are the covariates that this
+    smooth is a function of.}
+
+\item{k}{ the dimension(s) of the bases used to represent the smooth term.
+    If not supplied then set to \code{5^d}. If supplied as a single number then this 
+    basis dimension is used for each basis. If supplied as an array then the elements are
+    the dimensions of the component (marginal) bases of the tensor product.}
+
+\item{bs}{array (or single character string) specifying the type for each 
+marginal basis. \code{"cr"} for cubic regression spline; \code{"cc"} for periodic/cyclic 
+cubic regression spline; \code{"tp"} for thin plate regression spline. User defined bases can 
+also be used here (see \code{\link{smooth.construct}} for an example). If only one 
+identifier is given then this is used for all bases.}
+
+\item{m}{The order of the penalty for each t.p.r.s. term (e.g. 2 for
+    normal cubic spline penalty with 2nd derivatives). If a single number is given 
+    then it is used for all terms. \code{0} autoinitializes. \code{m} is ignored for the 
+\code{"cr"} and \code{"cc"} bases.}
+
+\item{d}{array of marginal basis dimensions. For example if you want a smooth for 3 covariates 
+made up of a tensor product of a 2 dimensional t.p.r.s. basis and a 1-dimensional basis, then 
+set \code{d=c(2,1)}.}
+
+\item{by}{specifies a covariate by which the whole smooth term is to
+    be multiplied. This is particularly useful for creating models in
+    which a smooth interacts with a factor: in this case the \code{by}
+    variable would usually be the dummy variable coding one level of the
+  factor. See the examples below.}
+
+\item{fx}{indicates whether the term is a fixed d.f. regression
+  spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
+}
+
+\details{ Smooths of several covariates can be constructed from tensor products of the bases
+used to represent smooths of one (or sometimes more) of the covariates. To do this `marginal' bases
+are produced with associated model matrices and penalty matrices, and these are then combined in the
+manner described in \code{\link{tensor.prod.model.matrix}} and \code{\link{tensor.prod.penalties}}, to produce 
+a single model matrix for the smooth, but multiple penalties (one for each marginal basis). The basis dimension 
+of the whole smooth is the product of the basis dimensions of the marginal smooths.
+ 
+Tensor product smooths are especially useful for representing functions of covariates measured in different units, 
+although they are typically not quite as nicely behaved as t.p.r.s. smooths for well scaled covariates.
+
+The function does not evaluate the variable arguments.
+}
+\value{ A class \code{tensor.smooth.spec} object defining a tensor product smooth
+ to be turned into a basis and penalties by the \code{smooth.construct.tensor.smooth.spec} function. 
+
+The returned object contains the following items:
+
+\item{margin}{A list of \code{smooth.spec} objects of the type returned by \code{\link{s}}, 
+defining the basis from which the tensor product smooth is constructed.}
+  \item{term}{An array of text strings giving the names of the covariates that 
+the term is a function of.}
+\item{by}{is the name of any \code{by} variable as text (\code{"NA"} for none).}
+  \item{fx}{ logical array with element for each penalty of the term
+(tensor product smooths have multiple penalties). \code{TRUE} if the penalty is to 
+be ignored, \code{FALSE}, otherwise. }
+  
+  \item{p.order}{The order of the t.p.r.s. penalty, or 0 for
+    auto-selection of the penalty order.}
+  
+  \item{full.call}{Text for pasting into a string to be converted to a
+    gam formula, which has the values of function options given explicitly -
+  this is useful for constructing a fully expanded gam formula which can
+be used without needing access to any variables that may have been used
+to define k, fx, bs or m in the original call. i.e. this is text which
+when parsed and evaluated generates a call to \code{s()} with all the
+options spelled out explicitly.}
+\item{label}{A suitable text label for this smooth term.}
+\item{dim}{The dimension of the smoother - i.e. the number of
+    covariates that it is a function of.}
+}
+
+
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+\url{http://www.stats.gla.ac.uk/~simon/}
+
+}
+
+\seealso{ \code{\link{s}},\code{\link{gam}},\code{\link{gamm}}}
+
+\examples{
+
+# following shows how tensor pruduct deals nicely with 
+# badly scaled covariates (range of x 5\% of range of z )
+test1<-function(x,z,sx=0.3,sz=0.4)  
+{ x<-x*20
+  (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+
+  0.8*exp(-(x-0.7)^2/sx^2-(z-0.8)^2/sz^2))
+}
+n<-500
+old.par<-par(mfrow=c(2,2))
+x<-runif(n)/20;z<-runif(n);
+xs<-seq(0,1,length=30)/20;zs<-seq(0,1,length=30)
+pr<-data.frame(x=rep(xs,30),z=rep(zs,rep(30,30)))
+truth<-matrix(test1(pr$x,pr$z),30,30)
+f <- test1(x,z)
+y <- f + rnorm(n)*0.2
+b1<-gam(y~s(x,z))
+persp(xs,zs,truth);title("truth")
+vis.gam(b1);title("t.p.r.s")
+b2<-gam(y~te(x,z))
+vis.gam(b2);title("tensor product")
+b3<-gam(y~te(x,z,bs=c("tp","tp")))
+vis.gam(b3);title("tensor product")
+par(old.par)
+
+test2<-function(u,v,w,sv=0.3,sw=0.4)  
+{ ((pi**sv*sw)*(1.2*exp(-(v-0.2)^2/sv^2-(w-0.3)^2/sw^2)+
+  0.8*exp(-(v-0.7)^2/sv^2-(w-0.8)^2/sw^2)))*(u-0.5)^2*20
+}
+n <- 500
+v <- runif(n);w<-runif(n);u<-runif(n)
+f <- test2(u,v,w)
+y <- f + rnorm(n)*0.2
+# tensor product of a 2-d thin plate regression spline and 1-d cr spline
+b <- gam(y~te(v,w,u,k=c(30,5),d=c(2,1),bs=c("tp","cr")))
+op <- par(mfrow=c(2,2))
+vis.gam(b,cond=list(u=0),color="heat",zlim=c(-0.2,3.5))
+vis.gam(b,cond=list(u=.33),color="heat",zlim=c(-0.2,3.5))
+vis.gam(b,cond=list(u=.67),color="heat",zlim=c(-0.2,3.5))
+vis.gam(b,cond=list(u=1),color="heat",zlim=c(-0.2,3.5))
+par(op)
+
+
+}
+
+\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+
+
+
+
+
+
