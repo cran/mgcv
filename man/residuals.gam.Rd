@@ -50,3 +50,6 @@ residuals.gam(object, type = c("deviance", "pearson", "working", "response"),...
 
 
 
+
+
+

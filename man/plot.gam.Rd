@@ -6,7 +6,8 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,...)
+plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
+         pers=FALSE,theta=30,phi=30,jit=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -14,15 +15,17 @@ plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,pers=FALSE,
  \item{x}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
- at the foot of each plot of a 1-d smooth, and the loactions of the
+ at the foot of each plot of a 1-d smooth, and the locations of the
  covariates are plotted as points on the contour plot representing a 2-d
  smooth.} 
   
 \item{se}{ when TRUE (default) upper and lower lines are added to the
   1-d plots at 2 standard errors
-        above and below the estimate of the smooth being plotted. For
+        above and below the estimate of the smooth being plotted while for
 	2-d plots, surfaces at +1 and -1 standard errors are contoured
-	and overlayed on the contour plot for the estimate.}
+	and overlayed on the contour plot for the estimate. If a
+	positive number is supplied then this number is multiplied by
+	the standard errors when calculating standard error curves or surfaces.}
  \item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
 if \code{pages=1} then all terms will be plotted on one page with the layout performed automatically. 
 Set to 0 to have the routine leave all graphics settings as they are. }
@@ -53,15 +56,16 @@ the plot is something like \code{s(var1,var2,edf)}, indicating the
 variables of which the term is a function, and the estimated degrees of
 freedom for the term. When \code{se=TRUE}, estimator variability is shown by overlaying
 contour plots at plus and minus 1 s.e. relative to the main
-estimate. Contour levels are chosen to try and ensure reasonable
+estimate. If \code{se} is a positive number then contour plots are at plus or minus \code{se} multiplied
+by the s.e. Contour levels are chosen to try and ensure reasonable
 separation of the contours of the different plots, but this is not
 always easy to achieve.  
    
-   Within the function, the data for the plots is obtained by a call to \code{predict.gam()} with a 
-   suitably constructed data frame.
+   Within the function, the data for the plots is obtained by direct
+   calls to the compiled C code that \code{predict.gam} uses.   
 
    Smooths of more than 2 variables are not currently dealt with, but
-   simply generate a warning.
+   simply generate a warning, but see \code{\link{persp.gam}}.
    }
 
 \value{ The function simply generates plots.
@@ -88,11 +92,11 @@ with Multiple
   The function can not deal with smooths of more than 2 variables!
 } 
 
-\seealso{  \code{\link{gam}} \code{\link{predict.gam}}}
+\seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{persp.gam}}}
 
 \examples{
-
 library(mgcv)
+set.seed(0)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)

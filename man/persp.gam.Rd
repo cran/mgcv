@@ -1,12 +1,13 @@
 \name{persp.gam}
+\alias{persp.gam}
 \title{Perspective Plot of GAM objects}
 \usage{
 persp.gam(x, view=NULL, slice=list(), sizes=c(20,20), mask=FALSE, se=2,  
-      theta=0, phi=15, r = sqrt(3), d = 1, scale = TRUE, expand = 1, col = NULL,
-      border = NULL, ltheta = -135, lphi = 45, shade = 0.75, box = TRUE, axes = TRUE, 
-      nticks = 5, ticktype = "detailed",...)   
+      theta=0, phi=15, r = sqrt(3), d = 1, scale = TRUE, expand = 1,
+      col = NULL, border = NULL, ltheta = -135, lphi = 45, shade = 0.75,
+      box = TRUE, axes = TRUE, nticks = 5, ticktype = "detailed",...)   
 }
-\alias{persp.gam}
+
 \arguments{
   \item{x}{a \code{gam} object, produced by \code{gam()}}
   \item{view}{a vector containing the names of the two covariates to be displayed on the 
@@ -81,7 +82,7 @@ persp.gam(x, view=NULL, slice=list(), sizes=c(20,20), mask=FALSE, se=2,
 }
 \details{
   A grid of values covering the projection of the range of data on which the \code{gam} 
-  object, \code{x}, is based are defined and the predicted values for each value them found. 
+  object, \code{x}, is based are defined. Predicted values for each point on this grid are then found. 
   A perspective plot of this is then drawn. The standard errors around the surface 
   can be indicated, and parts of the surface far from the data removed, if desired.
 }
@@ -93,7 +94,7 @@ persp.gam(x, view=NULL, slice=list(), sizes=c(20,20), mask=FALSE, se=2,
 }
 \examples{
 library(mgcv)
-set.seed(c(1,2,3))
+set.seed(0)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)

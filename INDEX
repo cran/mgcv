@@ -1,35 +1,38 @@
-GAMsetup                 Set up GAM using penalized cubic regression
-                         splines
-QT                       QT factorisation of a matrix
-SANtest                  Example of simple additive GAM using penalized
-                         regression splines.
-gam                      Generalized Additive Models using penalized
-                         regression splines and GCV
-gam.control              Setting Generalized Additive Models fitting
-                         defaults
-gam.fit                  Generalized Additive Models fitting using
-                         penalized regression splines and GCV
-gam.nbut                 Generalized Additive Models using Negative
-                         Binomial errors with unknown theta
-gam.parser               Generalized Additive Model fitting using
-                         penalized regression splines and GCV
-gam.setup                Generalized Additive Model set up.
-get.family               Identifies families
-mgcv                     Multiple Smoothing Parameter Estimation by GCV
-                         or UBRE
-mono.con                 Monotonicity constraints for a cubic regression
-                         spline.
-neg.bin                  Family function for Negative Binomial GAMs
-null.space.dimension     Dimension of the space of un-penalized
-                         functions.
-pcls                     Penalized Constrained Least Squares Fitting
-persp.gam                Perspective Plot of GAM objects
-plot.gam                 Default GAM plotting
-predict.gam              Prediction from fitted GAM model
-print.gam                Generalized Additive Model default print
-                         statement
-residuals.gam            Generalized Additive Model residuals
-s                        Defining smooths in GAM formulae
-theta.maxl               Estimate theta of the Negative Binomial by
-                         Maximum Likelihood
-uniquecombs              find the unique rows in a matrix
+GAMsetup                Set up GAM using penalized regression splines
+QT                      QT factorisation of a matrix 
+SANtest                 Example of simple additive GAM using penalized
+                        regression splines.
+gam                     Generalized Additive Models using penalized
+                        regression splines and GCV
+gam.check               Some diagnostics for a fitted gam model.
+gam.control             Setting Generalized Additive Models fitting
+                        defaults
+gam.fit                 Generalized Additive Models fitting using
+                        penalized regression splines and GCV
+gam.models              Specifying generalized Additive Models.
+gam.nbut                Generalized Additive Models using Negative
+                        Binomial errors with unknown theta
+gam.parser              Generalized Additive Model fitting using
+                        penalized regression splines and GCV
+gam.setup               Generalized Additive Model set up.
+gam.side.conditions     Identifiability side conditions for a GAM.
+get.family              Identifies families
+mgcv                    Multiple Smoothing Parameter Estimation by GCV
+                        or UBRE
+mono.con                Monotonicity constraints for a cubic regression
+                        spline.
+neg.binom               Family function for Negative Binomial GAMs 
+null.space.dimension    The basis of the space of un-penalized
+                        functions for a t.p.r.s.
+pcls                    Penalized Constrained Least Squares Fitting
+persp.gam               Perspective Plot of GAM objects
+plot.gam                Default GAM plotting
+predict.gam             Prediction from fitted GAM model
+print.gam               Generalized Additive Model default print
+                        statement
+residuals.gam           Generalized Additive Model residuals
+s                       Defining smooths in GAM formulae
+summary.gam             Summary for a GAM fit
+theta.maxl              Estimate theta of the Negative Binomial by
+                        Maximum Likelihood 
+uniquecombs             find the unique rows in a matrix 

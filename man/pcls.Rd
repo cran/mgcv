@@ -93,6 +93,7 @@ Journal on Scientific Computing 15(5):1126-1133
 
 \examples{
 # first an un-penalized example - fit E(y)=a+bx subject to a>0
+set.seed(0)
 n<-100
 x<-runif(n);y<-x-0.2+rnorm(n)*0.1
 M<-list(X=matrix(0,n,2),p=c(0.1,0.5),off=array(0,0),df=array(0,0),S=0,
@@ -104,7 +105,7 @@ plot(x,y);abline(M$p,col=2);abline(coef(lm(y~x)),col=3)
 # and now a penalized example: a monotonic penalized regression spline .....
 
 # Generate data from a monotonic truth.
-set.seed(10);x<-runif(100)*4-1;x<-sort(x);
+x<-runif(100)*4-1;x<-sort(x);
 f<-exp(4*x)/(1+exp(4*x));y<-f+rnorm(100)*0.1;plot(x,y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))

@@ -1,5 +1,23 @@
-/* library of routines designed for unstructured GCV problems:
-   */
+/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License   
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+(www.gnu.org/copyleft/gpl.html)
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+USA.*/
+
+/* library of routines designed for unstructured GCV problems: */
+
 #define ANSI   
 #include <stdio.h>
 #include <math.h>
@@ -7,7 +25,7 @@
 #include <string.h>
 #include "matrix.h"
 #include "gcv.h"
-#include <R.h>
+#include "general.h"
 void ErrorMessage(char *msg, int fatal);
 
 /* routines based on singular value decomposition.... They are not as well
@@ -367,7 +385,21 @@ double EScheck(matrix *y,matrix Q,matrix *LZSZL,double *rw,double *trial,int m,d
  return(V);
 }
 
-double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,double tol)
+void DumpEarg(matrix *T,matrix *z)
+     /* Dump arguments to EasySmooth */
+{ dumpmat(*T,"/home/snw/bugger.T");
+  dumpmat(*z,"/home/snw/bugger.z");
+}
+
+void ReadEarg(matrix *T,matrix *z)
+
+{ readmat(T,"/home/snw/bugger.T");
+  readmat(z,"/home/snw/bugger.z");
+}
+
+
+double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,double tol,int mesh,double *edf,
+                  double *score,double min_edf)
 
 /* routine that minimises
    (||(I-r*(I*r + T)^{-1})z ||^2+||x||^2) / (n - r*Tr(I*r+T)^{-1})^2
@@ -384,6 +416,12 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
    on entry.
 
    tol is golden section search tolerence 1e-6 usually ok
+   mesh is the number of grid points to search on in the first phase of
+        overall s.p. search.
+   edf[] is an array for storing model edf's used in direct search
+   score[] is an array for corresponding gcv/ubre scores.
+   min_edf is the minimum possible edf for the model. Useful for setting limits
+           on r, but ignored if <=0.
 
    returns smoothing parameter and minimum gcv/ubre score.
 
@@ -393,45 +431,74 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
 */
 
 { matrix l0,l1,x;
-  double xx,r,V,V0,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt,maxdV=0.0,firstdV=0.0;
-  long k,mesh=100L,i;
-  int gcv=1,ok=0,stop=0;
+  double xx,r,V,V0,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt,r4eps,reps,eps=DOUBLE_EPS,tr0;
+  double maxdV=0.0,firstdV=0.0,bracket_mult=20.0;
+  long k,i;
+  int gcv=1,ok=0;
   char msg[200];
   minV=0.0;
+  reps=sqrt(eps); /* square root of machine precision */
+  r4eps=sqrt(eps);
   if (*sig2>0.0) gcv=0;
   /* Initialise work space matrices */
   ldt=(double *)calloc((size_t)T->r,sizeof(double)); /* storage for leading diagonal of T*/
-  l0=initmat(T->r,1L);l1=initmat(T->r-1,1L);x=initmat(l0.r,1L);
-  /* get initial smooth estimates */
-  tr=0.0;for (i=0;i<T->r;i++) tr+=T->M[i][i];tr/=T->r;
-  minr=tr*1e-12;maxr=tr*1e12;
+  l0=initmat(T->r,1L);l1=initmat(T->r-1,1L);
+  x=initmat(l0.r,1L);
+  /*  Rprintf("\nx.r=%d  z.r=%d  T.r=%d   %g\n",x.r,z->r,T->r,eps);*/
+  nx=0.0;for (i=x.r;i<n;i++) nx+=z->V[i]*z->V[i]; /* ||x||^2 */
+  /* get initial smoothing parameter estimates */
+  r=0.0;for (i=0;i<T->r;i++) r+=T->M[i][i];r/=T->r;  /* first guess */
+  /* search for upper r */
+  maxr=r;tr=0.0;
+  while (fabs(tr-T->r)>reps*T->r)  /* maxr too small to give max df */   
+  { maxr*=bracket_mult;
+    if (gcv) *sig2=-1.0;
+    V=EScv(ldt,T,&l0,&l1,&x,nx,z,maxr,n,&tr,&rss,sig2);
+    tr=(1-sqrt(tr))*n;
+  } 
+  /* search for lower r */
+  /*minr=0.0;for (i=0;i<T->r;i++) if (minr<T->M[i][i]) minr=T->M[i][i];*/ 
+  minr = r* eps;  /* absolute lower limit on minr */
+  tr0=tr+1.0; /* purely to satisfy while loop condition */
+  while ((tr>min_edf+0.001)&&(fabs(tr0-tr)>reps*T->r||(T->r-tr<1))&&(r/bracket_mult>minr)&&(tr<tr0)) /* continue reducing r to search for lower search boundary */ 
+  { r/=bracket_mult;tr0=tr;
+    if (gcv) *sig2=-1.0;
+    V=EScv(ldt,T,&l0,&l1,&x,nx,z,r,n,&tr,&rss,sig2);
+    tr=(1-sqrt(tr))*n; 
+  }
+  minr=r;
   rm=exp(log(maxr/minr)/mesh);
   r=maxr*rm;
-  nx=0.0;for (i=x.r;i<n;i++) nx+=z->V[i]*z->V[i]; /* ||x||^2 */
-  
+  /* Rprintf("\nsp grid search.... \n");*/
+  V0=0.0;
   for (k=mesh;k>0;k--)
   { r/=rm;
     if (gcv) *sig2=-1.0;
     V=EScv(ldt,T,&l0,&l1,&x,nx,z,r,n,&tr,&rss,sig2);
     if (V<minV||k==mesh) 
-    { minV=V;minr=r;if (k<mesh) ok=1;
-      if (k==1&&fabs(V-V0)>1e-5*minV) /* GCV score still declining at lower boundary of search */
-      { sprintf(msg,"Overall smoothing parameter estimate on lower boundary.\nBoundary GCV score change: %g. Largest change: %g",
-                fabs(V-V0),maxdV);
-        ErrorMessage(msg,0);
+    { minV=V; minr=r; if (k<mesh) ok=1;
+      if (k==1&&fabs(V-V0)>reps*minV) /* GCV score still declining at lower boundary of search */
+      {/* sprintf(msg,"Overall smoothing parameter estimate on lower boundary.\nBoundary GCV score change: %g. Largest change: %g",
+               fabs(V-V0),maxdV);
+	       ErrorMessage(msg,0);*/
       } 
     }
-    if ((k<mesh/2)&&ok&&(V>minV)) stop++;
-    if (stop>1) break;
+    /*Rprintf("\n%20.14g  %20.14g  %20.14g  %g  k=%d ",n*(1-sqrt(tr)),V,minV,V-minV,k);*/
+    score[k-1]=V;edf[k-1]=n*(1-sqrt(tr)); /* storing diagnostics */
     if (k<mesh) /* need to store step sizes so that step sizes at boundary can be assessed if need be */
     { xx=fabs(V-V0);  /* store biggest V change to compare with change at upper boundary */
       if (k==mesh-1) firstdV=maxdV=xx;
       else if (xx>maxdV) maxdV=xx; 
     }
+    /* checking for multiple minima: almost all false positives - need something better.....*/
+    /*  if (!down&&(V0-V>r4eps*V0)) down=1; 
+    else if (down&&!up&&V-V0>r4eps*V) up=1;
+    else if (up&&V0-V>r4eps*V0) 
+    ErrorMessage("Possible multiple minima in GCV/UBRE function",0);*/ 
     V0=V;
-    /*if (n*tr<1.0) break;*/
   }
-  if (!ok&&firstdV>1e-5*minV)  /* GCV score never decreased from first value and gradient not low enough at first value */
+  /*Rprintf("\nover  n=%d\n",n);*/
+  if (!ok&&firstdV>reps*minV)  /* GCV score never decreased from first value and gradient not low enough at first value */
   { sprintf(msg,"Overall smoothing parameter estimate on upper boundary.\nBoundary GCV score change: %g. Largest change: %g",
                 firstdV,maxdV);
     ErrorMessage(msg,0);
@@ -467,92 +534,7 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
   return(minr);
 }
 
-double SingleSmooth(matrix *y,matrix *X,matrix *Z,matrix *w,matrix *S,matrix *p,
-                    double *df,double *sig2)
 
-/* NOTE: Does not work well with rank deficient penalties.
-   solves smoothing problems with influence matrix
-   rho*XZ[Z'X'WXZ*rho + Z'SZ]^{-1}Z'X'W
-   smoothed values are returned in y. The algorithm is a generalisation of Gu's
-   (1989), the generalisation widens the class of design matrices usable.
-   returns rho, and parameter values in p.
-   Z is the column basis for a null space of constraints.
-   It is assumed that these are stored efficiently as householder
-   transformations in the manner of routine QT. For example to impose
-   Cp=0: QT(Z,C,0);Z.r=C.r;
-
-   if *sig2>0.0 on entry then UBRE is used (which assumes that the variance
-   sig2 is known), otherwise GCV is used.
-*/
-{ double *rw,v,rho,zz;
-  matrix Wy,R,Q,U,T,z,l0,l1;
-  long n,i,j,k;
-  n=y->r;
-  /* Get Q'R=W^{0.5} X Z */
-  rw=(double *)calloc((size_t)n,sizeof(double));
-  for (i=0;i<n;i++) rw[i]=sqrt(w->V[i]);   /* rw contains l.d. of W^{0.5} */
-  Wy=initmat(n,1L);
-  for (i=0;i<n;i++) Wy.V[i]=rw[i]*y->V[i];
-  if (Z->r)
-  { R=initmat(n,Z->c);
-    mcopy (X,&R);HQmult(R,*Z,0,0);R.c-=Z->r;  /* R=XZ */
-  } else
-  { R=initmat(n,X->c);mcopy(X,&R);}          /* case when Z=I */
-  for (i=0;i<n;i++) for (j=0;j<R.c;j++) R.M[i][j]*=rw[i];  /* R=W^{0.5} XZ */
-  Q=initmat(n,n);
-  QR(&Q,&R);  /* done in up to O(n^3) */
-  /* invert R - it is this step that requires n>=nz*/
-  R.r=R.c; /* getting rid of zero part */
-  InvertTriangular(&R);   /* R now contains L */
-  /* following code is inefficient and should be optimized - DONE 26/11/97 and
-     tested (quickly with matest)*/
-  T=initmat(R.c,R.c);
-  U=initmat(S->r,S->r);mcopy(S,&U);
-  if (Z->r)
-  { HQmult(U,*Z,1,1);HQmult(U,*Z,0,0);
-    U.r=U.c=Z->c-Z->r;
-  }
-  /*multi(3,T,R,U,R,1,0,0); */
-  for (j=U.c-1;j>=0;j--) for (i=0;i<U.r;i++)
-  { zz=0.0; for (k=0;k<=j;k++) zz+=U.M[i][k]*R.M[k][j];U.M[i][j]=zz;}
-  for (i=U.r-1;i>=0;i--) for (j=0;j<=i;j++)
-  { zz=0.0; for (k=0;k<=i;k++) zz+=R.M[k][i]*U.M[k][j];U.M[i][j]=zz;}
-  for (i=U.r-1;i>=0;i--) for (j=0;j<=U.c;j++) U.M[j][i]=U.M[i][j];
-  mcopy(&U,&T);
-  freemat(U);
-  U=initmat(R.c,R.c);
-  UTU(&T,&U);
-  z=initmat(n,1L);
-  for (i=0;i<n;i++) z.V[i]=rw[i]*y->V[i]; /* z=W^{1/2}y */
-  OrthoMult(&Q,&z,0,Q.r,0,1,1);           /* z=QW^{1/2}y */
-  z.r=T.r;                                /* z=[I,0]QW^{1/2}y */
-  OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
-  z.r=n;
-  rho=EasySmooth(&T,&z,&v,df,n,sig2,1e-6);
-  l0=initmat(T.r,1L);l1=initmat(T.r-1,1L);
-  for (i=0;i<T.r;i++) T.M[i][i] += rho;
-  tricholeski(&T,&l0,&l1);
-  for (i=0;i<T.r;i++) T.M[i][i] -= rho;
-  z.r=T.r;
-  y->r=z.r;
-  bicholeskisolve(y,&z,&l0,&l1);        /* y=(I*rho+T)^{-1} z */
-  OrthoMult(&U,y,1,T.r-2,0,1,0);        /* y=U(I*rho+T)^{-1} z */
-  p->r=R.r;
-  matmult(*p,R,*y,0,0);
-  if (Z->r)
-  { p->r=Z->c;
-    for (i=R.r;i<Z->c;i++) p->V[i]=0.0;
-    HQmult(*p,*Z,1,0);
-    /**p=vecmult(*Z,*p,0); FZ */
-  }
-  for (i=0;i<p->r;i++) p->V[i]*=rho;    /* p=rho*ZLU(I+rho+T)^{-1} z */
-  y->r=n;for (i=T.r;i<y->r;i++) y->V[i]=0.0;
-  OrthoMult(&Q,y,0,Q.r,1,1,1);   /* smoothed values now in y */
-  for (i=0;i<n;i++) y->V[i]*=rho/rw[i];
-  freemat(Q);freemat(U);freemat(R);freemat(T);freemat(z);freemat(Wy);
-  freemat(l0);freemat(l1);free(rw);
-  return(rho);
-}
 
 /* tediouscv and boringHg are debugging routines for MultiSmooth() */
 
@@ -908,11 +890,13 @@ double **da,double **db,double ***trd2A,double ***d2a,double ***d2b,double **nin
 }
 
 
-void init_msrep(msrep_type *msrep,int m)
+void init_msrep(msrep_type *msrep,int m, int direct_mesh)
 /* Initialize the memory for a MultiSmooth diagnostic report object */
 { msrep->g=(double *)calloc((size_t)m,sizeof(double));
   msrep->h=(double *)calloc((size_t)m,sizeof(double));
   msrep->e=(double *)calloc((size_t)m,sizeof(double));
+  msrep->edf=(double *)calloc((size_t)direct_mesh,sizeof(double));
+  msrep->score=(double *)calloc((size_t)direct_mesh,sizeof(double));
 }
 
 
@@ -921,13 +905,15 @@ void free_msrep(msrep_type *msrep)
 { free(msrep->g);
   free(msrep->h);
   free(msrep->e);
+  free(msrep->edf);
+  free(msrep->score);
 }
 
 
 
 double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
                  double *theta,long *off,int m,double *sig2,msctrl_type *msctrl,
-				 msrep_type *msrep)
+				 msrep_type *msrep, int direct_mesh)
 
 /* routine for multiple smoothing parameter problems, with influence matrix:
    A=r*JZ(Z'J'WJZ*r + \sum_{i=1}^m \theta_i Z'S_iZ)^{-1} Z'J'W
@@ -990,6 +976,8 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
    msctrl->conv_tol controls the convergence tolerence (1e-6 usually ok)
    msctrl->max_step_half gives the number of step halvings to try during Newton 
                          updates (15 is usually ok)
+   msctrl->min_edf is the minimum possible edf for the whole model. Useful for setting
+                   rho (overall s.p.) limits in EasySmooth. <=0 to ignore.
  
    Returns gcv/ubre score. 
 
@@ -1008,7 +996,8 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
           rho,v,vmin=0.0,x,**MM,**M1M,tdf,xx1,tol,
           *pinf,*ninf,*ldt;
   long i,j,l,n,np,nz;
-  int iter,reject,ok=1,autoinit=0,op=0,ubre=0,accept=0,steepest=0;
+  int iter,reject,ok=1,autoinit=0,op=0,
+      ubre=0,accept=0,steepest=0;
   matrix z,l0,l1,Q,R,*LZrS,*LZSZL,T,U,A,Wy,Hess,g,c,*H,*ULZSZLU,
          *ULZrS,*dAy,*dpAy,d,Ay,dum;
   if (*sig2>0.0) ubre=1; /* use UBRE rather than GCV */
@@ -1072,47 +1061,50 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
       z.r=n;                                  /* z->[z,x_1]' */
       if (!ubre) *sig2=-1.0; /* setting to signal GCV rather than ubre */
-	  rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,1e-14);    /* do a cheap minimisation in rho */
+      rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,DOUBLE_EPS*100,direct_mesh,msrep->edf,msrep->score,msctrl->min_edf);    /* do a cheap minimisation in rho */
       z.r=R.r;
       if ((!iter||v<vmin)&&(reject!=msctrl->max_step_half-1)) /* accept current step - last condition avoids prob. with bad guess 2 */
       { if (autoinit) { if (iter>1) accept++;} else accept++; /* counting successful updates */
         if (m==1) ok=0; /* there is only one smooth term, so terminate immediately */
-		else
-		if (iter<3) ok=1; /* never terminate too soon */ 
-		else /* test for convergence - don't look at trial step length - can be long at valid convergence if score flat */
+	else
+	if (iter<=3) ok=1; /* never terminate too soon */ 
+	else /* test for convergence - don't look at trial step length - can be long at valid convergence if score flat */
         { tol=msctrl->conv_tol;ok=0;
           if (vmin-v>tol*(1+v)) ok=1;
           xx1=0.0;for (i=0;i<m;i++) xx1+=g.V[i]*g.V[i];xx1=sqrt(xx1);
           if (xx1>pow(tol,1.0/3)*(1+v)) ok=1;
         }  
-	    for (i=0;i<m;i++) eta[i]=trial[i];reject=0;
-		vmin=v;
+	for (i=0;i<m;i++) eta[i]=trial[i];reject=0;
+	vmin=v;
       } else   /* contract step */
       { reject++;
-   		if (iter>1&&reject==4&&steepest==0) /* switch from Newton to steepest descent */
+   	if (iter>1&&reject==4&&steepest==0) /* switch from Newton to steepest descent */
         { steepest=1;
           x=0.0;for (i=0;i<m;i++) { xx1=fabs(g.V[i]); if (xx1>x) x=xx1;}
 		  for (i=0;i<m;i++) del[i] = - g.V[i]/x; /* reset step to steepest descent - length such that biggest component is 1 */
-        } else
-	    for (i=0;i<m;i++) del[i]*=0.5;
+        } else for (i=0;i<m;i++) del[i]*=0.5;
         if (reject==msctrl->max_step_half-1) for (i=0;i<m;i++) del[i]=0.0;
         if (reject==msctrl->max_step_half) reject=0; 
         if (!reject)
-		{ if (iter==1&&autoinit) msrep->inok=0; /* report that second guess failed */
-		  else if (iter>3) /* terminate as step has failed */
-		  { ok=0; 
-		    msrep->step_fail=1;
-		  }
+	{ if (iter==1&&autoinit) msrep->inok=0; /* report that second guess failed */
+	  else if (iter>3) /* terminate as step has failed */
+	  { ok=0; 
+	    msrep->step_fail=1;
+	  }
         }
       }
-      if (op==1) Rprintf("\n%12.6g  %12.6g",v,vmin);
+      if (op==1) 
+      { Rprintf("\nv=%12.6g  %12.6g  %d  %d r=%12.6g,tdf=%12.6g",v,vmin,iter,steepest,rho,tdf);
+        for (i=0;i<m;i++) Rprintf(" %9.3g",del[i]);
+     
+      } 
     }
     
     /* get choleski decomposition of (I*rho+T) */
     for (i=0;i<T.r;i++) {ldt[i]=T.M[i][i];T.M[i][i] += rho;}
     tricholeski(&T,&l0,&l1);
     for (i=0;i<T.r;i++) T.M[i][i] = ldt[i]; /* note this way avoids serious rounding error */
-	if ((!iter&&autoinit)||!ok) /* do second update guess at start parameters, or finish (ok==0) */
+    if ((!iter&&autoinit)||!ok) /* do second update guess at start parameters, or finish (ok==0) */
     { /* get the current best parameter vector ZLU(I*r+T)^{-1}z */
       c.r=z.r;
       bicholeskisolve(&c,&z,&l0,&l1);
@@ -1148,21 +1140,22 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
     } else /* full  Newton update */
     { /* call routine to do gradient and Hessian calculations */
       
-	  MSgH(ubre,m,LZrS,ULZrS,ULZSZLU,&U,&T,&l0,&l1,&A,H,&d,&c,&Wy,&Ay,dAy,dpAy,&Q,&g,&Hess,rho,*sig2,trdA,trd2A,eta,da,d2a,db,d2b);
+      MSgH(ubre,m,LZrS,ULZrS,ULZSZLU,&U,&T,&l0,&l1,&A,H,&d,&c,&Wy,&Ay,dAy,dpAy,&Q,&g,&Hess,rho,*sig2,trdA,trd2A,eta,da,d2a,db,d2b);
       /* boringHg(R,Q,LZSZL,y,rw,eta,rho,m,ubre*(*sig2),1e-4); - this can be used for f.d. checking */
 
       /* and finally work out the update direction........ */
       c.r=A.c=A.r=Hess.r;
-	  for (i=0;i<c.r;i++) { msrep->g[i]=g.V[i];msrep->h[i]=Hess.M[i][i];} /* fill in diagnostic structure */
+      for (i=0;i<c.r;i++) { msrep->g[i]=g.V[i];msrep->h[i]=Hess.M[i][i];} /* fill in diagnostic structure */
       specd(Hess,c); /* get the spectral decomposition of H */
-	  for (i=0;i<c.r;i++) msrep->e[i]=c.V[i]; /* fill in diagnostic structure */
+      for (i=0;i<c.r;i++) msrep->e[i]=c.V[i]; /* fill in diagnostic structure */
 
-	  if (c.V[c.r-1]<=0.0) /* saddle point approx => Newton's method unhelpful => use steepest descent */
+      if (c.V[c.r-1]<=0.0) /* saddle point approx => Newton's method unhelpful => use steepest descent */
       { x=0.0;for (i=0;i<g.r;i++) if (fabs(g.V[i])>x) x=fabs(g.V[i]);
-	    for (i=0;i<g.r;i++) del[i]= -g.V[i]/x; /* scale so that longest component of trial step is length 1 */
-		steepest=1;
+	for (i=0;i<g.r;i++) del[i]= -g.V[i]/x; /* scale so that longest component of trial step is length 1 */
+	steepest=1;
+        if (op==1) Rprintf("\nAt saddle, using steepest.");
       } else /* Newton should work  */
-	  { for (i=0;i<c.r;i++) c.V[i]=1/(c.V[i]);
+      { for (i=0;i<c.r;i++) c.V[i]=1/(c.V[i]);
         matmult(dum,Hess,g,1,0);
         for (i=0;i<c.r;i++) dum.V[i]*=c.V[i];
         matmult(c,Hess,dum,0,0); /* -c is search direction */
@@ -1170,6 +1163,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
 		for (i=0;i<c.r;i++) if (fabs(c.V[i])>x) x=fabs(c.V[i]);
 		x=5.0/x; /* multiplier ensuring step is short enough that no component is larger than 5 */
 		for (i=0;i<c.r;i++) del[i] = -c.V[i]*x;
+                if (op==1&&x!=1.0) Rprintf("Hess step multiplier = %g",x);
 		steepest=0;
       }
     }
@@ -1257,7 +1251,7 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
 
 { double *rw,tr,*eta,*del,*trial,trA,a,b,*trdA,**trd2A,*db,**d2b,*da,**d2a,
           rho,v,vmin=0.0,x,**RM,*pp,**MM,**M1M,**M2M,*pp1,tdf,xx1,xx2,tol,
-          *pinf,*ninf,*lam;
+          *pinf,*ninf,*lam,score[100],edf[100];
   long i,j,k,l,n,np,nz;
   int iter,reject,ok=1,autoinit=0,op=0,ubre=0;
   matrix z,l0,l1,Q,R,C,ZC,*LZrS,*LZSZL,T,U,A,Wy,Hess,g,c,*H,*ULZSZLU,
@@ -1406,7 +1400,7 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
       OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
       z.r=n;                                  /* z->[z,x_1]' */
       if (!ubre) *sig2=-1.0; /* signalling use of GCV */
-      rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,1e-6);    /* do a cheap minimisation in rho */
+      rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,1e-6,100,edf,score,0.0);    /* do a cheap minimisation in rho */
       z.r=R.r;
       if (!iter||v<vmin) /* accept current step */
       { reject=0;
@@ -1720,6 +1714,18 @@ Bug fix log:
             Also in EasySmooth a warning was generated whenever the best rho was really at "zero" or "infinity" 
             - this warning is now only generated if the gradient at the boundary is non-zero as judged relative
             to the biggest drop seen in the score. 
+1/5/2002 - R compiles with options that break IEEE fp comliance on some platforms. This means that optimization can 
+           use floating point registers to store variables with excess precision. This in turn breaks equality 
+           testing of doubles (can also break inequality testing). This is pretty odd, since e.g. Watkins (1991),
+           uses constructions that rely on sensible performance of equality testing (according to Brian Ripley, 
+           so does linpack!). The Intel site has a worryingly unconvinving explanation of their reasons for 
+           carrying extra precision (basically that it allows the programmer to be sloppy). This means that it 
+           is not possible to guarantee exact cross platform or cross compiler compatibility. Effectively every 
+           floating point operation is possibly subject to a random perturbation beyond the range of the mantissa, 
+           which can feed back into the mantissa. The benefits are tiny speed improvements. 
+           EasySmooth() is the main victim of this - it's search was stopping prematurely becuase of incorrect 
+           f.p. equality testing.     
+
 */
 /*******************************************************************************************************/
 
