@@ -2029,8 +2029,8 @@ interpret.gam<-function (gf)
     if (smooth.spec[[i]]$by!="NA")
     fake.formula<-paste(fake.formula,"+",smooth.spec[[i]]$by)
   }
-  fake.formula<-as.formula(fake.formula,environment(gf))
-  ret<-list(pf=as.formula(pf),pfok=pfok,smooth.spec=smooth.spec,full.formula=as.formula(rf),
+  fake.formula<-as.formula(fake.formula,p.env)
+  ret<-list(pf=as.formula(pf,p.env),pfok=pfok,smooth.spec=smooth.spec,full.formula=as.formula(rf,p.env),
             fake.formula=fake.formula,response=response)
   class(ret)<-"split.gam.formula"
   ret
@@ -2178,11 +2178,17 @@ gam.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),kn
   G
 }
 
+formula.gam <- function(x, ...)
+# formula.lm and formula.glm reconstruct the formula from x$terms, this is 
+# problematic because of the way mgcv handles s() and te() terms 
+{ x$formula
+}
 
 
 
-gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,control=gam.control(),
-              scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
+gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,
+                control=gam.control(),
+                scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
 
 # Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 # parsed and interpreted to figure out which bits relate to smooth terms and which to parametric terms.
@@ -3854,12 +3860,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-1 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-2 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-1 \n")
+    cat("This is mgcv 1.1-2 \n")
 }
 
 

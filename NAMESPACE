@@ -2,7 +2,7 @@ useDynLib(mgcv)
 
 export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        exclude.too.far,extract.lme.cov, extract.lme.cov2,
-       formXtViX, full.score, 
+       formXtViX, full.score, formula.gam,
        gam, gamm, gam.check, gam.control,
        gam.fit, gamm.setup , influence.gam, interpret.gam, gam.setup, 
        gam.side.conditions,
@@ -31,10 +31,11 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        uniquecombs, vis.gam)
 
 importFrom(graphics, plot)
-importFrom(stats, predict, residuals, influence)
+importFrom(stats, predict, residuals, influence, formula, logLik, anova)
 
-
+S3method(anova, gam)
 S3method(influence, gam)
+S3method(formula, gam)
 S3method(logLik, gam)
 S3method(plot, gam)
 S3method(predict, gam)
