@@ -2,6 +2,8 @@
 \alias{Predict.matrix}
 \alias{Predict.matrix.tprs.smooth}
 \alias{Predict.matrix.cr.smooth}
+\alias{Predict.matrix.ts.smooth}
+\alias{Predict.matrix.cs.smooth}
 \alias{Predict.matrix.cyclic.smooth}
 \alias{Predict.matrix.tensor.smooth}
 %- Also NEED an `\alias' for EACH other topic documented here.
@@ -26,7 +28,6 @@ evaluated.}
 \value{ A matrix which will map the parameters associated with the smooth to the vector of values of the smooth 
 evaluated at the covariate values given in \code{object}.}
 
-}
 
 \details{ Smooth terms in a GAM formula are turned into smooth specification objects of 
 class \code{xx.smooth.spec} during processing of the formula. Each of these objects is
@@ -37,8 +38,6 @@ the predicted values for the term at new covariate values.
 Note that new smooth classes can be added by writing a new \code{smooth.construct} method function and a 
 corresponding \code{\link{Predict.matrix}} method function: see the example code provided for 
 \code{\link{smooth.construct}} for details.}
-
-}
 
 
 \references{ 

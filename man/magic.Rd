@@ -165,7 +165,7 @@ Note that some further useful quantities can be obtained using \code{\link{magic
 }
 \references{
 
-Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass.
 
 \url{http://www.stats.gla.ac.uk/~simon/}

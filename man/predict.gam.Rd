@@ -5,9 +5,9 @@
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} 
 and produces predictions given a new set of values for the model covariates 
 or the original values used for the model fit.}
-}
 \usage{
-predict.gam(object,newdata,type="link",se.fit=FALSE,...)
+predict.gam(object,newdata,type="link",se.fit=FALSE,terms=NULL,
+            block.size=1000,newdata.guaranteed=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -18,22 +18,31 @@ predict.gam(object,newdata,type="link",se.fit=FALSE,...)
   are required. If this is not provided then predictions corresponding to the
                 original data are returned. If \code{newdata} is provided then
                 it should contain all the variables needed for prediction: a
-                warning is generated if not.
-
- } 
- 
+                warning is generated if not. } 
  
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
-parametric model components, followed by each smooth component, but excludes any offset. When \code{type="response"} predictions 
+parametric model components, followed by each smooth component, but excludes
+any offset and any intercept. When \code{type="response"} predictions 
 on the scale of the response are returned (possibly with approximate
 standard errors). When \code{type="lpmatrix"} then a matrix is returned
 which yields the values of the linear predictor (minus any offset) when applied to the
 parameter vector (in this case \code{se.fit} is ignored). The latter
 option is most useful for getting variance estimates for integrated quantities. }
 
- \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
+\item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
+
+\item{terms}{if \code{type=="terms"} then only results for the terms given in this array
+will be returned.}
+
+\item{block.size}{maximum number of predictions to process per call to underlying
+code: larger is quicker, but more memory intensive. Set to < 1 to use total number
+of predictions as this.}
+
+\item{newdata.guaranteed}{Set to \code{TRUE} to turn off all checking of
+\code{newdata} except for sanity of factor levels: this can speed things up
+for large prediction tasks, but \code{newdata} must be complete. }
 
  \item{...}{ other arguments.}
 
@@ -48,7 +57,7 @@ array of predictions is returned. The dimensions of the returned arrays depends 
 \code{type} is \code{"terms"} or not: if it is then the array is 2 dimensional with each 
 term in the linear predictor separate, otherwise the array is 1 dimensional and contains the 
 linear predictor/predicted values (or corresponding s.e.s). The linear predictor returned termwise will 
-not include the offset.
+not include the offset or the intercept.
 
 \code{newdata} can be a data frame, list or model.frame: if it's a model frame
 then all variables must be supplied.
@@ -57,9 +66,16 @@ then all variables must be supplied.
 
 \details{The standard errors produced by \code{predict.gam} are based on the
 Bayesian posterior covariance matrix of the parameters \code{Vp} in the fitted
-gam object. }
+gam object. 
+
+To facilitate plotting with \code{\link{termplot}}, if \code{object} possesses
+an attribute \code{"para.only"} and \code{type=="terms"} then only parametric
+terms of order 1 are returned (i.e. those that \code{termplot} can handle).
+}
 
 \references{
+
+Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
 
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
@@ -71,12 +87,16 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk} 
+
+The design is inspired by the S function of the same name described in
+Chambers and Hastie (1993) (but is not a clone).
+
+}
 
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
 \code{predict.gam()} in Splus.
 
-Note that the 
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{gamm}}, \code{\link{plot.gam}}}

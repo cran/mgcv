@@ -2,18 +2,21 @@
 \alias{gam.control}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Setting GAM fitting defaults}
-\description{ This is an internal function of package \code{mgcv} which allows control of the numerical options for fitting a GAM. 
-Typically users will want to modify the defaults if model fitting fails to converge, or if the warnings are generated which suggest a 
+\description{ This is an internal function of package \code{mgcv} which allows 
+control of the numerical options for fitting a GAM. 
+Typically users will want to modify the defaults if model fitting fails to
+converge, or if the warnings are generated which suggest a 
 loss of numerical stability during fitting.  
 }
 \usage{
 gam.control(irls.reg=0.0,epsilon = 1e-04, maxit = 20,globit = 20,
             mgcv.tol=1e-6,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
-            fit.method="magic",perf.iter=TRUE,rank.tol=.Machine$double.eps^0.5) 
+            fit.method="magic",perf.iter=NULL,spIterType="perf",
+            rank.tol=.Machine$double.eps^0.5) 
 }
 \arguments{ 
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
-by which GAMs are fitted  can fail to converge in some circumstances. For example data with many zeroes can cause 
+by which GAMs are fitted  can fail to converge in some circumstances. For example, data with many zeroes can cause 
 problems in a model with a log link, because a mean of zero corresponds to an infinite range of linear predictor 
 values. Such convergence problems are caused by a fundamental lack of identifiability, but do not show up as 
 lack of identifiability in the penalized linear model problems that have to be solved at each stage of iteration.
@@ -23,38 +26,60 @@ In such circumstances it is possible to apply a ridge regression penalty to the 
 
 \item{epsilon}{This is used for judging conversion of the GLM IRLS loop in \code{gam.fit}.}
 
-\item{maxit}{Maximum number of IRLS iterations to perform using cautious GCV/UBRE optimization, after \code{globit} 
-IRLS iterations with normal GCV optimization have been performed. Note that fit method \code{"magic"} makes no distinction 
-between cautious and global optimization.}
+\item{maxit}{Maximum number of IRLS iterations to perform using cautious
+GCV/UBRE optimization, after \code{globit} IRLS iterations with normal GCV 
+optimization have been performed. Note that fit method \code{"magic"} makes 
+no distinction between cautious and global optimization.}
 
-\item{globit}{Maximum number of IRLS iterations to perform with normal GCV/UBRE optimization. If convergence is not achieved after these 
-iterations then a further \code{maxit} iterations will be performed using cautious GCV/UBRE optimization. } 
+\item{globit}{Maximum number of IRLS iterations to perform with normal 
+GCV/UBRE optimization. If convergence is not achieved after these 
+iterations then a further \code{maxit} iterations will be performed 
+using cautious GCV/UBRE optimization. } 
 
 \item{mgcv.tol}{The convergence tolerance parameter to use in GCV/UBRE optimization.}
 
-\item{mgcv.half}{If a step of  the GCV/UBRE optimization method leads to a worse GCV/UBRE score, then the step length is halved. This is
+\item{mgcv.half}{If a step of  the GCV/UBRE optimization method leads 
+to a worse GCV/UBRE score, then the step length is halved. This is
 the number of halvings to try before giving up.}
 
-\item{nb.theta.mult}{Controls the limits on theta when negative binomial parameter is to be estimated. Maximum theta is set to 
-the initial value multiplied by \code{nb.theta.mult}, while the minimum value is set to the initial value divided by 
-\code{nb.theta.mult}. }
+\item{nb.theta.mult}{Controls the limits on theta when negative binomial 
+parameter is to be estimated. Maximum theta is set to the initial value 
+multiplied by \code{nb.theta.mult}, while the minimum value is set to
+the initial value divided by \code{nb.theta.mult}. }
 
 \item{trace}{Set this to \code{TRUE} to turn on diagnostic output.}
 
-\item{fit.method}{set to \code{"mgcv"} to use the method described in Wood (2000). Set to \code{"magic"} to use a 
-newer numerically more stable method, which allows regularization and mixtures of fixed and estimated smoothing parameters. 
-Set to \code{"fastest"} to use \code{"mgcv"} for single penalty models and \code{"magic"} otherwise.}
+\item{fit.method}{set to \code{"mgcv"} to use the method described in Wood 
+(2000). Set to \code{"magic"} to use a newer numerically more stable method
+(Wood, 2004), 
+which allows regularization and mixtures of fixed and estimated smoothing 
+parameters. Set to \code{"fastest"} to use \code{"mgcv"} for single penalty 
+models and \code{"magic"} otherwise.}
 
-\item{perf.iter}{set to \code{TRUE} to use Gu's approach to finding smoothing 
-parameters in which GCV or UBRE is
-applied to the penalized linear modelling problem produced at each IRLS iteration. This method is very fast, but means that it 
-is often possible to find smoothing parameters yielding a slightly lower GCV/UBRE score by perturbing some of the estimated 
-smoothing parameters a little. Technically this occurs because the performance iteration effectively neglects the dependence of the 
-iterative weights on the smoothing parameters. Setting \code{perf.iter} to \code{FALSE} uses O'Sullivan's approach in which
-the IRLS is run to convergence for each trial set of smoothing parameters. This is much slower, since it uses \code{nlm} with 
-finite differences and requires many more IRLS steps. } 
+\item{perf.iter}{deprecated: use \code{spIterType} instead.}
 
-\item{rank.tol}{The tolerance used to estimate rank when using \code{fit.method="magic"}.}
+
+\item{spIterType}{Smoothing parameter estimation can be performed within each
+step of the IRLS fitting method (which means that dependence of the iterative
+weights on the smoothing parameters is ignored), or the IRLS scheme can be 
+iterated to convergence for each trial set of smoothing parameters, with the 
+GCV/UBRE score only evaluated at convergence, so that smoothing parameter
+estimation is outer to the IRLS loop. The former method is Gu's
+`performance iteration' approach while the latter approach is basically what 
+O'Sullivan suggested. Set \code{spIterType} to \code{"perf"} for performance 
+iteration, to \code{"outer"} for the alternative or to \code{"perf+outer"} 
+for one followed by the other. In the case of of \code{"outer"} one IRLS
+performance iteration step is used to get starting values. Performance
+iteration is computationally very efficient, but outer looping can yield
+slightly lower GCV/UBRE scores for the same model. \code{"perf+outer"} is
+usaully quicker than \code{"outer"} because of the excellent starting values
+from which the expensive outer looping generally starts. \code{"outer"} is 
+sometimes useful if the performance iteration does not converge while the 
+IRLS iteration itself is basically convergent.  }
+
+\item{rank.tol}{The tolerance used to estimate rank when using
+\code{fit.method="magic"}.}
+
 }
 
 \details{ 
@@ -83,6 +108,10 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 
 65(1):95-114
+
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass.
+
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 

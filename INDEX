@@ -1,24 +1,31 @@
+anova.gam               Hypothesis tests related to GAM fits
 exclude.too.far         Exclude prediction grid points too far from
                         data
 extract.lme.cov         Extract the data covariance matrix from an lme
                         object
+formXtViX               Form component of GAMM covariance matrix
 full.score              GCV/UBRE score for use within nlm
 gam                     Generalized Additive Models using penalized
                         regression splines and GCV
 gam.check               Some diagnostics for a fitted gam model.
 gam.control             Setting GAM fitting defaults
+gam.convergence         GAM convergence issues.
 gam.fit                 Generalized Additive Models fitting using
                         penalized regression splines and GCV
 gamm                    Generalized Additive Mixed Models
 gam.models              Specifying generalized Additive Models.
 gamm.setup              Generalized Additive Mixed Model set up.
 gam.neg.bin             GAMs with the negative binomial distribution
+gamObject               Fitted gam object
 gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
 gam.side.conditions     Identifiability side conditions for a GAM.
 get.var                 Get named variable or evaluate expression from
                         list or data.frame
+influence.gam           Extract the diagonal of the Influence/Hat
+                        matrix for a GAM.
 interpret.gam           Interpret a GAM formula
+logLik.gam              Extract the log likelihood for a fitted GAM
 magic                   Stable Multiple Smoothing Parameter Estimation
                         by GCV or UBRE, with optional fixed penalty
 magic.post.proc         Auxilliary information from magic fit
@@ -50,6 +57,7 @@ residuals.gam           Generalized Additive Model residuals
 s                       Defining smooths in GAM formulae
 smooth.construct        Constructor functions for smooth terms in a
                         GAM
+step.gam                Alternatives to step.gam
 summary.gam             Summary for a GAM fit
 te                      Define tensor product smooths in GAM formulae
 tensor.prod.model.matrix

@@ -56,7 +56,7 @@ dat<-data.frame(x=x,y=y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-gam.setup(y~s(x,k=10,bs="cr")-1,dat,fit.method="mgcv")->G;
+gam(y~s(x,k=10,bs="cr")-1,data=dat,fit=FALSE)->G
 F<-mono.con(G$smooth[[1]]$xp);
 G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
 G$p<-G$smooth[[1]]$xp;G$y<-y;G$w<-y*0+1

@@ -6,7 +6,7 @@
 data, by a call to \code{lme} in the normal errors identity link case, or by 
 a call to \code{glmmPQL} from the \code{MASS} library otherwise. 
 In the latter case estimates are only approximately MLEs. The routine is typically 
-much slower than \code{gam}, and not quite as numerically robust.
+slower than \code{gam}, and not quite as numerically robust.
 
 Smooths are specified as in a call to \code{\link{gam}} as part of the fixed 
 effects model formula, but the wiggly components of the smooth are treated as 
@@ -21,7 +21,11 @@ the smooths. For this reason the routine calculates a posterior covariance
 matrix for the coefficients of all the terms in the fixed effects formula, 
 including the smooths.
 
+To use this function effectively it helps to be quite familiar with the use of
+\code{\link{gam}} and \code{\link[nlme]{lme}}.
+
 }
+
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
@@ -41,21 +45,19 @@ represent the smooth term. If \code{k} is not
  specified then \code{k=10*3^(d-1)} is used where \code{d} is the number
  of covariates for this term. \code{fx} is used to indicate whether or
  not this term has a fixed muber of degrees of freedom (\code{fx=FALSE}
- to select d.f. by GCV/UBRE). \code{bs} indicates the basis to use, with
- \code{"cr"} indicating cubic regression spline, \code{"cc"} a periodic 
-cubic regression spline, and \code{"tp"}
- indicating thin plate regression spline: \code{"cr"} and \code{"cc"} can only be used
- with 1-d smooths. Tensor product smooths are specified using \code{\link{te}} terms.
+ to select d.f. by GCV/UBRE). \code{bs} indicates the basis to use: see
+ \code{\link{s}} for full details, but note that the default \code{"tp"} can
+ be slow with large data sets. Tensor product smooths are specified using \code{\link{te}} terms.
 } 
 \item{random}{The (optional) random effects structure as specified in a call to 
-\code{\link{lme}}: only the \code{list} form is allowed, to facilitate 
+\code{\link[nlme]{lme}}: only the \code{list} form is allowed, to facilitate 
 manipulation of the random effects structure within \code{gamm} in order to deal
-with smooth terms.}
-\item{correlation}{An optional \code{corStruct} object (see \code{\link{corClasses}}) as used to define correlation 
-structures in \code{\link{lme}}.}
+with smooth terms. See example below.}
+\item{correlation}{An optional \code{corStruct} object (see \code{\link[nlme]{corClasses}}) as used to define correlation 
+structures in \code{\link[nlme]{lme}}. See examples below.}
 \item{family}{A \code{family} as used in a call to \code{\link{glm}} or \code{\link{gam}}.
 The default \code{gaussian} with identity link causes \code{gamm} to fit by a direct call to
-\code{\link{lme}}, otherwise \code{glmmPQL} from the \code{MASS} library is used.}
+\code{\link[nlme]{lme}} procided there is no offset term, otherwise \code{glmmPQL} from the \code{MASS} library is used.}
 \item{data}{ A data frame containing the model response variable and 
 covariates required by the formula.  By default the variables are taken 
 from \code{environment(formula)}, typically the environment from 
@@ -86,8 +88,8 @@ faster, but gives poorer results (and the user must be quite careful in choosing
 Different terms can use different 
 numbers of knots, unless they share a covariate.
 }
-\item{control}{A list of fit control parameters for \code{\link{lme}} returned by 
-\code{\link{lmeControl}}. Note the default setting for the number of EM iterations 
+\item{control}{A list of fit control parameters for \code{\link[nlme]{lme}} returned by 
+\code{\link[nlme]{lmeControl}}. Note the default setting for the number of EM iterations 
 used by \code{lme}: high settings tend to lead to numerical problems because variance components
 for smooth terms can legitimately be non-finite.}
 
@@ -109,7 +111,7 @@ One advantage of this approach is that it allows correlated errors to be dealt w
 or the correlation structures available in the \code{nlme} library. 
 
 
-Some brief details of how GAMs are represented as mixed models and estimated using \code{lme} or \code{glmmPQL} in \code{gamm} can be found in Wood (manuscript). In addition \code{gamm} obtains a posterior covariance matrix for the parameters of all the fixed effects and the smooth terms. The approach is similar to that described in (Lin & Zhang, 1999) - the covariance matrix of the data (or pseudodata in the generalized case) implied by the weights, correlation and random effects structure is obtained, based on the estimates of the parameters of these terms and this is used to obtain the posterior covariance matrix of the fixed and smooth effects. 
+Some brief details of how GAMs are represented as mixed models and estimated using \code{lme} or \code{glmmPQL} in \code{gamm} can be found in Wood (2004a,b). In addition \code{gamm} obtains a posterior covariance matrix for the parameters of all the fixed effects and the smooth terms. The approach is similar to that described in (Lin & Zhang, 1999) - the covariance matrix of the data (or pseudodata in the generalized case) implied by the weights, correlation and random effects structure is obtained, based on the estimates of the parameters of these terms and this is used to obtain the posterior covariance matrix of the fixed and smooth effects. 
 
 The bases used to represent smooth terms are the same as those used in \code{\link{gam}}.
 
@@ -117,7 +119,10 @@ The bases used to represent smooth terms are the same as those used in \code{\li
 
 
 \value{ Returns a list with two items:
-\item{gam}{an object of class \code{gam}, less information relating to GCV/UBRE model selection.}
+\item{gam}{an object of class \code{gam}, less information relating to
+GCV/UBRE model selection. At present this contains enough information to use
+\code{predict}, \code{summary} and \code{print} methods and \code{vis.gam},
+but not to use e.g. the \code{anova} method function to comapre models.}
 \item{lme}{the fitted model object returned by \code{lme} or \code{glmmPQL}. Note that the model formulae and grouping 
 structures may appear to be rather bizarre, because of the manner in which the GAMM is split up and the calls to 
 \code{lme} and \code{glmmPQL} are constructed.}
@@ -146,12 +151,16 @@ with S. Fourth edition.  Springer.
 Wahba, G. (1983) Bayesian confidence intervals for the cross validated smoothing spline. 
 JRSSB 45:133-150
 
-Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
+Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. Journal of the American Statistical Association.
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-Wood, S.N. (manuscript) Tensor product smooth interactions in Generalized Additive Mixed Models.
+
+Wood, S.N. (2004b) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Technical Report of the Department of
+Statistics, University of Glasgow, UK.
+
 
 Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statist. Soc. B 60, 159-174
 
@@ -160,17 +169,32 @@ Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statis
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNINGS }{
-\code{lme} and \code{glmmPQL} will not deal with offsets, so neither can \code{gamm}.
+
+The routine will be very slow and memory intensive if correlation structures
+are used for the very large groups of data. e.g. attempting to run the
+spatial example in the examples section with many 1000's of data is definitely not 
+recommended: often the correlations should only apply within clusters that can
+be defined by a grouping factor, and provided these clusters do not get too huge
+then fitting is usually possible.
+
+Models must contain at least one random effect: either a smooth with non-zero
+smoothing parameter, or a random effect specified in argument \code{random}.
 
 Models like \code{s(z)+s(x)+s(x,z)} are not currently supported.
 
 \code{gamm} is not as numerically stable as \code{gam}: an \code{lme} call will occasionally fail. Experimenting with 
 \code{niterEM} in the \code{control} argument can sometimes help.
 
-\code{gamm} is usually much slower than \code{gam}.
+\code{gamm} is usually much slower than \code{gam}, and on some platforms you may need to
+increase the memory available to R in order to use it with large data sets
+(see \code{\link{mem.limits}}).
 
 Note that the weights returned in the fitted GAM object are dummy, and not
 those used by the PQL iteration: this makes partial residual plots look odd.
+
+Note that the \code{gam} object part of the returned object is not complete in
+the sense of having all the elements defined in \code{\link{gamObject}} and
+does not inherit from \code{glm}: hence e.g. multi-model \code{anova} calls will not work.
 
 } 
 
@@ -181,6 +205,7 @@ those used by the PQL iteration: this makes partial residual plots look odd.
 
 \examples{
 library(mgcv)
+## simple examples using gamm as alternative to gam
 set.seed(0) 
 n <- 400
 sig <- 2
@@ -201,12 +226,17 @@ op <- par(mfrow=c(2,2))
 plot(b$gam)
 par(op)
 
+## Add a factor to the linear predictor, to be modelled as random
+fac <- rep(1:4,n/4)
+f <- f + fac*3
+fac<-as.factor(fac)
+
 g<-exp(f/5)
 y<-rpois(rep(1,n),g)
-b2<-gamm(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
+b2<-gamm(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,random=list(fac=~1))
 plot(b2$gam,pages=1)
 
-# now an example with autocorrelated errors....
+## now an example with autocorrelated errors....
 x <- 0:(n-1)/(n-1)
 f <- 0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10-1.396
 e <- rnorm(n,0,sig)
@@ -221,7 +251,43 @@ b <- gam(y~s(x,k=20))
 plot(b);lines(x,f-mean(f),col=2)
 par(op)
 
-# and a "spatial" example
+## more complex situation with nested random effects and within
+## group correlation 
+
+set.seed(0)
+n.g <- 10
+n<-n.g*10*4
+sig <- 2
+## simulate smooth part
+x0 <- runif(n, 0, 1)
+x1 <- runif(n, 0, 1)
+x2 <- runif(n, 0, 1)
+x3 <- runif(n, 0, 1)
+f <- 2 * sin(pi * x0)
+f <- f + exp(2 * x1) - 3.75887
+f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
+## simulate nested random effects....
+fa <- as.factor(rep(1:10,rep(4*n.g,10)))
+ra <- rep(rnorm(10),rep(4*n.g,10))
+fb <- as.factor(rep(rep(1:4,rep(n.g,4)),10))
+rb <- rep(rnorm(4),rep(n.g,4))
+for (i in 1:9) rb <- c(rb,rep(rnorm(4),rep(n.g,4)))
+## simulate auto-correlated errors within groups
+e<-array(0,0)
+for (i in 1:40) {
+eg <- rnorm(n.g, 0, sig)
+for (j in 2:n.g) eg[j] <- eg[j-1]*0.6+ eg[j]
+e<-c(e,eg)
+}
+y <- f + ra + rb + e
+dat<-data.frame(y=y,x0=x0,x1=x1,x2=x2,x3=x3,fa=fa,fb=fb)
+## fit model .... 
+b <- gamm(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+
+  s(x3,bs="cr"),data=dat,random=list(fa=~1,fb=~1),
+  correlation=corAR1())
+plot(b$gam,pages=1)
+
+## and a "spatial" example
 library(nlme);set.seed(1)
 test1<-function(x,z,sx=0.3,sz=0.4)
 { (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+

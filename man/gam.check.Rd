@@ -16,7 +16,7 @@ gam.check(b)
 underlying fitting method was \code{"mgcv"} or \code{"magic"} (see \code{\link{gam.control}}).
 
 For fit method \code{"mgcv"}, the first plot shows the GCV or UBRE score against model 
-degrees of freedom given the final estimates of the relative smoothing parameters for the model. This is a slice through the 
+degrees of freedom, given the final estimates of the relative smoothing parameters for the model. This is a slice through the 
 GCV/UBRE score function that passes through the minimum found during fitting. Although not conclusive (except in the single 
 smoothing parameter case), a lack of multiple local minima on this plot is suggestive of a lack of multiple local minima in the 
 GCV/UBRE function and is therefore a good thing. Multiple local minima on this plot indicates that the GCV/UBRE function 
@@ -84,16 +84,15 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 library(mgcv)
 set.seed(0)
 n<-200
-sig2<-4
+sig<-2
 x0 <- runif(n, 0, 1)
 x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
-pi <- asin(1) * 2
 y <- 2 * sin(pi * x0)
 y <- y + exp(2 * x1) - 3.75887
 y <- y+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
-e <- rnorm(n, 0, sqrt(abs(sig2)))
+e <- rnorm(n, 0, sig)
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b,pages=1)

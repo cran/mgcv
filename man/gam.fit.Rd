@@ -12,8 +12,6 @@ GCV}
 IRLS weights is also permitted as a way of addressing identifiability related problems (see 
 \code{\link{gam.control}}). Negative binomial parameter estimation is supported.
 }
-}
-
 
 
 \references{

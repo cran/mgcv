@@ -2,6 +2,8 @@
 \alias{smooth.construct}
 \alias{smooth.construct.tp.smooth.spec}
 \alias{smooth.construct.cr.smooth.spec}
+\alias{smooth.construct.ts.smooth.spec}
+\alias{smooth.construct.cs.smooth.spec}
 \alias{smooth.construct.cc.smooth.spec}
 \alias{smooth.construct.tensor.smooth.spec}
 \alias{p.spline}
@@ -12,7 +14,7 @@ class \code{xx.smooth.spec} during processing of the formula. Each of these obje
 converted to a smooth object using an appropriate \code{smooth.construct} function. New smooth classes 
 can be added by writing a new \code{smooth.construct} method function and a corresponding 
 \code{\link{Predict.matrix}} method function (see example code below).}
-}
+
 \usage{
 smooth.construct(object,data,knots)
 }
@@ -92,6 +94,11 @@ wiggliness penalty for this term.}
 
 Again, these extra elements would be found in the elements of the \code{margin} list of \code{tensor.smooth} 
 class object.
+
+The classes \code{cs.smooth} and \code{ts.smooth} are modifications of the
+classes \code{cr.smooth} and \code{tprs.smooth} respsectively: they differ
+only in having an extra shrinkage component added to their penalties, so that
+automatic model selection can effectively remove such terms from a model altogether.
 }
 
 

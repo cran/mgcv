@@ -34,8 +34,6 @@ full.score(sp,G,family,control,gamma)
 \value{ The value of the GCV/UBRE score, with attribute \code{"full.gam.object"}
 which is the full object returned by \code{\link{gam.fit}}.
 }
- 
-}
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 

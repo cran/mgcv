@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{ Automatically place a set of knots evenly through covariate values}
 \description{
-Given a univariate array of covariate values, places a set of knots for a regressin spline evenly through the 
+Given a univariate array of covariate values, places a set of knots for a regression spline evenly through the 
 covariate values.
 }
 \usage{ place.knots(x,nk)
@@ -19,7 +19,6 @@ then a knot would be placed at the first (sorted) covariate value and every seco
 less convenient numbers of data and knots the knots are placed within intervals between data in order to achieve 
 even coverage, where even means having approximately the same number of data between each pair of knots.}
 
-}
 \value{ An array of knot locations.
 }
 \references{

@@ -8,7 +8,7 @@
 }
 
 \usage{s(..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)}
-}
+
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{...}{ a list of variables that are the covariates that this
@@ -21,14 +21,16 @@
   it is.}
   \item{fx}{indicates whether the term is a fixed d.f. regression
   spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
-  \item{bs}{this can be \code{"cr"} for a cubic regression spline, \code{"cc"} for
+  \item{bs}{this can be \code{"cr"} for a cubic regression spline, \code{"cs"}
+  for a cubic regression spline with shrinkage, \code{"cc"} for
     a cyclic (periodic) spline,
-    \code{"tp"} for a thin plate regression spline, or a user defined 
-    charecter string for other user defined smooth classes. Of the built in alternatives, only thin plate
-    regression splines can be used for multidimensional smooths, so this
-    argument only has an effect for univariate smooths. Note that the
+    \code{"tp"} for a thin plate regression spline, \code{"ts"} for a thin
+    plate regression spline with shrinkage or a user defined 
+    character string for other user defined smooth classes. Of the built in alternatives, only thin plate
+    regression splines can be used for multidimensional smooths. Note that the
     \code{"cr"} and \code{"cc"} bases are faster to set up than the \code{"tp"} basis, particularly
-  on large data sets.}
+  on large data sets (although the \code{knots} argument to \code{gam} can be
+  used to get round this).}
   \item{m}{The order of the penalty for this t.p.r.s. term (e.g. 2 for
     normal cubic spline penalty with 2nd derivatives). O signals
     autoinitialization, which sets the order to the lowest value
@@ -39,9 +41,10 @@
     be multiplied. This is particularly useful for creating models in
     which a smooth interacts with a factor: in this case the \code{by}
     variable would usually be the dummy variable coding one level of the
-  factor. See the examples below.}
+  factor. See the examples below. This is the means by which `variable
+  coefficient models' can be specified.}
   }
-}
+
 \details{The function does not evaluate the variable arguments. To use this function to specify use of
 your own smooths, note the relationships between the inputs and the output object and see the example
 in \code{\link{smooth.construct}}.
@@ -75,6 +78,9 @@ options spelled out explicitly.}
 
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+
+
+\references{
 Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
 with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 

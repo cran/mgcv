@@ -7,7 +7,7 @@ that is part of a gam object see \code{\link{gam}}, or use \code{names()}. The f
 model formula, and estimated degrees of freedom for each model term (plus total) are printed, as 
 well as the minimized GCV or UBRE score, depending on which was used.
 }
-}
+
 
 \references{
 
