@@ -36,7 +36,7 @@ automatically.}
 following:  
 \item{X}{the full design matrix.}
 \item{S}{an array of matrices containing the coefficients of the penalties. These are 
-stored in a compact form, so that \code{H$S[i]} is the smallest square matrix containing 
+stored in a compact form, so that \code{H$S[i]} is the smallest square matrix  
 submatrix  containing all the non-zero elements of \eqn{ {\bf S}_i}{S_i}
 the ith penalty 
 matrix. Element 0,0 of \code{H$S[i]} is element \code{off[i],off[i]} of \eqn{ {\bf 
@@ -52,7 +52,7 @@ values at a series of \eqn{x}{x} values - these vectors contain those \eqn{x}{x}
 values!}
 }
 \references{ Wood, S.N. (2000) Modelling and smoothing parameter estimation with multiple
-quadratic penalties" JRSSB 62(2) }
+quadratic penalties" JRSSB 62(2):413-428 }
 \author{Simon N. Wood \email{snw@st-and.ac.uk}}
 
 \seealso{ \code{\link{mgcv}} }
@@ -83,6 +83,8 @@ quadratic penalties" JRSSB 62(2) }
     H$y <- y    # add data to H
     H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H
     H$w <- w       # add weights to H
+    H$sp<-array(-1,H$m)
+    H$fix<-array(FALSE,H$m)
     H <- mgcv(H)  # select smoothing parameters and fit model
     
 }

@@ -15,27 +15,24 @@ plot.gam(object,rug,se,pages,scale,n)
                 }
  \item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
  at the foot of each plot.} 
- 
- }
- 
-\item{se}{ when TRUE (defualt) upper and lower lines are added to the plot at 2 standard errors
+  
+\item{se}{ when TRUE (default) upper and lower lines are added to the plot at 2 standard errors
         above and below the estimate of the smooth being plotted.}
  \item{pages}{ (default 1) the number of pages over which to spread the output. Set to 0 to 
  have the routine leave all graphics settings as they are.}
-\item{scale}{ set to -1 (defualt) to have the same y-axis scale for each plot, and to 0 for a 
+\item{scale}{ set to -1 (default) to have the same y-axis scale for each plot, and to 0 for a 
           different y axis for eaxh plot.  }
 \item{n}{ number of points used for each plot - for a nice smooth plot this needs to be several times the estimated 
     degrees of freedom for the smooth. Default value 100.}
-\details{ Produces default plot showing the smooth components of a fitted GAM. The x axis of eaxh plot is labelled 
+}
+\details{ Produces default plot showing the smooth components of a fitted GAM. The x axis of each plot is labelled 
    with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
    is the covariate name, and \code{edf} the estimated degrees of freedom of the smooth.
    Within the function, the data for the plots is obtained by a call to \code{predict.gam()} with a 
-   suitably constructed data frame.}
+   suitably constructed data frame. A rug plot along the bottom of each frame shows the covariate values.}
    }
-}
+
 \value{ The function simply generates plots.
-
-
 }
 
 \references{
@@ -46,7 +43,7 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 Wood (2000) Modelling and Smoothing Parameter Estimation 
 with Multiple 
-   Quadratic Penalties. JRSSB 62(2)
+   Quadratic Penalties. JRSSB 62(2):413-428
 
 
 \url{http://www.ruwpa.st-and.ac.uk/simon.html}

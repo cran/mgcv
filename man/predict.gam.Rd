@@ -23,15 +23,15 @@ predict.gam(object,newdata,type,se.fit)
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
-parametric model component, folloed by each smooth component.}
+parametric model component, followed by each smooth component.}
 
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
  
 }
 
 \value{ If \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
-and \code{se.fit} containing predictions and associated standard error estimates, otherwise and 
-array of predictions is returned. The dimensions of the returned arrys depends on whether 
+and \code{se.fit} containing predictions and associated standard error estimates, otherwise an 
+array of predictions is returned. The dimensions of the returned arrays depends on whether 
 \code{type} is \code{"terms"} or not: if it is then the array is 2 dimensional with each 
 term in the linear predictor separate, otherwise the array is 1 dimensional and contains the 
 linear predictor itself (or s.e.s). 
@@ -49,7 +49,7 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 Wood (2000) Modelling and Smoothing Parameter Estimation 
 with Multiple 
-   Quadratic Penalties. JRSSB 62(2)
+   Quadratic Penalties. JRSSB 62(2):413-428
 
 
 \url{http://www.ruwpa.st-and.ac.uk/simon.html}
