@@ -112,7 +112,7 @@ with Multiple
 X}}{X}
 especially in contexts where the weights vary wildly. } 
 
-\seealso{  \code{\link{GAMsetup}} }
+\seealso{  \code{\link{GAMsetup}} \code{\link{gam}}}
 
 \examples{
 

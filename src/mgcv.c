@@ -832,4 +832,3 @@ void RGAMpredict(double *xpd,int *nsdf,int *df,int *m,double *xd,int *np,double 
 2. 20/10/00: Modified mgcv() to cope with problems with no penalties, by call to leastsq() -
    this is needed to allow gam() to fit models with fixed degrees of freedom.
 */
-
