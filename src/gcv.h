@@ -14,7 +14,7 @@ double EScv(matrix *T,matrix *l0,matrix *l1,matrix *x,double nx,matrix *z,double
 double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2);
 double SingleSmooth(matrix *y,matrix *X,matrix *Z,matrix *w,matrix *S,matrix *p,
                     double *df,double *sig2);
-void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
+double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
                  double *theta,long *off,int m,double *sig2);
 void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
              matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,

@@ -6,7 +6,7 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(object,rug,se,pages,scale,n)
+plot.gam(object,rug=TRUE,se=TRUE,pages=0,scale=-1,n)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -18,8 +18,9 @@ plot.gam(object,rug,se,pages,scale,n)
   
 \item{se}{ when TRUE (default) upper and lower lines are added to the plot at 2 standard errors
         above and below the estimate of the smooth being plotted.}
- \item{pages}{ (default 1) the number of pages over which to spread the output. Set to 0 to 
- have the routine leave all graphics settings as they are.}
+ \item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
+if \code{pages=1} then all terms will be plotted on one page with the layout performed automatically. 
+Set to 0 to have the routine leave all graphics settings as they are. }
 \item{scale}{ set to -1 (default) to have the same y-axis scale for each plot, and to 0 for a 
           different y axis for each plot.  }
 \item{n}{ number of points used for each plot - for a nice smooth plot this needs to be several times the estimated 
@@ -71,7 +72,7 @@ y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b)
+plot(b,pages=1)
 
  
 }

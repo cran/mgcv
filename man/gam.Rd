@@ -124,7 +124,7 @@ expected value for  each datum.}
 \item{df}{number of knots for each smooth (one more than maximum
           degrees of freedom).}
 
-\item{nsdf}{number of parametric, non-smooth, model terms excluding the
+\item{nsdf}{number of parametric, non-smooth, model terms including the
           intercept.}
 
 \item{Vp}{estimated covariance matrix for parameters.}
@@ -156,8 +156,12 @@ with Multiple
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\section{WARNING }{The code does not check for rank defficiency of the
+\section{WARNINGS }{The code does not check for rank defficiency of the
 model matrix -it will likely just fail instead!
+
+You must have more unique combinations of covariates than the model has total
+parameters. (Total parameters is sum of knots plus sum of non-spline terms
+less the number of spline terms). 
 
 Automatic smoothing parameter selection is not likely to work well when 
 fitting models to very few response data. 
@@ -180,15 +184,15 @@ f <- f + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b) 
+plot(b,pages=1) 
 # now fit GAM with 3df regression spline term and two penalized terms
 b1<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
-plot(b1)
+plot(b1,pages=1)
 # now simulate poisson data
 g<-exp(f/5)
 for (i in  1:length(f)) y[i]<-rpois(1,f[i])
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
-plot(b2)
+plot(b2,pages=1)
 }
 \keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
 

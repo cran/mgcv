@@ -603,7 +603,7 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
   }
 }
 
-void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
+double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
                  double *theta,long *off,int m,double *sig2)
 
 /* routine for multiple smoothing parameter problems, with influence matrix:
@@ -641,6 +641,8 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
    Supplying *sig2 as a positive number signals the routine to use UBRE, rather
    than GCV, since *sig2 is known. Supplying *sig2 as zero or negative causes
    the routine to use GCV. (added 15/1/99)
+   
+   Returns gcv/ubre score. 
 */
 
 { double *rw,tr,*eta,*del,*trial,trA,a,b,*trdA,**trd2A,*db,**d2b,*da,**d2a,
@@ -733,7 +735,8 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
     for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
     LZSZL[l]=initmat(R.c,R.c); // this memory requirement could be halved
     matmult(LZSZL[l],LZrS[l],LZrS[l],0,1);
-    H[l]=initmat(R.c,R.c);
+    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    // need to make sure that matrix is big enough for storage sharing with ULZrS
+    else { H[l]=initmat(R.c,ZC.c);H[l].c=R.c;}
     ULZSZLU[l]=initmat(R.c,R.c); // memory requirement could be halved, but would need own choleskisolve
     //ULZrS[l]=initmat(R.c,ZC.c);
     ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; // sharing memory with H[l]
@@ -790,6 +793,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       z.r=n;                                  /* z->[z,x_1]' */
       if (!ubre) *sig2=-1.0; /* setting to signal GCV rather than ubre */
       rho=EasySmooth(&T,&z,&v,&tdf,n,sig2);    /* do a cheap minimisation in rho */
+   
       z.r=R.r;
       if (!iter||v<vmin) /* accept current step */
       { reject=0;
@@ -865,6 +869,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
           M1M[i][j]=M1M[j][i]=x;
         }
       }
+     
       /* now calculate the various traces needed in the calculation.
          These will be stored in trA, trdA[], trd2A[][]. These calculations
          are up to O(n^2)*/
@@ -877,6 +882,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
         trdA[l] -= A.M[i][j]*A.M[i][j];
         trdA[l]*=rho;
       }
+    
       /* first form (Ir+T)^{-1}U'L'Z'S_iZLU(Ir+T)^{-0.5} for all i */
       for (l=0;l<m;l++)
       { A.r=ULZSZLU[l].r;A.c=ULZSZLU[l].c;
@@ -1024,6 +1030,7 @@ void MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
   free(dAy);free(dpAy);free(ninf);free(pinf);
   free(trd2A);free(d2b);free(d2a);free(trdA);free(db);free(da);
   free(rw);free(eta);free(del);free(trial);
+  return(vmin);
 }
 
 
@@ -1165,7 +1172,8 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
     for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
     LZSZL[l]=initmat(R.c,R.c); // this memory requirement could be halved
     matmult(LZSZL[l],LZrS[l],LZrS[l],0,1);
-    H[l]=initmat(R.c,R.c);
+    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    // need to make sure that matrix is big enough for storage sharing with ULZrS
+    else { H[l]=initmat(R.c,ZC.c);H[l].c=R.c;}
     ULZSZLU[l]=initmat(R.c,R.c); // memory requirement could be halved, but would need own choleskisolve
     //ULZrS[l]=initmat(R.c,ZC.c);
     ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; // sharing memory with H[l]
@@ -1489,3 +1497,50 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
   free(lam);
   free(trial);
 }
+
+
+
+/*******************************************************************************************************/
+/*
+
+Bug fix log:
+
+21/2/2001 - Multismooth/Msmooth: H[l] and ULZrS[l] share memory space for their .M - under highly unusual
+            circumstances it was possible for H[l].M to have fewer columns allocated than were needed
+            by ULZrS[l].M. This caused a matrix out of bound write error. This is now fixed.
+
+24/2/2001 - Multismooth now returns gcv/ubre score
+*/
+/*******************************************************************************************************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

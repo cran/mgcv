@@ -8,7 +8,7 @@ GCV}
   modification is that rather than solving a weighted least squares problem at each IRLS step, 
   a weighted, penalized least squares problem
   is solved at each IRLS step with smoothing parameters associated with each penalty chosen by GCV or UBRE,
-  using routine \code{mgcv}. For further information on usuage see code for \code{gam}.
+  using routine \code{mgcv}. For further information on usage see code for \code{gam}.
 }
 }
 

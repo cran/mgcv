@@ -28,20 +28,21 @@ USA. */
 #include "gcv.h"
 #include "mgcv.h"
 #include "matrix.h"
+#include <R.h>
 #define round(a) ((a)-floor(a) <0.5 ? (int)floor(a):(int) floor(a)+1)
 
 
 void ErrorMessage(char *msg,int fatal)
 
 { //MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK);
-  printf("%s",msg);
-  if (fatal) exit(-1);
+  if (fatal) error("%s",msg);
+  else warning("%s",msg);
 }
 
 void infobox(char *msg)
 
 { //MessageBox(HWND_DESKTOP,msg,"Info!",MB_ICONEXCLAMATION|MB_OK);
-  printf("%s",msg);
+  warning("%s",msg);
 }
 
 /* The following are some rather ancient routines used to set up an example
@@ -355,6 +356,7 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
     /* set up part of design matrix for this smooth */
     /* get knot sequence */
     lp=l+nsdf;
+   
     // arrange knots by spreading them roughly every dx x values
     for (j=0;j<n;j++) y.V[j]=x[lp][j];
     y.r=(long)n;
@@ -388,6 +390,7 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *xp,long *off,double **x,
     tmap(my,mg,xp[l],x[lp][0],1); /* kill matrix allocation in tmap */
     freemat(my);freemat(mg);
   }
+ 
   freemat(y);
   if (getZ)  // obtain null space of T
   { *Z=initmat(np,np);
@@ -435,7 +438,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
    selecting sp[] by GCV (sig2<=0.0) or UBRE (sig2>0.0) - W=diag(w).
 
    y is n by 1 data vector
-   w is n by 1 weight vector
+   w is n by 1 weight vector (W above)
    X is n by q design matrix
    p is q by 1 parameter vector
    C is r by q constraint matrix
@@ -456,7 +459,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
 { long n,q,r,*dim,*off,dimmax;
   int m,i,j,k;
   matrix *S,y,X,p,C,Z,w,Vp,L;
-  double sig2,xx;
+  double sig2,xx,gcvubre;
   //char msg[100];
   sig2= *sig2d;
   m=(int)*md;
@@ -482,10 +485,11 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   }
 
   Z=initmat(q,q);QT(Z,C,0);Z.r=C.r; // finding null space of constraints
+
   if (m)
   { 
-    MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2);
-    
+    gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2);
+   
     *sig2d=sig2;
   } else // no penalties, just solve the least squares problem
   { L=initmat(X.r,X.c); 
@@ -500,6 +504,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     sig2=0.0;for (i=0;i<y.r;i++) { xx=(Vp.V[i]-y.V[i])*w.V[i];sig2+=xx*xx;}
     
     if (n==p.r) sig2=0.0; else sig2/=(n-p.r);*sig2d=sig2;
+    gcvubre=sig2/(n-p.r);
     for (i=0;i<w.r;i++) w.V[i] *=w.V[i];
     p.r+=Z.r;
     HQmult(p,Z,1,0); // back out of null space
@@ -559,7 +564,6 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
 
   freemat(Z);
   if (m) {free(dim);free(off);free(S);}
- // infobox("end");
 }
 
 void RQT(double *A,int *r,int*c)
@@ -655,6 +659,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *xpd,
   }
   for (i=0;i<m;i++) offd[i]=(int)off[i];
   /* tidy up */
+
   freemat(X);freemat(C);
   for (i=0;i<m;i++) {freemat(S[i]);freemat(xp[i]);}
   free(S);free(xp);free(off);free(df);

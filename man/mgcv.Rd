@@ -13,7 +13,9 @@ mgcv(M)
 %- maybe also `usage' for other objects documented here.
 \arguments{ The function takes list argument \code{M} with the 
   following elements:
- \item{M$y}{The response data vector}
+ \item{M$y}{The response data vector.}
+ \item{M$w}{A vector of weights for the data (often proportional to the 
+           reciprocal of the variance). }
  \item{M$X}{The design matrix for the problem, note that \code{ncol(M$X)}
             must give the number of model parameters, while \code{nrow(M$X)} 
             should give the number of data.}
@@ -88,7 +90,8 @@ following
   \item{M$sp}{The estimated smoothing parameters 
 (\eqn{\lambda_i/\rho}{lambda_i/rho})}
   \item{M$sig2}{The estimated (GCV) or supplied (UBRE) error variance.}
-
+  \item{M$edf}{The estimated degrees of freedom associated with each penalized term.}
+  \item{M$Vp}{Estimated covariance matrix of model parameters.}
 }
 \references{
 

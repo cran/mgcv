@@ -63,12 +63,8 @@ matrix initmat(rows,cols) long rows,cols;
   pad=0L;
 #endif
   A.vec=0;
-/*  if (rows*cols==0L)
-  { A.original_r=A.r=rows;A.original_c=A.c=cols;A.mem=0L;A.vec=0;
-    A.M=(double **)NULL;A.V=(double *)NULL;return(A);
-  } */
   A.M=(double **)calloc((size_t)rows+2*pad,sizeof(double *));
-  if (((cols==1L)||(rows==1L))&&((cols*(long)rows+2*pad)*(long)sizeof(double)<=65535))
+  if ((cols==1L)||(rows==1L))
   { if (A.M)
     A.M[0]=(double *)calloc((size_t)cols*rows+2*pad,sizeof(double));
     for (i=1L;i<rows+2*pad;i++)
@@ -2418,4 +2414,13 @@ void fprintmat(matrix A,char *fname,char *fmt)
    9. svd() bug fixed - it division by zero was possible while trying to avoid over/
       underflow in Givens rotations - check added to fix problem. 15/5/00
 
+  10. initmat() problem fixed. There was a hangover from segmented memory architectures 
+      left in initmat(): this meant that vectors could not be accessed using a.V[i]
+      if they were larger than about 8192 elements ("about" because the out of bound write 
+      checking mechanism uses some elements when switched on). This restriction has 
+      now been removed.
 */
+
+
+
+
