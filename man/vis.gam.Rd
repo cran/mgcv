@@ -35,13 +35,15 @@ labelling to the plots.}
 \value{Simply produces a plot.}
 
 \description{ Produces perspective plot views of \code{gam} model predictions, fixing all but the values in \code{view} to the 
-values supplied in \code{cond}. Replaces \code{persp.gam}. 
+values supplied in \code{cond}. 
 }
 \details{ The x and y limits are determined by the ranges of the variables supplied in \code{view}. If \code{se}<=0 then 
 a single (height colour coded, by default) surface is produced, otherwise three (by default see-through) meshes are produced at 
 mean and +/- \code{se} standard errors. Parts of the x-y plane too far from data can be excluded by setting \code{too.far}}
 
-\author{Simon Wood \email{simon@stats.gla.ac.uk}, based on an original idea and design by Mike Lonergan.}
+\author{Simon Wood \email{simon@stats.gla.ac.uk}
+
+ Based on an original idea and design by Mike Lonergan.}
 
 \seealso{
 \code{\link{persp}} and \code{\link{gam}}.

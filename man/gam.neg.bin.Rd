@@ -19,12 +19,12 @@ so that the GCV (Pearson) estimate of the scale parameter is one (since the scal
 is one for the negative binomial). 
 
 \eqn{\theta}{theta} estimation is nested within the IRLS loop used for GAM fitting. After
-each call to fit an iteratively weighted additive model to the IRLS pseudodata the \eqn{\theta}{theta}
+each call to fit an iteratively weighted additive model to the IRLS pseudodata, the \eqn{\theta}{theta}
 estimate is updated. This is done by conditioning on all components of the current GCV/Pearson 
 estimator of the scale parameter except \eqn{\theta}{theta} and then searching for the 
 \eqn{\hat \theta}{theta} which equates this conditional  estimator to one. The search is 
 a simple bisection search after an initial crude line search to bracket one. The search will 
-terminate at the upper boundary of the search region is a Poisson fit would have yielded an estiamted 
+terminate at the upper boundary of the search region is a Poisson fit would have yielded an estimated 
 scale parameter <1. Search limits can be set in \code{gam.control}.
 
 Note that 

@@ -6,15 +6,18 @@
   identifiable models given some side conditions on the null space of
   the model penalties. This routine works out appropriate side conditions
   and returns the coefficient matrix that imposes them. It is called
-  from \code{\link{gam}} and is not intended to be called by users.
+  from \code{\link{gam}} and is not intended to be called by users. 
+
+  The routine will not deal with lack of identifiability between tensor product 
+  smooth terms and other smooths. i.e. only the \code{s} terms are processed here,
+  while \code{te} terms are ignored.
 }
 \usage{
 gam.side.conditions(G)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
-  \item{G}{ the object obtained by calling \code{\link{gam.setup}} followed by
-    \code{\link{GAMsetup}} }
+  \item{G}{ the object obtained by calling \code{\link{gam.setup}}. }
 }
 \details{ Part of the basis of a thin plate regression spline (of the
   sort used to define GAMs in package \code{mgcv}) is a polynomial basis

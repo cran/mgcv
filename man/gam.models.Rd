@@ -11,7 +11,7 @@
   \deqn{g(\mu_i) = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} +
     f_1(x_{3i})+f_2(x_{4i},x_{4i})}{g(m)=b0 + b1x1 + b2x2 + f1(x3) +
     f2(x4,x5) }
-  where \eqn{g} is a smooth monotonic "link" function, and \eqn{f_1}{f1}
+  where \eqn{g} is a smooth monotonic `link' function, and \eqn{f_1}{f1}
   and \eqn{f_2}{f2} are smooth functions. The key idea here is that the
   dependence of the response on the predictors can be represented as a
   parametric sub-model plus the sum of some smooth fucntions of one or
@@ -41,7 +41,7 @@
   basis sets an upper limit on the maximum possible degrees of
   freedom for the basis - the limit is typically one less than basis
   dimension). Full details of how to control smooths are given in
-  \code{\link{s}}. For the moment suppose that we would like to change
+  \code{\link{s}} and \code{\link{te}}. For the moment suppose that we would like to change
   the basis of the first smooth to a cubic regression spline basis with
   a dimension of 20, while fixing the second term at 25 degrees of
   freedom. The appropriate formula would be:\cr
@@ -52,7 +52,7 @@
   \eqn{y}{y} is a smooth function of \eqn{x}{x} except at a point
   \eqn{x^*}{x*} where the function jumps discontinuously. This model can
   be written as:
-  \deqn{E(y_i)= \beta_0+\beta_1h(x*,x_i)+f_1(x_i)}{E(y) = b0 + b1
+  \deqn{E(y_i)= \beta_0+\beta_1h(x^*,x_i)+f_1(x_i)}{E(y) = b0 + b1
     h(x*,x) + f1(x)}
   where \eqn{h} is a step function jumping from 0 to 1 at
   \eqn{x^*}{x*}. The way to fit this model is to create a variable
@@ -69,7 +69,7 @@
   of fitting:\cr
   \code{y~s(x)+s(z)+s(x,z)}.\cr
   \code{gam} automatically generates side conditions to make this model
-  identifiable. You can also estimate "overlapping" models like:\cr
+  identifiable. You can also estimate `overlapping' models like:\cr
   \code{y~s(x,z)+s(z,v)}.
   
   Sometimes models of the form:
@@ -97,12 +97,19 @@
   be:\cr
   \code{y~fac+s(x,by=fac.1)+s(x,by=fac.2)+s(x,by=fac.3)}.\cr
 
+In the above examples the smooths of more than one covariate have all employed 
+single penalty thin plate regression splines. These isotropic smooths are not 
+alway appropriate: if variables are not naturally `well scaled' relative to each 
+other then it is often preferable to use tensor product smooths, with a wiggliness 
+penalty for each covariate of the term. See \code{\link{te}} for examples.
+
 }
 
 %- maybe also `usage' for other objects documented here.
 \section{WARNING}{
 There are no identifiability checks made between the smooth and
-parametric parts of a gam formula.
+parametric parts of a gam formula, although fit method \code{\link{magic}}
+can handle such problems numerically.
 }
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}

@@ -57,15 +57,16 @@ dat<-data.frame(x=x,y=y)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
 gam.setup(y~s(x,k=10,bs="cr")-1,dat,fit.method="mgcv")->G;
-GAMsetup(G)->G;F<-mono.con(G$xp);
+F<-mono.con(G$smooth[[1]]$xp);
 G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
-G$p<-G$xp;G$y<-y;G$w<-y*0+1
+G$p<-G$smooth[[1]]$xp;G$y<-y;G$w<-y*0+1
 
 p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 
 # now modify the gam object from unconstrained fit a little, to use it
 # for predicting and plotting constrained fit. 
 p<-c(0,p);f.ug$coefficients<-p; 
+x<-seq(min(x),max(x),length=200)
 lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=2)
 }
 \keyword{models} \keyword{smooth} \keyword{regression} %-- one or more ..

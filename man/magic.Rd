@@ -54,7 +54,8 @@ problem. If \eqn{\bf b}{b} is the parameter vector then the parameters are force
 \eqn{ {\bf Cb} = {\bf 0} }{Cb=0}. }
 
 \item{w}{ the regression weights. If this is a matrix then it is taken as being the 
-square root of the inverse of the covariance matrix of \code{y}. If \code{w} is an array then 
+square root of the inverse of the covariance matrix of \code{y}, specifically 
+\eqn{ {\bf V}_y^{-1} = {\bf w}^\prime{\bf w}}{V_y^{-1}=w'w}. If \code{w} is an array then 
 it is taken as the diagonal of this matrix, or simply the weight for each element of 
 \code{y}.}
 
@@ -92,8 +93,8 @@ The method is a computationally efficient means of applying GCV or UBRE (often a
 AIC) to the 
 problem of smoothing parameter selection in generalized ridge regression problems 
 of the form:
-\deqn{ minimise~ \| { \bf W} ({ \bf Xb - y} ) \|^2 + {\bf b}^\prime {\bf Hb}  \sum_{i=1}^m
-\theta_i {\bf b^\prime S}_i{\bf b} }{ minimise || W (Xb-y) ||^2 + b'Hb+
+\deqn{ minimise~ \| { \bf W} ({ \bf Xb - y} ) \|^2 + {\bf b}^\prime {\bf Hb} + \sum_{i=1}^m
+\theta_i {\bf b^\prime S}_i{\bf b} }{ minimise || W (Xb-y) ||^2 + b'Hb +
 theta_1 b'S_1 b + theta_2 b'S_2 b + . . .}
 possibly subject to constraints \eqn{ {\bf Cb}={\bf 0}}{Cb=0}. 
 \eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf b}{b} a parameter vector, 
@@ -104,7 +105,7 @@ defining the ith penalty with associated smoothing parameter \eqn{\theta_i}{thet
 matrix of coefficients defining any linear equality constraints on the problem. 
 \eqn{ {\bf X}}{X} need not be of full column rank.
 
-The \eqn{\theta_i}{theta_i} are chosen to minize either the GCV score:
+The \eqn{\theta_i}{theta_i} are chosen to minimize either the GCV score:
 
 \deqn{V_g = \frac{n\|{\bf W}({\bf y} - {\bf Ay})\|^2}{[tr({\bf I} - \gamma {\bf A})]^2}}{V_g = n ||W(y-Ay)||^2/[tr(I - g A)]^2}
 
@@ -163,8 +164,9 @@ Note that some further useful quantities can be obtained using \code{\link{magic
 
 }
 \references{
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+
+Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass.
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
@@ -176,6 +178,29 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 \code{\link{mgcv}},
 \code{\link{gam}},
 }
+\examples{
+library(mgcv)
+set.seed(1);n<-400;sig2<-4
+x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
+x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
+f <- 2 * sin(pi * x0)
+f <- f + exp(2 * x1) - 3.75887
+f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
+e <- rnorm(n, 0, sqrt(sig2))
+y <- f + e
+# set up additive model
+G<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE)
+# fit using magic
+mgfit<-magic(G$y,G$X,G$sp,G$S,G$off,G$rank,C=G$C)
+# and fit using gam as consistency check
+b<-gam(G=G)
+mgfit$sp;b$sp  # compare smoothing parameter estimates
+edf<-magic.post.proc(G$X,mgfit,G$w)$edf  # extract e.d.f. per parameter
+# get termwise e.d.f.s
+twedf<-0;for (i in 1:4) twedf[i]<-sum(edf[((i-1)*10+1):(i*10)])
+twedf;b$edf  # compare
+}
+
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

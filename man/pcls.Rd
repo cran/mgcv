@@ -12,7 +12,7 @@ pcls(M)
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{M}{is the single list argument to \code{pcls}. It should have  the 
-  following elements (last 3 are not in argument for \link{mgcv}) :
+  following elements:
 \itemize{
  \item{y}{The response data vector.}
  \item{w}{A vector of weights for the data (often proportional to the 
@@ -21,24 +21,17 @@ pcls(M)
             must give the number of model parameters, while \code{nrow(M$X)} 
             should give the number of data.}
 \item{C}{Matrix containing any linear equality constraints 
-            on the problem (i.e. \eqn{ \bf C}{C} in \eqn{ {\bf Cp}={\bf
-		0} }{Cp=0}). If you have no equality constraints
-	    initialize this to a zero by zero matrix.}
- \item{S}{ A one dimensional array containing the non-zero elements of the
-   penalty matrices. Let \code{start<-sum(M$df[1:(k-1)]^2)} or
-   \code{start<-0} if \code{k==1}. Then penalty matrix \code{k} has
-   \code{M$S[start+i+M$df[i]*(j-1)} on its ith row and jth column.
-   The kth full penalty matrix is constructed by placing the matrix just
-   derived into an appropriate matrix of zeroes with it's 1,1 element at
-   \code{M$off[k],M$off[k]}
- }
- \item{off}{ Offset values locating the elements of \code{M$S[]} in
+            on the problem (e.g. \eqn{ \bf C}{C} in \eqn{ {\bf Cp}={\bf
+		c} }{Cp=c}). If you have no equality constraints
+	    initialize this to a zero by zero matrix. Note that there is no need 
+            to supply the vector \eqn{ \bf c}{c}, it is defined implicitly by the 
+            initial parameter estimates \eqn{ \bf p}{p}.}
+ \item{S}{ A list of penalty matrices. \code{S[[i]]} is the smallest contiguous matrix including 
+          all the non-zero elements of the ith penalty matrix. The first parameter it
+          penalizes is given by \code{off[i]+1} (starting counting at 1). }
+ \item{off}{ Offset values locating the elements of \code{M$S} in
    the correct location within each penalty coefficient matrix. (Zero
    offset implies starting in first location)}
-
- \item{df}{ \code{M$df[i]} gives the number of rows and columns of
-               \code{M$S[i]} that are non-zero.}
-  
 \item{sp}{ An array of  smoothing parameter estimates.}
 \item{p}{An array of feasible initial parameter estimates - these must
 satisfy the constraints, but should avoid satisfying the inequality
@@ -56,7 +49,7 @@ constraints as equality constraints.}
 \deqn{ minimise~ \| { \bf W}^{1/2} ({ \bf Xp - y} ) \|^2  +  \sum_{i=1}^m
 \lambda_i {\bf p^\prime S}_i{\bf p} }{ minimise || W^0.5 (Xp-y) ||^2 + 
 lambda_1 p'S_1 p + lambda_1 p'S_2 p + . . .}
-subject to constraints \eqn{ {\bf Cp}={\bf 0}}{Cp=0} and \eqn{ {\bf
+subject to constraints \eqn{ {\bf Cp}={\bf c}}{Cp=c} and \eqn{ {\bf
     A}_{in}{\bf p}>{\bf b}_{in}}{A_in p > b_in}, w.r.t. \eqn{\bf p}{p} given the
 smoothing parameters \eqn{\lambda_i}{lambda_i}.
 \eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf p}{p} a parameter vector, 
@@ -99,13 +92,13 @@ Journal on Scientific Computing 15(5):1126-1133
 set.seed(0)
 n<-100
 x<-runif(n);y<-x-0.2+rnorm(n)*0.1
-M<-list(X=matrix(0,n,2),p=c(0.1,0.5),off=array(0,0),df=array(0,0),S=0,
-Ain=matrix(0,1,2),bin=0,C=matrix(0,0,0),sp<-0,y=y,w=y*0+1)
+M<-list(X=matrix(0,n,2),p=c(0.1,0.5),off=array(0,0),S=list(),
+Ain=matrix(0,1,2),bin=0,C=matrix(0,0,0),sp=0,y=y,w=y*0+1)
 M$X[,1]<-1;M$X[,2]<-x;M$Ain[1,]<-c(1,0)
 pcls(M)->M$p
 plot(x,y);abline(M$p,col=2);abline(coef(lm(y~x)),col=3)
 
-# and now a penalized example: a monotonic penalized regression spline .....
+# Penalized example: monotonic penalized regression spline .....
 
 # Generate data from a monotonic truth.
 x<-runif(100)*4-1;x<-sort(x);
@@ -113,48 +106,39 @@ f<-exp(4*x)/(1+exp(4*x));y<-f+rnorm(100)*0.1;plot(x,y)
 dat<-data.frame(x=x,y=y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
-# Create Design matrix, constriants etc. for monotonic spline....
-gam.setup(y~s(x,k=10,bs="cr")-1,dat,fit.method="mgcv")->G;
-GAMsetup(G)->G;F<-mono.con(G$xp);
-G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
-G$p<-G$xp;G$y<-y;G$w<-y*0+1;
+# Create Design matrix, constraints etc. for monotonic spline....
+sm<-smooth.construct(s(x,k=10,bs="cr"),dat,knots=NULL)
+F<-mono.con(sm$xp);   # get constraints
+G<-list(X=sm$X,C=matrix(0,0,0),sp=f.ug$sp,p=sm$xp,y=y,w=y*0+1)
+G$Ain<-F$A;G$bin<-F$b;G$S<-sm$S;G$off<-0
 
 p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 
-# now modify the gam object from unconstrained fit a little, to use it
-# for predicting and plotting constrained fit. 
-p<-c(0,p);f.ug$coefficients<-p; 
-lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=2)
+fv<-Predict.matrix(sm,data.frame(x=x))\%*\%p
+lines(x,fv,col=2)
 
 # now a tprs example of the same thing....
 
 f.ug<-gam(y~s(x,k=10));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-gam.setup(y~s(x,k=10),dat,fit.method="mgcv")->G;
-GAMsetup(G)->G;
+sm<-smooth.construct(s(x,k=10,bs="tp"),dat,knots=NULL)
 nc<-40         # number of constraints
 xc<-0:nc/nc # points on [0,1]  
 xc<-xc*4-1  # points at which to impose constraints
-A0<-predict.gam(f.ug,data.frame(x=xc),type="lpmatrix") 
+A0<-Predict.matrix(sm,data.frame(x=xc)) 
 # ... A0%*%p evaluates spline at xc points
-A1<-predict.gam(f.ug,data.frame(x=xc+1e-6),type="lpmatrix") 
+A1<-Predict.matrix(sm,data.frame(x=xc+1e-6)) 
 A<-(A1-A0)/1e-6    
-# ... approx. constraint matrix (A%*%p is -ve spline gradient at points xc)
+# ... approx. constraint matrix (A\%*\%p is -ve spline gradient at points xc)
+G<-list(X=sm$X,C=matrix(0,0,0),sp=f.ug$sp,y=y,w=y*0+1,S=sm$S,off=0)
 G$Ain<-A;    # constraint matrix
 G$bin<-rep(0,nc);  # constraint vector
-G$sp<-f.ug$sp; # use smoothing parameters from un-constrained fit
-G$p<-rep(0,11);G$p[11]<-0.1  
+G$p<-rep(0,10);G$p[10]<-0.1  
 # ... monotonic start params, got by setting coefs of polynomial part
-G$p[10]<- -mean(0.1*x) 
-# ... must meet gam side conditions: sum of smooth over x's is zero 
-G$y<-y;G$w<-y*0+1
 p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 
-# now modify the gam object from unconstrained fit a little, to use it
-# for predicting and plotting constrained fit. 
-f.ug$coefficients<-p; 
-lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=3)
-
+fv2<-Predict.matrix(sm,data.frame(x=x))\%*\%p
+lines(x,fv2,col=3)
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

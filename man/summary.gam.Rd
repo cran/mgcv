@@ -85,9 +85,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
-\section{WARNING }{ The supplied p-values are only approximate: they are
-  conditional on the smoothing parameters, which will usually
-  have been estimated.
+\section{WARNING }{ The supplied p-values are only approximate and should be treated with scepticism.
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{gam.check}} }

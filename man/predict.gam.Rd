@@ -62,7 +62,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
 \code{predict.gam()} in Splus.} 
 
-\seealso{  \code{\link{gam}} \code{\link{plot.gam}}}
+\seealso{  \code{\link{gam}}, \code{\link{gamm}}, \code{\link{plot.gam}}}
 
 \examples{
 library(mgcv)

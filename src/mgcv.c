@@ -1,7 +1,7 @@
 /* Source code for mgcv.dll/.so multiple smoothing parameter estimation code,
 suitable for interfacing to R 
 
-Copyright (C) 2000-2002 Simon N. Wood  snw@st-and.ac.uk
+Copyright (C) 2000-2004 Simon N. Wood  simon@stats.gla.ac.uk
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -84,13 +84,63 @@ warning("%s",msg);
 
 /* The following are some rather ancient routines used to set up an example
    additive model using regression (cubic) splines, via RGAMsetup(). */
+void RUnpackSarray(int m,matrix *S,double *RS)
+/* unpacks the R array RS into an array of matrices initialized to the correct dimensions 
+   let kk = sum_{i=0}^k S[i].r*S[i].c
+   Then the kth matrix starts at element kk of RS and stops at element k(k+1)
+   ... let this extracted array be M. S[k].M[i][j]=M[i+S[k].r*j] - in this way we ensure that 
+   M can be extracted straight to a matrix in R with 
+   A<-matrix(M,S[k].r,S[k].c) 
+*/ 
+{ int start,i,j,k;
+  start=0;
+  for (k=0;k<m;k++)
+  { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++) S[k].M[i][j]=RS[start+i+S[k].r*j];
+    start += S[k].r*S[k].c;
+  }
+}
+
+void RPackSarray(int m,matrix *S,double *RS)
+/* Packs an array of matrices S[] into an R array RS in the manner described in RUnpackSarray
+*/
+{ int start,i,j,k;
+  start=0;
+  for (k=0;k<m;k++)
+  { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++) RS[start+i+S[k].r*j]=S[k].M[i][j];
+    start += S[k].r*S[k].c;
+  }
+
+}
+
+
+
+void RArrayFromMatrix(double *a,long r,matrix *M)
+
+/* copies matrix *M into R array a where r is the number of rows of A treated as
+  a matrix by R */
+
+{ int i,j;
+  for (i=0;i<M->r;i++) for (j=0;j<M->c;j++) a[i+r*j]=M->M[i][j];
+}
+
+
+matrix Rmatrix(double *A,long r,long c)
+
+/* produces a matrix from the array containing a (default) R matrix stored:
+   A[0,0], A[1,0], A[2,0] .... etc */
+
+{ int i,j;
+  matrix M;
+  M=initmat(r,c);
+  for (i=0;i<r;i++) for (j=0;j<c;j++) M.M[i][j]=A[i+j*r];
+  return(M);
+}
 
 
 /********** The following are from spline.c (rather plodding coding) ***********/
 
 /* The next 4 functions are basis functions for the 1st derivative
    representation of a cubic spline */
-
 
 double b0(x0,x1,x) double x0,x1,x;
 
@@ -103,6 +153,7 @@ double b0(x0,x1,x) double x0,x1,x;
   res=2.0*(x-x0+0.5*h)*xx1*xx1/(h*h*h);
   return(res);
 }
+
 
 double b1(x0,x1,x) double x0,x1,x;
 
@@ -385,7 +436,7 @@ void getSmooth(S,x,rescale) matrix *S,x;int rescale;
 }
 
 
-void crspline(double *x,int n,int knots,matrix *X,matrix *S, matrix *C, matrix *xp)
+void crspline(double *x,int n,int knots,matrix *X,matrix *S, matrix *C, matrix *xp,int control)
 
 /* Sets up a cubic regression spline, by specifying a set of knot locations 
    spread evenly throughout the covariate values, and using cubic hermite
@@ -405,7 +456,11 @@ void crspline(double *x,int n,int knots,matrix *X,matrix *S, matrix *C, matrix *
    X - design matrix 
    S - wiggliness penalty matrix
    C - constraint matrix 
-   xp - knot position vector 
+   xp - knot position vector - can also be supplied as input
+
+   control 0 indicates full call as above
+   control 1 indicates prediction call: xp *must* be supplied and only X 
+             calculated
 
    so that a penalized regression spline could be fitted by minimising:
 
@@ -420,32 +475,34 @@ void crspline(double *x,int n,int knots,matrix *X,matrix *S, matrix *C, matrix *
   matrix y,my;
   double dx,xx;
   /* sort x values into order and get list of unique x values .... */
-  y=initmat((long)n,1L);
-  for (j=0;j<n;j++) y.V[j]=x[j];
-  y.r=(long)n;
-  sort(y); /* next reduce to list of unique values..... */
-  k=0;for (i=0;i<n;i++) if (y.V[k]!=y.V[i]) { k++;y.V[k]=y.V[i];} y.r=(long)k+1;
-  dx=(y.r-1)/(knots-1.0);
-  /* now place the knots..... */
-  if (xp->V[0]==xp->V[1]) /* then knot positions have not been supplied */
-  { xp->V[0]=y.V[0];
-    for (i=1;i<knots-1;i++)  /* place knots */
-    { xx=dx*i;
-      k=(int)floor(xx);
-      xx -= k;
-      xp->V[i]=(1-xx)*y.V[k]+xx*y.V[k+1];
-    } 
-    xp->V[knots-1]=y.V[y.r-1];
+  if (control==0)
+  { if (xp->V[0]>=xp->V[1]) /* then knot positions have not been supplied */
+    { y=initmat((long)n,1L);
+      for (j=0;j<n;j++) y.V[j]=x[j];
+      y.r=(long)n;
+      sort(y); /* next reduce to list of unique values..... */
+      k=0;for (i=0;i<n;i++) if (y.V[k]!=y.V[i]) { k++;y.V[k]=y.V[i];} y.r=(long)k+1;
+      dx=(y.r-1)/(knots-1.0);
+      /* now place the knots..... */
+      xp->V[0]=y.V[0];
+      for (i=1;i<knots-1;i++)  /* place knots */
+      { xx=dx*i;
+        k=(int)floor(xx);
+        xx -= k;
+        xp->V[i]=(1-xx)*y.V[k]+xx*y.V[k+1];
+      } 
+      xp->V[knots-1]=y.V[y.r-1];
+      freemat(y);
+    }
+ 
+    /* create the wiggliness measure matrix...... */
+    getSmooth(S,*xp,0);
+ 
+    /* create the constraint matrix ...... */
+    *C=initmat(1L,(long)knots);
+    for (i=0;i<knots;i++) C->M[0][i]=1.0;
+    /* and finally, create the design matrix ...... */
   }
-  freemat(y);
- 
-  /* create the wiggliness measure matrix...... */
-  getSmooth(S,*xp,0);
- 
-  /* create the constraint matrix ...... */
-  *C=initmat(1L,(long)knots);
-  for (i=0;i<knots;i++) C->M[0][i]=1.0;
-  /* and finally, create the design matrix ...... */
   *X=initmat((long)n,xp->r);
   my=initmat(xp->r,1L);
   for (j=0;j<n;j++)
@@ -457,162 +514,126 @@ void crspline(double *x,int n,int knots,matrix *X,matrix *S, matrix *C, matrix *
   freemat(my);
 }
 
-void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *UZ,matrix *Xu,matrix *xp,
-              long *off,double **x,double **by,double *knots,int m,int n,int *dim,int *s_type, long *df,
-              int *p_order,int *by_exists,int *n_knots,int nsdf,int getZ)
+void construct_cr(double *x,int *nx,double *k,int *nk,double *X,double *S,double *C,int *control)
 
-/* Sets up the Design matrix and Smoothness constraints for a regression spline
-   based GAM. There are m smoothers, n datapoints. The ith smoother has
-   df[i] parameters starting at off[i], with smoothing constraint matrix
-   S[i], and is dim[i] dimensional, of type s_type[i]. s_type 0 is crs.
-   x[i][j], contains the jth value of the ith covariate.
-   by[i][j] is the jth value for the ith "by" variable.
-   by_exists[] is an array of 0/1's indicating existence of otherwise of by
-   variables for each smooth
-   knots[] may contain information specifying knot locations for use when 
-           setting up a basis. Arrays of covariate values are stacked end 
-           on end in this array in an order corresponding to the ordering 
-           of the rows of x. 
-   n_knots[] - number of knots for each smooth term.
-   The first nsdf x[i]s are columns of the design matrix for the non-spline
-   part of the model (including the intercept term) .
-   X & Z are initialised in the routine.
-   Each S[i], UZ[i] and Xu[i] is also initialised in the routine, but note that 
-   no memory is allocated for UZ and Xu for cubic regression splines: their rows
-   and columns are just set to 0.
-   xp[i] is returned containing the vector of knot positions for the ith spline.
-   Each xp[i] is initialised within the routine.
-
-   Z contains the null space for the GAM side constraints if getZ is not set to
-     0 - if getZ==0 then Z is returned containing the constraint matrix itself.
-
-   All smooths are constrained so that their parameters sum to zero - the first
-   parameter in the model will then be a mean. Hence for a pure gam() x[1] should
-   be a vector of 1's and nsdf should be equal to one, to allow for a constant.
-*/
-
-{ long np,l,i,j,k,lp,by_counter=0,nsm;
-  matrix T,Xl,Cl;
-  double *XMj,*XlMj,bylj,**knt;
-  np=nsdf;nsm=0;for (i=0;i<m;i++) {np+=df[i];nsm+=dim[i];}
-  if (m) T=initmat((long)m,np);T.r=0L;
-  *X=initmat((long)n,(long)np);
-  knt=(double **)calloc((size_t)(nsm+1),sizeof(double *)); /* knt[i][j] is jth knot value for ith variable */
-  k=1;knt[0]=knots;for (i=0;i<m;i++) for (j=0;j<dim[i];j++) { knt[k]=knt[k-1]+n_knots[i];k++;}
-  off[0]=nsdf;
-  for (j=0;j<nsdf;j++) for (i=0;i<n;i++) X->M[i][j]=x[j][i];
-  lp=nsdf;  /* where we are in the x[i]'s */
-  for (l=0;l<m;l++) /* work through the smooths */
-  { if (l) off[l]=off[l-1]+df[l-1];else off[l]=nsdf;
-    
-    /* get design matrix etc for this particular term...... */
-    if (s_type[l]==0)
-    { xp[l]=initmat((long)df[l],1L);
-      if (n_knots[l]==df[l]) /* knots provided */
-      { for (i=0;i<df[l];i++) xp[l].V[i]=knt[lp-nsdf][i];
-      }
-      crspline(x[lp],n,df[l],&Xl,S+l, &Cl, xp+l);
-      UZ[l].r=UZ[l].c=Xu[l].r=Xu[l].c=0L;
-    }
-    else
-    { tprs_setup(x+lp,knt+lp-nsdf,p_order[l],dim[l],n,df[l],1,&Xl,S+l,UZ+l,Xu+l,n_knots[l]);
-    }
-    /* copy Cl into overall constraint matrix T..... */
-    if (s_type[l]==0)
-    { for (i=0;i<df[l];i++)
-      T.M[T.r][off[l]+i]=Cl.M[0][i];
-      freemat(Cl);T.r++;
-    } else /* impose a sum to zero side condition on the spline term */
-    { for (i=0;i<df[l];i++)
-      for (j=0;j<Xl.r;j++)
-      T.M[T.r][off[l]+i]+=Xl.M[j][i];
-      T.r++;
-    }
-    /* multiply design matrix component by "by" variable if there is one */
-    if (by_exists[l])
-    { for (j=0;j<n;j++)
-      { bylj=by[by_counter][j];
-        for (XlMj=Xl.M[j];XlMj<Xl.M[j]+Xl.c;XlMj++) *XlMj *= bylj;
-      } 
-      by_counter++;  
-    }
-    /* copy Xl into overall design matrix X  */
-    for (j=0;j<n;j++)
-    { XMj=X->M[j]+off[l];
-      XlMj=Xl.M[j];
-      for (i=0;i<Xl.c;i++) XMj[i]=XlMj[i];
-    }
-    lp+=dim[l];
-    freemat(Xl);
+/* Routine to be called from R to set up a cubic regression spline basis given
+   x - array of x values (un-ordered)
+   nx - number of x values
+   k - array of/for knot locations. Should be in ascending order - if first two are not then 
+       locations are generated automatically
+   nk - number of knots
+   The routine returns the knot locations in k plus
+   X - the model matrix       n by nk
+   S - the penalty matrix     nk by nk
+   C - the constraint matrix  1 by nk
    
-  }
-  if (getZ)  /* obtain null space of T */
-  { if (T.r)
-    { *Z=initmat(np,np);
-      QT(*Z,T,0);
-    } 
-    Z->r = T.r;
-    if (T.r) freemat(T);
-  } else     /* return T itself */
-  { *Z=T;}
-  free(knt);
-  
-}
-
-/*************************** End of cut and paste code! ***********************************/
-
-
-void RUnpackSarray(int m,matrix *S,double *RS)
-/* unpacks the R array RS into an array of matrices initialized to the correct dimensions 
-   let kk = sum_{i=0}^k S[i].r*S[i].c
-   Then the kth matrix starts at element kk of RS and stops at element k(k+1)
-   ... let this extracted array be M. S[k].M[i][j]=M[i+S[k].r*j] - in this way we ensure that 
-   M can be extracted straight to a matrix in R with 
-   A<-matrix(M,S[k].r,S[k].c) 
-*/ 
-{ int start,i,j,k;
-  start=0;
-  for (k=0;k<m;k++)
-  { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++) S[k].M[i][j]=RS[start+i+S[k].r*j];
-    start += S[k].r*S[k].c;
-  }
-}
-
-void RPackSarray(int m,matrix *S,double *RS)
-/* Packs an array of matrices S[] into an R array RS in the manner described in RUnpackSarray
+   control is an array of control constant:
+   0 indicates full set up as above
+   1 indicates prediction call, in which case k *must* be supplied and only X is returned
+   
 */
-{ int start,i,j,k;
-  start=0;
-  for (k=0;k<m;k++)
-  { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++) RS[start+i+S[k].r*j]=S[k].M[i][j];
-    start += S[k].r*S[k].c;
+
+{ matrix Xm,Sm,Cm,xp;
+  int i;
+  xp=initmat((long)*nk,1L);
+  for (i=0;i<xp.r;i++) xp.V[i]=k[i];
+  crspline(x,*nx,*nk,&Xm,&Sm,&Cm,&xp,*control);
+  for (i=0;i<xp.r;i++) k[i]=xp.V[i];
+  RArrayFromMatrix(X,Xm.r,&Xm);
+  if (*control==0)
+  { RArrayFromMatrix(S,Sm.r,&Sm);
+    RArrayFromMatrix(C,Cm.r,&Cm);
   }
+} 
 
+void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
+                    double *UZ,double *Xu,int *nXu,double *C)
+/* inputs: 
+   x contains the n values of each of the d covariates, stored end to end
+   knt contains the nk knot locations packed as x
+   m is the order of the penalty 
+   k is the basis dimension
+   
+   outputs:
+   X is the n by k model matrix
+   S is the K by K penalty matrix
+   UZ is the (nXu+M) by k matrix transforming from the truncated to full bases
+   Xu is the nXu by d matrix of unique covariate combinations
+   C is the 1 by k sum to zero constraint matrix 
+*/ 
+
+{ double **xx,**kk=NULL,*dum,**XM;
+  matrix Xm,Sm,UZm,Xum;
+  int i,j,Xr;
+  xx=(double **)calloc((size_t)(*d),sizeof(double*));
+  for (i=0;i<*d;i++) xx[i]=x + i * *n;
+  if (*nk)
+  { kk=(double **)calloc((size_t)(*d),sizeof(double*));
+    for (i=0;i<*d;i++) kk[i]=knt + i * *nk;
+  }
+  tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk); /* Do actual setup */
+  RArrayFromMatrix(X,Xm.r,&Xm);
+  RArrayFromMatrix(S,Sm.r,&Sm);
+  RArrayFromMatrix(UZ,UZm.r,&UZm);  
+  RArrayFromMatrix(Xu,Xum.r,&Xum);
+  *nXu=Xum.r;  
+  /* construct the sum to zero constraint */
+  dum=C;XM=Xm.M;Xr=Xm.r;
+  for (i=0;i< *k;i++)
+  { *dum = 0.0;
+    for (j=0;j<Xr;j++) *dum += XM[j][i];
+    dum++;
+  }
+  freemat(Xm);freemat(Sm);freemat(UZm);freemat(Xum);
+  free(xx);if(*nk) free(kk);
+}
+
+void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *nXu,
+                  double *UZ,double *by,int *by_exists,double *X)
+/* inputs are:
+   * The n values of the d covariates at which to predict - covariates packed end to end in x
+     - any required centering to be done before this call.
+   * m is the penalty order and M the null space dimension
+   * k is the rank of the basis
+   * Xu is the nXu by d matrix of unique covariate values
+   * UZ is the basis of the reduced space 
+
+   returns the n by k matrix X mapping the parameters to the predicted values.
+*/
+{ matrix Xm,UZm,Xum,b,p;
+  double by_mult,*xx;
+  int i,j,l;
+  p.r=0L;
+  Xum=Rmatrix(Xu,*nXu,*d);
+  UZm=Rmatrix(UZ,*nXu + *M,*k);
+  b=initmat(UZm.r,1L);
+  Xm=initmat((long)*n,(long)*k);
+  xx=(double*)calloc((size_t) *d,sizeof(double));
+  for (i=0;i< *n;i++) 
+  { if (*by_exists) by_mult=by[i]; else by_mult=1.0;
+    if (by_mult==0.0)         /* then don't waste flops on calculating stuff that will only be zeroed */
+    { for (j=0;j<UZm.c;j++) Xm.M[i][j]=0.0;
+    } else                    /* proceed as normal */
+    { for (j=0;j< *d;j++) xx[j]=x[j * *n + i];
+      tps_g(&Xum,&p,xx,*d,*m,&b,1);             
+      for (j=0;j<UZm.c;j++) 
+      { Xm.M[i][j]=0.0;
+        for (l=0;l<b.r;l++) Xm.M[i][j] += b.V[l]*UZm.M[l][j]; /* forming b'UZ */
+        Xm.M[i][j] *= by_mult;
+      }
+    }
+  }
+  /* Now clean up and copy X back.*/
+  RArrayFromMatrix(X,Xm.r,&Xm);
+  tps_g(&Xum,&p,x,0,0,&b,1); /* have tps_g clear up */ 
+  freemat(Xm);freemat(Xum);freemat(UZm);freemat(b);
+  free(xx);
 }
 
 
 
-void RArrayFromMatrix(double *a,long r,matrix *M)
-
-/* copies matrix *M into R array a where r is the number of rows of A treated as
-  a matrix by R */
-
-{ int i,j;
-  for (i=0;i<M->r;i++) for (j=0;j<M->c;j++) a[i+r*j]=M->M[i][j];
-}
 
 
-matrix Rmatrix(double *A,long r,long c)
-
-/* produces a matrix from the array containing a (default) R matrix stored:
-   A[0,0], A[1,0], A[2,0] .... etc */
-
-{ int i,j;
-  matrix M;
-  M=initmat(r,c);
-  for (i=0;i<r;i++) for (j=0;j<c;j++) M.M[i][j]=A[i+j*r];
-  return(M);
-}
 
 
 void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
@@ -777,7 +798,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
         if (trA>L.c+0.001||trA< *min_edf-0.001) /* then trA is impossibly large or small */
 	{ ok++;inv_tol*=2; /* change svd truncation tolerance and repeat */
         } else 
-	{ if (ok>1) ErrorMessage("Numerical difficulties obtaining tr(A) - apparently resolved. Apply some caution to results.",0); 
+	{ if (ok>1)
+          ErrorMessage("Numerical difficulties obtaining tr(A) - apparently resolved. Apply some caution to results.",0); 
           ok=0;
         }
         if (ok>15)
@@ -843,14 +865,14 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       HQmult(Vp,Z,1,0);
       HQmult(Vp,Z,0,1);  
       freemat(L);
-      /* now work out edf per term - meaningful only if penalties are non-overlapping */
+      /* now work out edf per parameter */
       L=initmat(Vp.r,X.r);
       matmult(L,Vp,X,0,1);
-      for (i=0;i<L.r;i++) for (j=0;j<L.c;j++) L.M[i][j]*=w.V[j];
-      for (i=0;i<m;i++)
+      for (i=0;i<L.r;i++) for (j=0;j<L.c;j++) L.M[i][j]*=w.V[j]; 
+      for (i=0;i<L.r;i++)
       { edf[i]=0.0;
-        for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
-        edf[i]+=X.M[j][k]*L.M[k][j];
+        for (j=0;j<X.r;j++)  
+        edf[i]+=L.M[i][j]*X.M[j][i];
       } 
       /* work out elements on leading diagonal of hat matrix */
       trA_check=0.0;
@@ -891,6 +913,25 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   dmalloc_log_unfreed(); dmalloc_verify(NULL);
 #endif
 }
+
+void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist)
+/* For each point gx[i],gy[i] calculates the minimum  Euclidian distance to a point in dx[], dy[].
+   These distances are stored in dist. 
+*/
+
+{ double sep,xx,yy,*dum,*xdum,*ydum;
+  int n,m;
+  n = *gn;m = *dn;
+  for (dum=dist;dum < dist + n; dum++,gx++,gy++)
+  { xx= *gx - *dx;yy = *gy - *dy;*dum = xx*xx + yy*yy; /* first separation */
+    for (xdum=dx+1,ydum=dy+1;xdum < dx + m;xdum++,ydum++)
+    { xx= *gx - *xdum;yy = *gy - *ydum;sep = xx*xx + yy*yy; /* subsequent separations */
+      if (sep < *dum) *dum = sep;
+    }
+    *dum = sqrt(*dum);
+  }
+} 
+
 
 
 void RuniqueCombs(double *X,int *r, int *c)
@@ -981,416 +1022,9 @@ void RQT(double *A,int *r,int*c)
 }
 
 
-void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,double *xpd,
-             int *offd,double *xd,int  *md,int  *nd,int *dfd,int *nsdfd, int *dim, int *s_type, 
-             int *p_order,int *by_exists,double *byd,double *knots,int *n_knots)
-
-/* Interface routine to GAMsetup from R (and hopefully Splus)
-   The arrays pointed to by all arguments must be initialised to the
-   correct size prior to calling this routine.
-   Inputs are:
-   1. x - in R terms x[i,j] is the jth obs of the ith covariate (corresponding
-          to the jth datapoint being modelled i.e. y[j]). Note however that the
-          first nsdf x[i]'s are the first nsdf columns of the design matrix
-          corresponding to the parametric part of the model (including the intercept); 
-          the remaining x[i]'s are covariates that will be treated using smooths.
-          Dimension (m+nsdf) by n.
-   2. nsdf - the number of parametric terms (including the mean/intercept term)
-   3. df - m terms; df[i] is the max. d.f. for the ith smooth
-   4. m - number of smooths
-   5. n - number of data to be modelled.
-   6. dim - dim[i] is the dimension of smooth term i
-   7. s_type - s_type[i] is the smooth type for smooth i - currently only 0 
-               for crs allowed
-   8. p_order - p_order[i] is the order of the penalty for the ith term
-   9. by_exists - 0/1 m-array indicating whether or not there is a "by" variable
-      for each smooth.
-   10. by - in R terms by[i,j] is the jth observation for the ith existing by-var
-   11. knots - a densely packed array of covariate values specifying knot locations
-               sub-arrays for each covariate are packed within this 1-d array
-               in order corresponding to the ordering for the smooth related parts of x
-   12. n_knots - array of number of knots per smooth.     
-   Ouputs are:
-   1. X - the n by q design matrix where q = \sum_i df[i]+nsdf
-   2. xp - xp[i][j] is the jth knot position for the ith smooth. Dimension must
-           be set to m by (max_i df[i]).
-   3. S - array containing smoothness matrices. let start_k=sum_{i=0}^{k-1} S[i].r*S[i].c
-          S[k].M[i][j]= S[start_k+i+S[k].r*j] - see RPackSarray() above
-   4. UZd - Array Containing matrices UZ[k] such that \delta = UZ[k] \delta_k for 
-           smooth k.  i.e. UZ[k] is basis of truncated parameter space.
-           UZ[k].M[i][j] is row i, col j of kth basis. These matrices are actually
-           stored in UZd in a packed form as follows:
-           let start[k]=\sum_{k=0}^{k-1} UZ[k].c*UZ[k].r if k>0 and start[0]=0 
-           UZ[k].M[i][j]=UZd[start[k]+i+UZ[k].r*j]
-   5. Xud - array containing matrices the rows of which give all the unique covariate 
-            combinations for each term. row i col j of the kth matrix is given by:
-            Xud[start[k]+i+j*xu[k]] 
-            where start[k+1]=start[k]+ xu[k]*dim[k], but start[0]=0
-            xu[k] is number of unique covariate combinations, dim[k] is number of 
-            covariates.      
-   6. xu - array of numbers of unique cov.values for each s_type=1 term 
-   4. C - Constraint matrix for problem. Input dimension h by q (see 1), where
-          h = sum_i (1-s_type[i]).
-   5. off - array of offsets locating S[k]'s within overall constraint matrix
-            S[k][0][0] goes in row off[k] col off[k]
-
-*/
-
-{ matrix X,C,*S,*xp,*UZ,*Xu;
-  long *off,*df,dumb;
-  int m,n,nsdf,i,j,k,nx,k1,*M,nby;
-  double **x,**by=(double **)NULL; /* avoid compiler warning */
-  /* setup x[][], df[], off[], m, n, nsdf, S[], xp[], for calling GAMsetup.
-     X, C, S[i]'s and xp[i]'s are initialised in the function */
-  m= *md;
-  n= *nd;
-  nsdf= *nsdfd;
-  /* deal with any "by" variables */
-  nby=0;for (i=0;i<m;i++) nby+=by_exists[i];
-  if (nby) by=(double **)calloc((size_t)nby,sizeof(double *));
-  for (i=0;i<nby;i++) 
-  { by[i]=(double *)calloc((size_t)n,sizeof(double));
-    for (j=0;j<n;j++) by[i][j]=byd[i+nby*j];
-  }
-  /* and now the covariates + parametric design matrix columns */ 
-  nx=nsdf;for (i=0;i<m;i++) nx+=dim[i];
-  x=(double **)calloc((size_t)nx,sizeof(double *));
-  for (i=0;i<nx;i++) 
-  { x[i]=(double *)calloc((size_t)n,sizeof(double));
-    for (j=0;j<n;j++) x[i][j]=xd[i+nx*j]; /* loading data passed by R into x[][] */
-  }
-  if (m>0)
-  { S=(matrix *)calloc((size_t)m,sizeof(matrix));
-    xp=(matrix *)calloc((size_t)m,sizeof(matrix));
-    UZ=(matrix *)calloc((size_t)m,sizeof(matrix));
-    Xu=(matrix *)calloc((size_t)m,sizeof(matrix));
-    M=(int *)calloc((size_t) m,sizeof(int));
-    for (i=0;i<m;i++) M[i]=null_space_dimension(dim[i],p_order[i]);  
-    df=(long *)calloc((size_t)m,sizeof(long));
-    for (i=0;i<m;i++) df[i]=(long)dfd[i];
-    off=(long *)calloc((size_t)m,sizeof(long));
-  } else {S=xp=UZ=Xu=&X;off=df=&dumb;M=&m;} /* purely to avoid compiler warnings */
-  /* now run GAMsetup to get X, C, S[],UZ[],Xu[], xp, off */
-  GAMsetup(&X,&C,S,UZ,Xu,xp,off,x,by,knots,m,n,dim,s_type,df,p_order,by_exists,n_knots,nsdf,0); /* Initializes X and C */
-  /* unload returned matrices into R arrays: X, C, S[k], xp */
-  RArrayFromMatrix(Xd,(long)n,&X);
-  RArrayFromMatrix(Cd,(long)m,&C);
-  /*mdf=0;for (i=0;i<m;i++) if (mdf<df[i]) mdf=df[i];*/
-  /*m1=0; for (i=0;i<m;i++) if (s_type[i]) m1++;*/   /* number of tprs terms */
-  /*mdf1=0;for (i=0;i<m;i++) if (s_type[i]) if (mdf1<df[i]) mdf1=df[i];*/ /* max df over tprs terms */
-  /*mdim=0;for (i=0;i<m;i++) if (dim[i]>mdim) mdim=dim[i];*/   /* max dimension of terms   */
- 
-  RPackSarray(m,S,Sd);
-  RPackSarray(m,UZ,UZd);
-  RPackSarray(m,Xu,Xud);
-  k1=0;  /*counter for tprs terms */  
-  for (k=0;k<m;k++)
-  { /*for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
-      Sd[k+i*m+j*m*mdf]=S[k].M[i][j]; OLD CODE INEFFICIENT - AS IS CODE BELOW!!*/
-    if (s_type[k]==1) /* then save the basis UZ and reduced covariate set Xu */
-    { /*for (i=0;i<UZ[k].r;i++) for (j=0;j<UZ[k].c;j++)
-	UZd[k1+i*m1+j*(n+maxM)*m1]=UZ[k].M[i][j];*/
-    
-      /*for (i=0;i<Xu[k].r;i++) for (j=0;j<Xu[k].c;j++)
-	Xud[k1+i*m1+j*n*m1]=Xu[k].M[i][j];*/
-     
-      xu[k1]=(int)Xu[k].r;k1++;
-    } else
-    {  for (i=0;i<df[k];i++) xpd[k+m*i]=xp[k].V[i];
-    } 
-   
-  } 
-  for (i=0;i<m;i++) offd[i]=(int)off[i];
-  /* tidy up */
-  freemat(X);if (C.r) freemat(C);
-  if (m>0)
-  { for (i=0;i<m;i++) if (s_type[i]) { freemat(UZ[i]); freemat(Xu[i]);}
-    free(UZ);free(Xu);
-    for (i=0;i<m;i++) {freemat(S[i]); if (s_type[i]==0) freemat(xp[i]);}
-    free(S);free(xp);free(off);free(df);free(M);
-  }
-  for (i=0;i<nx;i++) free(x[i]);free(x);
-  for (i=0;i<nby;i++) free(by[i]); if (nby) free(by);
-#ifdef MEM_CHECK
-  dmalloc_log_unfreed();  dmalloc_verify(NULL);
-#endif 
-}
-
-void gam_map(matrix tm, matrix *t, double *x,double *by,matrix *UZ,matrix *Xu,int *s_type, int *dim, int *p_order,
-             int *by_exists,int m,int nsdf, int kill)
-
-/* Consider a gam with a set of parametric terms given by the first nsdf terms of 
-   vector x and m smooth terms each of dimension dim[i]. 
-
-   The splines are one of two types:
-   s_type[i]==0 => a cubic regression spline  parameterized by the function values at the knots, 
-   s_type[i]==1 => thin plate regression spline                   
-
-   the model parameters are assumed arranged: constant, parametric terms, spline terms_1, spline terms_2 etc...
-
-   each smooth may also be multiplied by a "by"-variable... see by_exists.
-
-   If p is the parameter vector then this routine returns tm, such that tm'p = f(x).
-   
-   To save time this routine saves some matrices statically - to free them, and set 
-   things up for a new knot sequence call with kill==1.
-
-*/
 
 
-{ static matrix *D,b;static char first=1;
-  static int terms=0,bl=0;
-  matrix h,p;
-  double xx,by_mult,**UZjM,*bV,*tmVk;
-  int offset,by_counter=0;
-  long i,j,k,l;
-  
-  if (kill)
-  { first=1;
-    for (i=0;i<terms;i++) 
-    if (s_type[i]==0) 
-    { freemat(D[i]);
-    }
-    free(D);
-    terms=0;
-    tps_g(UZ,&p,x,0,0,&h,1); /* clear up here */ 
-    if (bl) freemat(b);
-    return;
-  }
-  if (first)
-  { first=0;
-    D=(matrix *)calloc((size_t)m,sizeof(matrix));
-    bl=0;
-    for (i=0;i<m;i++)
-    if (s_type[i]==0)
-    { h=initmat(t[i].r-1,1L);
-      for (j=0L;j<t[i].r-1;j++) h.V[j]=t[i].V[j+1]-t[i].V[j];
-      D[i]=getD(h,0); 
-      freemat(h);
-    } else
-    { if (UZ[i].r>bl) bl=UZ[i].r;}
-    if (bl) b=initmat((long)bl,1L);
-    terms=m;
-  }
-  /* deal with the  parametric terms first.... */
-  for (k=0;k<nsdf;k++) tm.V[k]=x[k];
-  /* now the splines..... */
-  p.r=0;
-  offset=nsdf; /* how far through x's we are */
-  for (j=0;j<m;j++) 
-  { if (by_exists[j]) { by_mult=by[by_counter];by_counter++;} else by_mult=1.0;
-    if (s_type[j]==0) /* it's a cubic regression spline  */
-    { xx=x[offset];
-      i=0L;while((xx>t[j].V[i+1])&&(i<t[j].r-2)) i++; 
-      for (l=0;l<t[j].r;l++)
-      { tm.V[k]=D[j].M[i][l]*d0(t[j].V[i],t[j].V[i+1],xx)+
-	          D[j].M[i+1][l]*d1(t[j].V[i],t[j].V[i+1],xx);
-        if (l==i) tm.V[k]+=b0(t[j].V[i],t[j].V[i+1],xx);
-        if (l==(i+1)) tm.V[k]+=b1(t[j].V[i],t[j].V[i+1],xx);
-        tm.V[k]*=by_mult;
-        k++;
-      }
-      offset++;
-    }
-    else  /* it's a thin plate regression spline  */
-    { if (by_mult==0.0)         /* then don't waste flops on calculating stuff that will only be zeroed */
-      { for (i=0;i<UZ[j].c;i++) {tm.V[k]=0.0;k++;}
-      } else                    /* proceed as normal */
-      { b.r=UZ[j].r; /*  - don't forget null space dimension */
-        tps_g(Xu+j,&p,x+offset,dim[j],p_order[j],&b,1);
-        UZjM=UZ[j].M;bV=b.V;     
-        for (i=0;i<UZ[j].c;i++) 
-        { tmVk=tm.V+k;*tmVk=0.0; 
-          for (l=0;l<b.r;l++) *tmVk += bV[l]*UZjM[l][i]; /* forming b'UZ */
-          *tmVk *= by_mult;
-          k++;
-        }
-      }
-      offset+=dim[j];
-    }
-  } 
- 
-}
 
-void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,int *s_type,int *df,int *p_order,int *m,
-                int *n,double *xd,int *np,double *p, double *Vpd,double *etad,double *sed,double *X,int *control,
-                int *by_exists, double *by)
-
-/* Routine for prediction from GAMs made up of penalized cubic regression splines.
-   
-   xu[i]    is the number of unique combinations of covariates for the ith tprs term
-   Xud -    array containing matrices the rows of which give all the unique covariate 
-            combinations for each term. row i col j of the kth matrix is given by:
-            Xud[start[k]+i+j*xu[k]] 
-            where start[k+1]=start[k]+ xu[k]*dim[k], but start[0]=0
-            xu[k] is number of unique covariate combinations, dim[k] is number of 
-            covariates. 
-   UZd      Array Containing matrices UZ[k] such that \delta = UZ[k] \delta_k for 
-            smooth k.  i.e. UZ[k] is basis of truncated parameter space.
-            UZ[k].M[i][j] is row i, col j of kth basis. These matrices are actually
-            stored in UZd in a packed form as follows:
-            let start[k]=\sum_{k=0}^{k-1} UZ[k].c*UZ[k].r if k>0 and start[0]=0 
-            UZ[k].M[i][j]=UZd[start[k]+i+UZ[k].r*j]   
-    
-   xp[i][j] is the jth knot position for the ith smooth (xp[i] dimension must be set to 
-            max_i(df[i])... only applicable for s_type=0 terms)
-   nsdf     is the number of non spline terms including the constant.
-   dim[i]   is the dimension of the ith term
-   s_type[i] is the type of the ith term - cubic regression spline or tprs
-   p_order[i] is the order of the ith penalty
-   df[i]    is the number of parameters for the ith spline
-   m        is the number of splines
-   n        is the number of data that the model were originally fitted to - needed for unpacking 
-            UZ[i]'s
-   x[i][j]  is the ith observation of jth covariate, for which predictions are required - 
-            first nsdf are none spline terms
-   np       is the number of predictions required (number of obs. per cov.)
-   p[i]     is the ith parameter: 0 to nsdf-1 are the none spline terms
-                                  nsdf to nsdf+df[0]-1 is the first spline
-                                  nsdf+df[i-1] to nsdf+df[i]-1 is the ith spline 
-   Vp[i][j] is covariance of p[i] and p[j]
-   by_exists[i] is 1 if there is a by-variable to multiply the whole of smooth term i - 0 if not
-   by       in R terms by[i,j] is jth value for ith by-variable  
- 
-   eta is the o/p linear predictor
-   se is the o/p standard error on l.p.
-   X is the o/p matrix mapping the parameters to the l.p. vector
-   
-
-   control sets the type of output: 
-           0: l.p. no s.e.
-           1: l.p. with s.e.
-           2: predictor for each term, no s.e.
-           3: predictor for each term with s.e.
-           4: matrix mapping parameters to l.p.
-
-   note  that the dimensions of X, eta and se must be appropriate for the control option selected.
-*/
-           
-{ matrix tm,*xp,Vp,eta,se,*UZ,*Xu;
-  int i,j,k,nb,kk,l,nx,*M,nby; 
-  double **x,z,Vt;
-  char info[200];
-  /* perform bits of unpacking ...... */
-  nby=0;for (i=0;i< *m;i++) nby+=by_exists[i];
-  /* by[nby*j+i] is jth entry for ith by variable */
-  x=(double **)calloc((size_t) *np,sizeof(double *));
-  nx= *nsdf;for (i=0;i<*m;i++) nx+=dim[i]; /* the number of covariates (inc. none spline terms) */
-  for (i=0;i<*np;i++) 
-  { x[i]=(double *)calloc((size_t)nx,sizeof(double));
-    for (j=0;j<nx;j++) 
-    { x[i][j]=xd[j+nx*i]; /* loading data passed by R into x[][] */
-    } 
-  }
-  /* now unpack any UZ[i], Xu[i], terms */
-  if (*m>0)
-  { M=(int *)calloc((size_t) *m,sizeof(int));
-    for (i=0;i< *m;i++) M[i]=null_space_dimension(dim[i],p_order[i]);  
-    UZ=(matrix *)calloc((size_t) *m,sizeof(matrix));
-    Xu=(matrix *)calloc((size_t) *m,sizeof(matrix)); 
-    /* m1=0;for (i=0;i< *m;i++) m1+=s_type[i];*/ /* number of tprs terms */
-  } else { Xu=UZ=&Vp;M=&i;} /* just avoids spurious fussy compiler warnings */
-  kk=0; /* counter for tprs terms */
- 
-  for (k=0;k<*m;k++)
-  if (s_type[k]==1)
-  { UZ[k]=initmat((long)xu[kk]+M[k],(long)df[k]);
-    /*for (i=0;i<UZ[k].r;i++) for (j=0;j<UZ[k].c;j++)
-      UZ[k].M[i][j]=UZd[kk+i * m1+j * (*n+maxM) * m1];*/
-    Xu[k]=initmat((long)xu[kk],(long)dim[k]);
-    /*for (i=0;i<Xu[k].r;i++) for (j=0;j<Xu[k].c;j++)
-      Xu[k].M[i][j]= Xud[kk+i * m1+j * *n * m1];*/  
-    kk++; 
-  } else 
-  { Xu[k].r=Xu[k].c=UZ[k].r=UZ[k].c=0; /* needs to be set to allow correct unpacking */ 
-  }
-  RUnpackSarray(*m,Xu,Xud);
-  RUnpackSarray(*m,UZ,UZd);
-  nb =  *nsdf;  /* number of parameters */
-  for (i=0;i < *m;i++) nb += df[i];
-  Vp=Rmatrix(Vpd,(long)nb,(long)nb); /* param cov matrix */
- 
-  /* initialise a couple of storage matrices */
-  if (*control<2) k=1;else k=  *nsdf + *m;  /* don't allocate more than is needed */
-  eta=initmat((long)k,(long)*np); 
-  se=initmat((long)k,(long)*np);
-  /* need to unpack xpd into xp here ..... */
-  if (*m>0) xp=(matrix *)calloc((size_t) *m,sizeof(matrix));
-  else xp=&Vp; /* avoids spurious compiler warning */
-  for (k=0;k< *m;k++)
-  if (s_type[k]==0)
-  { xp[k]=initmat((long)df[k],1L);
-    for (i=0;i<df[k];i++) xp[k].V[i]=xpd[k+ *m *i];
-  }  
-  tm=initmat((long)nb,1L);
- 
-  for (k=0;k< *np;k++) /* loop through the predictions */
-  { gam_map(tm,xp,x[k],by+nby*k,UZ,Xu,s_type,dim,p_order,by_exists,*m,*nsdf,0);
-    if (*control==4) /* matrix X such that eta=Xp, is required */
-    { for (j=0;j<tm.r;j++) X[k + *np * j]=tm.V[j];
-    }
-    else if (*control<2) /* then linear predictor required */
-    { z=0.0;
-     for (i=0;i<tm.r;i++) 
-     { z+=tm.V[i]*p[i];eta.M[0][k]=z;
-       
-     }
-      if (*control==1) /* get s.e. */
-      { z=0.0;
-        for (i=0;i<tm.r;i++) 
-        { Vt=0.0; for (j=0;j<tm.r;j++) Vt+=Vp.M[i][j]*tm.V[j];
-          z+=tm.V[i]*Vt; 
-        }
-        se.M[0][k]=sqrt(z);
-      }
-    } else /* individual predictors wanted */
-      { /* parametric terms..... */
-      for (i=0;i< *nsdf;i++) 
-      { eta.M[i][k]=p[i]*x[k][i];
-      if (*control==3) se.M[i][k]=sqrt(x[k][i]*x[k][i]*Vp.M[i][i]); 
-      }
-      /* and now the splines ..... */
-      kk= *nsdf;
-      for (l=0;l< *m;l++)
-      { z=0.0;for (i=0;i<df[l];i++) { z+=tm.V[kk+i]*p[kk+i];}
-        eta.M[ *nsdf + l][k] = z;
-        if (*control==3)
-        { z=0.0;
-          for (i=0;i<df[l];i++) 
-          { Vt=0.0; 
-            for (j=0;j<df[l];j++) Vt+=Vp.M[kk+i][kk+j]*tm.V[kk+j];
-            z+=Vt*tm.V[kk+i];              
-          } 
-          if (z<0.0) {sprintf(info,"z = %g in RGAMpredict",z);
-          infobox(info);}     
-          se.M[ *nsdf + l][k]=sqrt(z);
-        }
-        kk+=df[l];
-      }
-    } 
-  } 
-  /* convert results for o/p */
- 
-  gam_map(tm,xp,x[0],by,UZ,Xu,s_type,dim,p_order,by_exists,*m,*nsdf,1);  /* free memory in gam_map() */
- 
-  freemat(tm);
-  if (*control!=4)
-  { RArrayFromMatrix(etad,eta.r,&eta);
-    if ((*control)%2) RArrayFromMatrix(sed,se.r,&se);
-  }
-  /* tidy up.... */
-  for (i=0;i< *np;i++) free(x[i]);free(x);  
-  if (*m>0)
-  { for (i=0;i< *m;i++) if (s_type[i]==1) { freemat(UZ[i]);freemat(Xu[i]);} 
-    free(UZ);free(Xu);free(M);
-  }
-  freemat(Vp);freemat(eta);freemat(se);
-
-  for (k=0;k< *m;k++) if (s_type[k]==0) freemat(xp[k]); if (*m>0) free(xp);
-#ifdef MEM_CHECK
-  dmalloc_log_unfreed();  dmalloc_verify(NULL);
-#endif 
-}    
 
 
 void RprintM(matrix *A)
@@ -1521,7 +1155,10 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
              effective degrees of freedom are calculated correctly. The problem arises with ill-conditioned 
              models when an inversion required for the term-wise effective degrees of freedom can 
              become unstable.
-17.23/10/02: Bug in TrA calculation when smootthing parameters supplied. X'X used in place of X'WX - fixed.
+17.23/10/02: Bug in TrA calculation when smoothing parameters supplied. X'X used in place of X'WX - fixed.
 
+18. 24/1/04: RGAMpredict, RGAMsetup, GAMsetup and gam_map deleted, to make way for a more object oriented
+             and modular approach to model setup and prediction, based on "smooth objects". Constructor and 
+             prediction code added instead.
 */
 

@@ -28,8 +28,8 @@ residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working"
   residuals are the residuals returned from model fitting at convergence.
 
   There is  a special function for \code{gam} objects because of a bug
-  in the calculation of Pearson residuals in some versions of
-  residual.glm().
+  in the calculation of Pearson residuals in some earlier versions of
+  \code{residual.glm}.
  
 }
 \value{ An array of residuals.
@@ -40,7 +40,7 @@ residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working"
 
 
 
-\seealso{   \code{\link{gam}} \code{\link{mgcv}}}
+\seealso{   \code{\link{gam}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

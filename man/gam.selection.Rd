@@ -15,7 +15,7 @@ relative smoothness of terms, with Newton/Steepest descent updates of the relati
 of terms, given the overall amount of smoothness. 
 
 Automatic smoothness selection is unlikely to be successful with few data, particularly with
-multiple terms to be selected. The methods can also fail to find the real minimum of the GCV/UBRE
+multiple terms to be selected. The \code{\link{mgcv}} method can also fail to find the real minimum of the GCV/UBRE
 score if the model contains many smooth terms that should really be completely smooth, or close to it (e.g. a straight line 
 for a default 1-d smooth). The problem is that in this circumstance the optimal overall smoothness given the relative
 smoothness of terms may make all terms completely smooth - but this will tend to move the smoothing parameters 

@@ -4,8 +4,8 @@
 \title{Exclude prediction grid points too far from data}
 \description{ Takes two arrays defining the nodes of a grid over a 2D covariate space and two arrays 
 defining the location of data in that space, and returns a logical vector with elements \code{TRUE} if 
-corresponding node is too far from data and \code{FALSE} otherwise. Basically a service routine for 
-\code{vis.gam}.
+the corresponding node is too far from data and \code{FALSE} otherwise. Basically a service routine for 
+\code{vis.gam} and \code{plot.gam}.
 }
 \usage{
 exclude.too.far(g1,g2,d1,d2,dist)
@@ -16,7 +16,7 @@ exclude.too.far(g1,g2,d1,d2,dist)
 \item{g2}{co-ordinates of grid relative to second axis.}
 \item{d1}{co-ordinates of data relative to first axis.}
 \item{d2}{co-ordinates of data relative to second axis.}
-\item{dist}{how far away counts as two far. Grid and data are first scaled so that the grid lies exactly 
+\item{dist}{how far away counts as too far. Grid and data are first scaled so that the grid lies exactly 
 in the unit square, and \code{dist} is a distance within this unit square.} 
 }
 \details{ Linear scalings of the axes are first determined so that the grid defined by the nodes in 
@@ -24,13 +24,11 @@ in the unit square, and \code{dist} is a distance within this unit square.}
 applied to \code{g1}, \code{g2}, \code{d1} and \code{d2}. The minimum Euclidean 
 distance from each node to a datum is then determined and if it is greater than \code{dist} the 
 corresponding entry in the returned array is set to \code{TRUE} (otherwise to \code{FALSE}). The 
-calculations are performed by looping through the nodes (although they are vectorized with respect to the 
-data): unless there are very few data this is not overly ineffeicient, and avoids using excessive amounts of 
-memory. 
+distance calculations are performed in compiled code for speed without storage overheads.
 }
 
-\value{An logical array with \code{TRUE} indicating a node in the grid defined by \code{g1}, \code{g2} that 
-is too far from any datum to be included. 
+\value{A logical array with \code{TRUE} indicating a node in the grid defined by \code{g1}, \code{g2} that 
+is `too far' from any datum. 
 }
 
 \references{
@@ -38,16 +36,13 @@ is too far from any datum to be included.
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
-\section{WARNING }{ Routine is vectorized w.r.t. the data and not the grid: it will be very inefficient if 
-\code{d1} and \code{d2} are very short while \code{g1} and \code{g2} are very long.
-} 
 
 \seealso{ \code{\link{vis.gam}} }
 
 \examples{
 library(mgcv)
 x<-rnorm(100);y<-rnorm(100) # some "data"
-n<-20 # generate a grid....
+n<-40 # generate a grid....
 mx<-seq(min(x),max(x),length=n)
 my<-seq(min(y),max(y),length=n)
 gx<-rep(mx,n);gy<-rep(my,rep(n,n))

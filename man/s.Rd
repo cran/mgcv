@@ -21,11 +21,13 @@
   it is.}
   \item{fx}{indicates whether the term is a fixed d.f. regression
   spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
-  \item{bs}{this can be \code{"cr"} for a cubic regression spline or
-    \code{"tp"} for a thin plate regression spline. Only thin plate
+  \item{bs}{this can be \code{"cr"} for a cubic regression spline, \code{"cc"} for
+    a cyclic (periodic) spline,
+    \code{"tp"} for a thin plate regression spline, or a user defined 
+    charecter string for other user defined smooth classes. Of the built in alternatives, only thin plate
     regression splines can be used for multidimensional smooths, so this
     argument only has an effect for univariate smooths. Note that the
-    \code{"cr"} basis is faster than the \code{"tp"} basis, particularly
+    \code{"cr"} and \code{"cc"} bases are faster to set up than the \code{"tp"} basis, particularly
   on large data sets.}
   \item{m}{The order of the penalty for this t.p.r.s. term (e.g. 2 for
     normal cubic spline penalty with 2nd derivatives). O signals
@@ -40,21 +42,19 @@
   factor. See the examples below.}
   }
 }
-\details{The function does not evaluate the variable arguments. It will
-  correctly interpret calls like \code{s(x,14|f)} (results in pure
-  regression spline smooth of one variable with a 14 knot cubic
-  regression spline basis), \code{s(x,z,20)} (a penalized regression
-  spline of 2 covariates using a 20 dimensional t.p.r.s. basis),
-  etc. but this feature is purely for back compatibility reasons, and
-  may not be maintained indefinitely. 
-
+\details{The function does not evaluate the variable arguments. To use this function to specify use of
+your own smooths, note the relationships between the inputs and the output object and see the example
+in \code{\link{smooth.construct}}.
 }
-\value{ A list with the following items:
+\value{ A class \code{xx.smooth.spec} object, where \code{xx} is a basis identifying code given by
+the \code{bs} argument of \code{s}. These \code{smooth.spec} objects define smooths and are turned into
+bases and penalties by \code{smooth.construct} method functions. 
+
+The returned object contains the following items:
+
   \item{term}{An array of text strings giving the names of the covariates that 
 the term is a function of.}
   \item{bs.dim}{The dimension of the basis used to represent the smooth.}
-  \item{bs.type}{The type of basis. 0 is cubic regression spline. 1 is
-    thin plate regression spline. 0 can only be used for 1-d smooths.}
   \item{fixed}{TRUE if the term is to be treated as a pure regression
     spline (with fixed degrees of freedom); FALSE if it is to be treated
   as a penalized regression spline}
@@ -62,14 +62,15 @@ the term is a function of.}
     covariates that it is a function of.}
   \item{p.order}{The order of the t.p.r.s. penalty, or 0 for
     auto-selection of the penalty order.}
-  \item{by}{is the name of any \code{by} variable as text ("NA" for none).}
+  \item{by}{is the name of any \code{by} variable as text (\code{"NA"} for none).}
   \item{full.call}{Text for pasting into a string to be converted to a
     gam formula, which has the values of function options given explicitly -
   this is useful for constructing a fully expanded gam formula which can
 be used without needing access to any variables that may have been used
-to define k, fx, bs or m in the original call. i.e. this is text which
+to define \code{k}, \code{fx}, \code{bs} or \code{m} in the original call. i.e. this is text which
 when parsed and evaluated generates a call to \code{s()} with all the
 options spelled out explicitly.}
+\item{label}{A suitable text label for this smooth term.}
 }
 
 
@@ -83,7 +84,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 }
 
-\seealso{   \code{\link{gam}}}
+\seealso{ \code{\link{te}}, \code{\link{gam}}, \code{\link{gamm}}}
 
 \examples{
 # example utilising `by' variables
@@ -95,7 +96,7 @@ fac<-c(rep(1,n/2),rep(2,n/2)) # create factor
 fac.1<-rep(0,n)+(fac==1);fac.2<-1-fac.1 # and dummy variables
 fac<-as.factor(fac)
 f1 <-  exp(2 * x1) - 3.75887
-f2 <-  0.2 * x1^11 * (10 * (1 - x1))^6 + 10 * (10 * x1)^3 * (1 - x1)^10 - 1.396
+f2 <-  0.2 * x1^11 * (10 * (1 - x1))^6 + 10 * (10 * x1)^3 * (1 - x1)^10
 f<-f1*fac.1+f2*fac.2+x2
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e

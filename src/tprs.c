@@ -1,4 +1,4 @@
-/* Copyright (C) 2000-2002 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 2000-2004 Simon N. Wood  simon@stats.gla.ac.uk
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
