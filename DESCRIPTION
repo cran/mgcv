@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.0-8
+Version: 1.0-9
 Author: Simon Wood <simon@stats.gla.ac.uk>
 Maintainer: Simon Wood <simon@stats.gla.ac.uk>
 Title: Multiple smoothing parameter estimation and GAMs by GCV
@@ -9,4 +9,4 @@ Description: Routines for GAMs and other generalized ridge regression
 Priority: recommended
 Depends: R (>= 1.9.0), nlme (>= 3.1-40), MASS (>= 7.1-11)
 License: GPL version 2 or later
-Packaged: Wed May 26 11:17:05 2004; simon
+Packaged: Thu Jun 17 15:28:57 2004; simon

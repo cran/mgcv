@@ -376,7 +376,9 @@ the \code{\link{smooth.construct}} objects.}
 
 \item{sp}{smoothing parameter for each smooth.}
 
-\item{Vp}{estimated covariance matrix for parameter estimators.}
+\item{Vp}{estimated covariance matrix for the parameters. This is a Bayesian
+posterior covariance matrix that results from adopting a particular Bayesian
+model of the smoothing process.}
 
 \item{weights}{final weights used in IRLS iteration.}
 

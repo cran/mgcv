@@ -55,6 +55,10 @@ then all variables must be supplied.
 
 }
 
+\details{The standard errors produced by \code{predict.gam} are based on the
+Bayesian posterior covariance matrix of the parameters \code{Vp} in the fitted
+gam object. }
+
 \references{
 
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via

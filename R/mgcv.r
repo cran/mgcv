@@ -3329,12 +3329,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.0-8 \n")
+.onAttach <- function(...) cat("This is mgcv 1.0-9 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.0-8 \n")
+    cat("This is mgcv 1.0-9 \n")
 }
 
 
