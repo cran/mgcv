@@ -258,6 +258,7 @@ give the \code{by} variable names.}
   \code{TRUE} if the ith smooth has a \code{by} variable associated with
 it, \code{FALSE} otherwise.}
 
+\item{call}{the matched call (allows \code{update} to be used with \code{gam} objects, for example). }
 
 \item{coefficients}{the coefficients of the fitted model. Parametric
           coefficients are  first, followed  by coefficients for each
