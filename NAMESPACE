@@ -31,7 +31,7 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        uniquecombs, vis.gam)
 
 importFrom(graphics, plot)
-importFrom(stats, predict, residuals)
+importFrom(stats, predict, residuals, influence)
 
 
 S3method(influence, gam)

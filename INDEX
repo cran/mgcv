@@ -1,3 +1,4 @@
+Predict.matrix          Prediction methods for smooth terms in a GAM
 anova.gam               Hypothesis tests related to GAM fits
 exclude.too.far         Exclude prediction grid points too far from
                         data
@@ -12,14 +13,14 @@ gam.control             Setting GAM fitting defaults
 gam.convergence         GAM convergence issues.
 gam.fit                 Generalized Additive Models fitting using
                         penalized regression splines and GCV
-gamm                    Generalized Additive Mixed Models
 gam.models              Specifying generalized Additive Models.
-gamm.setup              Generalized Additive Mixed Model set up.
 gam.neg.bin             GAMs with the negative binomial distribution
-gamObject               Fitted gam object
 gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
 gam.side.conditions     Identifiability side conditions for a GAM.
+gamObject               Fitted gam object
+gamm                    Generalized Additive Mixed Models
+gamm.setup              Generalized Additive Mixed Model set up.
 get.var                 Get named variable or evaluate expression from
                         list or data.frame
 influence.gam           Extract the diagonal of the Influence/Hat
@@ -50,7 +51,6 @@ place.knots             Automatically place a set of knots evenly
                         through covariate values
 plot.gam                Default GAM plotting
 predict.gam             Prediction from fitted GAM model
-Predict.matrix          Prediction methods for smooth terms in a GAM
 print.gam               Generalized Additive Model default print
                         statement
 residuals.gam           Generalized Additive Model residuals
