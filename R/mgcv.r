@@ -897,6 +897,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.
 
 {  # create model frame.....
   gp<-gam.parser(formula) # interpret the formula 
+  cl<-match.call() # call needed in gam object for update to work
   mf<-match.call(expand.dots=FALSE)
   ff<-paste(gp$v.names[1],gp$pftext) # fake formula to collect necessary data
   n<-length(gp$v.names) # pick up arguments of smooths
@@ -980,6 +981,7 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.
   object$p.order<-G$p.order
   object$dim<-G$dim
   object$min.edf<-G$min.edf
+  object$call<-cl # needed for update() to work
   class(object)<-"gam"
   object
 }
@@ -2239,7 +2241,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.9-2 \n")
+    cat("This is mgcv 0.9-3 \n")
 }
 
 
