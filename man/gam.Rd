@@ -173,9 +173,10 @@ can be used, with or without known \eqn{\theta}{theta} parameter: see
 \code{\link{gam.neg.bin}} for details.
 } 
 
-\item{data}{ A data frame containing the model response variable and covariates required by the
-formula. If this is missing then the frame from which \code{gam} was called is
-searched for the variables specified in the formula.} 
+\item{data}{ A data frame containing the model response variable and 
+covariates required by the formula.  By default the variables are taken 
+from \code{environment(formula)}, typically the environment from 
+which \code{gam} is called.} 
 
 \item{weights}{ prior weights on the data.}
 
@@ -223,7 +224,9 @@ formula. With fit method \code{"magic"} (see \code{\link{gam.control}}
 and \code{\link{magic}}) then negative elements indicate that the 
 parameter should be estimated, and hence a mixture of fixed and estimated 
 parameters is possible. With fit method \code{"mgcv"}, if \code{sp} is 
-supplied then all its elements must be positive.  }
+supplied then all its elements must be positive. Note that \code{fx=TRUE} 
+in a smooth term over-rides what is supplied here exectively setting the 
+smoothing parameter to zero.}
 
 \item{min.sp}{for fit method \code{"magic"} only, lower bounds can be 
 supplied for the smoothing parameters. Note that if this option is used then
@@ -231,7 +234,8 @@ the smoothing parameters, \code{sp}, in the returned object will need to be adde
 what is supplied here to get the actual smoothing parameters. Lower bounds on the smoothing 
 parameters can sometimes help stabilize otherwise divergent P-IRLS iterations.}
 
-\item{H}{a user supplied fixed quadratic penalty on the parameters of the 
+\item{H}{With fit method \code{"magic"} a user supplied fixed quadratic 
+penalty on the parameters of the 
 GAM can be supplied, with this as its coefficient matrix. A common use of this term is 
 to add a ridge penalty to the parameters of the GAM in circumstances in which the model
 is close to un-identifiable on the scale of the linear predictor, but perfectly well
