@@ -20,7 +20,7 @@ print an appropriate description of the model.
 \value{ A model formula.}
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \seealso{  \code{\link{gam}}}

@@ -100,7 +100,7 @@ University of Glasgow.
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \section{WARNING }{ The supplied p-values are only approximate and should be
 treated with scepticism, particularly for the smooth terms.

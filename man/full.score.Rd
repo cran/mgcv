@@ -2,19 +2,14 @@
 \alias{full.score}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GCV/UBRE score for use within nlm}
-\description{ \code{gam} allows the option to `polish' smoothing parameter 
-estimates by minimising the GCV/UBRE score calculated at convergence of the IRLS 
-algorithm, given a set of smoothing parameters, rather than using the `performance 
-iteration' method which estimates smoothing parameters within the IRLS loop. The 
-estimates are often slightly different, since the performance iteration effectively 
-neglects the dependence of the iterative weights on the smoothing parameters.
-
-The `polishing' optimisation is fairly crude and numerically costly. 
-\code{\link{nlm}} is used to minimise the scores with respect to the smoothing 
-parameters, and this routine is designed to be supplied to it as an argument. 
+\description{ Evaluates GCV/UBRE score for a GAM, given smoothing
+parameters. The routine calls \code{\link{gam.fit}} to fit the model, and is
+usually called by \code{\link{nlm}} to optimize the smoothing parameters. 
 
 This is basically a service routine for \code{\link{gam}}, and is not usually 
-called directly by users.
+called directly by users. It is only used in this context for GAMs fitted by
+outer iteration (see \code{\link{gam.outer}}) when the the outer method is 
+\code{"nlm.fd"} (see \code{\link{gam.method}}).
 }
 \usage{
 full.score(sp,G,family,control,gamma)
@@ -35,7 +30,7 @@ full.score(sp,G,family,control,gamma)
 which is the full object returned by \code{\link{gam.fit}}.
 }
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

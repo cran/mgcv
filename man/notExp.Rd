@@ -33,7 +33,7 @@ notLog(x)
 \value{ An array of function values evaluated at the supplied argument values.}
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \references{
 

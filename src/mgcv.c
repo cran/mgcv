@@ -1,7 +1,7 @@
 /* Source code for mgcv.dll/.so multiple smoothing parameter estimation code,
 suitable for interfacing to R 
 
-Copyright (C) 2000-2004 Simon N. Wood  simon@stats.gla.ac.uk
+Copyright (C) 2000-2005 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -319,7 +319,7 @@ void tmap(matrix tm,matrix t,double time,int kill)
 
 { static matrix D;static char first=1;
   matrix h;
-  double **DM,*dum,*tmV,*DMi,*DMi1,tVi,tVi1,d0v,d1v,x,xx0,xx1,xx02,xx12,h1,h2,h3,b0v,b1v,x0,x1;
+  double **DM,*dum,*tmV,*DMi,*DMi1,d0v,d1v,x,xx0,xx1,xx02,xx12,h1,h2,h3,b0v,b1v,x0,x1;
   long i,k,tr;
   if (first)
   { first=0;h=initmat(t.r-1,1L);
@@ -612,13 +612,14 @@ void construct_cr(double *x,int *nx,double *k,int *nk,double *X,double *S,double
 } 
 
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
-                    double *UZ,double *Xu,int *nXu,double *C)
+                    double *UZ,double *Xu,int *nXu,double *C,int *max_knots)
 /* inputs: 
    x contains the n values of each of the d covariates, stored end to end
    knt contains the nk knot locations packed as x
    m is the order of the penalty 
    k is the basis dimension
-   
+   max_knots is the maximum number of knots to allow in t.p.r.s. setup.   
+
    outputs:
    X is the n by k model matrix
    S is the K by K penalty matrix
@@ -636,7 +637,7 @@ void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,do
   { kk=(double **)calloc((size_t)(*d),sizeof(double*));
     for (i=0;i<*d;i++) kk[i]=knt + i * *nk;
   }
-  tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk); /* Do actual setup */
+  tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk,*max_knots); /* Do actual setup */
   RArrayFromMatrix(X,Xm.r,&Xm);
   RArrayFromMatrix(S,Sm.r,&Sm);
   RArrayFromMatrix(UZ,UZm.r,&UZm);  
@@ -864,12 +865,12 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
 	{ ok++;inv_tol*=2; /* change svd truncation tolerance and repeat */
         } else 
 	{ if (ok>1)
-          ErrorMessage("Numerical difficulties obtaining tr(A) - apparently resolved. Apply some caution to results.",0); 
+          ErrorMessage(_("Numerical difficulties obtaining tr(A) - apparently resolved. Apply some caution to results."),0); 
           ok=0;
         }
         if (ok>15)
-	{ if (trA>n||trA<0) ErrorMessage("tr(A) utter garbage and situation un-resolvable.",1);
-	  else ErrorMessage("Numerical difficulties calculating tr(A). Not completely resolved. Use results with care!",0);
+	{ if (trA>n||trA<0) ErrorMessage(_("tr(A) utter garbage and situation un-resolvable."),1);
+	  else ErrorMessage(_("Numerical difficulties calculating tr(A). Not completely resolved. Use results with care!"),0);
 	  ok=0;
         } 
       }
@@ -954,7 +955,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       } else ok=0;
       
       if (ok>15) /* failed */
-      { ErrorMessage("Termwise estimate degrees of freedom are unreliable",0);
+      { ErrorMessage(_("Termwise estimate degrees of freedom are unreliable"),0);
         ok=0;
       } 
       /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */

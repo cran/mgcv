@@ -1,7 +1,7 @@
 Package: mgcv
-Version: 1.1-8
-Author: Simon Wood <simon@stats.gla.ac.uk>
-Maintainer: Simon Wood <simon@stats.gla.ac.uk>
+Version: 1.2-0
+Author: Simon Wood <simon.wood@r-project.org>
+Maintainer: Simon Wood <simon.wood@r-project.org>
 Title: GAMs with GCV smoothness estimation and GAMMs by REML/PQL
 Description: Routines for GAMs and other generalized ridge regression  
              with multiple smoothing parameter selection by GCV or UBRE.
@@ -12,4 +12,4 @@ Imports: graphics, stats
 Suggests: nlme (>= 3.1-52), MASS (>= 7.2-2)
 LazyLoad: yes
 License: GPL version 2 or later
-Packaged: Fri Nov 12 11:58:50 2004; simon
+Packaged: Wed Mar  9 15:58:12 2005; simon

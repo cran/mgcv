@@ -83,7 +83,7 @@ Journal on Scientific Computing 15(5):1126-1133
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}} 
+\author{ Simon N. Wood \email{simon.wood@r-project.org}} 
 
 \seealso{  \code{\link{mgcv}} \code{\link{mono.con}}  }
 

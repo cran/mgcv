@@ -49,8 +49,8 @@ means that many of these are less than 1.}
 
 \item{family}{family object specifying distribution and link used.}
 
-\item{fit.method}{ The underlying multiple GCV/UBRE method used: \code{"magic"} 
-for the new more stable method, \code{"mgcv"} for the Wood (2000) method.}
+\item{fit.method}{ Character string describing the multiple GCV/UBRE smoothing
+parameter estimation method used.}
 
 \item{fitted.values}{fitted model predictions of expected value for each
           datum.}
@@ -69,14 +69,16 @@ Same length as response data vector.}
 
 \item{iter}{number of iterations of P-IRLS taken to get convergence.}
 
-\item{linear.predictor}{fitted model prediction of link function of
+\item{linear.predictors}{fitted model prediction of link function of
 expected value for  each datum.}
 
-\item{method}{Either \code{"GCV"} or \code{"UBRE"}, depending on smoothing parameter selection method used 
-(or appropriate, if none used).}
+\item{method}{One of \code{"GCV"} or \code{"UBRE"}, depending on the fitting
+criterion used.}
 
-\item{mgcv.conv}{ A list of convergence diagnostics relating to smoothing
-parameter estimation. Differs for method \code{"magic"} and \code{"mgcv"}. Here is 
+\item{mgcv.conv}{ A list of convergence diagnostics relating to the
+\code{"mgcv"} or \code{"magic"} parts of smoothing
+parameter estimation - this will not be very meaningful for pure \code{"outer"}
+estimation of smoothing parameters. \code{mgcv.conv} differs for method \code{"magic"} and \code{"mgcv"}. Here is 
 the \code{"mgcv"} version:
 
 \item{score}{corresponding to edf, an array of GCV or UBRE scores for the model given the final 
@@ -129,6 +131,10 @@ convergence.}
 
 \item{offset}{model offset.}
 
+\item{outer.info}{If `outer' iteration has been used to fit the model (see
+\code{\link{gam.method}}) then this is present and contains whatever was
+returned by the optimization routine used (currently \code{\link{nlm}} or \code{\link{optim}}). }
+
 \item{prior.weights}{prior weights on observations.} 
 
 \item{pterms}{\code{terms} object for strictly parametric part of model.}
@@ -152,7 +158,6 @@ posterior covariance matrix that results from adopting a particular Bayesian
 model of the smoothing process.}
 
 \item{weights}{final weights used in IRLS iteration.}
-
 
 \item{y}{response data.}
 
@@ -188,7 +193,7 @@ Hastie and Tibshirani (1990) Generalized Additive Models. Chapman and Hall.
 Wahba (1990) Spline Models of Observational Data. SIAM 
 
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \section{WARNINGS }{ This model object is different to that described in
 Chambers and Hastie (1993) in order to allow smoothing parameter estimation etc.

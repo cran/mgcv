@@ -35,7 +35,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \seealso{   \code{\link{mgcv}} }

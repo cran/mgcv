@@ -1,7 +1,7 @@
 \name{gam.models}
 \alias{gam.models}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Specifying generalized Additive Models.}
+\title{Specifying Generalized Additive Models.}
 \description{ This page is intended to provide some more information on
   how to specify GAMs. Assume that in general we are interested in
   modelling some response variable \eqn{y_i}{y} with an exponential
@@ -108,11 +108,12 @@ penalty for each covariate of the term. See \code{\link{te}} for examples.
 %- maybe also `usage' for other objects documented here.
 \section{WARNING}{
 There are no identifiability checks made between the smooth and
-parametric parts of a gam formula, although fit method \code{\link{magic}}
-can handle such problems numerically.
+parametric parts of a gam formula, and any such lack of identifiability will
+cause problems if the underlying fitting routine is \code{\link{mgcv}} (not
+the default). 
 }
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
 set.seed(10)

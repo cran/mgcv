@@ -12,14 +12,17 @@ gam.check(b)
 \arguments{ 
 \item{b}{ a fitted \code{gam} object as produced by \code{gam()}.}
 }
-\details{ This function plots 4 standard diagnostic plots, and some other convergence diagnostics. Output differs depending on whether the 
-underlying fitting method was \code{"mgcv"} or \code{"magic"} (see \code{\link{gam.control}}).
+\details{ This function plots 4 standard diagnostic plots, and some other
+convergence diagnostics. Output differs depending on whether the underlying
+fitting method was \code{\link{mgcv}} or another method (see \code{\link{gam.method}}).
 
-For fit method \code{"mgcv"}, the first plot shows the GCV or UBRE score against model 
-degrees of freedom, given the final estimates of the relative smoothing parameters for the model. This is a slice through the 
+For \code{\link{mgcv}} based fits , the first plot shows the GCV or UBRE score against model 
+degrees of freedom, given the final estimates of the relative smoothing
+parameters for the model. This is a slice through the 
 GCV/UBRE score function that passes through the minimum found during fitting. Although not conclusive (except in the single 
-smoothing parameter case), a lack of multiple local minima on this plot is suggestive of a lack of multiple local minima in the 
-GCV/UBRE function and is therefore a good thing. Multiple local minima on this plot indicates that the GCV/UBRE function 
+smoothing parameter case), a lack of multiple local minima on this plot is
+suggestive of a lack of multiple local minima 
+in the GCV/UBRE function and is therefore a good thing. Multiple local minima on this plot indicates that the GCV/UBRE function 
 may have multiple local minima, but in a multiple smoothing parameter case this is not conclusive - multiple local minima on one slice 
 through a function do not necessarily imply that the function has multiple local minima. A `good' plot here is a smooth curve with 
 only one local minimum (which is therefore its global minimum).
@@ -42,7 +45,7 @@ estimation of the effective degrees of freedom: this usually reflects problems w
 In this circumstance reported estimated degrees of freedom can not be trusted, although the fitted model and term estimates are likely to be quite 
 acceptable. 
 
-If the fit method is \code{"magic"} then there is no global search and the problems with phantom local minima are much reduced. The first plot in this case will simply be a normal QQ plot of the standardized residuals.
+If the fit method is based on \code{\link{magic}} or \code{\link{gam.fit2}} then there is no global search and the problems with phantom local minima are much reduced. The first plot in this case will simply be a normal QQ plot of the standardized residuals.
 
 The other 3 plots are two residual plots and plot of fitted values against original data.
 
@@ -50,13 +53,14 @@ The function also prints out information about the convergence of the GCV minimi
 many iterations  were required to minimise the GCV/UBRE score. A message is printed if the minimization terminated by 
 failing to improve the score with a steepest descent step: otherwise minimization terminated by meeting convergence criteria.
 The mean absolute gradient or RMS gradient of the GCV/UBRE function at the minimum is given. An indication of whether or not the Hessian of the GCV/UBRE function is positive definite is given. If some smoothing parameters 
-are not well defined (effectively zero, or infinite) then it may not be, although this is not usually a problem. If the fit method is 
-\code{"mgcv"}, a message is printed 
+are not well defined (effectively zero, or infinite) then it may not be, although this is not usually a problem. If the fit method is \code{\link{mgcv}}, a message is printed 
 if the second guess smoothing parameters did not improve on the first guess - this is primarily there for the developer. 
-For fit method \code{"magic"} the estimated rank of the model is printed.
+For other fit methods the estimated rank of the model is printed.
 
 
-The ideal results from this function have a smooth, single minima GCV/UBRE plot, good residual plots, and convergence to small 
+The ideal results from this function have a smooth, single minima GCV/UBRE
+plot (where appropriate), 
+good residual plots, and convergence to small 
 gradients with a positive definite Hessian. However, failure to meet some of these criteria 
 is often  acceptable,  and the information provided is primarily of use in diagnosing suspected problems. 
 High gradients at convergence  are a clear indication of problems, however.
@@ -75,7 +79,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \url{http://www.stats.gla.ac.uk/~simon/}
 
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \seealso{  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}

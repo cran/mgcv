@@ -1,4 +1,4 @@
-/* Copyright (C) 2000-2004 Simon N. Wood  simon@stats.gla.ac.uk
+/* Copyright (C) 2000-2005 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -41,7 +41,7 @@ double eta(int m,int d,double r)
     pi=asin(1.0)*2.0; 
     Ghalf=sqrt(pi);   /* Gamma function of 0.5 */
   }
-  if (2*m<=d) ErrorMessage("You must have 2m>d for a thin plate spline.",1);
+  if (2*m<=d) ErrorMessage(_("You must have 2m>d for a thin plate spline."),1);
   if (r<=0.0) return(0.0); /* this is safe: even if eta() gets inlined so that r comes in in an fp register! */
   if (d%2==0) /* then d even */
   { if ((m+1+d/2)%2) f= -1.0; else f=1.0; /* finding (-1)^{m+1+d/2} */
@@ -95,7 +95,7 @@ void gen_tps_poly_powers(int **pi,int M,int m, int d)
 */
 
 { int *index,i,j,sum;
-  if (2*m<=d) ErrorMessage("You must have 2m > d",1);
+  if (2*m<=d) ErrorMessage(_("You must have 2m > d"),1);
   index=(int *)calloc((size_t)d,sizeof(int));
   for (i=0;i<M;i++)
   { /* copy index to pi */
@@ -286,7 +286,7 @@ int *Xd_strip(matrix *Xd)
 }
 
 void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,matrix *X,matrix *S,
-                matrix *UZ,matrix *Xu,int n_knots)
+                matrix *UZ,matrix *Xu,int n_knots,int max_knots)
 
 /* Takes d covariates x_1,..,x_d and creates the truncated basis for an order m 
    smoothing spline, returning the design matrix and wiggliness penalty matrix 
@@ -352,7 +352,10 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
  
   
   Xu->c--; /* hide indexing column */
-  if (Xu->r<k) ErrorMessage("A term has fewer unique covariate combinations than specified maximum degrees of freedom",1);
+  if (Xu->r<k) 
+  ErrorMessage(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"),1);
+  if (Xu->r>max_knots)
+  ErrorMessage(_("Too many knots for t.p.r.s term: see `gam.control' to increase limit, or use a different basis, or see large data set help for `gam'."),1);
   if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
   tpsE(&E,Xu,m,d); /* The important matrix in the full t.p.s. problem */
   tpsT(&T,Xu,m,d); /* The tps constraint matrix */
@@ -360,7 +363,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   /*ek=k-(d+1);*/  /* erroneous code - when I thought that -ve's must not be deleted */
   if (k<M+1)  /* re-set basis dimension if it is impossibly small */
   {  k=M+1;
-     if (Xu->r<k) ErrorMessage("A term has fewer unique covariate combinations than specified maximum degrees of freedom",1);
+     if (Xu->r<k) ErrorMessage(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"),1);
   }
   if (Xu->r==k) pure_knot=1; /* basis dimension is number of knots - don't need eigen step */
 

@@ -29,7 +29,7 @@ parameters, and the model maximizes the penalized likelihood, not the actual lik
 }
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk} based directly on \code{logLik.glm}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} based directly on \code{logLik.glm}}
 
 \section{WARNING }{ Note that the likelihood is evaluated at the maximum of
 the penalized likelihood for most GAMs, rather than at the MLE.

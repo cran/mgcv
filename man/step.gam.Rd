@@ -18,7 +18,7 @@ approach, where selection is a fully integrated part of model estimation.
 
 }
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 

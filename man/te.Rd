@@ -8,7 +8,7 @@
   based smooths.
 }
 
-\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE)
+\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -49,6 +49,12 @@ set \code{d=c(2,1)}.}
 \item{mp}{\code{TRUE} to use multiple penalties for the smooth. \code{FALSE} to use only 
 a single penalty: single penalties are not recommended - they tend to allow only rather 
 wiggly models.}
+
+\item{np}{ \code{TRUE} to use the `natural parameterization' for a tensor
+product smooth. This parameterization represents any 1-d marginal smooths
+using a parameterization where the parameters are function values at `knots'
+spread evenly through the data. The parameterization make the penalties
+easily interpretable.}
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases
@@ -70,7 +76,15 @@ nested within GAMs constructed from higher rank tensor product smooths if the
 same marginal bases are used in both cases (the marginal smooths themselves
 are just special cases of tensor product smooths.)
 
+The `natural parameterization' (\code{np=TRUE}) re-parameterizes the marginal
+smooths of a tensor product smooth so that the parameters are function values
+at a set of points spread evenly through the range of values of the covariate
+of the smooth. This means that the penalty of the tensor product associated
+with any particular covariate direction can be interpreted as the penalty of
+the appropriate marginal smooth applied in that direction and averaged over the smooth.
+
 The function does not evaluate the variable arguments.
+
 }
 \value{ A class \code{tensor.smooth.spec} object defining a tensor product smooth
  to be turned into a basis and penalties by the \code{smooth.construct.tensor.smooth.spec} function. 
@@ -102,7 +116,7 @@ options spelled out explicitly.}
 }
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 \references{
 
 Wood, S.N. (2004) Low rank scale invariant tensor product smooths for

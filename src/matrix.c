@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2003 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 1991-2005 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -82,7 +82,7 @@ matrix initmat(rows,cols) long rows,cols;
   memused+=A.mem;matrallocd++;
   A.original_r=A.r=rows;A.original_c=A.c=cols;
   if (((!A.M)||(!A.M[rows-1+2*pad]))&&(rows*cols>0L))
-  { ErrorMessage("Failed to initialize memory for matrix.",1);}
+  { ErrorMessage(_("Failed to initialize memory for matrix."),1);}
   if (pad)  /* This lot is debugging code that checks out matrix errors
 		       on allocation and release */
   { if (A.vec)
@@ -144,13 +144,13 @@ void freemat(A) matrix A;
 	     }
       }
       if (!ok)
-      { ErrorMessage("An out of bound write to matrix has occurred!",1);
+      { ErrorMessage(_("An out of bound write to matrix has occurred!"),1);
       }
       /* find the matrix being deleted in the linked list of extant matrices */
       i=0L;delet=bottom;
       while ((i<matrallocd)&&(delet->mat.M!=A.M)) { i++;delet=delet->fp;}
       if (i==matrallocd)
-      { ErrorMessage("INTEGRITY PROBLEM in the extant matrix list.",1);
+      { ErrorMessage(_("INTEGRITY PROBLEM in the extant matrix list."),1);
       } else
       { if (i)
 	     delet->bp->fp=delet->fp;
@@ -183,7 +183,7 @@ void matrixintegritycheck()
   long pad=PAD,i,j,k=0L;
   matrix A;
 #ifndef RANGECHECK
-  ErrorMessage("You are trying to check matrix integrity without defining RANGECHECK.");
+  ErrorMessage(_("You are trying to check matrix integrity without defining RANGECHECK."));
 #endif
   B=bottom;
   while (k<matrallocd)
@@ -207,7 +207,7 @@ void matrixintegritycheck()
       }
     }
     if (!ok)
-    { ErrorMessage("An out of bound write to matrix has occurred!",1);
+    { ErrorMessage(_("An out of bound write to matrix has occurred!"),1);
     }
     k++;B=B->fp;
   }
@@ -252,7 +252,8 @@ void readmat(M,filename) matrix *M;char *filename;
 { FILE *in;long i,j,k;char str[200];
   in=fopen(filename,"rb");
   if (in==NULL)
-  { sprintf(str,"\n%s not found, nothing read ! ",filename);ErrorMessage(str,1);}
+  { sprintf(str,_("\n%s not found, nothing read ! "),filename);
+    ErrorMessage(str,1);}
   fread(&i,sizeof(long),1,in);
   fread(&j,sizeof(long),1,in);
   (*M)=initmat(i,j);
@@ -321,7 +322,7 @@ void mcopy(matrix *A,matrix *B)
 
 { long Ac;
   double *pA,*pB,**AM,**BM;
-  if (A->r>B->r||A->c>B->c) ErrorMessage("Target matrix too small in mcopy",1);
+  if (A->r>B->r||A->c>B->c) ErrorMessage(_("Target matrix too small in mcopy"),1);
   BM=B->M;Ac=A->c;
   for (AM=A->M;AM<A->M+A->r;AM++)
   { pB= *BM;
@@ -341,7 +342,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
   if (tA)
   { if (tB)
     { if ((A.r!=B.c)||(A.c!=C.r)||(B.r!=C.c))
-      { ErrorMessage("Incompatible matrices in matmult.",1);}
+      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
       for (i=0;i<A.c;i++) for (j=0;j<B.r;j++)
       { p2=CM[i]+j;(*p2)=0.0;p=BM[j];
 	for (k=0;k<A.r;k++)
@@ -349,7 +350,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
       }
     } else
     { if ((A.r!=B.r)||(A.c!=C.r)||(B.c!=C.c))
-      { ErrorMessage("Incompatible matrices in matmult.",1);}
+      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
       for (i=0;i<A.c;i++)
       for (p=CM[i];p<(CM[i]+C.c);p++)
       (*p)=0.0;
@@ -362,7 +363,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
   } else
   { if (tB)
     { if ((A.c!=B.c)||(A.r!=C.r)||(B.r!=C.c))
-      { ErrorMessage("Incompatible matrices in matmult.",1);}
+      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
       for (i=0;i<A.r;i++) for (j=0;j<B.r;j++)
       { p2=CM[i]+j;*p2=0.0;p1=BM[j];
 	for (p=AM[i];p<(AM[i]+A.c);p++)
@@ -370,7 +371,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
       }
     } else
     { if ((A.c!=B.r)||(C.r!=A.r)||(C.c!=B.c))
-      { ErrorMessage("Incompatible matrices in matmult.",1);}
+      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
       for (i=0;i<A.r;i++) for (p=CM[i];p<(CM[i]+B.c);p++) *p=0.0;
       for (k=0;k<A.c;k++) for (i=0;i<A.r;i++)
       { p1=BM[k];temp=AM[i][k];
@@ -476,7 +477,7 @@ void invert(matrix *A)
 
 { double **AM,*p,*p1,max,x;
   int *c,*rp,*cp,i,j,k,pr=0,pc=0,*d,cj,ck;
-  if (A->r!=A->c) ErrorMessage("Attempt to invert() non-square matrix",1);
+  if (A->r!=A->c) ErrorMessage(_("Attempt to invert() non-square matrix"),1);
   c=(int *)calloc((size_t)A->c,sizeof(int)); /* index of columns, used for column pivoting */
   d=(int *)calloc((size_t)A->c,sizeof(int));
   rp=(int *)calloc((size_t)A->c,sizeof(int)); /* row changes */
@@ -498,7 +499,7 @@ void invert(matrix *A)
     cj=c[j]; /* save time */
     /* Now reduce the column */
     x=AM[j][cj];
-    if (x==0.0) ErrorMessage("Singular Matrix passed to invert()",1);
+    if (x==0.0) ErrorMessage(_("Singular Matrix passed to invert()"),1);
     for (p=AM[j];p<AM[j]+A->c;p++) *p/=x; /* divide row j by pivot element */
     AM[j][cj]=1.0/x;
     for (i=0;i<A->r;i++) /* work down rows eliminating column j */
@@ -651,7 +652,7 @@ void tricholeski(matrix *T,matrix *l0,matrix *l1)
 void choleski(A,L,invert,invout) matrix A,L;int invert,invout;
 /* version that halts execution on failure */
 { if (!chol(A,L,invert,invout))
-  ErrorMessage("Not a +ve def. matrix in choleski().",1);
+  ErrorMessage(_("Not a +ve def. matrix in choleski()."),1);
 }
 
 int chol(A,L,invert,invout) matrix A,L;int invert,invout;
@@ -869,7 +870,7 @@ double cov(a,b) matrix a,b;
 { long i;
   double y2=0.0,y=0.0,y1=0.0;
   if (a.r*a.c!=b.r*b.c)
-  { ErrorMessage("Error in Covariance(a,b) - a,b not same length.",1);}
+  { ErrorMessage(_("Error in Covariance(a,b) - a,b not same length."),1);}
   for (i=0;i<a.r;i++) { y2+=a.V[i]*b.V[i];y+=a.V[i];y1+=b.V[i];}
   return(y2/a.r-y*y1/(a.r*a.r));
 }
@@ -1808,7 +1809,7 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
       }
     }  
     if (k==maxreps) 
-    ErrorMessage("svd() not converged",1);
+    ErrorMessage(_("svd() not converged"),1);
   }
   /* make all singular values  non-negative */
   for (i=0;i<w->r;i++) 
@@ -1964,7 +1965,8 @@ void gettextmatrix(M,name) matrix M;char *name;
   char c,str[200];
   f=fopen(name,"rt");
   if (!f)
-  { sprintf(str,"%s not found by routine gettextmatrix().\n",name);ErrorMessage(str,1);}
+  { sprintf(str,_("%s not found by routine gettextmatrix().\n"),name);
+    ErrorMessage(str,1);}
   for (i=0;i<M.r;i++)
   { for (j=0;j<M.c;j++)
     { fscanf(f,"%lf",M.M[i]+j);
@@ -2185,7 +2187,7 @@ matrix svdroot(matrix A,double reltol)
     { for (j=0;j<a.c;j++) v.M[j][k]=a.M[j][i]*w.V[i];k++;
       prod=0.0;for (j=0;j<a.r;j++) prod+=a.M[j][i]*v.M[j][i];
       if (prod<0.0) 
-	  { sprintf(err,"svdroot matrix not +ve semi def. %g",w.V[i]*w.V[i]);
+	  { sprintf(err,_("svdroot matrix not +ve semi def. %g"),w.V[i]*w.V[i]);
 		ErrorMessage(err,1); 
 	  }
     }
@@ -2409,7 +2411,7 @@ void sort(matrix a)
 { int i;
   qsort(a.V,(size_t)a.r*a.c,sizeof(a.V[0]),elemcmp);
   for (i=0;i<a.r*a.c-1;i++) if (a.V[i]>a.V[i+1])
-  ErrorMessage("Sort failed",1);
+  ErrorMessage(_("Sort failed"),1);
 
 }
 
@@ -2537,7 +2539,7 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
       } 
       /* check whether iteration limit exceeded.... */
       if (os==start&&oe==end)
-      { counter++; if (counter>iter_limit) ErrorMessage("eigen_tri() failed to converge",1);
+      { counter++; if (counter>iter_limit) ErrorMessage(_("eigen_tri() failed to converge"),1);
       } else counter=0;
       /* calculate the Wilkinson shift, sig ...... */
       d1=d[end-1];d2=d[end];g1=g[end-1];
@@ -2693,7 +2695,7 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
       if (ok==0||ok1==0) ok=0; else ok=1;
       iter++;
       if (iter>iter_max) 
-	  {sprintf(msg,"eigenvv_tri() Eigen vector %d of %d failure. Error = %g > %g",k,n,x,DOUBLE_EPS);
+	  {sprintf(msg,_("eigenvv_tri() Eigen vector %d of %d failure. Error = %g > %g"),k,n,x,DOUBLE_EPS);
            ErrorMessage(msg,1); 
           
           }
@@ -2827,7 +2829,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
     } 
     /* calculate b[j].... */
     zz=b+j;*zz = 0.0;for (i=0;i<n;i++) { xx=z[i];*zz+=xx*xx;}*zz=sqrt(*zz);
-    if (b[j]==0.0&&j<n-1) ErrorMessage("Lanczos failed",1); /* Actually this isn't really a failure => rank(A)<l+lm */
+    if (b[j]==0.0&&j<n-1) ErrorMessage(_("Lanczos failed"),1); /* Actually this isn't really a failure => rank(A)<l+lm */
     /* get q[j+1]      */
     if (j<n-1)
     { q[j+1]=(double *)calloc((size_t)n,sizeof(double));

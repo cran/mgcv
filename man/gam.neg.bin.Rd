@@ -32,12 +32,14 @@ Note that
 \code{"identity"}. In addition the \code{negative.binomial} family results in a more 
 informative \code{gam} summary.  
 
+The negative binomial families can not yet be used with `outer' estimation of
+smoothing parameters (see \code{\link{gam.method}}).
 
 }
 
 %- maybe also `usage' for other objects documented here.
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
 library(MASS) # required for negative binomial families

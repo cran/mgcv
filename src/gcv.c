@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 1991-2005 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -287,7 +287,7 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
   } /* minV and minr now contain the global minimum */
   
   if (!ok&&firstdV>reps*minV)  /* GCV score never decreased from first value and gradient not low enough at first value */
-  { sprintf(msg,"Overall smoothing parameter estimate on upper boundary.\nBoundary GCV score change: %g. Largest change: %g",
+  { sprintf(msg,_("Overall smoothing parameter estimate on upper boundary.\nBoundary GCV score change: %g. Largest change: %g"),
                 firstdV,maxdV);
     ErrorMessage(msg,0);
   }
@@ -872,9 +872,9 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
       { for (i=0;i<m;i++)
         if (trial[i]<ninf[i])
-	    { trial[i]=ninf[i];ErrorMessage("resetting -ve inf",0);}
+	    { trial[i]=ninf[i];ErrorMessage(_("resetting -ve inf"),0);}
         else if (trial[i]>pinf[i])
-	    { trial[i]=pinf[i];ErrorMessage("resetting +ve inf",0);}
+	    { trial[i]=pinf[i];ErrorMessage(_("resetting +ve inf"),0);}
       } 
       /* form S the combined smooth measure */
       x=exp(trial[0]);MM=LZSZL[0].M;M1M=T.M;
@@ -1011,7 +1011,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
   }
   msrep->iter=iter; /* filling in diagnostic structure */
   if (!accept&&m>1) 
-      { if (autoinit) ErrorMessage("Multiple GCV didn't improve autoinitialized relative smoothing parameters",0); 
+      { if (autoinit) ErrorMessage(_("Multiple GCV didn't improve autoinitialized relative smoothing parameters"),0); 
   } 
   freemat(A);freemat(c);freemat(Ay);freemat(d);
   freemat(Wy);freemat(Q);freemat(R);freemat(c_copy);
