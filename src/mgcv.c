@@ -19,10 +19,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
 USA. */
 
-/* #define WINDOWS */
+    /*#define WINDOWS*/ 
 
 #ifdef WINDOWS
 #include <windows.h>   /* For easy self window porting, without neading everything R.h needs */
+#include <stdarg.h>
 #else
 #include <R.h>
 #endif
@@ -38,6 +39,27 @@ USA. */
 
 #define round(a) ((a)-floor(a) <0.5 ? (int)floor(a):(int) floor(a)+1)
 
+
+#ifdef WINDOWS
+/* following routine provides a version of Rprintf that outputs to a file instead 
+   of console, to facilitate debugging under windows.....
+*/
+typedef struct{
+double a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20;
+} _dodgy_print_storage;
+
+void Rprintf(char *str,...)
+{ _dodgy_print_storage ug; 
+  FILE *f;
+  va_list argptr;
+  f=fopen("d:/simon/Rdump.txt","at");
+  va_start(argptr,str);
+  ug=va_arg(argptr,_dodgy_print_storage);
+  fprintf(f,str,ug);
+  va_end(argptr);
+  fclose(f);
+}
+#endif
 
 void ErrorMessage(char *msg,int fatal)
 
@@ -569,7 +591,7 @@ matrix Rmatrix(double *A,long r,long c)
 void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
           double *pd, double *sp,int *offd,int *dimd,int *md,
           int *nd,int *qd,int *rd,double *sig2d,double *Vpd,double *edf,
-          double *conv_tol,int *ms_max_half)
+          double *conv_tol,int *ms_max_half,double *ddiag, int *idiag)
 
 
 /* Solves :
@@ -594,16 +616,28 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
    edf is an array of estiamted degrees of freedom for each smooth
    The routine is an interface routine suitable for calling from the
    R and Splus.
+
+   There are 2 arrays of convergence diagnostics returned:
+
+   ddiag[] is a 3*m array of doubles - first m are gradients of gcv/ubre
+           score at convergence, next m is leading diagonal of Hessian, last
+		   m are eigenvalues of Hessian.
+   idiag[] is a length 3 array of integers. idiag[0] is iterations taken to 
+           converg, idiag[1] is 1/0 if second guess was/wasn't good, idiag[2]
+		   is 1/0 if terminated/not on step failure.
+
   
 */
 
 { long n,q,r,*dim,*off,dimmax;
-  int m,i,j,k;
+  int m,i,j,k,gcv;
   msctrl_type msctrl;
+  msrep_type msrep;
   matrix *S,y,X,p,C,Z,w,Vp,L;
   double sig2,xx,gcvubre;
   /*char msg[100]; */
   sig2= *sig2d;
+  if (sig2<=0) gcv=1; else gcv=0;
   m=(int)*md;
   n=(long)*nd;
   q=(long)*qd;
@@ -612,7 +646,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   { dim=(long *)calloc((size_t)m,sizeof(long));
     off=(long *)calloc((size_t)m,sizeof(long));
     S=(matrix *)calloc((size_t)m,sizeof(matrix));
-  } 
+  } else { dim=off=&n;S=&y;} /* purely to avoid compiler warning */
   for (i=0;i<m;i++) off[i]=(long)offd[i];
   for (i=0;i<m;i++) dim[i]=(long)dimd[i];
   /* set up matrices for MultiSmooth */
@@ -630,11 +664,18 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   if (C.r) {Z=initmat(q,q);QT(Z,C,0);}
   Z.r=C.r; /* finding null space of constraints */
   if (m)
-  { msctrl.conv_tol= *conv_tol;
+  { init_msrep(&msrep,m);
+	msctrl.conv_tol= *conv_tol;
     msctrl.max_step_half= *ms_max_half;
-    gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2,&msctrl);
-   
-    *sig2d=sig2;
+    gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2,&msctrl,&msrep);
+    for (i=0;i<m;i++) /* copy out diagnostics for return */
+    { ddiag[i]=msrep.g[i];
+	  ddiag[m+i]=msrep.h[i];
+	  ddiag[2*m+i]=msrep.e[i];
+    }
+	idiag[0]=msrep.iter;idiag[1]=msrep.inok;idiag[2]=msrep.step_fail;
+	free_msrep(&msrep);
+    if (gcv) *sig2d=sig2;
   } else /* no penalties, just solve the least squares problem */
   { L=initmat(X.r,X.c); 
     mcopy(&X,&L);
@@ -646,9 +687,9 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     Vp=initmat(y.r,1L);/* temp for fitted values */
     matmult(Vp,L,p,0,0);
     sig2=0.0;for (i=0;i<y.r;i++) { xx=(Vp.V[i]-y.V[i])*w.V[i];sig2+=xx*xx;}
-    
-    if (n==p.r) sig2=0.0; else sig2/=(n-p.r);*sig2d=sig2;
-    gcvubre=sig2/(n-p.r);
+    if (n==p.r) sig2=0.0; else sig2/=(n-p.r);
+    if (gcv) *sig2d=sig2;
+    gcvubre=sig2/(n-p.r); /* NOTE: should really do UBRE is not GCV */
     for (i=0;i<w.r;i++) w.V[i] *=w.V[i];
     p.r+=Z.r;
     HQmult(p,Z,1,0); /* back out of null space */
@@ -690,8 +731,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
       edf[i]+=X.M[j][k]*L.M[k][j];
     }
-    /* multiply Vp by estimated variance so that it is proper covariance matrix estimate */
-    for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j]*=sig2;
+    /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */
+    for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j] *= *sig2d;
     freemat(L);
     RArrayFromMatrix(Vpd,Vp.r,&Vp); /* convert to R format */
     freemat(Vp);
@@ -838,7 +879,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
 */
 
 { matrix X,C,*S,*xp,*UZ,*Xu;
-  long *off,*df;
+  long *off,*df,dumb;
   int m,n,nsdf,i,j,k,nx,k1,*M;
   double **x;
   /* setup x[][], df[], off[], m, n, nsdf, S[], xp[], for calling GAMsetup.
@@ -863,7 +904,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
     df=(long *)calloc((size_t)m,sizeof(long));
     for (i=0;i<m;i++) df[i]=(long)dfd[i];
     off=(long *)calloc((size_t)m,sizeof(long));
-  }
+  } else {S=xp=UZ=Xu=&X;off=df=&dumb;M=&m;} /* purely to avoid compiler warnings */
   /* now run GAMsetup to get X, C, S[],UZ[],Xu[], xp, off */
   GAMsetup(&X,&C,S,UZ,Xu,xp,off,x,m,n,dim,s_type,df,p_order,nsdf,0); /* Initializes X and C */
   /* unload returned matrices into R arrays: X, C, S[k], xp */
@@ -1065,7 +1106,7 @@ void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,
     UZ=(matrix *)calloc((size_t) *m,sizeof(matrix));
     Xu=(matrix *)calloc((size_t) *m,sizeof(matrix)); 
     /* m1=0;for (i=0;i< *m;i++) m1+=s_type[i];*/ /* number of tprs terms */
-  }
+  } else { Xu=UZ=&Vp;M=&i;} /* just avoids spurious fussy compiler warnings */
   kk=0; /* counter for tprs terms */
  
   for (k=0;k<*m;k++)
@@ -1092,6 +1133,7 @@ void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,
   se=initmat((long)k,(long)*np);
   /* need to unpack xpd into xp here ..... */
   if (*m>0) xp=(matrix *)calloc((size_t) *m,sizeof(matrix));
+  else xp=&Vp; /* avoids spurious compiler warning */
   for (k=0;k< *m;k++)
   if (s_type[k]==0)
   { xp[k]=initmat((long)df[k],1L);
@@ -1212,6 +1254,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
 */
 { matrix y,X,p,w,Ain,Af,b,H,*S;
   int n,np,i,*active;
+ 
   np=nar[1];n=nar[0];
   /* unpack from R into matrices */
   X=Rmatrix(Xd,(long)n,(long)np);
@@ -1223,9 +1266,10 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   if (nar[2]>0) b=Rmatrix(bd,(long)nar[2],1L);else b.r=0L;
  
   if (*m) S=(matrix *)calloc((size_t) *m,sizeof(matrix));
+  else S=&H; /* avoid spurious compiler warning */
   for (i=0;i< *m;i++) S[i]=initmat((long)dim[i],(long)dim[i]);
   RUnpackSarray(*m,S,Sd);
- 
+  
   if (nar[4]) H=initmat(y.r,y.r); else H.r=H.c=0L;
   active=(int *)calloc((size_t)p.r+1,sizeof(int)); /* array for active constraints at best fit active[0] will be  number of them */
   /* call routine that actually does the work */

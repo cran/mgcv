@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 0.6-2
+Version: 0.7-0
 Author: Simon Wood <snw@mcs.st-and.ac.uk> and  
   Mike Lonergan <mel@mcs.st-and.ac.uk>
   [mel: persp.gam() and negative binomial; snw: rest]   

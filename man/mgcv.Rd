@@ -5,7 +5,7 @@
 \description{
 Function to efficiently estimate smoothing parameters in Generalized
 Ridge Regression Problem with multiple (quadratic) penalties, by GCV 
-or UBRE. The function uses Newton's method in multi-dimensions.
+or UBRE. The function uses Newton's method in multi-dimensions, backed up by steepest descent.
 }
 \usage{
 mgcv(M)
@@ -48,9 +48,9 @@ given
 \item{M$sp}{ An array of initial smoothing parameter estimates if any of 
 these is not strictly positive then automatic generation of initial values
 is used.}
-\item{M$conv.tol} {The convergence tolerence to use for the multiple
+\item{M$conv.tol}{The convergence tolerence to use for the multiple
   smoothing parameter search. 1e-6 is usually ok.}
-\item{M$max.half}{Each Newton step of the GCV minimisation is halved if it fails to
+\item{M$max.half}{Each step of the GCV minimisation is repeatedly halved if it fails to
   improve the GCV score. This is the maximum number of halvings to try
   at each step. 15 is usually enough.}
 }
@@ -79,7 +79,17 @@ of any equality constraints.
 
 The method operates by alternating very efficient direct searches for 
 \eqn{\rho}{rho}
-with Newton updates of the logs of the \eqn{\lambda_i}{lambda_i}
+with Newton or steepest descent updates of the logs of the \eqn{\lambda_i}{lambda_i}. 
+Because the GCV/UBRE scores are flat w.r.t. very large or very small \eqn{\lambda_i}{lambda_i}, 
+it's important to get good starting parameters, and to be careful not to step into a flat region
+of the smoothing parameter space. For this reason the algorithm rescales any Newton step that 
+would result in a \eqn{log(\lambda_i)}{log(lambda_i)} change of more than 5. Newton steps are only used
+if the Hessian of the GCV/UBRE is postive definite, otherwise steepest descent is used. Similarly steepest 
+descent is used if the Newton step has to be contracted too far (indicating that the quadratic model 
+underlying Newton is poor). All initial steepest descent steps are scaled so that their largest component is
+1. However a step is calculated, it is never expanded if it is successful (to avoid flat portions of the objective), 
+but steps are successively halved if they do not decrease the GCV/UBRE score, until they do, or the direction is deemed to have 
+failed. \code{M$conv} provides some convergence diagnostics.
 
 The method is coded in \code{C} and is intended to be portable. It should be 
 noted that seriously ill conditioned problems (i.e. with close to column rank 
@@ -95,8 +105,18 @@ following
   \item{M$sp}{The estimated smoothing parameters 
 (\eqn{\lambda_i/\rho}{lambda_i/rho})}
   \item{M$sig2}{The estimated (GCV) or supplied (UBRE) error variance.}
-  \item{M$edf}{The estimated degrees of freedom associated with each penalized term.}
+  \item{M$edf}{The estimated degrees of freedom associated with each penalized term. If \eqn{ {\bf p}_i}{p_i} is the vector of parameters penalized by the ith penalty then we can write \eqn{ {\bf p}_i = {\bf P}_i {\bf y}}{p_i = P_i y}, and the edf for the ith term is \eqn{ tr({\bf XP}_i)}{tr(XP_i)}... while this is sensible in the non-overlapping penalty case (e.g. GAMs) it makes alot less sense if penalties overlap!}
   \item{M$Vp}{Estimated covariance matrix of model parameters.}
+  \item{M$conv}{A list of convergence diagnostics, with the following elements:
+\item{g}{the gradient of the GCV/UBRE score w.r.t. the smoothing parameters at termination.}
+\item{h}{the second derivatives corresponding to \code{g} above - i.e. the leading diagonal of the Hessian.}
+\item{e}{the eigen-values of the Hessian. These should all be non-negative!}
+\item{iter}{the number of iterations taken.}
+\item{in.ok}{\code{TRUE} if the second smoothing parameter guess improved the GCV/UBRE score. (Please report examples 
+where this is \code{FALSE})}
+\item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by "converging". 
+Not necessarily a problem, but check the above derivative information quite carefully.}
+}
 }
 \references{
 

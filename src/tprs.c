@@ -6,6 +6,7 @@
 
 #define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
 
+void ErrorMessage(char *msg, int fatal);
 
 double eta(int m,int d,double r)
 
@@ -302,7 +303,7 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
    rescaling is transparent.
 */
 
-{ matrix X1,E,U,v,TU,T,Z,v1;
+{ matrix X1,E,U,v,TU,T,Z;
   int l,i,j,M,ek,*yxindex;
   double w;
   *Xu=initmat((long)n,(long)d+1);

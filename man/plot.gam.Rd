@@ -6,7 +6,7 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,...)
+plot.gam(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -26,6 +26,7 @@ plot.gam(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi
  \item{pages}{ (default 0) the number of pages over which to spread the output. For example, 
 if \code{pages=1} then all terms will be plotted on one page with the layout performed automatically. 
 Set to 0 to have the routine leave all graphics settings as they are. }
+\item{select}{Allows the  plot for a single model term to be selected for printing. e.g. if you just want the plot for the second smooth term set \code{select=2}. }
 \item{scale}{ set to -1 (default) to have the same y-axis scale for each plot, and to 0 for a 
           different y axis for each plot.  }
 \item{n}{ number of points used for each 1-d plot - for a nice smooth plot this needs to be several times the estimated 
@@ -36,6 +37,7 @@ Set to 0 to have the routine leave all graphics settings as they are. }
   terms.}
 \item{theta}{One of the perspective plot angles.}
 \item{phi}{The other perspective plot angle.}
+\item{jit}{Set to TRUE if you want rug plots for 1-d terms to be jittered.}
 \item{...}{ other arguments.}
 }
 \details{ Produces default plot showing the smooth components of a

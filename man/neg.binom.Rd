@@ -1,7 +1,7 @@
 % based on MASS/negative.binomial
 %
-\name{neg.bin}
-\alias{neg.bin}
+\name{neg.binom}
+\alias{neg.binom}
 \title{
 Family function for Negative Binomial GAMs 
 }
@@ -11,7 +11,7 @@ Additive Model, with known or unknown \code{theta} parameter, using
 \code{gam()} and \code{gam.nbut()}. The code is a minor modification of
  \code{negative.binomial} from \code{library(MASS)}. } 
 \usage{
-neg.bin(theta=NA, link="log")
+neg.binom(theta=NA, link="log")
 }
 \arguments{
 \item{theta}{
@@ -32,3 +32,4 @@ generalised additive mode with Negative Binomial errors.
 \keyword{regression}
 \keyword{models}
 \keyword{smooth}
+

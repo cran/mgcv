@@ -4,7 +4,7 @@
 \title{Defining smooths in GAM formulae}
 \description{ Function used in definition of smooth terms within
   \code{gam} model formulae. The function does not evaluate a (spline)
-  smooth - it exist purely to help set up a model using spline based smooths.
+  smooth - it exists purely to help set up a model using spline based smooths.
 }
 
 \usage{s(..., k=-1,fx=FALSE,bs="tp",m=0)}

@@ -33,6 +33,9 @@ logical: should iteration progress be printed?
 The required estimate of \code{theta}, as a scalar.
 }
 \seealso{
-\code{\link{gam}}, \code{\link{gam.nbut}}
+\code{\link{neg.binom}} \code{\link{gam}}, \code{\link{gam.nbut}}
 }
 \keyword{models}
+
+
+

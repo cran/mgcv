@@ -550,6 +550,7 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
 { int i,j,k;
   matrix z,F,W,Z,B,C;
   double x,xx;
+ 
   /* form transformed data vector z */
   if (m>0) z=initmat(y->r+p->r,1L);else z=initmat(y->r,1L);
   W=initmat(w->r,1L);
@@ -559,11 +560,13 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
   /* first put in W^0.5X */
   for (i=0;i<X->r;i++) for (j=0;j<X->c;j++) F.M[i][j]=W.V[i]*X->M[i][j];
   /* add up the Penalties */
+ 
   if (m>0)
   { B=initmat(p->r,p->r);
     for (k=0;k<m;k++) for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
     B.M[i+off[k]][j+off[k]]+=theta[k]*S[k].M[i][j];
     /* and find a square root of B..... */
+
     root(&B,&C,0.0);
 
     /* copy C' into the last p->r rows of F */
