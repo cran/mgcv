@@ -36,10 +36,12 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        uniquecombs, vis.gam)
 
 importFrom(graphics, plot)
-importFrom(stats, predict, residuals, influence, formula, logLik, anova)
+importFrom(stats, predict, residuals, influence, formula, logLik, anova, 
+cooks.distance)
 
 S3method(anova, gam)
 S3method(influence, gam)
+S3method(cooks.distance, gam)
 S3method(formula, gam)
 S3method(logLik, gam)
 S3method(plot, gam)

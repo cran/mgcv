@@ -2360,8 +2360,11 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
 # parameters.
 {
  if (method$outer=="nlm.fd") {
-    um<-nlm(full.score,lsp,typsize=lsp,fscale=fscale,stepmax=1,
-            ndigit=12,gradtol=1e-4,steptol=0.01,G=G,family=family,control=control,gamma=gamma)
+    um<-nlm(full.score,lsp,typsize=lsp,fscale=fscale, stepmax = 
+            control$nlm$stepmax, ndigit = control$nlm$ndigit,
+	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
+            iterlim = control$nlm$iterlim, G=G,family=family,control=control,
+            gamma=gamma)
     lsp<-um$estimate
     object<-attr(full.score(lsp,G,family,control,gamma=gamma),"full.gam.object")
     object$gcv.ubre <- um$minimum
@@ -2380,13 +2383,16 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
              weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale)
     if (method$outer=="nlm") {
       b <- nlm(gam3objective, lsp, typsize = lsp, fscale = fscale, 
-            stepmax = 1, ndigit = 12, gradtol = 1e-04, steptol = 0.01, 
+            stepmax = control$nlm$stepmax, ndigit = control$nlm$ndigit,
+	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
+            iterlim = control$nlm$iterlim,
+	    check.analyticals=control$nlm$check.analyticals,
             args=args)
       lsp <- b$estimate
 
     } else if (method$outer=="optim") {
       b<-optim(par=lsp,fn=gam2objective,gr=gam2derivative,method="L-BFGS-B",control=
-         list(fnscale=fscale,factr=1e7,lmm=min(5,length(lsp))),args=args)
+         list(fnscale=fscale,factr=control$optim$factr,lmm=min(5,length(lsp))),args=args)
       lsp <- b$par
     }
     obj <- gam2objective(lsp,args)
@@ -2476,10 +2482,14 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
   if (!fit) return(G)
 
+  # is outer looping needed ?
+  outer.looping <- !G$am && (method$gam=="perf.outer"||method$gam=="outer") &&
+                    length(G$S)>0 && sum(G$sp<0)!=0
+
   # take only one IRLS step to get scale estimates for "pure" outer
   # looping...
     
-  if (!G$am && method$gam=="outer") oneStep <- TRUE else oneStep <- FALSE
+  if (outer.looping && method$gam=="outer") oneStep <- TRUE else oneStep <- FALSE
   
   object<-gam.fit(G,family=family,control=control,gamma=gamma,oneStep=oneStep,...)
   
@@ -2491,15 +2501,16 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
    
   # mgcv.conv<-object$mgcv.conv
    
-
-  # need to check that i) following is wanted; (ii) there are free s.p.s to estimate...
-
-  outer.looping <- !G$am && (method$gam=="perf.outer"||method$gam=="outer") &&
-                    length(G$S)>0 && sum(G$sp<0)!=0
-
   if (outer.looping)
-  { #lsp<-log(object$sp[G$all.sp<0]) # make sure only free s.p.s are optimized!
-    lsp <- log(initial.sp(G$X,G$S,G$off)) 
+  { # use perf.iter s.p. estimates from gam.fit as starting values...
+    lsp<-log(object$sp[G$all.sp<0]) # make sure only free s.p.s are optimized!
+    # don't allow initial sp's too far from defaults, otherwise optimizers may
+    # get stuck on flat portions of GCV/UBRE score....
+    if (method$gam!="perf.outer") { 
+      lsp2 <- log(initial.sp(G$X,G$S,G$off)) 
+      ind <- lsp > lsp2+5;lsp[ind] <- lsp2[ind]+5
+      ind <- lsp < lsp2-5;lsp[ind] <- lsp2[ind]-5 
+    }
    # temp.sp <-object$sp # keep copy off all sp's
     mgcv.conv <- object$mgcv.conv  
   
@@ -2552,7 +2563,8 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object
 }
 
-gam.check<-function(b)
+
+gam.check <- function(b)
 # takes a fitted gam object and produces some standard diagnostic plots
 { if (b$fit.method=="mgcv"||b$fit.method=="performance iteration - mgcv")
   fit.method <- "mgcv" else fit.method <- "other"
@@ -2566,7 +2578,8 @@ gam.check<-function(b)
         points(b$nsdf+sum(b$edf),b$gcv.ubre,col=2,pch=20)
       }
     } else qqnorm(residuals(b))
-    plot(fitted(b),residuals(b),main="Residuals vs. Fitted",xlab="Fitted Values",ylab="Residuals");
+    plot(b$linear.predictors,residuals(b),main="Resids vs. linear pred.",
+         xlab="linear predictor",ylab="residuals");
     hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
     plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
     if (b$mgcv.conv$iter>0)   
@@ -2594,7 +2607,7 @@ gam.check<-function(b)
     par(old.par)
   }
   else
-  plot(fitted(b),residuals(b),xlab="fitted values",ylab="residuals")
+  plot(b$linear.predictor,residuals(b),xlab="linear predictor",ylab="residuals")
 }
 
 print.gam<-function (x,...) 
@@ -2620,7 +2633,7 @@ print.gam<-function (x,...)
 gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
                          mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000,trace =FALSE,
                          rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-                         max.tprs.knots=5000) 
+                         max.tprs.knots=5000,nlm=list(),optim=list()) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -2631,14 +2644,7 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
 # nb.theta.mult controls the upper and lower limits on theta estimates - for use with negative binomial  
 # for single s.p. case and "magic" otherwise. 
 # rank.tol is the tolerance to use for rank determination
-{#   if (!is.null(perf.iter)) {
- #     warning("perf.iter is deprecated: use spIterType")
- #     if (!is.logical(perf.iter)) stop("power.iter must be one of TRUE or FALSE.")
- #     if (perf.iter) spIterType <- "perf" else
- #     spIterType <- "perf+outer"
- #   }
-#    if (!(spIterType%in%c("perf","perf+outer","outer"))) stop(
-#    "spIterType must be one of \"perf\", \"perf+outer\" or \"outer\".")
+{
     if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
         stop("value of epsilon must be > 0")
@@ -2652,9 +2658,33 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
     { rank.tol=.Machine$double.eps^0.5
       warning("silly value supplied for rank.tol: reset to square root of machine precision.")
     }
+    # work through nlm defaults
+    if (is.null(nlm$ndigit)||nlm$ndigit<2) nlm$ndigit <- max(2,ceiling(-log10(epsilon)))
+    nlm$ndigit <- round(nlm$ndigit)
+    ndigit <- floor(-log10(.Machine$double.eps))
+    if (nlm$ndigit>ndigit) nlm$ndigit <- ndigit
+    if (is.null(nlm$gradtol)) nlm$gradtol <- epsilon*100
+    nlm$gradtol <- abs(nlm$gradtol)
+    ## note that nlm will stop after hitting stepmax 5 consecutive times
+    ## hence should not be set too small ... 
+    if (is.null(nlm$stepmax)||nlm$stepmax==0) nlm$stepmax <- 2
+    nlm$stepmax <- abs(nlm$stepmax)
+    if (is.null(nlm$steptol)) nlm$steptol <- 1e-4
+    nlm$steptol <- abs(nlm$steptol)
+    if (is.null(nlm$iterlim)) nlm$iterlim <- 200
+    nlm$iterlim <- abs(nlm$iterlim)
+    ## Should be reset for a while anytime derivative code altered...
+    if (is.null(nlm$check.analyticals)) nlm$check.analyticals <- FALSE
+    nlm$check.analyticals <- as.logical(nlm$check.analyticals) 
+
+    # and optim defaults
+    if (is.null(optim$factr)) optim$factr <- 1e7
+    optim$factr <- abs(optim$factr)
+
     list(irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,globit = globit,
          trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,nb.theta.mult=nb.theta.mult,
-         rank.tol=rank.tol,absorb.cons=absorb.cons,max.tprs.knots=max.tprs.knots)
+         rank.tol=rank.tol,absorb.cons=absorb.cons,max.tprs.knots=max.tprs.knots,nlm=nlm,
+         optim=optim)
     
 }
 
@@ -3678,6 +3708,15 @@ summary.gam<-function (object,...)
   ret
 }
 
+cooks.distance.gam <- function(model,...)
+{ res <- residuals(model,type="pearson")
+  dispersion <- model$sig2
+  hat <- model$hat
+  p <- sum(model$edf)
+  (res/(1 - hat))^2 * hat/(dispersion * p)
+}
+
+
 anova.gam <- function (object, ..., dispersion = NULL, test = NULL)
 {   # adapted from anova.glm: R stats package
     dotargs <- list(...)
@@ -4212,12 +4251,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-0 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-1 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-0 \n")
+    cat("This is mgcv 1.2-1 \n")
 }
 
 

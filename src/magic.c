@@ -173,6 +173,7 @@ void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,double 
   } 
   /* get the QR decomposition of WX */
   tau=(double *)calloc((size_t)*q,sizeof(double)); /* part of reflector storage */
+ 
   pivot=(int *)calloc((size_t)*q,sizeof(int));
   /* Accuracy can be improved by pivoting on some occasions even though it's not going to be 
      `used' as such here - see Golub and Van Loan (1983) section 6.4. page 169 for reference. */

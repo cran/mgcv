@@ -13,7 +13,7 @@ choise of fitting method, see \code{\link{gam.method}}.
 gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
             mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-            max.tprs.knots=5000) 
+            max.tprs.knots=5000,nlm=list(),optim=list()) 
 }
 \arguments{ 
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
@@ -71,9 +71,34 @@ storage) for these smooths scales as the square of the number of initial knots, 
 high you can appear to freeze R. Usually one would want to use an alternative
 smoothing basis (or \code{\link{te}} terms), or the approach illustrated in the
 examples in \code{\link{gam}}, rather than simply increasing this default.}
+
+\item{nlm}{list of control parameters to pass to \code{\link{nlm}} if this is
+used for outer estimation of smoothing parameters. See details.}
+
+\item{optim}{list of control parameters to pass to \code{\link{optim}} if this
+is used for outer estimation of smoothin parameters. See details.}
 }
 
-\details{ 
+\details{ When outer iteration is used for fitting then the control list
+\code{nlm} stores control arguments for calls to routine
+\code{\link{nlm}}. The list has the following named elements: (i) \code{ndigit} is
+the number of significant digits in the GCV/UBRE score - by default this is
+worked out from \code{epsilon}; (ii) \code{gradtol} is the tolerance used to
+judge convergence of the gradient of the GCV/UBRE score to zero - by default
+set to \code{100*epsilon}; (iii) \code{stepmax} is the maximum allowable log
+smoothing parameter step - defaults to 2; (iv) \code{steptol} is the minimum
+allowable step length - defaults to 1e-4; (v) \code{iterlim} is the maximum
+number of optimization steps allowed - defaults to 200; (vi)
+\code{check.analyticals} indicates whether the built in exact derivative
+calculations should be checked numerically - defaults to \code{FALSE}. Any of
+these which are not supplied and named in the list are set to their default
+values.
+
+Outer iteration using \code{\link{optim}} is controlled using list
+\code{optim}, which currently has one element: \code{factr} which takes
+default value 1e7.
+
+
 When fitting is been done by calls to routine \code{\link{mgcv}}, 
 \code{maxit} and \code{globit} control the maximum iterations of the IRLS algorithm, as follows: 
 the algorithm will first execute up to
