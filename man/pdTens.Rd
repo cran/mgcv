@@ -17,7 +17,9 @@ possible to transform the problem to make the required random effects covariance
 \code{pdMat} classes: hence the need for the \code{pdTens} class. A \code{\link{notLog}} parameterization ensures that 
 the parameters are positive. 
 
-These functions would not normally be called directly.
+These functions (\code{pdTens}, \code{pdConstruct.pdTens},
+ \code{pdFactor.pdTens}, \code{pdMatrix.pdTens}, \code{coef.pdTens} and \code{summary.pdTens})
+ would not normally be called directly.
 }
 
 \usage{
@@ -39,12 +41,16 @@ covariance matrix for these random effects.}
 \details{ This appears to be the minimum set of functions required to implement a new \code{pdMat} class. 
 
 Note that while the \code{pdFactor} and \code{pdMatrix} functions return the inverse of the scaled random 
-effect covariance matrix or its factor, the \code{pdConstruct} function is initialised with estimates of the 
-scaled covariance matrix itself.
+effect covariance matrix or its factor, the \code{pdConstruct} function is
+sometimes initialised with estimates of the scaled covariance matrix, and
+sometimes intialized with its inverse. 
 
 }
-\value{ A class \code{pdTens} object, or its coefficients or the matrix it represents or the factor of that matrix.}
-
+\value{ A class \code{pdTens} object, or its coefficients or the matrix it
+represents or the factor of 
+that matrix. \code{pdFactor} returns the factor as a vector (packed
+column-wise) (\code{pdMatrix} always returns a matrix).
+}
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 

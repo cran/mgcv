@@ -54,7 +54,10 @@ represent the smooth term. If \code{k} is not
 manipulation of the random effects structure within \code{gamm} in order to deal
 with smooth terms. See example below.}
 \item{correlation}{An optional \code{corStruct} object (see \code{\link[nlme]{corClasses}}) as used to define correlation 
-structures in \code{\link[nlme]{lme}}. See examples below.}
+structures in \code{\link[nlme]{lme}}. Any grouping factors in the formula for
+this object are assumed to be nested within any random effect grouping
+factors, without the need to make this explicit in the formula (this is 
+slightly different to the behaviour of \code{lme}). See examples below.}
 \item{family}{A \code{family} as used in a call to \code{\link{glm}} or \code{\link{gam}}.
 The default \code{gaussian} with identity link causes \code{gamm} to fit by a direct call to
 \code{\link[nlme]{lme}} procided there is no offset term, otherwise \code{glmmPQL} from the \code{MASS} library is used.}
@@ -62,8 +65,8 @@ The default \code{gaussian} with identity link causes \code{gamm} to fit by a di
 covariates required by the formula.  By default the variables are taken 
 from \code{environment(formula)}, typically the environment from 
 which \code{gamm} is called.} 
-\item{weights}{ prior weights on the data. Read the documentation for \code{lme} and \code{glmmPQL} very 
-carefully before even thinking about using this argument.}
+\item{weights}{ prior weights on the data. See documentation for \code{lme}
+for details of how to use this argument.}
 \item{subset}{ an optional vector specifying a subset of observations to be
           used in the fitting process.}
 \item{na.action}{ a function which indicates what should happen when the data
@@ -220,6 +223,7 @@ e <- rnorm(n, 0, sig)
 y <- f + e
 b <- gamm(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b$gam,pages=1)
+summary(b$lme) # details of underlying lme fit
 
 b <- gamm(y~te(x0,x1)+s(x2)+s(x3)) 
 op <- par(mfrow=c(2,2))
@@ -249,7 +253,15 @@ b <- gamm(y~s(x,k=20))
 plot(b$gam);lines(x,f-mean(f),col=2)
 b <- gam(y~s(x,k=20))
 plot(b);lines(x,f-mean(f),col=2)
-par(op)
+
+## more complicated autocorrelation example - AR errors
+## only within groups defined by `fac'
+e <- rnorm(n,0,sig)
+for (i in 2:n) e[i] <- 0.6*e[i-1]*(fac[i-1]==fac[i]) + e[i]
+y <- f + e
+b <- gamm(y~s(x,k=20),correlation=corAR1(form=~1|fac))
+plot(b$gam);lines(x,f-mean(f),col=2)
+par(op) 
 
 ## more complex situation with nested random effects and within
 ## group correlation 
