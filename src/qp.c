@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2005 Simon N. Wood  simon.wood@r-project.org
+/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -26,10 +26,10 @@ USA.*/
 #include "matrix.h"
 #include "qp.h"
 #include "general.h"
-#include "mgcv.h"
 
-#define DELMAX 35
+#define DELMAX 35L
 
+void ErrorMessage(char *msg,int fatal);
 
 #define max(a,b)    (((a) > (b)) ? (a) : (b))
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
@@ -39,24 +39,24 @@ USA.*/
 
 
 
-matrix addconQT(matrix *Q,matrix T,matrix a,matrix *u)
+matrix addconQT(Q,T,a,u) matrix *Q,T,a,*u;
 
 /* A constraint, a (a row vector), is added to the QT factorization of
    the working set. T must have been initialised square, and then had T.r
    set to correct length. */
 
-{ int q,i,j;
+{ long q,i,j;
   double la,ra=0.0,*cV,*bV,*T1V;
   matrix b,c;
-  c=initmat(Q->r,1);b=initmat(Q->r,1);(*u)=initmat(Q->r,1);
+  c=initmat(Q->r,1L);b=initmat(Q->r,1L);(*u)=initmat(Q->r,1L);
   for (i=0;i<c.r;i++) for (j=0;j<a.c;j++) c.V[i]+=a.V[j]*Q->M[j][i];
   la=dot(c,c);
   cV=c.V;bV=b.V;
   q=T.c-T.r-1;
-  if (q!=0)
+  if (q!=0L)
   { for (i=q+1;i<a.c;i++) { ra+=cV[i]*cV[i];bV[i]=cV[i];}
     if ((la-ra)<0.0)
-    { error(_("ERROR in addconQT."));}
+    { ErrorMessage("ERROR in addconQT.",1);}
     else
     bV[q]=sqrt(la-ra);
     if (cV[q]>0.0) bV[q]= -bV[q];
@@ -84,10 +84,10 @@ void GivensAddconQT(matrix *Q,matrix *T,matrix *a,matrix *s,matrix *c)
    initialized outside the routine.
    */
 
-{ int q,i,j;
+{ long q,i,j;
   double Qi,r,cc,ss,*bV,*sV,*cV,**QM,*QV,bb,bb1;
   matrix b;
-  b.V=T->M[T->r]; b.r=Q->r;b.c=1;
+  b.V=T->M[T->r]; b.r=Q->r;b.c=1L;
   for (i=0;i<T->c;i++) b.V[i]=0.0;
   for (i=0;i<b.r;i++) for (j=0;j<Q->r;j++) b.V[i]+=Q->M[j][i]*a->V[j];
   /* now calculate a series of Givens rotations that will rotate the null basis
@@ -130,7 +130,7 @@ void LSQPaddcon(matrix *Ain,matrix *Q,matrix *T,matrix *Rf,matrix *Py,matrix *PX
 { matrix a;
   double RfMji,*RfV,*RfV1,ss,cc,r,x1,x2;
   int i,j,k;
-  a.V=Ain->M[sth];a.r=Ain->c;a.c=1; /* vector containing sth constraint */
+  a.V=Ain->M[sth];a.r=Ain->c;a.c=1L; /* vector containing sth constraint */
   s->r=T->c-T->r-1;  /* number of Givens rotations about to be returned */
   /* Update Q and T and return Givens rotations required to do so ....*/
   GivensAddconQT(Q,T,&a,s,c);
@@ -237,7 +237,7 @@ void LSQPdelcon(matrix *Q,matrix *T,matrix *Rf,matrix *Py,matrix *PX,int sth)
 */
 
 { int i,j,colj,coli,k,Tr,Tc,Qr,T1r,T1c;
-  double r,s,c,xi,xj,**TM,**QM,*TV,*QV,*T1V,*RfV,*RfV1;
+  double r,s,c,xi,xj,**TM,**QM,**T1M,*TV,*QV,*T1V,*RfV,*RfV1;
   Tr=T->r;TM=T->M;QM=Q->M;Tc=T->c;Qr=Q->r;
   for (i=sth+1;i<Tr;i++)   /* work down the rows from the deletion point (row not removed yet) */
   { coli=Tc-i-1;colj=Tc-i;    /* coli is zeroed - colj=coli+1 */
@@ -290,7 +290,7 @@ void LSQPdelcon(matrix *Q,matrix *T,matrix *Rf,matrix *Py,matrix *PX,int sth)
   }
   /* Now actually remove the extra row from T - this could be done awefully efficiently */
   /* by shuffling the pointers to rows, but it would probably end in tears, so I haven't */
-  T->r--;T1r=T->r;T1c=T->c;
+  T->r--;T1M=T->M;T1r=T->r;T1c=T->c;
   for (k=0;k<T1r;k++)
   { T1V=TM[k];TV=TM[k];
     for (j=0;j<T1c-k-1;j++) T1V[j]=0.0;
@@ -419,16 +419,16 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
 */
 
 { matrix Q,T,Rf,PX,Py,a,P,p1,s,c,Xy,y1,u,Pd,pz,pk;
-  int k,i,j,tk,*I,*ignore,*fixed,*delog,maxdel=100;
+  int k,i,j,tk,*I,*ignore,iter=0,*fixed,*delog,maxdel=100;
   double x;
-  I=(int *)CALLOC((size_t) p->r,sizeof(int)); /* I[i] is the row of Ain containing ith active constraint */
-  fixed=(int *)CALLOC((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequality constraint is to be left in regardless of l.m. estimate */
-  ignore=(int *)CALLOC((size_t) Ain->r,sizeof(int)); /* ignore[i] is 1 if ith row of Ain is in active set, 0 otherwise */
-  delog=(int *)CALLOC((size_t) Ain->r,sizeof(int)); /* counts up number of times a constraint is deleted */
-  p1=initmat(p->r,1);    /* a working space vector for stepping & lagrange */
-  y1=initmat(y->r,1);    /* a work space vector for lagrange */
-  s=initmat(p->r,1);c=initmat(p->r,1); /* working space vectors for Givens rotation */
-  Xy=initmat(p->r,1);     /* vector storing X'y for use in lagrange multiplier calculation */
+  I=(int *)calloc((size_t) p->r,sizeof(int)); /* I[i] is the row of Ain containing ith active constraint */
+  fixed=(int *)calloc((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequlity constraint is to be left in regardless of l.m. estimate */
+  ignore=(int *)calloc((size_t) Ain->r,sizeof(int)); /* ignore[i] is 1 if ith row of Ain is in active set, 0 otherwise */
+  delog=(int *)calloc((size_t) Ain->r,sizeof(int)); /* counts up number of times a constraint is deleted */
+  p1=initmat(p->r,1L);    /* a working space vector for stepping & lagrange */
+  y1=initmat(y->r,1L);    /* a work space vector for lagrange */
+  s=initmat(p->r,1L);c=initmat(p->r,1L); /* working space vectors for Givens rotation */
+  Xy=initmat(p->r,1L);     /* vector storing X'y for use in lagrange multiplier calculation */
   vmult(X,y,&Xy,1);      /* form X'y */
   Rf=initmat(X->r,X->c);  /* Rf=PXQ, where P and Q are orthogonal */
   mcopy(X,&Rf);          /* initialize Rf while P and Q are identity matrices */
@@ -437,7 +437,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
   /* initialize Q, T and Rf using fixed constraints (if any) .... */
   for (i=0;i<p->r;i++) for (j=0;j<p->r;j++) Q.M[i][j]=0.0;
   for (i=0;i<p->r;i++) Q.M[i][i]=1.0;
-  T.r=0;a.r=1;a.c=Af->c;
+  T.r=0L;a.r=1L;a.c=Af->c;
   for (i=0;i<Af->r;i++)
   { a.V=Af->M[i];
     T=addconQT(&Q,T,a,&u); /* adding constraint from Af to working set */
@@ -447,20 +447,22 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
   /* Now Form Rf, proper. i.e. PXQ, using QR factorization */
   P=initmat(Rf.c,Rf.r);
   QR(&P,&Rf);   /* Rf now contains Rf=PXQ   (on entry it contained XQ) */
-  Py=initmat(y->r,1);mcopy(y,&Py);
+  Py=initmat(y->r,1L);mcopy(y,&Py);
   OrthoMult(&P,&Py,0,(int)P.r,0,1,1); /* Form Py */
   PX=initmat(X->r,X->c);mcopy(X,&PX);
   OrthoMult(&P,&PX,0,(int)P.r,0,1,1); /* Form PX */
   freemat(P); /* no longer needed */
-  P=initmat(b->r,1); /* used solely for feasibility checking */
-  Pd=initmat(y->r,1);pz=initmat(p->r,1);pk=initmat(p->r,1);
+  P=initmat(b->r,1L); /* used solely for feasibility checking */
+  Pd=initmat(y->r,1L);pz=initmat(p->r,1L);pk=initmat(p->r,1L);
   tk=0;             /* The number of inequality constraints currently active */
   /*printf("\nLSQ");*/
-  while(1) { /* Form Pd=Py-PXp and minimize ||R pz - Pd|| */
+  while(1)
+  { iter++;
+    /* Form Pd=Py-PXp and minimize ||R pz - Pd|| */
     vmult(&PX,p,&Pd,0); /* Pd = PXp */
     for (i=0;i<Pd.r;i++) Pd.V[i] = Py.V[i]-Pd.V[i]; /* Pd=P(y-Xp) */
     Rf.c=Rf.r=p->r-tk-Af->r; /* Restrict attention to QR factor of PXZ */
-    for (i=0;i<Rf.c;i++) if (Rf.M[i][i]==0.0) error(_("QPCLS - Rank deficiency in model"));
+    for (i=0;i<Rf.c;i++) if (Rf.M[i][i]==0.0) ErrorMessage("QPCLS - Rank deficiency in model",1);
     Rsolv(&Rf,&pz,&Pd,0);  /* solve R pz= Pd for pz - search direction in null space */
     Rf.r=X->r;Rf.c=X->c; /* Restore Rf */
     pz.r=p->r-tk-Af->r;
@@ -504,17 +506,17 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
         /* free memory */
         freemat(T);freemat(Rf);freemat(PX);freemat(Py);freemat(p1);freemat(y1);
         freemat(s);freemat(c);freemat(Xy);freemat(Pd);freemat(pz);freemat(pk);
-        FREE(I);FREE(ignore);freemat(P);FREE(fixed);FREE(delog);
+        free(I);free(ignore);freemat(P);free(fixed);free(delog);
         /* return */
         return;
       }
     }
   }
-} /* QPCLS */
+}
 
 
 void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
-          matrix *Af,matrix *S,int *off,double *theta,int m,int *active)
+          matrix *Af,matrix *H,matrix *S,int *off,double *theta,int m,int *active)
 
 /* Routine for Penalized Constrained Least Squares problems.
    PCLS() is an interface routine for QPCLS for solving the general problem class:
@@ -536,6 +538,9 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
    ... where F = [ X'W^0.5, B^0.5']'  and z = [y'W^0.5, 0]'. This rewrite is
    performed and then QPCLS is called to obtain the solution.
 
+   If H->r==y->r on entry, then an influence (or "hat") matrix is returned in H.
+   At present the calculation of H is inefficient and none too stable.
+
    On exit active[] contains a list of the active inequlity constraints in elements 
    1->active[0]. This array should be initialized to length p.r+1 on entry.
 
@@ -543,13 +548,13 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
 
 */
 
-{ int i,j,k,n;
-  matrix z,F,W,Z,B;
-  double *p1,*C;
+{ int i,j,k;
+  matrix z,F,W,Z,B,C;
+  double x,xx;
  
   /* form transformed data vector z */
-  if (m>0) z=initmat(y->r+p->r,1);else z=initmat(y->r,1);
-  W=initmat(w->r,1);
+  if (m>0) z=initmat(y->r+p->r,1L);else z=initmat(y->r,1L);
+  W=initmat(w->r,1L);
   for (i=0;i<y->r;i++) { W.V[i]=sqrt(w->V[i]);z.V[i]=W.V[i]*y->V[i];}
   /* form transformed design matrix X */
   F=initmat(z.r,p->r);
@@ -557,26 +562,31 @@ void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
   for (i=0;i<X->r;i++) for (j=0;j<X->c;j++) F.M[i][j]=W.V[i]*X->M[i][j];
   /* add up the Penalties */
  
-  if (m>0) { //B=initmat(p->r,p->r);
-    n = p->r;
-    C = (double *)CALLOC((size_t)(n*n),sizeof(double));
+  if (m>0)
+  { B=initmat(p->r,p->r);
     for (k=0;k<m;k++) for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
-					       C[i+off[k]+n*(j+off[k])] += theta[k]*S[k].M[i][j];
+    B.M[i+off[k]][j+off[k]]+=theta[k]*S[k].M[i][j];
     /* and find a square root of B..... */
-    k = -1;
-    mroot(C,&k,&n); // C'C = S_tot (min rows - returned in k)
-    /* copy C into the last p->r rows of F */
-    for (p1=C,i=0;i<n;i++) for (j=0;j<k;j++,p1++) F.M[j+X->r][i] = *p1;
-    FREE(C);
+
+    root(&B,&C,8*DOUBLE_EPS);
+
+    /* copy C' into the last p->r rows of F */
+    for (i=0;i<C.r;i++) for (j=0;j<C.c;j++) F.M[j+X->r][i]=C.M[i][j];
+    freemat(B);freemat(C);
   }
   /*  printf("\ncond(F)=%g",condition(F));*/
   /* Which means that the problem is now in a form where QPCLS can solve it.... */
   QPCLS(&Z,&F,p,&z,Ain,b,Af,active); /* note that at present Z is full not HH */
+  if (H->r==y->r) /* then calculate the influence matrix XZ(Z'F'FZ)^{-1}Z'X'W */
+  { freemat(W);W=initmat(Z.c,Z.c);
+    multi(4,W,Z,F,F,Z,1,1,0,0);invert(&W); /* Wildly inefficient!! */
+    multi(5,*H,*X,Z,W,Z,*X,0,0,0,1,1);      /* ditto */
+    for (i=0;i<H->r;i++) for (j=0;j<H->c;j++) H->M[i][j]*=w->V[j];
+  }
   /* working out value of objective at minimum */
-  B=initmat(z.r,1);matmult(B,F,*p,0,0);
-  /*xx=0.0;for (i=0;i<z.r;i++) { x=B.V[i]-z.V[i];xx+=x*x;}
-    printf("\nObjective at Minimum = %g\n",xx);*/
-  freemat(B);
+  B=initmat(z.r,1L);matmult(B,F,*p,0,0);
+  xx=0.0;for (i=0;i<z.r;i++) { x=B.V[i]-z.V[i];xx+=x*x;}
+  /*printf("\nObjective at Minimum = %g\n",xx);*/ freemat(B);
   /* freeing storage .... */
   freemat(F);freemat(z);freemat(W);freemat(Z);
 }

@@ -1,82 +1,367 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2016
-##  With contributions from Henric Nilsson
+# These are the R routines for the package mgcv (c) Simon Wood 2000-2003
 
-Rrank <- function(R,tol=.Machine$double.eps^.9) {
-## Finds rank of upper triangular matrix R, by estimating condition
-## number of upper rank by rank block, and reducing rank until this is 
-## acceptably low... assumes R pivoted 
- m <- nrow(R)
- rank <- min(m,ncol(R))
- ok <- TRUE
-  while (ok) {
-    Rcond <- .C(C_R_cond,R=as.double(R),r=as.integer(m),c=as.integer(rank),
-             work=as.double(rep(0,4*m)),Rcond=as.double(1))$Rcond
-    if (Rcond*tol<1) ok <- FALSE else rank <- rank - 1  
+QT<-function(A) {
+
+# This routine performs a QT factorization of matrix A. A QT factorization
+# is of the form AQ=[0,T] where T is reverse lower triangular (top left zero)
+# nrow(A)<ncol(A) and the first (ncol(A)-nrow(A)) columns of Q are the null
+# space of A. Q is actually stored as Householder rotations in over A. 
+# Specifically if u_i is row i of A then let H_i=(I-u_i u_i') then 
+# Q = H_1 H_2 ... there are nrow(A) u_i's and H_i's. The last i-1 elements
+# of u_i are always zero (i>=1). The main use of this routine is to find
+# the null space of a constraint matrix C, as used in mgcv().
+# The return value is the over-written A. The factorization is performed
+# using compiled code.
+if (!is.matrix(A)) stop("Argument to QT must be a matrix.")
+if (nrow(A)>ncol(A)) stop("Matrix argument to QT has more rows than columns.")
+oo<-.C("RQT",as.double(A),as.integer(nrow(A)),as.integer(ncol(A)),PACKAGE="mgcv")
+A<-matrix(oo[[1]],nrow(A),ncol(A))
+A
+}
+
+
+mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
+# Takes the knot sequence x for a cubic regression spline and returns a list with 
+# 2 elements matrix A and array b, such that if p is the vector of coeffs of the
+# spline, then Ap>b ensures monotonicity of the spline.
+# up=TRUE gives monotonic increase, up=FALSE gives decrease.
+# lower and upper are the optional lower and upper bounds on the spline.
+{
+  if (is.na(lower)) {lo<-0;lower<-0;} else lo<-1
+  if (is.na(upper)) {hi<-0;upper<-0;} else hi<-1
+  if (up) inc<-1 else inc<-0
+  control<-4*inc+2*lo+hi
+  n<-length(x)
+  if (n<4) stop("At least three knots required in call to mono.con.")
+  A<-matrix(0,4*(n-1)+lo+hi,n)
+  b<-array(0,4*(n-1)+lo+hi)
+  if (lo*hi==1&&lower>=upper) stop("lower bound >= upper bound in call to mono.con()")
+  oo<-.C("RMonoCon",as.double(A),as.double(b),as.double(x),as.integer(control),as.double(lower),
+         as.double(upper),as.integer(n),PACKAGE="mgcv")
+  A<-matrix(oo[[1]],dim(A)[1],dim(A)[2])
+  b<-array(oo[[2]],dim(A)[1])
+  list(A=A,b=b)
+}  
+
+
+uniquecombs<-function(x) {
+# takes matrix x and counts up unique rows
+if (is.null(x)) stop("x is null")
+if (is.null(nrow(x))) stop("x has no row attribute")
+if (is.null(ncol(x))) stop("x has no col attribute")
+res<-.C("RuniqueCombs",as.double(x),as.integer(nrow(x)),as.integer(ncol(x)),PACKAGE="mgcv")
+n<-res[[2]]*res[[3]]
+x<-matrix(res[[1]][1:n],res[[2]],res[[3]])
+x
+}
+
+
+null.space.dimension<-function(d,m)
+# vectorized function for calculating null space dimension for penalties of order m
+# for dimension d data M=(m+d+1)!/(d!(m-d)!). Any m not satisfying 2m>d is reset so 
+# that 2m>d+1 (assuring "visual" smoothness) 
+{ if (sum(d<0)) stop("d can not be negative in call to null.space.dimension().")
+  ind<-2*m<d+1
+  if (sum(ind)) # then default m required for some elements
+  { m[ind]<-1;ind<-2*m<d+2
+    while (sum(ind)) { m[ind]<-m[ind]+1;ind<-2+m<d+2;}
   }
-  rank
-}
- 
-slanczos <- function(A,k=10,kl=-1,tol=.Machine$double.eps^.5,nt=1) {
-## Computes truncated eigen decomposition of symmetric A by 
-## Lanczos iteration. If kl < 0 then k largest magnitude
-## eigenvalues returned, otherwise k highest and kl lowest.
-## Eigenvectors are always returned too.
-## set.seed(1);n <- 1000;A <- matrix(runif(n*n),n,n);A <- A+t(A);er <- slanczos(A,10)
-## um <- eigen(A,symmetric=TRUE);ind <- c(1:5,(n-5+1):n)
-## range(er$values-um$values[ind]);range(abs(er$vectors)-abs(um$vectors[,ind]))
-## It seems that when k (or k+kl) is beyond 10-15% of n
-## then you might as well use eigen(A,symmetric=TRUE), but the
-## extra cost is the expensive accumulation of eigenvectors.
-## Should re-write whole thing using LAPACK routines for eigenvectors. 
-   if (tol<=0||tol>.01) stop("silly tolerance supplied")
-   k <- round(k);kl <- round(kl)
-   if (k<0) stop("argument k must be positive.")
-   m <- k + max(0,kl) 
-   n <- nrow(A) 
-   if (m<1) return(list(values=rep(0,0),vectors=matrix(0,n,0),iter=0)) 
-   if (n != ncol(A)) stop("A not square")
-   if (m>n) stop("Can not have more eigenvalues than nrow(A)")
-   oo <- .C(C_Rlanczos,A=as.double(A),U=as.double(rep(0,n*m)),D=as.double(rep(0,m)),
-            n=as.integer(n),m=as.integer(k),ml=as.integer(kl),tol=as.double(tol),nt=as.integer(nt))
-   list(values = oo$D,vectors = matrix(oo$U,n,m),iter=oo$n) 
-}
-
-rig <- function(n,mean,scale) {
-## inverse gaussian deviates generated by algorithm 5.7 of
-## Gentle, 2003. scale = 1/lambda. 
-  if (length(n)>1) n <- length(n)
-  x <- y <- rnorm(n)^2
-  mys <- mean*scale*y
-  mu <- 0*y + mean ## y is there to ensure mu is a vector
-  mu2 <- mu^2;
-  ind <- mys < .Machine$double.eps^-.5 ## cut off for tail computation
-  x[ind] <- mu[ind]*(1 + 0.5*(mys[ind] - sqrt(mys[ind]*4+mys[ind]^2)))
-  x[!ind] <- mu[!ind]/mys[!ind] ## tail term (derived from Taylor of sqrt(1+eps) etc)
-  #my <- mean*y; sc <- 0*y + scale
-  #ind <- my > 1 ## cancellation error can be severe, without splitting
-  #x[!ind] <- mu[!ind]*(1 + 0.5*sc[!ind]*(my[!ind] - sqrt(4*my[!ind]/sc[!ind] + my[!ind]^2)))
-  ## really the sqrt in the next term should be expanded beyond first order and then
-  ## worked on - otherwise too many exact zeros?
-  #x[ind] <- pmax(0,mu[ind]*(1+my[ind]*.5*sc[ind]*(1-sqrt(1+ 4/(sc[ind]*my[ind])))))
-  ind <- runif(n) > mean/(mean+x)
-  x[ind] <- mu2[ind]/x[ind]
-  x ## E(x) = mean; var(x) = scale*mean^3
-}
-
-strip.offset <- function(x)
-# sole purpose is to take a model frame and rename any "offset(a.name)"
-# columns "a.name"
-{ na <- names(x)
-  for (i in 1:length(na)) {
-    if (substr(na[i],1,7)=="offset(") 
-      na[i] <- substr(na[i],8,nchar(na[i])-1)
+  M<-m*0+1;ind<-M==1;i<-0
+  while(sum(ind))
+  { M[ind]<-M[ind]*(d[ind]+m[ind]-1-i);i<-i+1;ind<-i<d
   }
-  names(x) <- na
-  x
+  ind<-d>1;i<-2
+  while(sum(ind))
+  { M[ind]<-M[ind]/i;ind<-d>i;i<-i+1   
+  }
+  M
 }
 
 
-pcls <- function(M)
+null.space.basis.powers<-function(m,d)
+# generates the sequence of powers required to specify the M polynomials spanning the 
+# null space of the penalty of a d-dimensional tps with wiggliness penalty order d 
+# So, if x_i are the co-ordinates the kth polynomial is x_1^pi[k][1]*x_2^pi[k][2] ....
+{ if (d<0) stop("d can not be negative in call to null.space.basis.powers()")
+  M<-null.space.dimension(d=d,m=m)
+  if (2*m<=d) {m<-1;while (2*m<d+2) m<-m+1;}
+  index<-array(0,d)
+  pi<-array(0,c(M,d))
+  for (i in 1:M)
+  { # copy index to pi 
+    pi[i,]<-index
+    # update index.... 
+    sumi<-sum(index)
+    if (sumi<m-1) # then increase lowest index 
+    index[1]<-index[1]+1
+    else          # pass the problem up 
+    { sumi<-sumi-index[1];
+      index[1]<-0;
+      for (j in 2:d)
+      { index[j]<-index[j]+1;sumi<-sumi+1;
+        if (sumi==m) { sumi<-sumi-index[j];index[j]<-0;}
+        else break; # problem resolved! 
+      } 
+    }
+  }
+  rm(index)
+  pi
+}
+
+null.space.basis.labels<-function(names,m,by="NA")
+# given the list of covariates of one spline term, and the order of the penalty for the
+# term this function returns a list of names for the polynomial terms spanning the null
+# space of the penalty, in the order in which the terms appear in the model design matrix.
+# The routine ensures that the same term always gets the same label, irrespective of the
+# ordering of the input names list.... this lets the labels be used for testing for
+# redundancy in a GAM design matrix. If a names is supplied in `by' then it  multiplies
+# all terms in the basis, except the constant. 
+{ d<-length(names[names!=""])
+  if (length(unique(names))<d) stop("Repeated variables in a smooth term (null space basis)")
+  pi<-null.space.basis.powers(m=m,d=d)
+  M<-dim(pi)[1]
+  term<-array("",M)
+  for (i in 1:M)
+  { label<-""
+    for (j in 1:d)
+    if (pi[i,j]==0) label[j]<-""
+    else if (pi[i,j]==1) label[j]<-names[j]
+    else label[j]<-paste(names[j],"^",pi[i,j],collapse="",sep="") 
+    label<-label[label!=""]
+    if (length(label))
+    { if (by!="NA") label[length(label)+1]<-by
+      label<-sort(label)
+      term[i]<-paste(label,collapse="*",sep="*")
+    }
+    else term[i]<-"1"
+  }  
+  term
+}  
+
+
+
+gam.side.conditions<-function(G)
+# This routine is designed to:
+#  i) check the smooth part of a gam for identifiability
+#  ii) impose side conditions to impose identifiability, where possible
+# some by-variable lack of identifiability may be missed. Smooths remain centred even with by-vars.
+{ gam.repeat.check<-function(v.names,by.names)
+  # takes a 2-d array of variable names and checks for repeated rows (order unimportant)
+  { n<-dim(v.names)[1];m<-dim(v.names)[2]
+    if (n<=1) return(FALSE) # nothing to do
+    for (i in 1:n) 
+    { vn<-v.names[i,]<-sort(v.names[i,])
+      vn<-vn[vn!=""];
+      if (length(unique(vn))!=length(vn)) return(TRUE) # there is a within term repeat
+    }
+    for (i in 1:(n-1))
+    { vn<-c(v.names[i,],by.names[i])
+      for (j in (i+1):n) if (sum(vn==c(v.names[j,],by.names[j]))==(m+1)) return(TRUE) # there is a repeat in this list of terms
+    }
+    return(FALSE) # no repeats
+  }
+  # end of local function declaration, start of main code.....
+  if (G$m==0) return(G$C) # nothing to do
+  n.vars<-length(G$vnames)
+  if (length(unique(G$vnames[(G$nsdf+1):n.vars]))==(n.vars-G$nsdf))
+  return(G$C) # nothing to do - there are no repeated variable names in the spline part
+  # first assemble the array of term labels
+  term.names<-array("",c(G$m,max(G$dim)))
+  k<-G$nsdf   
+  for (i in 1:G$m)   # term[i,j] holds jth variable name for ith term
+  { term.names[i,1:G$dim[i]]<-G$vnames[(k+1):(k+G$dim[i])]
+    k<-k+G$dim[i]
+  }  
+  # now work through the term dimensions
+  all.ind<-1:G$m # index vector
+  var.stack<-array("",0)  # stores names for null space basis vectors used so far - checked to avoid repeats
+  stack.size<-0  # size of var.stack
+  #by.index<-rep(0,G$m)
+  by.names<-rep("NA",G$m)
+  #by.index[G$by.exists]<-1:length(G$by.exists) # indexes existing rows of G$by
+  if (sum(G$by.exists)) by.names[G$by.exists]<-rownames(G$by) # names of by variables
+  for (d in 1:max(G$dim)) # note if d=1 were not first then would have to deal with "cr" terms specially 
+  { # assemble all terms of dimension d, need variable names, p.order and parameter vector offsets
+    ind<-all.ind[G$dim==d]
+    n.d<-length(ind)
+    if (n.d>0) # then there is something to do
+    { d.vnames<-term.names[ind,]
+      dim(d.vnames)<-c(n.d,dim(term.names)[2]) # otherwise vectors lose dimension attribute!
+      d.by.names<-by.names[ind]
+      d.off<-G$off[ind]
+      d.dim<-G$dim[ind]
+      d.p.order<-G$p.order[ind] # order of penalty 
+      d.k<-G$df[ind] # basis dimension
+      # check these terms for repeats within and between terms
+      if(gam.repeat.check(v.names=d.vnames,by.names=d.by.names)) 
+      stop("The smooth part of this model is not identifiable")
+      # work through the terms imposing constraints on redundant null basis  
+      # parameters and updating the null basis stack.....
+      for (j in 1:n.d) # work through all n.d d-dimensional terms 
+      { #cat(d.vnames[j,]," ",d.p.order[j]," ")
+        by<-d.by.names[j]
+        bs.label<-null.space.basis.labels(d.vnames[j,],d.p.order[j],by=by) # get unique null basis vector names
+        bs.label<-bs.label[bs.label!="1"] # constants already constrained by sum to zero constraints
+        #print(bs.label)
+        for (i in 1:length(bs.label)) 
+        if (length(var.stack[var.stack==bs.label[i]])>0) # already on the stack
+        { # locate the parameter for this term 
+          k<-1+d.off[j]+d.k[j]-null.space.dimension(d.dim[j],d.p.order[j])+i
+          rows<-dim(G$C)[1];cols<-dim(G$C)[2]
+          CC<-matrix(0,rows+1,cols)
+          CC[1:rows,1:cols]<-G$C
+          CC[rows+1,k]<-1
+          G$C<-CC;rm(CC)  # parameter constrained to be zero
+        } else # pop it on the stack
+        { stack.size<-stack.size+1
+          var.stack[stack.size]<-bs.label[i]
+        } 
+      }
+    }
+  }   
+  G$C # the final constraint matrix
+}  
+
+GAMsetup<-function(G) {
+# This function sets up the design matrix and penalty matrices for a GAM formulated with
+# one dimensional cubic penalized regression splines, or as thin plate regression splines.
+# It takes a list G as argument which  should have the following named elements:
+#
+# G$m the number of smooth terms in the model
+# G$n the number of data to be modelled
+# G$nsdf the number of user supplied columns of the design matrix for any parametric model parts
+#        including the constant (if any)
+# G$sp an array of supplied smoothing parameters
+# G$df an array of G$m integers specifying the maximum d.f. for each spline term
+# G$dim an array containing the dimensions of each smooth
+# G$s.type an array containing a code for the type of each smooth 0 - cubic regression spline
+#          1 - tprs.
+# G$p.order is an array giving the orders of the spline penalties to use 
+# G$x an array of G$n element arrays of data and (optionally) design matrix columns. The first
+#     G$nsdf elements of G$x should contain the elements of the columns of the design matrix
+#     corresponding to the parametric part of the model. The remaining G$m elements of G$x 
+#     are the values of the covariates that are arguments of the spline terms.
+# G$by.exists is an array of logicals indicating whether each term has a corresponding "by" 
+#             variable
+# G$by a compact array of by variables - only has rows for the smooths with by variables
+# G$knots a compact array of knot locations for each smooth, in the order corresponding to the 
+#         row order in G$x. There are G$dim[i] arrays of length G$n.knots[i] for the ith
+#         smnooth - all these arrays are packed end to end in 1-d array G$knots - zero length 1 for no knots.
+# G$n.knots - array giving number of knots of basis for each smooth term 0's for none
+# G$fit.method - one of "mgcv" or "magic", which determines the exact form of H$S and H$off
+# G$min.sp - minimum values for the smoothing parameters, only used with fit.method=="magic"
+# G$H - offset penalty matrix, only used with fit.method=="magic"
+# The function returns a list H containing all the above named elements plus the following:
+#
+# H$X the full design matrix.
+# H$S contains the elements of the G$m penalty matrices. let start.k=sum(G$df[1:(k-1)]^2) and start_1=0
+#     Element i,j of the kth penalty matrix is S[start.k+i+G$df[k]*(j-1)]. Note however that this
+#     matrix is infact the smallest matrix containing all the non-zero elements of the full
+#     penalty. Paste it into location starting at M$off[k], M$off[k] of an appropriate
+#     matrix of zeroes to get the full penalty. If fit.method=="magic" this is a list of matrices! 
+# H$off is an array of offsets, used to facilitate efficient storage of the penalty matrices
+#       and to indicate where in the overall parameter vector the parameters of the ith 
+#       spline reside (e.g. first parameter of ith spline is at p[off[i]]).
+# H$C - the matrix of linear equality constraints on the parameters .  
+# H$covariate.shift - the shift applied to the covariates in order to centre them
+# H$UZ - Array containing matrices giving the truncated basis for the ith tprs term.
+#        Let start[k]=sum_{i=1}^{k-1} (n+M[i])*df[i],  where n is number of data
+#        M[i] is null space dimension and df[i] the basis dimension for term i. start[0]=0. 
+#        Then row i col j of basis matrix k is at H$UZ[start+i+(j-1)*(n+M[k])] 
+# H$Xu - This is an array used for storing matrices containing all the unique covariate combinations for
+#        each model term (when it's a t.p.r.s.). The packing convention is a s follows:
+#        let start[1]=0 and start[k+1]=start[k]+xu[k]*dim[k] where xu[k] and dim[k] give the
+#        number of unique covariate combinations and the number of coivariates for the kth term.
+#        then the jth covariate for the ith unique combination for the kth model term is at:
+#        h$Xu[start[k]+i+(j-1)*xu[k]].
+# H$xu.length - H$xu.length[i] is the number of unique covariate values for the ith tprs term
+# H$xp - if the spline term is a cubic regression spline then this is  the matrix whose 
+#        rows contain the covariate values corresponding to the parameters
+#        of each spline - the splines are parameterized using their y- values at a series
+#        of x values - these vectors contain those x values!
+# H$rank - the ranks of the penalty matrices
+# H$m.free - number of free penalties (magic only)
+# H$m.off - offeste for free penalties (magic only)
+  q<-G$nsdf
+  if (G$m) for (i in 1:G$m) { q<-q+G$df[i] }  # q stores total number of parameters
+  X<-matrix(0,G$n,q)             # design matrix
+  if (G$m>0)
+  { mdf<-max(G$df)
+    # centre the covariates to improve numerical stability
+    nc<-0;for (i in 1:G$m) nc<-nc+G$dim[i] # count up covariates
+    G$covariate.shift<-array(0,nc)
+    for (i in 1:nc) G$covariate.shift[i]<-mean(G$x[i+G$nsdf,])
+    for (i in 1:nc) G$x[i+G$nsdf,]<-G$x[i+G$nsdf,]-G$covariate.shift[i]
+    if (is.null(G$knots)) { G$n.knots<-rep(0,G$m);G$knots<-0;}
+    k<-1;for (i in 1:G$m)  # apply shift to basis, as well  
+    { n<-G$n.knots[i]
+      if (n>0) for (j in 1:G$dim[i]) 
+      { G$knots[k:(k+n-1)]<-G$knots[k:(k+n-1)]-G$covariate.shift[i];k<-k+n;}
+    }
+    xp<-matrix(0,G$m,mdf)          # covariate matrix
+    S<-array(0,sum(G$df^2))   # array of wiggliness penalty matrices
+    C<-matrix(0,G$m,q)             # fixed constraint matrix (one per spline term)
+    m.type1<-sum(G$s.type)
+    M<-array(0,G$m);for (i in 1:G$m) M[i]<-null.space.dimension(G$dim[i],G$p.order[i])
+    if (m.type1>0) UZ.length<-sum((G$n+M[G$s.type==1])*G$df[G$s.type==1])
+    else UZ.length<-0
+    UZ<-array(0,UZ.length) # storage for truncated basis
+    if (m.type1>0) Xu.length<-sum(G$n*G$dim[G$s.type==1])
+    else Xu.length<-0
+    Xu<-array(0,Xu.length) # storage for set of unique covariate combinations
+    xu.length<-array(0,m.type1)  # storage for number of unique covariate combinations for each tprs term
+    off<-array(0,c(G$m))           # array for storing offsets for Wiggliness penalties
+    G$rank<- G$df-null.space.dimension(G$dim,G$p.order) # ranks of penalty matrices
+  } else mdf<-G$covariate.shift<-xp<-S<-C<-m.type1<-M<-UZ<-Xu<-xu.length<-off<-UZ.length<-Xu.length<-0;
+  o<-.C("RGAMsetup",as.double(X),as.double(C),as.double(S),as.double(UZ),as.double(Xu),as.integer(xu.length),as.double(xp),
+        as.integer(off),as.double(G$x),as.integer(G$m),as.integer(G$n),as.integer(G$df),
+        as.integer(G$nsdf),as.integer(G$dim),as.integer(G$s.type),as.integer(G$p.order),
+        as.integer(G$by.exists),as.double(G$by),as.double(G$knots),as.integer(G$n.knots),
+        PACKAGE="mgcv") # compiled code to set up matrices for model
+  G$X<-matrix(o[[1]],G$n,q);
+  G$C<-matrix(o[[2]],G$m,q);
+  G$off<-array(o[[8]],c(G$m));
+  if (G$fit.method=="magic") # magic requires a different penalty matrix format to mgcv
+  { G$S<-list();
+    if (!is.null(G$H)&&(dim(G$H)[1]!=q||dim(G$H)[2]!=q)) stop("dimensions of H incorrect.")
+    k<-1;G$m.free<-0;G$m.off<-0
+    if (G$m>0)
+    for (i in 1:G$m)
+    { j<-G$df[i];Si<-matrix(o[[3]][k:(k+j*j-1)],j,j);k<-k+j*j;
+      if (G$sp[i]<0)
+      { G$m.free<-G$m.free+1;G$S[[G$m.free]]<-Si;
+        G$m.off[G$m.free]<-G$off[i]+1
+        G$rank[G$m.free]<-G$rank[i]
+      } else
+      if (G$sp[i]>0)
+      { if (is.null(G$H)) G$H<-matrix(0,q,q)
+        off1<-G$off[i]+1;off2<-off1+j-1
+        G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*Si
+      }
+    }
+    # if minimum smoothing parameters supplied then penalties times these must be added to H
+    if (!is.null(G$min.sp)&&G$m>0)
+    { if (is.null(G$H)) G$H<-matrix(0,q,q)
+      for (i in 1:G$m)
+      { off1<-G$off[i]+1;off2<-off1+G$df[i]-1
+        G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$min.sp[i]*G$S[[i]]
+      }
+    }
+  } else # method is "mgcv"
+  { G$S<-array(o[[3]],sum(G$df^2));             #dim=c(G$m,mdf,mdf));
+    if (!is.null(G$H)) warning("H ignored for fit method mgcv.")
+    if (!is.null(G$min.sp)) warning("min.sp ignored for fit method mgcv.")
+  }
+  G$UZ<-array(o[[4]],UZ.length)  #dim=c(m.type1,G$n+maxM,mdf.type1))
+  G$xu.length<-array(o[[6]],m.type1)
+  if (m.type1>0) Xu.length<-sum(G$xu.length*G$dim[G$s.type==1]) # Xu.length<-sum(G$xu.length[G$s.type==1]*G$dim[G$s.type==1])
+  else Xu.length<-0
+  G$Xu<-array(o[[5]],Xu.length)    #dim=c(m.type1,G$n,mdim))
+  G$xp<-matrix(o[[7]],G$m,mdf);
+  G # ... and return
+}
+
+pcls<-function(M)
 # Function to perform penalized constrained least squares.
 # Problem to be solved is:
 #
@@ -93,2269 +378,716 @@ pcls <- function(M)
 # M$Ain - matrix of inequality constraints
 # M$bin - b above
 # M$C  - fixed constraint matrix
-# M$S  - List of (minimal) penalty matrices
+# M$S  - array packed with non-zero coefficients of S_i's see mgcv or GAMsetup for details of packing.
 # M$off - used for unpacking M$S
+# M$df  - used for unpacking M$S
 # M$sp - array of theta_i's 
 # Ain, bin and p are not in the object needed to call mgcv....
 #
-{ nar<-c(length(M$y),length(M$p),dim(M$Ain)[1],dim(M$C)[1])
-  ## sanity checking ...
-  if (nrow(M$X)!=nar[1]) stop("nrow(M$X) != length(M$y)") 
-  if (ncol(M$X)!=nar[2]) stop("ncol(M$X) != length(M$p)")
-  if (length(M$w)!=nar[1]) stop("length(M$w) != length(M$y)")
-  if (nar[3]!=length(M$bin)) stop("nrow(M$Ain) != length(M$bin)")
-  if (nrow(M$Ain)>0) {
-    if (ncol(M$Ain)!=nar[2]) stop("nrow(M$Ain) != length(M$p)") 
-    res <- as.numeric(M$Ain%*%M$p) - as.numeric(M$bin)
-    if (sum(res<0)>0) stop("initial parameters not feasible")
-    res <- abs(res)
-    if (sum(res<.Machine$double.eps^.5)>0) 
-      warning("initial point very close to some inequality constraints")
-    res <- mean(res)
-    if (res<.Machine$double.eps^.5) 
-      warning("initial parameters very close to inequality constraints")
-  }
+{ nar<-c(length(M$y),length(M$p),dim(M$Ain)[1],dim(M$C)[1],0)
+  H<-0
+  o<-.C("RPCLS",as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
+        ,as.double(M$C),as.double(H),as.double(M$S),as.integer(M$off),as.integer(M$df),as.double(M$sp),
+        as.integer(length(M$off)),as.integer(nar),PACKAGE="mgcv")
+  array(o[[2]],length(M$p))
+}  
+
+mgcv<-function(M) {
+
+# Performs multiple smoothing parameter selection for Generalized ridge regression problems 
+# M is a list which must containing the following named elements:
+#
+# M$y  - the response variable vector
+# M$m  - number of penalties
+# M$X  - the design matrix (declared as a matrix, with correct numbers of rows and columns,
+#        as number of data and number of parameters are read from this)
+# M$C  - matrix defining linear equality constraints on parameters (Cp=0). 
+#        Number of rows is number of constraints.
+# M$w  - weight vector (often proportional to inverse of standard deviation)
+# M$S  -  contains the elements of the G$m penalty matrices. let start.k=sum(M$df[1:(k-1)]^2) and start_1=0
+#         Element i,j of the kth penalty matrix is S[start.k+i+M$df[k]*(j-1)]. Note however that this
+#         matrix is infact the smallest matrix containing all the non-zero elements of the full
+#         penalty. Paste it into location starting at M$off[k], M$off[k] of an appropriate
+#         matrix of zeroes to get the full penalty.
+# M$off - array of offsets used as described for M$S and also indicates where in the parameter
+#         vector (p, say) the parameters penalized by the ith penalty start.
+# M$df  - array containing actual dimensions of non-zero part of S[i], i.e. S[i] contains only
+#         an M$df square block of non-zero elements.
+# M$fix - array containing TRUE if smooth i is to have fixed d.f. and FALSE otherwise
+# M$sig2 - the error variance if it is known and to be used for UBRE - must be <=0 to use GCV.
+#          Note the convention used here is that var(y_i) = sig2/w_i.
+# M$sp   - the initial smoothing parameter estimates: if any of these are <=0 then automatic
+#           initialisation is used
+# M$conv.tol - convergence tolerence for multiple s.p. GCV
+# M$max.half - maximum number of step-length halvings to perform at each newton update
+#              of s.p.'s
+# M$min.edf - minimum possible estimated degrees of freedom for model - useful for setting limits
+#             on overall smoothing parameter. Set to zero or negative to ignore.
+# M$target.edf - set to negative to ignore. This should only be used if cautious optimization
+#                is to be used in mgcv searching. If this is non-negative then the local 
+#                minimum closest to the target edf will be returned (which can be the global
+#                optimum). Designed for use with non-convergent gams.
+# M$fixed.sp - set to 1 to treat smoothing parameters as fixed.
+#
+# The routine returns M with the following elements added (or reset):
+#
+# M$p    - the best fit parameter vector given the selected smoothing parameters
+# M$sp   - the vector of smoothing parameters (\theta_i/\rho) estimated by the method
+# M$sig2 - the estimate of the error variance (if GCV used)
+# M$Vp   - the estimated covariance matrix of the parameters set Vp[1,1] <0 to not calculate
+# M$edf  - the estimated degrees of freedom for the ith smooth term if Vp calculated
+# M$hat  - array of same length as M$y with elements from leading diagonal of hat/influence matrix
+# M$conv - a list of convergence diagnostics
+#          g - gradients of gcv/ubre score at termination, h - leading diagonal of Hessian
+#          e - eigenvalues of Hessian, iter - iterations taken, init.ok - TRUE if second 
+#          autonitialization guess ok (or intial values supplied), step.fail - TRUE
+#          if algorithm terminated on step failure rather than convergence. 
+#          edf - array of model edf's from final grid search for overall s.p.
+#          score - array of gcv/ubre scores corresponding to edf.
+# M$gcv.ubre - the gcv/ubre score at the minimum.
+#  
+  if (is.null(M$sig2)) M$sig2<-0
+  C.r<-nrow(M$C)          # number of equality constraints
+  if (is.null(C.r)) C.r<-0
+  q<-ncol(M$X)            # number of parameters
   
-  if (nrow(M$C)>0) if (ncol(M$C)!=nar[2]) stop("ncol(M$C) != length(M$p)")  
-  if (length(M$S)!=length(M$off)) stop("M$S and M$off have different lengths")
-  if (length(M$S)!=length(M$sp)) stop("M$sp has different length to M$S and M$off")
-  
-  
-  # pack the S array for mgcv call 
-  m<-length(M$S)
-  Sa<-array(0,0);df<-0
-  if (m>0) for (i in 1:m)
-  { Sa<-c(Sa,M$S[[i]])
-    df[i]<-nrow(M$S[[i]])
-    if (M$off[i]+df[i]-1>nar[2]) stop(gettextf("M$S[%d] is too large given M$off[%d]", i, i))
+  n<-nrow(M$X)            # number of data
+  # need to strip out penalties for fixed df smooths..... 
+  # k<-length(M$df)
+  k<-M$m  # needed to allow models with no smooths!
+  if (is.null(k)) k<-0
+  if (k!=0)  m<-k-sum(M$fix) # count penalty terms to include
+  else m<-0
+  #S<-array(0,c(m,dim(M$S)[2],dim(M$S)[3])) # reduced smoothness array
+  if (sum(!M$fix)) S<-array(0,sum(M$df[!M$fix]^2))
+  else S<-array(0,0)
+  off<-array(0,m)  # reduced offset array
+  df<-array(0,m)   # reduced penalty size array
+  j<-1             # element index for off[], df and S[]
+  stop<-0          # where to stop in copying from M$S 
+  stopj<-0         # where to stop within S
+  if (k!=0)
+  for (i in 1:k)   # do actual stripping
+  { start<-stop;stop<-start+M$df[i]^2;start<-start+1
+    if (M$fix[i]==FALSE) 
+    { #S[j,,]<-M$S[i,,]
+      startj<-stopj;stopj<-startj+M$df[i]^2;startj<-startj+1
+      S[startj:stopj]<-M$S[start:stop]
+      off[j]<-M$off[i]
+      df[j]<-M$df[i]
+      j<-j+1
+    }  
   }
-  qra.exist <- FALSE
-  if (ncol(M$X)>nrow(M$X)) {
-    if (m>0) stop("Penalized model matrix must have no more columns than rows") 
-    else { ## absorb M$C constraints
-      qra <- qr(t(M$C))
-      j <- nrow(M$C);k <- ncol(M$X)
-      M$X <- t(qr.qty(qra,t(M$X))[(j+1):k,])
-      M$Ain <- t(qr.qty(qra,t(M$Ain))[(j+1):k,])
-      M$C <- matrix(0,0,0)
-      M$p <- rep(0,ncol(M$X)) 
-      nar[2] <- length(M$p)
-      qra.exist <- TRUE
-      if  (ncol(M$X)>nrow(M$X)) stop("Model matrix not full column rank")
-    }
-  }
-  o<-.C(C_RPCLS,as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
-        ,as.double(M$C),as.double(Sa),as.integer(M$off),as.integer(df),as.double(M$sp),
-        as.integer(length(M$off)),as.integer(nar))
-  p <- array(o[[2]],length(M$p))
-  if (qra.exist) p <- qr.qy(qra,c(rep(0,j),p))
-  p
-} ## pcls
-
-all_vars1 <- function(form) {
-## version of all.vars that doesn't split up terms like x$y into x and y
-  vars <- all.vars(form)
-  vn <- all.names(form)
-  vn <- vn[vn%in%c(vars,"$","[[")] ## actual variable related names
-  if ("[["%in%vn) stop("can't handle [[ in formula")
-  ii <- which(vn%in%"$") ## index of '$'
-  if (length(ii)) { ## assemble variable names
-    vn1 <- if (ii[1]>1) vn[1:(ii[1]-1)]
-    go <- TRUE
-    k <- 1
-    while (go) {
-      n <- 2; 
-      while(k<length(ii) && ii[k]==ii[k+1]-1) { k <- k + 1;n <- n + 1 }
-      vn1 <- c(vn1,paste(vn[ii[k]+1:n],collapse="$"))
-      if (k==length(ii)) {
-        go <- FALSE
-	ind <- if (ii[k]+n<length(vn)) (ii[k]+n+1):length(vn) else rep(0,0) 
-      } else {
-        k <- k +  1
-	ind <- if (ii[k-1]+n<ii[k]-1) (ii[k-1]+n+1):(ii[k]-1) else rep(0,0)
-      }
-      vn1 <- c(vn1,vn[ind])
-    }
-  } else vn1 <- vn
-  vn1
-} ## all_vars1
-
-interpret.gam0 <- function(gf,textra=NULL,extra.special=NULL)
-# interprets a gam formula of the generic form:
-#   y~x0+x1+x3*x4 + s(x5)+ s(x6,x7) ....
-# and returns:
-# 1. a model formula for the parametric part: pf (and pfok indicating whether it has terms)
-# 2. a list of descriptors for the smooths: smooth.spec
-# this is function does the work, and is called by in interpret.gam
-# 'textra' is optional text to add to term labels
-# 'extra.special' is label of extra smooth within formula.
-{ p.env <- environment(gf) # environment of formula
-  tf <- terms.formula(gf,specials=c("s","te","ti","t2",extra.special)) # specials attribute indicates which terms are smooth
- 
-  terms <- attr(tf,"term.labels") # labels of the model terms 
-  nt <- length(terms) # how many terms?
-  
-  if (attr(tf,"response") > 0) {  # start the replacement formulae
-    response <- as.character(attr(tf,"variables")[2])
-  } else { 
-    response <- NULL
-  }
-  sp <- attr(tf,"specials")$s     # array of indices of smooth terms 
-  tp <- attr(tf,"specials")$te    # indices of tensor product terms
-  tip <- attr(tf,"specials")$ti   # indices of tensor product pure interaction terms
-  t2p <- attr(tf,"specials")$t2   # indices of type 2 tensor product terms
-  zp <- if (is.null(extra.special)) NULL else attr(tf,"specials")[[extra.special]]
-  off <- attr(tf,"offset") # location of offset in formula
-
-  ## have to translate sp, tp, tip, t2p (zp) so that they relate to terms,
-  ## rather than elements of the formula...
-  vtab <- attr(tf,"factors") # cross tabulation of vars to terms
-  if (length(sp)>0) for (i in 1:length(sp)) {
-    ind <- (1:nt)[as.logical(vtab[sp[i],])]
-    sp[i] <- ind # the term that smooth relates to
-  }
-  if (length(tp)>0) for (i in 1:length(tp)) {
-    ind <- (1:nt)[as.logical(vtab[tp[i],])]
-    tp[i] <- ind # the term that smooth relates to
-  } 
-  if (length(tip)>0) for (i in 1:length(tip)) {
-    ind <- (1:nt)[as.logical(vtab[tip[i],])]
-    tip[i] <- ind # the term that smooth relates to
-  } 
-  if (length(t2p)>0) for (i in 1:length(t2p)) {
-    ind <- (1:nt)[as.logical(vtab[t2p[i],])]
-    t2p[i] <- ind # the term that smooth relates to
-  }
-  if (length(zp)>0) for (i in 1:length(zp)) {
-    ind <- (1:nt)[as.logical(vtab[zp[i],])]
-    zp[i] <- ind # the term that smooth relates to
-  } ## re-referencing is complete
-
-  k <- kt <- kti <- kt2 <- ks <- kz <- kp <- 1 # counters for terms in the 2 formulae
-  len.sp <- length(sp)
-  len.tp <- length(tp)
-  len.tip <- length(tip)
-  len.t2p <- length(t2p)
-  len.zp <- length(zp)
-  ns <- len.sp + len.tp + len.tip + len.t2p + len.zp# number of smooths
-  pav <- av <- rep("",0)
-  smooth.spec <- list()
-  #mgcvat <- "package:mgcv" %in% search() ## is mgcv in search path?
-  mgcvns <- loadNamespace('mgcv')
-  if (nt) for (i in 1:nt) { # work through all terms
-    if (k <= ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||(kz<=len.zp&&zp[kz]==i)||
-                  (kti<=len.tip&&tip[kti]==i)||(kt2<=len.t2p&&t2p[kt2]==i))) { # it's a smooth
-      ## have to evaluate in the environment of the formula or you can't find variables 
-      ## supplied as smooth arguments, e.g. k <- 5;gam(y~s(x,k=k)), fails,
-      ## but if you don't specify namespace of mgcv then stuff like 
-      ## loadNamespace('mgcv'); k <- 10; mgcv::interpret.gam(y~s(x,k=k)) fails (can't find s)
-      ## eval(parse(text=terms[i]),envir=p.env,enclos=loadNamespace('mgcv')) fails??
-      ## following may supply namespace of mgcv explicitly if not on search path...
-      ## If 's' etc are masked then we can fail even if mgcv on search path, hence paste
-      ## of explicit mgcv reference into first attempt...
-    
-      st <- try(eval(parse(text=paste("mgcv::",terms[i],sep="")),envir=p.env),silent=TRUE)
-      if (inherits(st,"try-error")) st <- 
-            eval(parse(text=terms[i]),enclos=p.env,envir=mgcvns)
-     
-      if (!is.null(textra)) { ## modify the labels on smooths with textra
-        pos <- regexpr("(",st$lab,fixed=TRUE)[1]
-        st$label <- paste(substr(st$label,start=1,stop=pos-1),textra,
-                    substr(st$label,start=pos,stop=nchar(st$label)),sep="")
-      }
-      smooth.spec[[k]] <- smooth.info(st) ## smooth.info supplies any extra specification info for class
-      if (ks<=len.sp&&sp[ks]==i) ks <- ks + 1 else # counts s() terms
-      if (kt<=len.tp&&tp[kt]==i) kt <- kt + 1 else # counts te() terms
-      if (kti<=len.tip&&tip[kti]==i) kti <- kti + 1 else # counts ti() terms
-      if (kt2<=len.t2p&&t2p[kt2]==i) kt2 <- kt2 + 1 # counts t2() terms
-      else kz <- kz + 1
-      k <- k + 1      # counts smooth terms 
-    } else {          # parametric
-      av[kp] <- terms[i] ## element kp on rhs of parametric
-      kp <- kp+1    # counts parametric terms
-    }
-  }    
-  if (!is.null(off)) { ## deal with offset 
-    av[kp] <- as.character(attr(tf,"variables")[1+off])
-    kp <- kp+1          
+  # check smoothing parameters if fixed....
+  if (M$fixed.sp)
+  { if (sum(M$sp<0)) stop("mgcv called with fixed negative smoothing parameter(s).")
+    if (sum(is.na(M$sp))) stop("mgcv called with fixed NA smoothing parameter(s).")
   }
 
-  pf <- paste(response,"~",paste(av,collapse=" + "))
-  if (attr(tf,"intercept")==0) {
-    pf <- paste(pf,"-1",sep="")
-    if (kp>1) pfok <- 1 else pfok <- 0
-  } else { 
-    pfok <- 1;if (kp==1) { 
-      pf <- paste(pf,"1"); 
-    }
-  }
+  # deal with quantities that will be estimated
+  p<-matrix(0,q,1)      # set up parameter vector
+  Vp<-matrix(0.0,q,q)   # estimated covariance matrix
+  edf<-array(0,m)       # estimated degrees of freedom
+  hat<-array(0,n)       # elements on leading diagonal of hat matrix
+  ddiag<-array(0,3*m)   # array for diagonostics
+  idiag<-array(0,3)     # array for diagnostics
+  Vp[1,1]<-1.0
+  M$gcv.ubre<-1.0;
+  direct.mesh<-100      # number of points for overall s.p. initial direct search
+  sdiag<-array(0.0,2*direct.mesh) # array for gcv/ubre vs edf diagnostics
+  if (is.null(M$target.edf)) M$target.edf<- -1 # set to signal no target edf
 
-  fake.formula <- pf
-
-  if (length(smooth.spec)>0) 
-  for (i in 1:length(smooth.spec)) {
-    nt <- length(smooth.spec[[i]]$term)
-    ff1 <- paste(smooth.spec[[i]]$term[1:nt],collapse="+")
-    fake.formula <- paste(fake.formula,"+",ff1)
-    if (smooth.spec[[i]]$by!="NA") {
-      fake.formula <- paste(fake.formula,"+",smooth.spec[[i]]$by)
-      av <- c(av,smooth.spec[[i]]$term,smooth.spec[[i]]$by)
-    } else av <- c(av,smooth.spec[[i]]$term)
-  }
-  fake.formula <- as.formula(fake.formula,p.env)
-  if (length(av)) {
-    pred.formula <- as.formula(paste("~",paste(av,collapse="+")))
-    pav <- all.vars(pred.formula) ## trick to strip out 'offset(x)' etc...
-    pred.formula <- reformulate(pav,env=p.env) 
-  } else  pred.formula <- ~1
-  ret <- list(pf=as.formula(pf,p.env),pfok=pfok,smooth.spec=smooth.spec,
-            fake.formula=fake.formula,response=response,fake.names=av,
-            pred.names=pav,pred.formula=pred.formula)
-  #environment(ret$fake.formula)  <- environment(ret$pred.formula) <- p.env	    
-  class(ret) <- "split.gam.formula"
-  ret
-} ## interpret.gam0
-
-interpret.gam <- function(gf,extra.special=NULL) {
-## wrapper to allow gf to be a list of formulae or 
-## a single formula. This facilitates general penalized 
-## likelihood models in which several linear predictors 
-## may be involved...
-##
-## The list syntax is as follows. The first formula must have a response on
-## the lhs, rather than labels. For m linear predictors, there 
-## must be m 'base formulae' in linear predictor order. lhs labels will 
-## be ignored in a base formula. Empty base formulae have '-1' on rhs.
-## Further formulae have labels up to m labels 1,...,m on the lhs, in a 
-## syntax like this: 3 + 5 ~ s(x), which indicates that the same s(x) 
-## should be added to both linear predictors 3 and 5. 
-## e.g. A bivariate normal model with common expected values might be
-## list(y1~-1,y2~-1,1+2~s(x)), whereas if the second component was contaminated 
-## by something else we might have list(y1~-1,y2~s(v)-1,1+2~s(x)) 
-## 
-## For a list argument, this routine returns a list of split.formula objects 
-## with an extra field "lpi" indicating the linear predictors to which each 
-## contributes...
-  if (is.list(gf)) {
-    d <- length(gf)
-    p.env <- environment(gf[[1]])
-    ## make sure all formulae have a response, to avoid
-    ## problems with parametric sub formulae of the form ~1
-    #if (length(gf[[1]])<3) stop("first formula must specify a response")
-    resp <- gf[[1]][2]
-    
-    ret <- list()
-    pav <- av <- rep("",0)
-    nlp <- 0 ## count number of linear predictors (may be different from number of formulae)
-    for (i in 1:d) {
-      textra <- if (i==1) NULL else paste(".",i-1,sep="") ## modify smooth labels to identify to predictor  
-
-      lpi <- getNumericResponse(gf[[i]]) ## get linear predictors to which this applies, if explicit
-      if (length(lpi)==1) warning("single linear predictor indices are ignored")
-      if (length(lpi)>0) gf[[i]][[2]] <- NULL else { ## delete l.p. labels from formula response 
-        nlp <- nlp + 1;lpi <- nlp ## this is base formula for l.p. number nlp       
-      }
-      ret[[i]] <- interpret.gam0(gf[[i]],textra,extra.special=extra.special)
-      ret[[i]]$lpi <- lpi ## record of the linear predictors to which this applies
-      
-      ## make sure all parametric formulae have a response, to avoid
-      ## problems with parametric sub formulae of the form ~1
-      respi <- rep("",0) ## no extra response terms
-      if (length(ret[[i]]$pf)==2) { 
-        ret[[i]]$pf[3] <- ret[[i]]$pf[2];ret[[i]]$pf[2] <- resp
-        respi <- rep("",0)
-      } else if (i>1) respi <- ret[[i]]$response ## extra response terms
-      av <- c(av,ret[[i]]$fake.names,respi) ## accumulate all required variable names 
-      pav <- c(pav,ret[[i]]$pred.names) ## predictors only 
-    } 
-    av <- unique(av) ## strip out duplicate variable names
-    pav <- unique(pav)
-    if (length(av)>0) {
-      ## work around - reformulate with response = "log(x)" will treat log(x) as a name,
-      ## not the call it should be... 
-      fff <- formula(paste(ret[[1]]$response,"~ ."))
-      ret$fake.formula <- reformulate(av,response=ret[[1]]$response,env=p.env) 
-      ret$fake.formula[[2]] <- fff[[2]] ## fix messed up response
-    } else ret$fake.formula <- ret[[1]]$fake.formula ## create fake formula containing all variables
-    ret$pred.formula <- if (length(pav)>0) reformulate(pav) else ~1 ## predictor only formula
-    environment(ret$pred.formula) <- p.env
-    ret$response <- ret[[1]]$response 
-    ret$nlp <- nlp ## number of linear predictors
-    for (i in 1:d) if (max(ret[[i]]$lpi)>nlp||min(ret[[i]]$lpi)<1) stop("linear predictor labels out of range")
-    class(ret) <- "split.gam.formula"
-    return(ret)
-  } else interpret.gam0(gf,extra.special=extra.special)  
-} ## interpret.gam
-
-
-fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0,strict=FALSE)
-# model matrix X2 may be linearly dependent on X1. This 
-# routine finds which columns of X2 should be zeroed to 
-# fix this. If rank.def>0 then it is taken as the known degree 
-# of dependence of X2 on X1 and tol is ignored.
-{ qr1 <- qr(X1,LAPACK=TRUE)
-  R11 <- abs(qr.R(qr1)[1,1])
-  r<-ncol(X1);n<-nrow(X1)
-  if (strict) { ## only delete columns of X2 individually dependent on X1
-    ## Project columns of X2 into space of X1 and look at difference
-    ## to orignal X2 to check for deficiency...  
-    QtX2 <- qr.qty(qr1,X2)
-    QtX2[-(1:r),] <- 0
-    mdiff <- colMeans(abs(X2 - qr.qy(qr1,QtX2)))
-    if (rank.def>0) ind <- (1:ncol(X2))[rank(mdiff) <= rank.def] else
-    ind <- (1:ncol(X2))[mdiff < R11*tol]
-    if (length(ind)<1) ind <- NULL
-  } else { ## make X2 full rank given X1
-    QtX2 <- qr.qty(qr1,X2)[(r+1):n,] # Q'X2
-    qr2 <- qr(QtX2,LAPACK=TRUE)
-    R <- qr.R(qr2)
-    # now final diagonal block of R may be zero, indicating rank 
-    # deficiency.
-    r0 <- r <- nrow(R)
-    if (rank.def > 0 && rank.def <= nrow(R)) r0 <- r - rank.def else ## degree of rank def known
-      while (r0>0 && mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
-    r0 <- r0 + 1
-    if (r0>r) return(NULL) else
-    ind <- qr2$pivot[r0:r] # the columns of X2 to zero in order to get independence
-  }
-  ind
-} ## fixDependence
-
-
-augment.smX <- function(sm,nobs,np) {
-## augments a smooth model matrix with a square root penalty matrix for
-## identifiability constraint purposes.
-  ns <- length(sm$S) ## number of penalty matrices
-  if (ns==0) { ## nothing to do
-    return(rbind(sm$X,matrix(0,np,ncol(sm$X))))
-  }
-  ind <- colMeans(abs(sm$S[[1]]))!=0
-  sqrmaX  <- mean(abs(sm$X[,ind]))^2
-  alpha <- sqrmaX/mean(abs(sm$S[[1]][ind,ind]))
-  St <- sm$S[[1]]*alpha
-  if (ns>1) for (i in 2:ns) { 
-    ind <- colMeans(abs(sm$S[[i]]))!=0
-    alpha <- sqrmaX/mean(abs(sm$S[[i]][ind,ind]))
-    St <- St +  sm$S[[i]]*alpha
-  }
-  rS <- mroot(St,rank=ncol(St)) ## get sqrt of penalty
-  X <- rbind(sm$X,matrix(0,np,ncol(sm$X))) ## create augmented model matrix
-  X[nobs+sm$p.ind,] <- t(rS) ## add in 
-  X ## scaled augmented model matrix
-} ## augment.smX
-
-gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
-# works through a list of smooths, sm, aiming to identify nested or partially
-# nested terms, and impose identifiability constraints on them.
-# Xp is the parametric model matrix. It is needed in order to check whether
-# there is a constant (or equivalent) in the model. If there is, then this needs 
-# to be included when working out side constraints, otherwise dependencies can be 
-# missed. 
-# Note that with.pen is quite extreme, since you then pretty much only pick
-# up dependencies in the null spaces
-{ if (!with.pen) { ## check that's possible and reset if not!
-    with.pen <- nrow(Xp) < ncol(Xp) + sum(unlist(lapply(sm,function(x) ncol(x$X))))
-  }
-  m <- length(sm)
-  if (m==0) return(sm)
-  v.names<-array("",0);maxDim<-1
-  for (i in 1:m) { ## collect all term names and max smooth `dim'
-    vn <- sm[[i]]$term
-    ## need to include by variables in names
-    if (sm[[i]]$by!="NA") vn <- paste(vn,sm[[i]]$by,sep="")
-    ## need to distinguish levels of factor by variables...
-    if (!is.null(sm[[i]]$by.level))  vn <- paste(vn,sm[[i]]$by.level,sep="")
-    sm[[i]]$vn <- vn ## use this record to identify variables from now
-    v.names <- c(v.names,vn)
-    if (sm[[i]]$dim > maxDim) maxDim <- sm[[i]]$dim
-  } 
-  lv <- length(v.names)   
-  v.names <- unique(v.names)
-  if (lv == length(v.names)) return(sm) ## no repeats => no nesting
-
-  ## Only get this far if there is nesting.
-  ## Need to test for intercept or equivalent in Xp
-  intercept <- FALSE
-  if (ncol(Xp)) {
-    ## first check columns directly...
-    if (sum(apply(Xp,2,sd)<.Machine$double.eps^.75)>0) intercept <- TRUE else {
-      ## no constant column, so need to check span of Xp...
-      f <- rep(1,nrow(Xp))
-      ff <- qr.fitted(qr(Xp),f)
-      if (max(abs(ff-f))<.Machine$double.eps^.75) intercept <- TRUE 
-    }
-  }
-
-  sm.id <- as.list(v.names)
-  names(sm.id) <- v.names
-  for (i in 1:length(sm.id)) sm.id[[i]]<-array(0,0)
-  sm.dim <- sm.id
-  for (d in 1:maxDim) {
-    for (i in 1:m) {
-      if (sm[[i]]$dim==d&&sm[[i]]$side.constrain) for (j in 1:d) { ## work through terms
-        term<-sm[[i]]$vn[j]
-        a <- sm.id[[term]]
-        la <- length(a)+1
-        sm.id[[term]][la] <- i   ## record smooth i.d. for this variable
-        sm.dim[[term]][la] <- d  ## ... and smooth dim.
-      }
-    }
-  }
-  ## so now each unique variable name has an associated array of 
-  ## the smooths of which it is an argument, arranged in ascending 
-  ## order of dimension. Smooths for which side.constrain==FALSE are excluded.
-  if (maxDim==1) warning("model has repeated 1-d smooths of same variable.")
-
-  ## Now set things up to enable term specific model matrices to be
-  ## augmented with square root penalties, on the fly...
-  if (with.pen) {
-    k <- 1
-    for (i in 1:m) { ## create parameter indices for each term
-      k1 <- k + ncol(sm[[i]]$X) - 1
-      sm[[i]]$p.ind <- k:k1
-      k <- k1 + 1
-    }
-    np <- k-1 ## number of penalized parameters
-  }
-  nobs <- nrow(sm[[1]]$X) ## number of observations
-  
-  for (d in 1:maxDim) { ## work up through dimensions 
-    for (i in 1:m) { ## work through smooths
-      if (sm[[i]]$dim == d&&sm[[i]]$side.constrain) { ## check for nesting
-        if (with.pen) X1 <- matrix(c(rep(1,nobs),rep(0,np)),nobs+np,as.integer(intercept)) else
-        X1 <- matrix(1,nobs,as.integer(intercept))
-	X1comp <- rep(0,0) ## list of components of X1 to avoid duplication
-        for (j in 1:d) { ## work through variables
-          b <- sm.id[[sm[[i]]$vn[j]]] # list of smooths dependent on this variable
-          k <- (1:length(b))[b==i] ## locate current smooth in list 
-          if (k>1) for (l in 1:(k-1)) if (!b[l] %in% X1comp) { ## collect X columns
-           X1comp <- c(X1comp,b[l]) ## keep track of components to avoid adding same one twice
-           if (with.pen) { ## need to use augmented model matrix in testing 
-              if (is.null(sm[[b[l]]]$Xa)) sm[[b[l]]]$Xa <- augment.smX(sm[[b[l]]],nobs,np)
-              X1 <- cbind(X1,sm[[b[l]]]$Xa)
-            } else X1 <- cbind(X1,sm[[b[l]]]$X) ## penalties not considered
-          }
-        } ## Now X1 contains columns for all lower dimensional terms
-        if (ncol(X1)==as.integer(intercept)) ind <- NULL else {
-          if (with.pen) {
-             if (is.null(sm[[i]]$Xa)) sm[[i]]$Xa <- augment.smX(sm[[i]],nobs,np)
-             ind <- fixDependence(X1,sm[[i]]$Xa,tol=tol) 
-          } else ind <- fixDependence(X1,sm[[i]]$X,tol=tol)        
-        }
-        ## ... the columns to zero to ensure independence
-        if (!is.null(ind)) { 
-          sm[[i]]$X <- sm[[i]]$X[,-ind]
-          ## work through list of penalty matrices, applying constraints...
-          nsmS <- length(sm[[i]]$S)
-          if (nsmS>0) for (j in nsmS:1) { ## working down so that dropping is painless
-            sm[[i]]$S[[j]] <- sm[[i]]$S[[j]][-ind,-ind]
-            if (sum(sm[[i]]$S[[j]]!=0)==0) rank <- 0 else
-            rank <- qr(sm[[i]]$S[[j]],tol=tol,LAPACK=FALSE)$rank
-            sm[[i]]$rank[j] <- rank ## replace previous rank with new rank
-            if (rank == 0) { ## drop the penalty
-              sm[[i]]$rank <- sm[[i]]$rank[-j]
-              sm[[i]]$S[[j]] <- NULL
-              sm[[i]]$S.scale <- sm[[i]]$S.scale[-j]
-              if (!is.null(sm[[i]]$L)) sm[[i]]$L <- sm[[i]]$L[-j,,drop=FALSE]
-            }
-          } ## penalty matrices finished
-          ## Now we need to establish null space rank for the term
-          mi <- length(sm[[i]]$S)
-          if (mi>0) {
-            St <- sm[[i]]$S[[1]]/norm(sm[[i]]$S[[1]],type="F")
-            if (mi>1) for (j in 1:mi) St <- St + 
-                  sm[[i]]$S[[j]]/norm(sm[[i]]$S[[j]],type="F")
-            es <- eigen(St,symmetric=TRUE,only.values=TRUE)
-            sm[[i]]$null.space.dim <- sum(es$values<max(es$values)*.Machine$double.eps^.75) 
-          } ## rank found
-
-          if (!is.null(sm[[i]]$L)) {
-            ind <- as.numeric(colSums(sm[[i]]$L!=0))!=0
-            sm[[i]]$L <- sm[[i]]$L[,ind,drop=FALSE] ## retain only those sps that influence something!
-          }
-
-          sm[[i]]$df <- ncol(sm[[i]]$X)
-          attr(sm[[i]],"del.index") <- ind
-          ## Now deal with case in which prediction constraints differ from fit constraints
-          if (!is.null(sm[[i]]$Xp)) { ## need to get deletion indices under prediction parameterization
-            ## Note that: i) it doesn't matter what the identifiability con on X1 is
-            ##            ii) the degree of rank deficiency can't be changed by an identifiability con
-            if (with.pen) { 
-              smi <- sm[[i]]  ## clone smooth 
-              smi$X <- smi$Xp ## copy prediction Xp to X slot.
-              smi$S <- smi$Sp ## and make sure penalty parameterization matches. 
-              Xpa <- augment.smX(smi,nobs,np)
-              ind <- fixDependence(X1,Xpa,rank.def=length(ind)) 
-            } else ind <- fixDependence(X1,sm[[i]]$Xp,rank.def=length(ind)) 
-            sm[[i]]$Xp <- sm[[i]]$Xp[,-ind,drop=FALSE]
-            attr(sm[[i]],"del.index") <- ind ## over-writes original
-          }
-        }
-        sm[[i]]$vn <- NULL
-      } ## end if (sm[[i]]$dim == d)
-    } ## end i in 1:m loop
-  }  
-  if (with.pen) for (i in 1:m) { ## remove working variables that were added
-    sm[[i]]$p.ind <- NULL
-    if (!is.null(sm[[i]]$Xa)) sm[[i]]$Xa <- NULL
-  }
-  sm
-} ## gam.side
-
-clone.smooth.spec <- function(specb,spec) {
-## produces a version of base smooth.spec, `specb', but with 
-## the variables relating to `spec'. Used by `gam.setup' in handling 
-## of linked smooths.
- ## check dimensions same...
- if (specb$dim!=spec$dim) stop("`id' linked smooths must have same number of arguments") 
- ## Now start cloning...
- if (inherits(specb,c("tensor.smooth.spec","t2.smooth.spec"))) { ##`te' or `t2' generated base smooth.spec
-    specb$term <- spec$term
-    specb$label <- spec$label 
-    specb$by <- spec$by
-    k <- 1
-    for (i in 1:length(specb$margin)) {
-      if (is.null(spec$margin)) { ## sloppy user -- have to construct margin info...
-         for (j in 1:length(specb$margin[[i]]$term)) {
-           specb$margin[[i]]$term[j] <- spec$term[k]
-           k <- k + 1
-         }
-         specb$margin[[i]]$label <- ""
- 
-      } else { ## second term was at least `te'/`t2', so margin cloning is easy
-        specb$margin[[i]]$term <- spec$margin[[i]]$term
-        specb$margin[[i]]$label <- spec$margin[[i]]$label
-        specb$margin[[i]]$xt <- spec$margin[[i]]$xt
-      }
-    }
-
-  } else { ## `s' generated case
-    specb$term <- spec$term
-    specb$label <- spec$label 
-    specb$by <- spec$by
-    specb$xt <- spec$xt ## don't generally know what's in here => don't clone
-  }
-  specb ## return clone
-} ## clone.smooth.spec
-
-
-parametricPenalty <- function(pterms,assign,paraPen,sp0) {
-## routine to process any penalties on the parametric part of the model.
-## paraPen is a list whose items have names corresponding to the 
-## term.labels in pterms. Each list item may have named elements 
-## L, rank and sp. All other elements should be penalty coefficient matrices.
-  S <- list()     ## penalty matrix list
-  off <- rep(0,0) ## offset array
-  rank <- rep(0,0) ## rank array
-  sp <- rep(0,0)    ## smoothing param array
-  full.sp.names <- rep("",0) ## names for sp's multiplying penalties (not underlying)
-  L <- matrix(0,0,0) 
-  k <- 0
-  tind <- unique(assign) ## unique term indices
-  n.t <- length(tind)
-  if (n.t>0) for (j in 1:n.t) if (tind[j]>0) {
-    term.label <- attr(pterms[tind[j]],"term.label")
-    P <- paraPen[[term.label]] ## get any penalty information for this term
-    if (!is.null(P)) { ## then there is information
-      ind <- (1:length(assign))[assign==tind[j]] ## index of coefs involved here
-      Li <- P$L;P$L <- NULL
-      spi <- P$sp;P$sp <- NULL
-      ranki <- P$rank;P$rank <- NULL
-      ## remaining terms should be penalty matrices...
-      np <- length(P)
-
-      if (!is.null(ranki)&&length(ranki)!=np) stop("`rank' has wrong length in `paraPen'") 
-      if (np) for (i in 1:np) { ## unpack penalty matrices, offsets and ranks
-        k <- k + 1
-        S[[k]] <- P[[i]]
-        off[k] <- min(ind) ## index of first coef penalized by this term
-        if ( ncol(P[[i]])!=nrow(P[[i]])||nrow(P[[i]])!=length(ind)) stop(" a parametric penalty has wrong dimension")
-        if (is.null(ranki)) {
-          ev <- eigen(S[[k]],symmetric=TRUE,only.values=TRUE)$values
-          rank[k] <- sum(ev>max(ev)*.Machine$double.eps*10) ## estimate rank
-        } else rank[k] <- ranki[i]
-      }
-      ## now deal with L matrices
-      if (np) { ## only do this stuff if there are any penalties!
-        if (is.null(Li)) Li <- diag(np)
-        if (nrow(Li)!=np) stop("L has wrong dimension in `paraPen'")
-        L <- rbind(cbind(L,matrix(0,nrow(L),ncol(Li))),
-                   cbind(matrix(0,nrow(Li),ncol(L)),Li))
-        ind <- (length(sp)+1):(length(sp)+ncol(Li))
-        ind2 <- (length(sp)+1):(length(sp)+nrow(Li)) ## used to produce names for full sp array
-        if (is.null(spi)) {
-          sp[ind] <- -1 ## auto-initialize
-        } else {
-          if (length(spi)!=ncol(Li)) stop("`sp' dimension wrong in `paraPen'")
-          sp[ind] <- spi
-        }
-        ## add smoothing parameter names....
-        if (length(ind)>1) names(sp)[ind] <- paste(term.label,ind-ind[1]+1,sep="") 
-        else names(sp)[ind] <- term.label
-        
-        if (length(ind2)>1) full.sp.names[ind2] <- paste(term.label,ind2-ind2[1]+1,sep="") 
-        else full.sp.names[ind2] <- term.label
-      }
-    } ## end !is.null(P)  
-  } ## looped through all terms
-  if (k==0) return(NULL)
-  if (!is.null(sp0)) {
-    if (length(sp0)<length(sp)) stop("`sp' too short")
-    sp0 <- sp0[1:length(sp)]
-    sp[sp<0] <- sp0[sp<0]
-  }
-  ## S is list of penalty matrices, off[i] is index of first coefficient penalized by each S[[i]]
-  ## sp is array of underlying smoothing parameter (-ve to estimate), L is matrix mapping log
-  ## underlying smoothing parameters to log smoothing parameters, rank[i] is the rank of S[[i]].
-  list(S=S,off=off,sp=sp,L=L,rank=rank,full.sp.names=full.sp.names)
-} ## parametricPenalty
-
-getNumericResponse <- function(form) {
-## takes a formula for which the lhs contains numbers, but no variable 
-## names, and returns an array of those numbers. For example if 'form' 
-## is '1+26~s(x)', this will return the numeric vector c(1,26). 
-## A zero length vector is returned if the lhs contains no numbers,
-## or contains variable names.  
-## This is useful for setting up models in which
-## multiple linear predictors share terms. The lhs numbers can then 
-## indicate which linear predictors the rhs will contribute to.
-
-  ## if the response contains variables or there is no
-  ## response then return nothing...
-
-  if (length(form)==2||length(all.vars(form[[2]]))>0) return(rep(0,0))
-
-  ## deparse turns lhs into a string; strsplit extracts the characters 
-  ## corresponding to numbers; unlist deals with the fact that deparse 
-  ## will split long lines resulting in multiple list items from 
-  ## strsplit; as.numeric converts the numbers; na.omit drops NAs
-  ## resulting from "" elements; unique & round are obvious... 
-
-  round(unique(na.omit(as.numeric(unlist(strsplit(deparse(form[[2]]), "[^0-9]+"))))))  
-
-} ## getNumericResponse
-
-olid <- function(X,nsdf,pstart,flpi,lpi) {
-## X is a model matrix, made up of nf=length(nsdf) column blocks.
-## The ith block starts at column pstart[i] and its first nsdf[i]
-## columns are unpenalized. X is used to define nlp=length(lpi)
-## linear predictors. lpi[[i]] gives the columns of X used in the 
-## ith linear predictor. flpi[j] gives the linear predictor(s)
-## to which the jth block of X belongs. The problem is that the 
-## unpenalized blocks need not be identifiable when used in combination. 
-## This function returns a vector dind of columns of X to drop for 
-## identifiability, along with modified lpi, pstart and nsdf vectors.
-  nlp <- length(lpi) ## number of linear predictors
-  n <- nrow(X) 
-  nf <- length(nsdf) ## number of formulae blocks
-  Xp <- matrix(0,n*nlp,sum(nsdf))
-  start <- 1
-  ii <- 1:n
-  tind <- rep(0,0) ## complete index of all parametric columns in X
-  ## create a block matrix, Xp, with the same identifiability properties as
-  ## unpenalized part of model...
-  for (i in 1:nf) {
-    stop <- start - 1 + nsdf[i]
-    if (stop>=start) {
-      ind <- pstart[i] + 1:nsdf[i] - 1
-      for (k in flpi[[i]]) {
-        Xp[ii+(k-1)*n,start:stop] <- X[,ind]
-      }
-      tind <- c(tind,ind)
-      start <- start + nsdf[i]
-    }
-  }
-  ## rank deficiency of Xp will reveal number of redundant parametric 
-  ## terms, and a pivoted QR will reveal which to drop to restore
-  ## full rank...
-  qrx <- qr(Xp,LAPACK=TRUE,tol=0.0) ## unidentifiable columns get pivoted to final cols
-  r <- Rrank(qr.R(qrx)) ## get rank from R factor of pivoted QR
-  if (r==ncol(Xp)) { ## full rank, all fine, drop nothing
-    dind <- rep(0,0)
-  } else { ## reduced rank, drop some columns
-    dind <- tind[sort(qrx$pivot[(r+1):ncol(X)],decreasing=TRUE)] ## columns to drop
-    ## now we need to adjust nsdf, pstart and lpi
-    for (d in dind) { ## working down through drop indices
-      ## following commented out code is useful should it ever prove necessary to 
-      ## adjust pstart and nsdf, but at present these are only used in prediction, 
-      ## and it is cleaner to leave them unchanged, and simply drop using dind during prediction.
-      #k <- if (d>=pstart[nf]) nlp else which(d >= pstart[1:(nf-1)] & d < pstart[2:nf])
-      #nsdf[k] <- nsdf[k] - 1 ## one less unpenalized column in this block
-      #if (k<nf) pstart[(k+1):nf] <-  pstart[(k+1):nf] - 1 ## later block starts move down 1 
-      for (i in 1:nlp) { 
-        k <- which(d == lpi[[i]])
-        if (length(k)>0) lpi[[i]] <- lpi[[i]][-k] ## drop row
-        k <- which(lpi[[i]]>d)
-        if (length(k)>0) lpi[[i]][k] <- lpi[[i]][k] - 1 ## close up
-      }
-    } ## end of drop index loop
-  }
-  list(dind=dind,lpi=lpi) ##,pstart=pstart,nsdf=nsdf)
-} ## olid
-
-
-gam.setup.list <- function(formula,pterms,
-                    data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
-                    min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
-                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=NULL,apply.by=TRUE,modCon=0) {
-## version of gam.setup for when gam is called with a list of formulae, 
-## specifying several linear predictors...
-## key difference to gam.setup is an attribute to the model matrix, "lpi", which is a list
-## of column indices for each linear predictor 
-  if (!is.null(paraPen)) stop("paraPen not supported for multi-formula models")
-  if (!absorb.cons) stop("absorb.cons must be TRUE for multi-formula models")
-  d <- length(pterms) ## number of formulae
-  if (is.null(drop.intercept)) drop.intercept <- rep(FALSE, d)
-  if (length(drop.intercept) != d) stop("length(drop.intercept) should be equal to number of model formulas")
-
-  lp.overlap <- if (formula$nlp<d) TRUE else FALSE ## predictors share terms
-
-  G <- gam.setup(formula[[1]],pterms[[1]],
-              data,knots,sp,min.sp,H,absorb.cons,sparse.cons,select,
-              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[1],apply.by=apply.by,list.call=TRUE,modCon=modCon)
-  G$pterms <- pterms
-  
-  G$offset <- list(G$offset)
-  #G$contrasts <- list(G$contrasts)
-  G$xlevels <- list(G$xlevels)
-  G$assign <- list(G$assign)
-  used.sp <- length(G$lsp0)
-  if (!is.null(sp)&&used.sp>0) sp <- sp[-(1:used.sp)] ## need to strip off already used sp's
-  if (!is.null(min.sp)&&nrow(G$L)>0) min.sp <- min.sp[-(1:nrow(G$L))]  
-
-  ## formula[[1]] always relates to the base formula of the first linear predictor...
-
-  flpi <- lpi <- list()
-  for (i in 1:formula$nlp) lpi[[i]] <- rep(0,0)
-  lpi[[1]] <- 1:ncol(G$X) ## lpi[[j]] is index of cols for jth linear predictor 
-  flpi[[1]] <- formula[[1]]$lpi ## used in identifiability testing by olid, later  
-
-  pof <- ncol(G$X) ## counts the model matrix columns produced so far
-  pstart <- rep(0,d) ## indexes where parameteric columns start in each formula block of X
-  pstart[1] <- 1
-  if (d>1) for (i in 2:d) {
-    if (is.null(formula[[i]]$response)) {  ## keep gam.setup happy
-      formula[[i]]$response <- formula$response 
-      mv.response <- FALSE
-    } else mv.response <- TRUE
-    #spind <- if (is.null(sp)) 1 else (length(G$S)+1):length(sp)
-    formula[[i]]$pfok <- 1 ## empty formulae OK here!
-    um <- gam.setup(formula[[i]],pterms[[i]],
-              data,knots,sp,min.sp,#sp[spind],min.sp[spind],
-	      H,absorb.cons,sparse.cons,select,
-              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[i],apply.by=apply.by,list.call=TRUE,modCon=modCon)
-    used.sp <- length(um$lsp0)	      
-    if (!is.null(sp)&&used.sp>0) sp <- sp[-(1:used.sp)] ## need to strip off already used sp's
-    if (!is.null(min.sp)&&nrow(um$L)>0) min.sp <- min.sp[-(1:nrow(um$L))]  
-
-    flpi[[i]] <- formula[[i]]$lpi
-    for (j in formula[[i]]$lpi) { ## loop through all l.p.s to which this term contributes
-      lpi[[j]] <- c(lpi[[j]],pof + 1:ncol(um$X)) ## add these cols to lpi[[j]]
-      ##lpi[[i]] <- pof + 1:ncol(um$X) ## old code
-    }
-    if (mv.response) G$y <- cbind(G$y,um$y)
-    if (i>formula$nlp&&!is.null(um$offset)) {
-      stop("shared offsets not allowed")
-    }
-    G$offset[[i]] <- um$offset
-    #G$contrasts[[i]] <- um$contrasts
-    if (!is.null(um$contrasts)) G$contrasts <- c(G$contrasts,um$contrasts)
-    G$xlevels[[i]] <- um$xlevels
-    G$assign[[i]] <- um$assign
-    G$rank <- c(G$rank,um$rank)
-    pstart[i] <- pof+1
-    G$X <- cbind(G$X,um$X) ## extend model matrix
-    ## deal with the smooths...
-    k <- G$m
-    if (um$m) for (j in 1:um$m) {
-      um$smooth[[j]]$first.para <- um$smooth[[j]]$first.para + pof
-      um$smooth[[j]]$last.para <- um$smooth[[j]]$last.para + pof
-      k <- k + 1 
-      G$smooth[[k]] <- um$smooth[[j]]
-    }
-    ## L, S and off...
-    ks <- length(G$S)
-    M <- length(um$S)
- 
-    if (!is.null(um$L)||!is.null(G$L)) {
-      if (is.null(G$L)) G$L <- diag(1,nrow=ks)
-      if (is.null(um$L)) um$L <- diag(1,nrow=M)
-      G$L <- rbind(cbind(G$L,matrix(0,nrow(G$L),ncol(um$L))),cbind(matrix(0,nrow(um$L),ncol(G$L)),um$L))
-    }
-
-    G$off <- c(G$off,um$off+pof)
-    if (M) for (j in 1:M) {
-      ks <- ks + 1
-      G$S[[ks]] <- um$S[[j]]
-    }
- 
-    G$m <- G$m + um$m ## number of smooths
-    ##G$nsdf <- G$nsdf + um$nsdf ## or list??
-    G$nsdf[i] <- um$nsdf
-    if (!is.null(um$P)||!is.null(G$P)) {
-      if (is.null(G$P)) G$P <- diag(1,nrow=pof)
-      k <- ncol(um$X)
-      if (is.null(um$P)) um$P <- diag(1,nrow=k)
-      G$P <- rbind(cbind(G$P,matrix(0,pof,k)),cbind(matrix(0,k,pof),um$P))
-    }
-    G$cmX <- c(G$cmX,um$cmX)
-    if (um$nsdf>0) um$term.names[1:um$nsdf] <- paste(um$term.names[1:um$nsdf],i-1,sep=".")
-    G$term.names <- c(G$term.names,um$term.names)
-    G$lsp0 <- c(G$lsp0,um$lsp0)
-    G$sp <- c(G$sp,um$sp)
-    pof <- ncol(G$X)
-  } ## formula loop end
-
-  ## If there is overlap then there is a danger of lack of identifiability of the 
-  ## parameteric terms, especially if there are factors present in shared components. 
-  ## The following code deals with this possibility... 
-  if (lp.overlap) {
-    rt <- olid(G$X,G$nsdf,pstart,flpi,lpi)
-    if (length(rt$dind)>0) { ## then columns have to be dropped
-      warning("dropping unidentifiable parametric terms from model",call.=FALSE)
-      G$X <- G$X[,-rt$dind] ## drop cols 
-      G$cmX <- G$cmX[-rt$dind]
-      G$term.names <- G$term.names[-rt$dind]
-      ## adjust indexing in smooth list, noting that coefs of smooths 
-      ## are never dropped by dind 
-      for (i in 1:length(G$smooth)) {
-        k <- sum(rt$dind < G$smooth[[i]]$first.para)
-        G$smooth[[i]]$first.para <- G$smooth[[i]]$first.para - k
-        G$smooth[[i]]$last.para <- G$smooth[[i]]$last.para - k
-      }
-      for (i in 1:length(G$off)) G$off[i] <- G$off[i] - sum(rt$dind < G$off[i])
-      ## replace various indices with updated versions...
-      # pstart <- rt$pstart; G$nsdf <- rt$nsdf ## these two only needed in predict.gam - cleaner to leave unchanged
-      lpi <- rt$lpi
-      attr(G$nsdf,"drop.ind") <- rt$dind ## store drop index
-    } 
-  }
-  attr(lpi,"overlap") <- lp.overlap
-  attr(G$X,"lpi") <- lpi
-  attr(G$nsdf,"pstart") <- pstart ##unlist(lapply(lpi,min))
-
-  ## assemble a global indicator array for non-linear parameters... 
-  G$g.index <- rep(FALSE,ncol(G$X))
-  n.sp0 <- 0
-  if (length(G$smooth)) for (i in 1:length(G$smooth)) {
-    if (!is.null(G$smooth[[i]]$g.index)) G$g.index[G$smooth[[i]]$first.para:G$smooth[[i]]$last.para] <- G$smooth[[i]]$g.index
-    n.sp <- length(G$smooth[[i]]$S)
-    if (n.sp) {
-      G$smooth[[i]]$first.sp <- n.sp0 + 1
-      n.sp0 <- G$smooth[[i]]$last.sp <- n.sp0 + n.sp
-    }
-  }  
-  if (!any(G$g.index)) G$g.index <- NULL  
-
-  G
-} ## gam.setup.list
-
-
-
-gam.setup <- function(formula,pterms,
-                     data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
-                    min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
-                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=FALSE,
-                    diagonal.penalty=FALSE,apply.by=TRUE,list.call=FALSE,modCon=0) 
-## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
-## needed for a gam fit.
-## elements of returned object:
-## * m - number of smooths
-## * min.sp - minimum smoothing parameters
-## * H supplied H matrix
-## * pearson.extra, dev.extra, n.true --- entries to hold these quantities
-## * pterms - terms object for parametric terms
-## * intercept TRUE if intercept present
-## * offset - the model offset
-## * nsdf - number of strictly parameteric coefs
-## * contrasts 
-## * xlevels - records levels of factors
-## * assign - indexes which parametric model matrix columns map to which term in pterms
-## * smooth - list of smooths
-## * S - penalties (non-zero block only)
-## * off - first coef penalized by each element of S
-## * cmX - col mean of X
-## * P - maps parameters in fit constraint parameterization to those in prediction parameterization
-## * X - model matrix
-## * sp
-## * rank
-## * n.paraPen
-## * L 
-## * lsp0
-## * y - response
-## * C - constraint matrix - only if absorb.cons==FALSE
-## * n - dim(y)
-## * w - weights
-## * term.names
-## * nP
-{ # split the formula if the object being passed is a formula, otherwise it's already split
-
-  if (inherits(formula,"split.gam.formula")) split <- formula else
-  if (inherits(formula,"formula")) split <- interpret.gam(formula) 
-  else stop("First argument is no sort of formula!") 
-  
-  if (length(split$smooth.spec)==0) {
-    if (split$pfok==0) stop("You've got no model....")
-    m <- 0
-  } else  m <- length(split$smooth.spec) # number of smooth terms
-  
-  G <- list(m=m,min.sp=min.sp,H=H,pearson.extra=0,
-            dev.extra=0,n.true=-1,pterms=pterms) ## dev.extra gets added to deviance if REML/ML used in gam.fit3
-  
-  if (is.null(attr(data,"terms"))) # then data is not a model frame
-  mf <- model.frame(split$pf,data,drop.unused.levels=FALSE) # must be false or can end up with wrong prediction matrix!
-  else mf <- data # data is already a model frame
-
-  G$intercept <-  attr(attr(mf,"terms"),"intercept")>0
-
-  ## get any model offset. Complicated by possibility of offsets in multiple formulae...
-  if (list.call) {
-    offi <- attr(pterms,"offset")
-    if (!is.null(offi)) {
-      G$offset <- mf[[names(attr(pterms,"dataClasses"))[offi]]]
-    }
-  } else G$offset <- model.offset(mf)   # get any model offset including from offset argument
-  
-  if (!is.null(G$offset))  G$offset <- as.numeric(G$offset) 
-
-  # construct strictly parametric model matrix.... 
-  if (drop.intercept) attr(pterms,"intercept") <- 1 ## ensure there is an intercept to drop
-  X <- model.matrix(pterms,mf)
-  if (drop.intercept) { ## some extended families require intercept to be dropped 
-    xat <- attributes(X);ind <- xat$assign>0 ## index of non intercept columns 
-    X <- X[,ind,drop=FALSE] ## some extended families need to drop intercept
-    xat$assign <- xat$assign[ind];xat$dimnames[[2]]<-xat$dimnames[[2]][ind];
-    xat$dim[2] <- xat$dim[2]-1;attributes(X) <- xat
-    G$intercept <- FALSE
-  } 
-  rownames(X) <- NULL ## save memory
-  
-  G$nsdf <- ncol(X)
-  G$contrasts <- attr(X,"contrasts")
-  G$xlevels <- .getXlevels(pterms,mf)
-  G$assign <- attr(X,"assign") # used to tell which coeffs relate to which pterms
-
-  ## now deal with any user supplied penalties on the parametric part of the model...
-  PP <- parametricPenalty(pterms,G$assign,paraPen,sp)
-  if (!is.null(PP)) { ## strip out supplied sps already used
-    ind <- 1:length(PP$sp)
-    if (!is.null(sp)) sp <- sp[-ind]
-    if (!is.null(min.sp)) { 
-      PP$min.sp <- min.sp[ind]
-      min.sp <- min.sp[-ind]
-    } 
-  }
-  
-  # next work through smooth terms (if any) extending model matrix.....
-  
-  G$smooth <- list()
-  G$S <- list()
- 
-  if (gamm.call) { ## flag that this is a call from gamm --- some smoothers need to know!
-    if (m>0) for (i in 1:m) attr(split$smooth.spec[[i]],"gamm") <- TRUE
-  }
-
-  if (m>0 && idLinksBases) { ## search smooth.spec[[]] for terms linked by common id's
-    id.list <- list() ## id information list
-    for (i in 1:m) if (!is.null(split$smooth.spec[[i]]$id)) {
-      id <- as.character(split$smooth.spec[[i]]$id)
-      if (length(id.list)&&id%in%names(id.list)) { ## it's an existing id
-        ni <- length(id.list[[id]]$sm.i) ## number of terms so far with this id
-        id.list[[id]]$sm.i[ni+1] <- i    ## adding smooth.spec index to this id's list
-        ## clone smooth.spec from base smooth spec....
-        base.i <- id.list[[id]]$sm.i[1]
-         
-        split$smooth.spec[[i]] <- clone.smooth.spec(split$smooth.spec[[base.i]],
-                                                      split$smooth.spec[[i]])
-        
-        ## add data for this term to the data list for basis setup...
-        temp.term <- split$smooth.spec[[i]]$term
-       
-        ## note cbind deliberate in next line, as construction will handle matrix argument 
-        ## correctly... 
-        for (j in 1:length(temp.term)) id.list[[id]]$data[[j]] <- cbind(id.list[[id]]$data[[j]],
-                                                          get.var(temp.term[j],data,vecMat=FALSE))
-       
-       } else { ## new id
-        id.list[[id]] <- list(sm.i=i) ## start the array of indices of smooths with this id
-        id.list[[id]]$data <- list()
-        ## need to collect together all data for which this basis will be used,
-        ## for basis setup...
-        term <- split$smooth.spec[[i]]$term
-        for (j in 1:length(term)) id.list[[id]]$data[[j]] <- get.var(term[j],data,vecMat=FALSE)
-      } ## new id finished
-    }
-  } ## id.list complete
-
-  G$off<-array(0,0)
-  first.para<-G$nsdf+1
-  sm <- list()
-  newm <- 0
-  if (m>0) for (i in 1:m) {
-    # idea here is that terms are set up in accordance with information given in split$smooth.spec
-    # appropriate basis constructor is called depending on the class of the smooth
-    # constructor returns penalty matrices model matrix and basis specific information
-  
-    id <- split$smooth.spec[[i]]$id
-    if (is.null(id)||!idLinksBases) { ## regular evaluation
-      sml <- smoothCon(split$smooth.spec[[i]],data,knots,absorb.cons,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons,
-                       diagonal.penalty=diagonal.penalty,apply.by=apply.by,modCon=modCon) 
-    } else { ## it's a smooth with an id, so basis setup data differs from model matrix data
-      names(id.list[[id]]$data) <- split$smooth.spec[[i]]$term ## give basis data suitable names
-      sml <- smoothCon(split$smooth.spec[[i]],id.list[[id]]$data,knots,
-                       absorb.cons,n=nrow(data),dataX=data,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons,
-                       diagonal.penalty=diagonal.penalty,apply.by=apply.by,modCon=modCon)
-    }
-    #for (j in 1:length(sml)) {
-    #  newm <- newm + 1
-    #  sm[[newm]] <- sml[[j]]
-    #}
-    ind <- 1:length(sml)
-    sm[ind+newm] <- sml[ind]
-    newm <- newm + length(sml)
-  }
-  
-  G$m <- m <- newm ## number of actual smooths
-
-  ## at this stage, it is neccessary to impose any side conditions required
-  ## for identifiability
-  if (m>0) { 
-    sm <- gam.side(sm,X,tol=.Machine$double.eps^.5)
-    if (!apply.by) for (i in 1:length(sm)) { ## restore any by-free model matrices
-      if (!is.null(sm[[i]]$X0)) { ## there is a by-free matrix to restore 
-        ind <- attr(sm[[i]],"del.index") ## columns, if any to delete
-        sm[[i]]$X <- if (is.null(ind)) sm[[i]]$X0 else sm[[i]]$X0[,-ind,drop=FALSE] 
-      }
-    }
-  }
-
-  ## The matrix, L, mapping the underlying log smoothing parameters to the
-  ## log of the smoothing parameter multiplying the S[[i]] must be
-  ## worked out...
-  idx <- list() ## idx[[id]]$c contains index of first col in L relating to id
-  L <- matrix(0,0,0)
-  lsp.names <- sp.names <- rep("",0) ## need a list of names to identify sps in global sp array
-  if (m>0) for (i in 1:m) {
-    id <- sm[[i]]$id
-    ## get the L matrix for this smooth...
-    length.S <- if (is.null(sm[[i]]$updateS)) length(sm[[i]]$S) else sm[[i]]$n.sp ## deals with possibility of non-linear penalty
-    Li <- if (is.null(sm[[i]]$L)) diag(length.S) else sm[[i]]$L 
-     
-    if (length.S > 0) { ## there are smoothing parameters to name
-       if (length.S == 1) lspn <- sm[[i]]$label else {
-          Sname <- names(sm[[i]]$S)
-          lspn <- if (is.null(Sname)) paste(sm[[i]]$label,1:length.S,sep="") else
-                  paste(sm[[i]]$label,Sname,sep="") ## names for all sp's
-       }
-       spn <- lspn[1:ncol(Li)] ## names for actual working sps
-    }
-
-    ## extend the global L matrix...
-    if (is.null(id)||is.null(idx[[id]])) { ## new `id'     
-      if (!is.null(id)) { ## create record in `idx'
-        idx[[id]]$c <- ncol(L)+1   ## starting column in L for this `id'
-        idx[[id]]$nc <- ncol(Li)   ## number of columns relating to this `id'
-      }
-      L <- rbind(cbind(L,matrix(0,nrow(L),ncol(Li))),
-                 cbind(matrix(0,nrow(Li),ncol(L)),Li))
-      if (length.S > 0) { ## there are smoothing parameters to name
-        sp.names <- c(sp.names,spn) ## extend the sp name vector
-        lsp.names <- c(lsp.names,lspn) ## extend full.sp name vector
-      }
-    } else { ## it's a repeat id => shares existing sp's
-      L0 <- matrix(0,nrow(Li),ncol(L))
-      if (ncol(Li)>idx[[id]]$nc) {
-        stop("Later terms sharing an `id' can not have more smoothing parameters than the first such term")
-      }
-      L0[,idx[[id]]$c:(idx[[id]]$c+ncol(Li)-1)] <- Li
-      L <- rbind(L,L0)
-      if (length.S > 0) { ## there are smoothing parameters to name
-        lsp.names <- c(lsp.names,lspn) ## extend full.sp name vector
-      }
-    }
-  }
-
-  ## create the model matrix...
-
-  Xp <- NULL ## model matrix under prediction constraints, if given
-  if (m>0) for (i in 1:m) {
-    n.para <- ncol(sm[[i]]$X)
-    # define which elements in the parameter vector this smooth relates to....
-    sm[[i]]$first.para<-first.para     
-    first.para <- first.para+n.para
-    sm[[i]]$last.para <- first.para-1
-    ## termwise offset handling ...
-    Xoff <- attr(sm[[i]]$X,"offset")
-    if (!is.null(Xoff)) { 
-      if (is.null(G$offset)) G$offset <- Xoff
-      else G$offset <- G$offset + Xoff
-    }
-    ## model matrix accumulation ...
-    
-    ## alternative version under alternative constraint first (prediction only)
-    if (is.null(sm[[i]]$Xp)) {
-      if (!is.null(Xp)) Xp <- cbind2(Xp,sm[[i]]$X)
-    } else { 
-      if (is.null(Xp)) Xp <- X
-      Xp <- cbind2(Xp,sm[[i]]$Xp);sm[[i]]$Xp <- NULL
-    }
-    ## now version to use for fitting ...
-    X <- cbind2(X,sm[[i]]$X);sm[[i]]$X<-NULL
+  oo<-.C("mgcv",as.double(M$y),as.double(M$X),as.double(M$C),as.double(M$w^2),as.double(S),
+         as.double(p),as.double(M$sp),as.integer(off),as.integer(df),as.integer(m),
+         as.integer(n),as.integer(q),as.integer(C.r),as.double(M$sig2),as.double(Vp),
+		 as.double(edf),as.double(M$conv.tol),as.integer(M$max.half),as.double(ddiag),
+                 as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(M$min.edf),
+                 as.double(M$gcv.ubre),as.double(M$target.edf),as.integer(M$fixed.sp),
+                 as.double(hat),PACKAGE="mgcv")
    
-    G$smooth[[i]] <- sm[[i]]   
+  p<-matrix(oo[[6]],q,1);
+  sig2<-oo[[14]]
+  Vp<-matrix(oo[[15]],q,q)
+  sp<-matrix(oo[[7]])
+  edf<-oo[[16]]
+  ddiag<-oo[[19]]
+  idiag<-oo[[20]]
+  sdiag<-oo[[21]]
+  M$gcv.ubre<-oo[[24]]
+  M$hat<-oo[[27]]
+  conv<-list(edf=sdiag[1:direct.mesh],score=sdiag[direct.mesh+1:direct.mesh],g=ddiag[1:m],h=ddiag[(m+1):(2*m)],
+             e=ddiag[(2*m+1):(3*m)],iter=idiag[1],init.ok=as.logical(idiag[2]),step.fail=as.logical(idiag[3]))
+  # unpack results back to correct place in output (which includes fixed d.f. and free d.f. terms)
+  M$conv<-conv # the convergence diagnostics
+  M$sp<-array(0,k)
+  M$edf<-array(0,k)
+  j<-1
+  if (k!=0)
+  for (i in 1:k)
+  { if (M$fix[i]==TRUE)
+    { M$sp[i]<-0
+	  M$edf[i]<- -1 # must be filled in outside this routine, with reference to constraints
+    }
+	else
+	{ M$sp[i]<-sp[j]
+	  M$edf[i]<-edf[j]
+      j<-j+1
+    }
   }
+  M$Vp<-Vp
+  M$p<-p;
+  M$sig2<-sig2;
+  M    # return list
+}
 
-  if (is.null(Xp)) {
-    G$cmX <- colMeans(X) ## useful for componentwise CI construction 
-  } else {
-    G$cmX <- colMeans(Xp)
-    ## transform from fit params to prediction params...
-    ## G$P <- qr.coef(qr(Xp),X) ## old code assumes always full rank!!
-    
-    qrx <- qr(Xp,LAPACK=TRUE)
-    R <- qr.R(qrx)
-    p <- ncol(R)
-    rank <- Rrank(R) ## rank of Xp/R    
-    QtX <- qr.qty(qrx,X)[1:rank,]
-    if (rank<p) { ## rank deficient  
-      R <- R[1:rank,]
-      qrr <- qr(t(R),tol=0)
-      R <- qr.R(qrr)
-      G$P <- forwardsolve(t(R),QtX)
-    } else {
-      G$P <- backsolve(R,QtX)
+
+
+
+########################################################################################
+## The following provide a gam() function and associated gubbins for R......
+########################################################################################
+
+
+
+s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
+# function for use in gam formulae to specify smooth term, e.g. s(x0,x1,x2,k=40,m=3,by=x3) specifies 
+# a rank 40 thin plate regression spline of x0,x1 and x2 with a third order penalty, to be multiplied by
+# covariate x3, when it enters the model.
+# Returns a list of consisting of the names of the covariates, and the name of any by variable
+# of a model formula term representing the smooth, the basis dimension, the type of basis
+# (1 -t.p.r.s.; 0 - cubic), whether it is fixed or penalized and the order of the penalty (0 for auto).
+# backwards compatibility with versions < 0.6 is maintained so that terms like: s(x,6|f)
+# still work correctly.
+# The returned full.call is a string with the call made fully explicit, so that when pasted
+# into a formula, that formula can be parsed without reference to any variables that may
+# have been used to define k,fx,bs or m.
+{ vars<-as.list(substitute(list(...)))[-1] # gets terms to be smoothed without evaluation
+ # call<-match.call() # get function call
+  d<-length(vars) # dimension of smoother
+  term<-deparse(vars[[d]]) # last term in the ... arguments
+  by.var<-deparse(substitute(by)) #getting the name of the by variable
+  # deal with old style formula
+  c<-substring(term,1,1) # first character of last ... argument
+  old.warn<-options(warn=-1)       # suppress warnings when testing for numerals
+  if (is.na(as.numeric(c))==FALSE) # then it's an old style formula smooth term (version's before 0.6)
+  { options(old.warn) # turn on warnings again
+    ss<-c;i<-2
+    ns<-nchar(term)   # length of dimension specifying term
+    if (ns>1)
+    while (c!="|"&&i<=ns)
+    { c<-" ";while(c==" "&&i<=ns) { c<-substring(term,i,i);i<-i+1}
+      if (c!="|") ss<-paste(ss,c,sep="")  # then add digit to basis dimension string
     }
-    if (rank<p) {
-      G$P <- qr.qy(qrr,rbind(G$P,matrix(0,p-rank,p)))
+    k<-as.numeric(ss)
+    if (c=="|")  # check whether term specified as fixed d.f.
+    { if (i>ns) stop("Syntax error in s() term: missing f")
+      c<-" ";while(c==" "&&i<=ns) { c<-substring(term,i,i);i<-i+1}
+      if (c=="f"||c=="F") fx<-TRUE 
+      else warning("Strange argument in s() call ignored")
     }
-    G$P[qrx$pivot,] <- G$P
+    d<-d-1 # reduce m since last ... argument specified basis dimension not variable
+    if (d==1) bs<-"cr" # maintain strict backwards compatibility of code
+  } else options(old.warn) # turn on regular warnings again
+  term<-deparse(vars[[1]]) # first covariate
+  if (d>1) # then deal with further covariates
+  for (i in 2:d)
+  { term[i]<-deparse(vars[[i]])
   }
-  ## cmX relates to computation of CIs incorportating uncertainty about the mean
-  ## It may make more sense to incorporate all uncertainty about the mean,
-  ## rather than just the uncertainty in the fixed effects mean. This means
-  ## incorporating the mean of random effects and unconstrained smooths. Hence
-  ## comment out the following.
-  #if (G$nsdf>0) G$cmX[-(1:G$nsdf)] <- 0 ## zero the smooth parts here 
-  #else G$cmX <- G$cmX * 0
-  G$X <- X;rm(X)
-  n.p <- ncol(G$X) 
-  # deal with penalties
+  # term now contains the names of the covariates for this model term
+  # now evaluate all the other 
+  k.new<-round(k) # in case user has supplied non-integer basis dimension
+  if (!all.equal(k.new,k)) {warning("argument k of s() should be integer and has been rounded")}
+  k<-k.new
+  if (k==-1) k<-10*3^(d-1) # auto-initialize basis dimension
+  if (bs=="cr") # set basis types
+  { bs.type<-0
+    if (d>1) { warning("cr basis only works with 1-d smooths!");bs.type<-1;}
+  } else 
+  { if (bs!="tp") warning("unrecognised basis specifier - set to t.p.r.s. basis.");
+    bs.type<-1
+  }
+  if (m<0) m<-0
+  # check for repeated variables in function argument list
+  if (length(unique(term))!=d) stop("Repeated variables as arguments of a smooth are not permitted")
+  # assemble version of call with all options expanded as text
+  full.call<-paste("s(",term[1],sep="")
+  if (d>1) for (i in 2:d) full.call<-paste(full.call,",",term[i],sep="")
+  full.call<-paste(full.call,",k=",deparse(k),",fx=",deparse(fx),",bs=",deparse(bs),",m=",deparse(m),
+                   ",by=",by.var,")",sep="")
+  ret<-list(term=term,bs.dim=k,bs.type=bs.type,fixed=fx,dim=d,p.order=m,by=by.var,full.call=full.call)
+  ret
+}
 
 
-  ## min.sp must be length nrow(L) to make sense
-  ## sp must be length ncol(L) --- need to partition
-  ## L into columns relating to free log smoothing parameters,
-  ## and columns, L0, corresponding to values supplied in sp.
-  ## lsp0 = L0%*%log(sp[sp>=0]) [need to fudge sp==0 case by
-  ## setting log(0) to log(effective zero) computed case-by-case]
-
-  ## following deals with supplied and estimated smoothing parameters...
-  ## first process the `sp' array supplied to `gam'...
-  
-  if (!is.null(sp)) { # then user has supplied fixed smoothing parameters
-   ok <- TRUE 
-   if (length(sp) < ncol(L)) { 
-      warning("Supplied smoothing parameter vector is too short - ignored.")
-      ok <- FALSE
+gam.parser<-function (gf,parent.level=1)
+# parses a gam formula of the generic form:
+#   y~x0+x1+x3*x4 + s(x5)+ s(x6,x7) ....
+# and returns 2 model formulae: 1 containing only the non-smooth stuff
+# and the other relating to the smooths in a conventional model notation 
+# without s(,,,)'s e.g:
+#   y~x5+x6:x7
+# On exit a list is returned (see ret below). The parametric part may also 
+# include any model offsets.
+# See s() above for syntax of smooth terms - s() is called for each smooth term and
+# returns information on the arguments of the smooth and it's properties. 
+# Note that this routine does not evaluate model variables.
+# parent.level specifies how far back to go from frame of this function to find
+# arguments of s() in GAM formula - changed 4/5/02 environment now taken from gf.
+{ p.env<-environment(gf) # environment of formula
+  tf<-terms.formula(gf,specials=c("s")) # specials attribute indicates which terms are smooth
+  terms<-attr(tf,"term.labels") # labels of the model terms
+  nt<-length(terms) # how many terms?
+  pf<-"~";          # start of parametric model formula
+  if (attr(tf,"response")>0)  # start the replacement formula
+  rf<-paste(as.character(attr(tf,"variables")[2]),"~",sep="")
+  else rf<-"~"
+  sp<-attr(tf,"specials")$s     # array of indeces of smooth terms 
+  off<-attr(tf,"offset") # location of offset in formula
+  if (!is.null(off)) sp[sp>off]<-sp[sp>off]-1 # have to remove the offset from this index list 
+  ns<-length(sp) # number of smooths
+  ks<-1;kp<-1 # counters for terms in the 2 formulae
+  df<- -1     # max d.f. array 
+  fix<-FALSE  # fixed d.f. array 
+  bs.type<-1  # basis type array
+  dim<-0      # dimension of smoother array
+  p.order<-0  # order of the penalties
+  v.names<-as.character(attr(tf,"variables")[2])  # names of covariates for smooths starting with response
+  n.cov<-1     # total number of covariates for smooths
+  by.names<-array("",0) # array of names of "by" variables for each smooth
+  if (nt)
+  for (i in 1:nt) # work through all terms
+  { if (ks<=ns&&sp[ks]==i+1) # it's a smooth
+    { st<-eval(parse(text=terms[i]),envir=p.env)
+      if (ks>1||kp>1) rf<-paste(rf,"+",st$full.call,sep="") # add to smooth formula
+      else rf<-paste(rf,st$full.call,sep="")
+      for (i in 1:st$dim) v.names[n.cov+i]<-st$term[i]
+      by.names[ks]<-st$by
+      n.cov<-n.cov+st$dim
+      df[ks]<-st$bs.dim;          # getting other info on smooth
+      fix[ks]<-st$fixed
+      bs.type[ks]<-st$bs.type
+      p.order[ks]<-st$p.order
+      dim[ks]<-st$dim
+      ks<-ks+1
+    } else          # parametric
+    { if (kp>1) pf<-paste(pf,"+",terms[i],sep="") # add to parametric formula
+      else pf<-paste(pf,terms[i],sep="")
+      if (ks>1||kp>1) rf<-paste(rf,"+",terms[i],sep="") # add to smooth formula
+      else rf<-paste(rf,terms[i],sep="")
+      kp<-kp+1
     }
-    if (sum(is.na(sp))) { 
-      warning("NA's in supplied smoothing parameter vector - ignoring.")
-      ok <- FALSE
-    }
-  } else ok <- FALSE
-  G$sp <- if (ok) sp[1:ncol(L)] else rep(-1,ncol(L))
-  
-  names(G$sp) <- sp.names
-
-  ## now work through the smooths searching for any `sp' elements
-  ## supplied in `s' or `te' terms.... This relies on `idx' created 
-  ## above...
-  
-  k <- 1 ## current location in `sp' array
-  if (m>0) for (i in 1:m) {
-    id <- sm[[i]]$id
-    if (is.null(sm[[i]]$L)) Li <- diag(length(sm[[i]]$S)) else Li <- sm[[i]]$L 
-    if (is.null(id)) { ## it's a smooth without an id
-      spi <- sm[[i]]$sp
-      if (!is.null(spi)) { ## sp supplied in `s' or `te'
-        if (length(spi)!=ncol(Li)) stop("incorrect number of smoothing parameters supplied for a smooth term")
-        G$sp[k:(k+ncol(Li)-1)] <- spi
-      }       
-      k <- k + ncol(Li) 
-    } else { ## smooth has an id
-      spi <- sm[[i]]$sp
-      if (is.null(idx[[id]]$sp.done)) { ## not already dealt with these sp's
-        if (!is.null(spi)) { ## sp supplied in `s' or `te'
-          if (length(spi)!=ncol(Li)) stop("incorrect number of smoothing parameters supplied for a smooth term")
-          G$sp[idx[[id]]$c:(idx[[id]]$c+idx[[id]]$nc-1)] <- spi
-        }
-        idx[[id]]$sp.done <- TRUE ## only makes sense to use supplied `sp' from defining term
-        k <- k + idx[[id]]$nc 
-      }
-    }
-  } ## finished processing `sp' vectors supplied in `s' or `te' terms
-
-  ## copy initial sp's back into smooth objects, so there is a record of
-  ## fixed and free...
-  k <- 1 
-  if (length(idx)) for (i in 1:length(idx)) idx[[i]]$sp.done <- FALSE
-  if (m>0) for (i in 1:m) { ## work through all smooths
-    id <- sm[[i]]$id 
-    if (!is.null(id)) { ## smooth with id
-      if (idx[[id]]$nc>0) { ## only copy if there are sp's
-        G$smooth[[i]]$sp <- G$sp[idx[[id]]$c:(idx[[id]]$c+idx[[id]]$nc-1)]
-      }   
-      if (!idx[[id]]$sp.done) { ## only update k on first encounter with this smooth
-        idx[[id]]$sp.done <- TRUE
-        k <- k + idx[[id]]$nc
-      }
-    
-    } else { ## no id, just work through sp 
-      if (is.null(sm[[i]]$L)) nc <- length(sm[[i]]$S) else nc <- ncol(sm[[i]]$L)
-      if (nc>0) G$smooth[[i]]$sp <- G$sp[k:(k+nc-1)]
-      k <- k + nc
-    }
-  } ## now all elements of G$smooth have a record of initial sp. 
+  } 
+   
+  if (!is.null(off)) # deal with offset
+  { if (kp>1) pf<-paste(pf,"+",sep="")
+    if (kp>1||ks>1) rf<-paste(rf,"+",sep="")
+    pf<-paste(pf,as.character(attr(tf,"variables")[1+off]),sep="")
+    rf<-paste(rf,as.character(attr(tf,"variables")[1+off]),sep="")
+    kp<-kp+1          
+  }
+  if (attr(tf,"intercept")==0) {pf<-paste(pf,"-1",sep="");rf<-paste(rf,"-1",sep="");if (kp>1) pfok<-1 else pfok<-0}
+  else { pfok<-1;if (kp==1) { pf<-"~1"; if (ks==1) rf<-paste(rf,"1",sep="");}}
+  sfok<-0;if (ks>1) sfok<-1;
+  ret<-list(pftext=pf,pf=as.formula(pf),pfok=pfok,v.names=v.names,by.names=by.names,fix=fix,df=df,
+            bs.type=bs.type,s.dim=dim,p.order=p.order,full.formula=as.formula(rf))
+  class(ret)<-"split.gam.formula"
+  ret
+}
 
 
-  if (!is.null(min.sp)) { # then minimum s.p.'s supplied
-    if (length(min.sp)<nrow(L)) stop("length of min.sp is wrong.")
-    if (nrow(L)>0) min.sp <- min.sp[1:nrow(L)]
+
+gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=TRUE,nsdf=-1,knots=NULL,sp=NULL,
+                    min.sp=NULL,H=NULL,fit.method="magic")
+# This gets the data referred to in the model formula and sets up 
+# G$names[i] contains the names associated with each column of the design matrix,
+# followed by the name of each smooth term - the constant is un-named! 
+# if nsdf==-1 then it assumed that the design matrix for the non-spline part of the 
+# model is to be found here. Otherwise it is assumed that nsdf is the known 
+# number of degrees of freedom for the non-spline part (including intercept), but
+# the columns corresponding to the non-spline part of the model and the offset 
+#  are set to zero.
+
+{ # split the formula if the object being passed is a formula, otherwise it's already split
+  if (class(formula)=="formula") split<-gam.parser(formula) 
+  else if (class(formula)=="split.gam.formula") split<-formula
+  else stop("First argument is no sort of formula!") 
+  if (split$df[1]==-1)
+  { if (split$pfok==0) stop("You've got no model....")
+    m<-0
+  }  
+  else  m<-length(split$df) # number of smooth terms
+  G<-list(m=m,df=split$df,full.formula=split$full.formula,min.sp=min.sp,H=H)
+  G$fix<-split$fix
+  if (fit.method=="fastest") 
+  { if (G$m==1) G$fit.method<-"mgcv" else G$fit.method<-"magic"
+  } else G$fit.method<-fit.method
+  if (!is.null(sp)) # then user has supplied fixed smoothing parameters
+  { ok<-TRUE
+    if (length(sp)!=m) { ok<-FALSE;warning("Fixed smoothing parameter vector is too short - ignored.")}
+    if (sum(is.na(sp))) { ok<-FALSE;warning("NA's in fixed smoothing parameter vector - ignoring.")}
+    #if (sum(sp<0)) { ok<-FALSE;warning("Negative values in fixed smoothing parameter vector  - ignoring.")}
+    if (ok) { G$sp<-sp; G$fixed.sp<-1} else { G$fixed.sp<-0;G$sp<-rep(-1,m)}
+  } else # set up for auto-initialization
+  { G$fixed.sp<-0;G$sp<-rep(-1,m)}
+  if (!is.null(min.sp)) # then minimum s.p.'s supplied
+  { if (length(min.sp)!=m) stop("length of min.sp is wrong.")
     if (sum(is.na(min.sp))) stop("NA's in min.sp.")
     if (sum(min.sp<0)) stop("elements of min.sp must be non negative.")
   }
-
-  k.sp <- 0 # count through sp and S
-  G$rank <- array(0,0)
-  if (m>0) for (i in 1:m) {
-    sm<-G$smooth[[i]]
-    if (length(sm$S)>0)
-    for (j in 1:length(sm$S)) {  # work through penalty matrices
-      k.sp <- k.sp+1
-      G$off[k.sp] <- sm$first.para 
-      G$S[[k.sp]] <- sm$S[[j]]
-      G$rank[k.sp]<-sm$rank[j]
-      if (!is.null(min.sp)) {
-        if (is.null(H)) H<-matrix(0,n.p,n.p)
-        H[sm$first.para:sm$last.para,sm$first.para:sm$last.para] <-
-        H[sm$first.para:sm$last.para,sm$first.para:sm$last.para]+min.sp[k.sp]*sm$S[[j]] 
-      }           
-    } 
-  }
- 
-  ## need to modify L, lsp.names, G$S, G$sp, G$rank and G$off to include any penalties
-  ## on parametric stuff, at this point....
-  if (!is.null(PP)) { ## deal with penalties on parametric terms
-    L <- rbind(cbind(L,matrix(0,nrow(L),ncol(PP$L))),
-                 cbind(matrix(0,nrow(PP$L),ncol(L)),PP$L))
-    G$off <- c(PP$off,G$off)
-    G$S <- c(PP$S,G$S)
-    G$rank <- c(PP$rank,G$rank)
-    G$sp <- c(PP$sp,G$sp)
-    lsp.names <- c(PP$full.sp.names,lsp.names)
-    G$n.paraPen <- length(PP$off)
-    if (!is.null(PP$min.sp)) { ## deal with minimum sps
-      if (is.null(H)) H <- matrix(0,n.p,n.p)
-      for (i in 1:length(PP$S)) {
-        ind <- PP$off[i]:(PP$off[i]+ncol(PP$S[[i]])-1)
-        H[ind,ind] <- H[ind,ind] + PP$min.sp[i] * PP$S[[i]]
-      }
-    } ## min.sp stuff finished
-  } else G$n.paraPen <- 0
-
-
-  ## Now remove columns of L and rows of sp relating to fixed 
-  ## smoothing parameters, and use removed elements to create lsp0
-
-  fix.ind <- G$sp>=0
-
-  if (sum(fix.ind)) {
-    lsp0 <- G$sp[fix.ind]
-    ind <- lsp0==0 ## find the zero s.p.s
-    ef0 <- indi <- (1:length(ind))[ind]
-    if (length(indi)>0) for (i in 1:length(indi)) {
-      ## find "effective zero" to replace each zero s.p. with
-      ii <- G$off[i]:(G$off[i]+ncol(G$S[[i]])-1) 
-      ef0[i] <- norm(G$X[,ii],type="F")^2/norm(G$S[[i]],type="F")*.Machine$double.eps*.1
-    }
-    lsp0[!ind] <- log(lsp0[!ind])
-    lsp0[ind] <- log(ef0) ##log(.Machine$double.xmin)*1000 ## zero fudge
-    lsp0 <- as.numeric(L[,fix.ind,drop=FALSE]%*%lsp0)
-
-    L <- L[,!fix.ind,drop=FALSE]  
-    G$sp <- G$sp[!fix.ind]
-  } else {lsp0 <- rep(0,nrow(L))}
-
-  G$H <- H
-
-  if (ncol(L)==nrow(L)&&!sum(L!=diag(ncol(L)))) L <- NULL ## it's just the identity
-
-  G$L <- L;G$lsp0 <- lsp0
-  names(G$lsp0) <- lsp.names ## names of all smoothing parameters (not just underlying)
-
-  if (absorb.cons==FALSE) {  ## need to accumulate constraints 
-    G$C <- matrix(0,0,n.p)
-    if (m>0) {
-      for (i in 1:m) {
-        if (is.null(G$smooth[[i]]$C)) n.con<-0 
-        else n.con<- nrow(G$smooth[[i]]$C)
-        C <- matrix(0,n.con,n.p)
-        C[,G$smooth[[i]]$first.para:G$smooth[[i]]$last.para]<-G$smooth[[i]]$C
-        G$C <- rbind(G$C,C)
-        G$smooth[[i]]$C <- NULL
-      }
-      rm(C)
-    }
-  } ## absorb.cons == FALSE
- 
-  G$y <- drop(data[[split$response]])
-  ydim <- dim(G$y)
-  if (!is.null(ydim)&&length(ydim)<2) dim(G$y) <- NULL
-         
-  ##data[[deparse(split$full.formula[[2]],backtick=TRUE)]]
-  
-  G$n <- nrow(data)
-
-  if (is.null(data$"(weights)")) G$w <- rep(1,G$n)
-  else G$w <- data$"(weights)"  
-
-  ## Create names for model coefficients... 
-
-  if (G$nsdf > 0) term.names <- colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
-  n.smooth <- length(G$smooth)
-  ## create coef names, if smooth has any coefs, and create a global indicator of non-linear parameters
-  ## g.index, if needed
-  n.sp0 <- 0
-  if (n.smooth) for (i in 1:n.smooth) {
-    k <- 1
-    jj <- G$smooth[[i]]$first.para:G$smooth[[i]]$last.para
-    if (G$smooth[[i]]$df > 0) for (j in jj) {
-      term.names[j] <- paste(G$smooth[[i]]$label,".",as.character(k),sep="")
-      k <- k+1
-    }
-    n.sp <- length(G$smooth[[i]]$S)
-    if (n.sp) { ## record sp this relates to in full sp vector
-      G$smooth[[i]]$first.sp <- n.sp0 + 1
-      n.sp0 <- G$smooth[[i]]$last.sp <- n.sp0 + n.sp
-    }
-    if (!is.null(G$smooth[[i]]$g.index)) {
-      if (is.null(G$g.index)) G$g.index <- rep(FALSE,n.p)
-      G$g.index[jj] <- G$smooth[[i]]$g.index
-    }
-    
-  }
-  G$term.names <- term.names
-
-  ## Deal with non-linear parameterizations...
- 
-
-  G$pP <- PP ## return paraPen object, if present
-
-  G
-} ## gam.setup
-
-
-
-formula.gam <- function(x, ...)
-# formula.lm and formula.glm reconstruct the formula from x$terms, this is 
-# problematic because of the way mgcv handles s() and te() terms 
-{ x$formula
-}
-
-BC <- function(y,lambda=1) {
-  y <- if (lambda==0) log(y) else (y^lambda-1)/lambda
-}
-
-corBC <- function(lambda,y,mu) {
-  n <- length(y)
-  qn <- qnorm((1:n-.5)/n)
-  -cor(qn,sort(BC(y,lambda)-BC(mu,lambda)))
-}
-
-neico4 <- function(nei,dd,dd1) {
-## nei is neighbourhood structure. dd are leave one out perturbations.
-## dd1 the same for a different residual
-## This routine computes the most basic covariance
-## matrix estimate, based on observed correlation within neighbourhoods
-## and assumption of zero correlation without. Somehow it is a testement
-## to my extreme slowness that it took me 6 months to come up with this
-## skull-thumpingly obvious solution having tried every other hare brained
-## scheme first.
-  n <- length(nei$i)
-  i1 <- 0
-  W <- dd*0 ## dbeta/dy (y-mu)
-  for (i in 1:n) {
-    i0 <- i1+1
-    i1 <- nei$m[i]
-    ii <- nei$k[i0:i1] ## neighbours of i
-    W[nei$i[i],] <-  W[nei$i[i],] + colSums(dd[ii,,drop=FALSE]) 
-  }
-  V <- t(dd1)%*%W
-} ## neico4
-
-pdef <- function(V,eps = .Machine$double.eps^.9) {
-## find nearest pdf matrix to symmetric matrix V
-  ev <- eigen(V,symmetric=TRUE)
-  thresh <- max(abs(ev$values))*eps
-  ii <- ev$values<thresh
-  if (any(ii)) {
-    ev$values[ii] <- thresh
-    V <- ev$vectors %*% (ev$values*t(ev$vectors))
-  }
-  V
-} ## pdef
-
-gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale,gamma,G,start=NULL,nei=NULL,...)
-# function for smoothing parameter estimation by outer optimization. i.e.
-# P-IRLS scheme iterated to convergence for each trial set of smoothing
-# parameters.
-# MAJOR STEPS:
-#  1. Call appropriate smoothing parameter optimizer, and extract fitted model
-#    `object'
-#  2. Call `gam.fit3.post.proc' to get parameter covariance matrices, edf etc to
-#     add to `object' 
-{ if (is.na(optimizer[2])) optimizer[2] <- "newton"
-  if (!optimizer[2]%in%c("newton","bfgs","nlm","optim")) stop("unknown outer optimization method.")
-
-  if (length(lsp)==0) { ## no sp estimation to do -- run a fit instead
-    optimizer[2] <- "no.sps" ## will cause gam2objective to be called, below
-  }
-  nbGetTheta <- substr(family$family[1],1,17)=="Negative Binomial" && length(family$getTheta())>1
-  if (nbGetTheta) stop("Please provide a single value for theta or use nb to estimate it")
- 
-  ## some preparations for the other methods, which all use gam.fit3...
- 
-  family <- fix.family.link(family)
-  family <- fix.family.var(family)
-  if (method%in%c("REML","ML","P-REML","P-ML")) family <- fix.family.ls(family)
-  
-  if (optimizer[1]=="efs"&& optimizer[2] != "no.sps" ) { ## experimental extended efs
-    ##warning("efs is still experimental!")
-    if (inherits(family,"general.family")) {
-      object <- efsud(x=G$X,y=G$y,lsp=lsp,Sl=G$Sl,weights=G$w,offset=G$offxset,family=family,
-                     control=control,Mp=G$Mp,start=start)
-    } else {
-      family <- fix.family.ls(family)
-      object <- efsudr(x=G$X,y=G$y,lsp=lsp,Eb=G$Eb,UrS=G$UrS,weights=G$w,family=family,offset=G$offset,
-                       start=start,
-                       U1=G$U1, intercept = TRUE,scale=scale,Mp=G$Mp,control=control,n.true=G$n.true,...)
-    }
-    object$gcv.ubre <- object$REML
-  } else if (optimizer[2]=="newton"||optimizer[2]=="bfgs"){ ## the gam.fit3 method 
-    if (optimizer[2]=="bfgs") 
-    b <- bfgs(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,offset=G$offset,U1=G$U1,Mp = G$Mp,
-                family=family,weights=G$w,control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
-                maxNstep= control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf, 
-                printWarn=FALSE,scoreType=criterion,null.coef=G$null.coef,start=start,
-                pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,nei=nei,...) else
-    b <- newton(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,offset=G$offset,U1=G$U1,Mp=G$Mp,
-                family=family,weights=G$w,control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
-                maxNstep= control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf, 
-                printWarn=FALSE,scoreType=criterion,null.coef=G$null.coef,start=start,
-                pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,
-		edge.correct=control$edge.correct,,nei=nei,...)                
-                
-    object <- b$object
-    object$REML <- object$REML1 <- object$REML2 <-
-    object$GACV <- object$D2 <- object$P2 <- object$UBRE2 <- object$trA2 <- 
-    object$GACV1 <- object$GACV2 <- object$GCV2 <- object$D1 <- object$P1 <- NULL
-    object$sp <- as.numeric(exp(b$lsp))
-    object$gcv.ubre <- b$score
-    b <- list(conv=b$conv,iter=b$iter,grad=b$grad,hess=b$hess,score.hist=b$score.hist) ## return info
-    object$outer.info <- b   
-  } else { ## methods calling gam.fit3 
-    args <- list(X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,offset=G$offset,U1=G$U1,Mp=G$Mp,family=family,
-             weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale,
-             L=G$L,lsp0=G$lsp0,null.coef=G$null.coef,n.true=G$n.true,Sl=G$Sl,start=start,nei=nei)
-  
-    if (optimizer[2]=="nlm") {
-       b <- nlm(gam4objective, lsp, typsize = lsp, fscale = fscale, 
-            stepmax = control$nlm$stepmax, ndigit = control$nlm$ndigit,
-	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
-            iterlim = control$nlm$iterlim,
-	    check.analyticals=control$nlm$check.analyticals,
-            args=args,...)
-      lsp <- b$estimate
-      
-    } else if (optimizer[2]=="optim") {
-      b<-optim(par=lsp,fn=gam2objective,gr=gam2derivative,method="L-BFGS-B",control=
-         list(fnscale=fscale,factr=control$optim$factr,lmm=min(5,length(lsp))),args=args,...)
-      lsp <- b$par
-    } else b <- NULL
-    obj <- gam2objective(lsp,args,printWarn=TRUE,...) # final model fit, with warnings 
-    object <- attr(obj,"full.fit")
-    attr(obj,"full.fit") <- NULL
-    object$gcv.ubre <- obj 
-    object$outer.info <- b
-    object$sp <- exp(lsp)
-  } # end of methods calling gam.fit2
-  
-  
-  if (scale>0) { 
-    object$scale.estimated <- FALSE; object$scale <- scale} else {
-    object$scale <- object$scale.est;object$scale.estimated <- TRUE
-  } 
-  
-  object$control <- control
-  object$method <- method
-  if (inherits(family,"general.family")) {
-    mv <- gam.fit5.post.proc(object,G$Sl,G$L,G$lsp0,G$S,G$off,gamma)
-    ## object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
-  } else mv <- gam.fit3.post.proc(G$X,G$L,G$lsp0,G$S,G$off,object,gamma)
-
-  object[names(mv)] <- mv
-  if (!is.null(nei)) {
-    if (isTRUE(all.equal(sort(nei$i),1:nrow(G$X))) && length(nei$mi)==nrow(G$X) && criterion=="NCV") { ## each point predicted on its own
-      loocv <- length(nei$k)==length(nei$i) && isTRUE(all.equal(nei$i,nei$k)) && length(nei$m) == length(nei$k) ## leave one out CV,
-      if (is.logical(nei$jackknife)&&nei$jackknife) loocv <- TRUE ## straight jackknife requested
-      if (nei$jackknife < 0) nei$jackknife <- TRUE ## signal cov matrix calc
-    } else {
-      loocv <- FALSE
-      if (nei$jackknife < 0) nei$jackknife <- FALSE
-    }  
-  }
-  if (!is.null(nei)&&(criterion!="NCV"||nei$jackknife)) { ## returning NCV when other criterion used for sp selection, or computing perturbations
-    if (!is.null(nei$QNCV)&&nei$GNCV) family$qapprox <- TRUE
-    if (is.null(family$qapprox)) family$qapprox <- FALSE
-    lsp <- if (is.null(G$L)) log(object$sp) + G$lsp0 else G$L%*%log(object$sp)+G$lsp0
-    if (object$scale.estimated && criterion %in% c("REML","ML","EFS")) lsp <- lsp[-length(lsp)] ## drop log scale estimate
-    if (is.null(nei$gamma)) nei$gamma <- 1 ## a major application of this NCV is to select gamma - so it must not itself change with gamma!
-    if (criterion!="NCV") nei$jackknife <- FALSE ## no cov matrix stuff.
-    if (nei$jackknife) {
-      n <- length(nei$i)
-      nei1 <- if (loocv) nei else list(i=1:n,mi=1:n,m=1:n,k=1:n) ## set up for LOO CV or requested straight jackknife
-      nei1$jackknife <- 10 ## signal that cross-validated beta perturbations are required
-    } else nei1 <- nei ## called with another criteria
-    b <- gam.fit3(x=G$X, y=G$y, sp=lsp,Eb=G$Eb,UrS=G$UrS,
-                 offset = G$offset,U1=G$U1,Mp=G$Mp,family = family,weights=G$w,deriv=0,
-                 control=control,gamma=nei$gamma, 
-		 scale=scale,printWarn=FALSE,start=start,scoreType="NCV",null.coef=G$null.coef,
-                 pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,nei=nei1,...)
-    object$NCV <- as.numeric(b$NCV)
-    if (nei$jackknife) { ## need to compute direct cov matrix estimate
-      dd <- attr(b$NCV,"dd") ## leave-one-out parameter perturbations
-      if (!loocv) { ## need to account for assumed independence structure
-        rsd0 <- residuals.gam(object)
-        ## compute cross validated residuals...
-        eta.cv <- attr(object$gcv.ubre,"eta.cv")
-        fitted0 <- object$fitted.values 
-        if (inherits(object$family,"general.family")) {
-          for (j in 1:ncol(eta.cv)) {
-            object$fitted.values[,j] <-
-	      if (j <= length(G$offset)&&!is.null(G$offset[[j]])) family$linfo[[j]]$linkinv(eta.cv[,j]+G$offset[[j]]) else 
-                family$linfo[[j]]$linkinv(eta.cv[,j])
-          }	
-        } else {
-          object$fitted.values <- object$family$linkinv(eta.cv+G$offset)
+  add.constant<-FALSE
+  if (split$pfok)   # deal with the strictly parametric part of the model 
+  { if (length(attr(terms(split$pf),"variables"))==1) # then the formula is ~ 1 and model.frame(), etc can't cope 
+    { G$nsdf<-1
+      add.constant<-TRUE  # must construct model matrix later when length of response is known
+    } else
+    { if (nsdf>=0)  # set G$nsdf to supplied value, but deal with X later
+      { G$nsdf<-nsdf
+      } else 
+      { if (is.null(attr(data,"terms"))) # then data is not a model frame
+        mf<-model.frame(split$pf,data,drop.unused.levels=FALSE) # mudt be false or can end up with wrong prediction matrix!
+        else mf<-data # data is already a model frame
+        # ... evaluates in data  
+        G$offset <- model.offset(mf)   # get the model offset (if any)
+        if (!is.null(G$offset) && length(attr(terms(split$pf),"variables"))<=2) # offset exists, but no more terms except "+1" or "-1"
+        { if (length(grep("-",as.character(split$pf[2])))>=1) # then there is a "-1" term in formula
+          X<-matrix(0,length(G$offset),0)
+          else X <- model.matrix(split$pf,mf)  # then there is a constant in the model and model.matrix() can cope 
         }
-        rsd <- residuals.gam(object)
-        object$fitted.values <- fitted0
-        ii <- !is.finite(rsd);if (any(ii)) rsd[ii] <- rsd0[ii]
-        dd1 <- dd*rsd/rsd0 ## correct to avoid underestimation (over-estimation if CV residuals used alone)	
+        else X <- model.matrix(split$pf,mf)       # getting the model matrix
+        G$nsdf <- dim(X)[2]                  # extract the total non- smooth df
+      }        
+    }	
+  } else
+  { if (m==0) Stop("Model appears to have no terms") 
+    G$nsdf<-0
+  }
+  if (!predict) # obtain the "y variable"  
+  { # evaluates rhs of model using data and failing that the calling environment...
+    G$y<-eval(parse(text=paste("data$\"",split$v.names[1],"\"",sep=""))) # works if data is model frame
+    if (is.null(G$y)) G$y<-eval(parse(text=split$v.names[1]),data)       # otherwise evaluate in data
+    # checks that this has worked.....
+    if (is.null(G$y)) stop(paste("Failed to find variable for",split$v.names[1]))
+  }
+  if (m>0) v.names<-split$v.names    # getting the list of variable names for the smooths
 
-        Vcv <- pdef(neicov(dd1,nei))  #*n/(n-sum(object$edf)) ## cross validated V (too large)
-	V0 <- pdef(neicov(dd,nei))  #*n/(n-sum(object$edf))   ## direct V (too small)
-	Vj <- (Vcv+V0)/2       ## combination less bad
-	alpha <- max(sum(diag(Vj))/sum(diag(object$Ve)),1) ## inverse learning rate - does lower limit make sense? 
-	alpha1 <- max(sum(Vj*object$Ve)/sum(object$Ve^2),1)
-	Vcv <- Vcv + (object$Vp-object$Ve)*alpha1 ## bias correct conservative (too large)
-	Vj <- Vj + (object$Vp-object$Ve)*alpha ## bias correct
-	attr(Vj,"Vcv") <- Vcv ## conservative as attribute
-      } else { ## LOO or straight jackknife requested
-        Vj <- pdef(crossprod(dd)) ## straight jackknife is fine.
-	alpha <- sum(diag(Vj))/sum(diag(object$Ve)) ## inverse learning rate (do not impose lower limit)
-	Vj <- Vj + (object$Vp-object$Ve)*alpha ## bias correct
+  G$n<-dim(data)[1]
+    
+  if (add.constant)          # then X must be created by hand for case where parametric model is ~1
+  { X<-matrix(1,G$n,G$nsdf)
+    colnames(X)<-"constant"
+  }
+  if (nsdf>=0) # then X still needs to be filled
+  { X<-matrix(0,G$n,G$nsdf)
+    colnames(X)<-rep("",G$nsdf)         # don't need them, but will fail below without!  
+    G$offset<-array(0,G$n)
+  }
+  xcols<-G$nsdf
+  if (m>0) xcols<-xcols+length(v.names)-1 # -1 is to remove ~y   
+  G$x<-array(0,dim=c(xcols,G$n)) # explanatory data array
+  G$names<-array("",G$nsdf+m)
+  G$s.type<-array(0,m)  # array to store smooth types
+  G$dim<-split$s.dim     # gam parser produces this array of smooth dimensions
+  G$p.order<-split$p.order # gam.parser's array of penalty orders
+  if (G$nsdf>0) for (k in 1:G$nsdf) 
+  { G$x[k,]<-X[,k] # copy columns of parametric design matrix
+    G$names[k]<-colnames(X)[k] # copy column names for later use as labels
+  }
+  # count the "by" variables, and fill in logical structure indicating presence
+  G$by.exists<-array(FALSE,m);n.by<-0
+  if (m>0) for (jj in 1:m) if (split$by.names[jj]!="NA") 
+  { G$by.exists[jj]<-TRUE;n.by<-n.by+1}
+  G$by<-array(0,c(n.by,G$n)) # array for "by" variables
+  n.by<-0 # use to count through by's
+  kk<-k<-G$nsdf+1
+  v.off<-2  # must be 2 to avoid response!!
+  if (G$nsdf>0) G$vnames<-colnames(X) 
+  if (m>0)
+  for (jj in 1:m)  # loop through smooths
+  { if (G$by.exists[jj]) # first deal with by-variables 
+    { z<-eval(parse(text=split$by.names[jj]),data)#,p.env)
+      if (is.null(z)) stop(paste("Failed to find by-variable",split$by.names[jj]))  
+      if (length(z)!=G$n) stop("variable lengths don't all match!")
+      n.by<-n.by+1;G$by[n.by,]<-z;
+    } 
+    # now deal with variables that smooth depends on
+    vlist<-v.names[v.off:(v.off+G$dim[jj]-1)];v.off<-v.off+G$dim[jj];
+    if (jj==1) 
+    {  if (G$nsdf>0) G$vnames<-c(G$vnames,vlist) else
+       G$vnames<-vlist 
+    } else G$vnames<-c(G$vnames,vlist)
+    G$names[kk]<-"s("
+    for (i in 1:G$dim[jj]) # produces a column for each variable in this smooth
+    { z<-eval(parse(text=paste("data$\"",vlist[i],"\"",sep=""))) # is term in model frame ?
+      if (is.null(z)) z<-eval(parse(text=vlist[i]),data)#,p.env) # if not, evaluate in data frame
+      if (is.null(z)) stop(paste("Failed to find variable",vlist[i]))  
+      if (length(z)!=G$n) stop("variable lengths don't all match")
+      G$x[k,]<-z
+      if (i<length(vlist)) G$names[kk]<-paste(G$names[kk],vlist[i],",",sep="")
+      else G$names[kk]<-paste(G$names[kk],vlist[i],sep="")
+      k<-k+1
+    }
+    G$s.type[jj]<-split$bs.type[jj] 
+    G$names[kk]<-paste(G$names[kk],")",sep="")
+    kk<-kk+1
+  }
+  if (n.by>0) rownames(G$by)<-split$by.names[split$by.names!="NA"]
+  # now sort out max dfs per term (only if get.y - otherwise call from predict)
+  if (!predict&&m>0)
+  { k<-0;off<-G$nsdf
+    for (i in 1:G$m)
+    { xx<-G$x[(off+1):(off+G$dim[i]),]
+      M<-null.space.dimension(G$dim[i],G$p.order[i])
+      if (G$dim[i]==1) n<-length(unique(xx))
+      else n<-dim(uniquecombs(xx))[2]
+      if (M>=n) stop("There are too few unique covariate combinations to support one of your model terms")
+      if (G$df[i]>n) 
+      { warning("Max d.f. reset to number of unique covariate combinations for one of your model terms")
+        G$df[i]<-n
+      } else
+      if (G$df[i]<=M)
+      { warning("Max d.f. for term must be > than penalty null space dimension - max. d.f. has been raised for term");
+        G$df[i]<-M+1
       }
-      attr(object$Ve,"Vp") <- object$Vp ## keep original
-      attr(object$Ve,"inv.learn") <- alpha
-      object$Vp <- Vj     
+      k<-k+G$df[i]
+      off<-off+G$dim[i] 
+    }
+    xx<-G$x[(G$nsdf+1):off,]
+    if (off-G$nsdf==1) n<-length(unique(xx))
+    else n<-dim(uniquecombs(xx))[2]
+    if (k>n) 
+    stop("Total max model d.f. must be <= unique covariate combinations - use uniquecombs() to investigate further") 
+  }
+  # evaluate weights......
+ 
+  if (is.null(data$"(weights)")) G$w<-rep(1,G$n)
+  else G$w<-data$"(weights)"  
+
+  # now create information on knot locations, if it's been provided....
+  kk<-G$nsdf;k<-1;G$knots<-0;G$n.knots<-array(0,G$m)
+  if (!is.null(knots)) # then user has supplied a knot location list
+  { for (i in 1:G$m)
+    { for (j in 1:G$dim[i])
+      { kk<-kk+1
+        knot.seq<-eval(parse(text=paste("knots$",G$vnames[kk],sep="")))
+        if (is.null(knot.seq)) stop(paste("knot sequence variable",G$vnames[kk],"not found"))
+        if (G$s.type[i]==0)  knot.seq<-sort(unique(knot.seq))
+        n<-length(knot.seq)
+        if (j>1&&n!=G$n.knots[i]) stop("Knot location vectors of unequal length within a term")
+        else G$n.knots[i]<-n
+        G$knots[k:(k+n-1)]<-knot.seq
+        k<-k+n
+        if (G$s.type[i]==0&&n!=G$df[i]) 
+        stop("With a \"cr\" basis you must supply the same number of knots as the basis dimension!")
+        if (n<G$df[i]) stop("You can't have fewer basis knots than the basis dimension!")
+      }
     }
   }
-  ## note: use of the following (Vc) in place of Vp appears to mess up p-values for smooths,
-  ##       but doesn't change r.e. p-values of course. 
-  #if (!is.null(mv$Vc)) object$Vc <- mv$Vc 
-  #if (!is.null(mv$edf2)) object$edf2 <- mv$edf2
-  #object$Vp <- mv$Vb
-  #object$V.sp <- mv$V.sp
-  #object$hat<-mv$hat
-  #object$Ve <- mv$Ve
-  #object$edf<-mv$edf
-  #object$edf1 <- mv$edf1
-  ##object$F <- mv$F ## DoF matrix --- probably not needed
-  #object$R <- mv$R ## qr.R(sqrt(W)X)
-  object$aic <- object$aic + 2*sum(object$edf)
-  object$nsdf <- G$nsdf
-  object$K <-  object$D1 <-  object$D2 <-  object$P <-  object$P1 <-  object$P2 <- object$dw.drho <-  
-  object$GACV <-  object$GACV1 <-  object$GACV2 <-  object$REML <-  object$REML1 <-  object$REML2 <-  
-  object$GCV<-object$GCV1<- object$GCV2 <- object$UBRE <-object$UBRE1 <- object$UBRE2 <- object$trA <-
-  object$trA1<- object$trA2 <- object$alpha <- object$alpha1 <- object$scale.est <- NULL
-  object$sig2 <- object$scale
-  
-  object
-} ## gam.outer
-
-get.null.coef <- function(G,start=NULL,etastart=NULL,mustart=NULL,...) {
-## Get an estimate of the coefs corresponding to maximum reasonable deviance...
-  y <- G$y
-  weights <- G$w
-  nobs <- G$n ## ignore codetools warning!!
-  ##start <- etastart <- mustart <- NULL
-  family <- G$family
-  eval(family$initialize) ## have to do this to ensure y numeric
-  y <- as.numeric(y)
-  mum <- mean(y)+0*y
-  etam <- family$linkfun(mum)
-  null.coef <- qr.coef(qr(G$X),etam)
-  null.coef[is.na(null.coef)] <- 0;
-  ## get a suitable function scale for optimization routines
-  null.scale <- sum(family$dev.resids(y,mum,weights))/nrow(G$X) 
-  list(null.coef=null.coef,null.scale=null.scale)
+  rownames(G$x)<-G$vnames
+  G
 }
 
-estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NULL,nei=NULL,...) {
-## Do gam estimation and smoothness selection...
 
-  if (!is.null(G$family$method) && !method %in% G$family$method) method <- G$family$method[1] 
 
-  if (method %in% c("QNCV","NCV")||!is.null(nei)) {
-    optimizer <- c("outer","bfgs")
-    if (method=="QNCV") { method <- "NCV";G$family$qapprox <- TRUE } else G$family$qapprox <- FALSE
-    if (is.null(nei)) nei <- list(i=1:G$n,mi=1:G$n,m=1:G$n,k=1:G$n) ## LOOCV
-    if (is.null(nei$k)||is.null(nei$m)) nei$k <- nei$m <- nei$mi <- nei$i <- 1:G$n 
-    if (is.null(nei$i)) if (length(nei$m)==G$n) nei$mi <- nei$i <- 1:G$n else stop("unclear which points NCV neighbourhoods belong to")
-    if (length(nei$mi)!=length(nei$m)) stop("for NCV number of dropped and predicted neighbourhoods must match")
-    nei$m <- round(nei$m); nei$mi <- round(nei$mi); nei$k <- round(nei$k); nei$i <- round(nei$i); 
-    if (min(nei$i)<1||max(nei$i>G$n)||min(nei$k)<1||max(nei$k>G$n)) stop("nei indexes non-existent points")
-    if (nei$m[1]<1||max(nei$m)>length(nei$k)||length(nei$m)<2||any(diff(nei$m)<1)) stop('nei$m faulty')
-    if (nei$mi[1]<1||max(nei$mi)>length(nei$i)||length(nei$mi)<2||any(diff(nei$mi)<1)) stop('nei$mi faulty')
-    if (is.null(nei$jackknife)) nei$jackknife <- -1
-  }  
 
-  if (inherits(G$family,"extended.family")) { ## then there are some restrictions...
-    if (!(method%in%c("REML","ML","NCV"))) method <- "REML"
-    if (inherits(G$family,"general.family")) {
-       if (!(method%in%c("REML","NCV"))||optimizer[1]=="efs") method <- "REML"
-       if (method=="NCV"&&is.null(G$family$ncv)) {
-         warning("family lacks a Neighbourhood Cross Validation method")
-         method <- "REML"
-       }	 
-       G$Sl <- Sl.setup(G) ## prepare penalty sequence
-      
-       G$X <- Sl.initial.repara(G$Sl,G$X,both.sides=FALSE) ## re-parameterize accordingly
+gam<-function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,control=gam.control(),
+              scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,...)
+
+# Routine to fit a GAM to some data. The model is stated in the formula, which is then 
+# parsed and interpreted to figure out which bits relate to smooth terms and which to parametric terms.
+
+{  # create model frame.....
+  gp<-gam.parser(formula) # interpret the formula 
+  cl<-match.call() # call needed in gam object for update to work
+  mf<-match.call(expand.dots=FALSE)
+  ff<-paste(gp$v.names[1],gp$pftext) # fake formula to collect necessary data
+  n<-length(gp$v.names) # pick up arguments of smooths
+  if (n>1) { ff1<-paste(gp$v.names[2:n],collapse="+");ff<-paste(ff,"+",ff1)}
+  if (sum(gp$by.names!="NA")) # ... and "by" variables
+  { ff1<-paste(gp$by.names[gp$by.names!="NA"],collapse="+")
+    ff<-paste(ff,"+",ff1)
+  }
+  mf$formula<-as.formula(ff,env=environment(formula))
+  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp<-mf$H<-mf$gamma<-mf$...<-NULL
+  mf$drop.unused.levels<-TRUE
+  mf[[1]]<-as.name("model.frame")
+  mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
+
+  if (is.character(family)) family<-eval(parse(text=family))
+  if (is.function(family)) family <- family()
+  if (is.null(family$family)) stop("family not recognized")
+  
+  if (sum(control$fit.method==c("mgcv","magic","fastest"))==0) stop("Unknown fit method.") 
+  G<-gam.setup(gp,data=mf,predict=FALSE,knots=knots,sp=sp,min.sp=min.sp,H=H,fit.method=control$fit.method)
+  
+  G<-GAMsetup(G) 
+  
+  G$C<-gam.side.conditions(G) # check for identifiability of smooth part, constrain if poss.
  
-       if (!is.null(start)) start <- Sl.initial.repara(G$Sl,start,inverse=FALSE,both.sides=FALSE)
-
-       ## make sure optimizer appropriate for available derivatives
-       if (!is.null(G$family$available.derivs)) {
-         if (G$family$available.deriv==1 && optimizer[1]!="efs")  optimizer <- c("outer","bfgs")
-	 if (G$family$available.derivs==0) optimizer <- "efs"
-       }	 
-    }
+  if (is.null(G$offset)) G$offset<-rep(0,G$n)
+  
+  if (scale==0) 
+  { if (family$family=="binomial"||family$family=="poisson") scale<-1 #ubre
+    else scale <- -1 #gcv
   }
+  
+  G$sig2<-scale
 
-  if (!optimizer[1]%in%c("outer","efs")) stop("unknown optimizer")
-  if (optimizer[1]=="efs") method <- "REML"
-  if (!method%in%c("GCV.Cp","GACV.Cp","REML","P-REML","ML","P-ML","NCV")) stop("unknown smoothness selection criterion") 
-  G$family <- fix.family(G$family)
-  G$rS <- mini.roots(G$S,G$off,ncol(G$X),G$rank)
+  G$conv.tol<-control$mgcv.tol      # tolerence for mgcv
+  G$max.half<-control$mgcv.half # max step halving in Newton update mgcv
+  G$min.edf<-G$nsdf+sum(null.space.dimension(G$dim,G$p.order))-dim(G$C)[1]
+
+  object<-gam.fit(G,family=family,control=control,gamma=gamma,...)
+
  
-  reml <- method%in%c("REML","P-REML","ML","P-ML","NCV")
-  
-  Ssp <- totalPenaltySpace(G$S,G$H,G$off,ncol(G$X))
-  G$Eb <- Ssp$E       ## balanced penalty square root for rank determination purposes 
-  G$U1 <- cbind(Ssp$Y,Ssp$Z) ## eigen space basis
-  G$Mp <- ncol(Ssp$Z) ## null space dimension
-  G$UrS <- list()     ## need penalty matrices in overall penalty range space...
-  if (length(G$S)>0) for (i in 1:length(G$S)) G$UrS[[i]] <- t(Ssp$Y)%*%G$rS[[i]] else i <- 0
-  if (!is.null(G$H)) { ## then the sqrt fixed penalty matrix H is needed for (RE)ML 
-      G$UrS[[i+1]] <- t(Ssp$Y)%*%mroot(G$H)
-  }
-
-
-  # is outer looping needed ?
-  outer.looping <- (!G$am ||reml||method=="GACV.Cp"||method=="NCV"||!is.null(nei)) 
-
-  ## sort out exact sp selection criterion to use
-
-  fam.name <- G$family$family[1]
-
-  if (scale==0) { ## choose criterion for performance iteration
-    if (fam.name == "binomial"||fam.name == "poisson") G$sig2<-1 #ubre
-      else G$sig2 <- -1 #gcv
-  } else {G$sig2 <- scale}
-
-
-  if (reml||method=="NCV") { ## then RE(ML) selection, but which variant?
-   criterion <- method
-   if (fam.name == "binomial"||fam.name == "poisson") scale <- 1
-   if (inherits(G$family,"extended.family") && scale <=0) {
-     scale <- if (is.null(G$family$scale)) 1 else G$family$scale
-   }
-  } else {
-    if (scale==0) { 
-      if (fam.name=="binomial"||fam.name=="poisson") scale <- 1 #ubre
-      else scale <- -1 #gcv
-    }
-    if (scale > 0) criterion <- "UBRE"
-    else {
-      if (method=="GCV.Cp") criterion <- "GCV" else criterion <- "GACV"
-    }
-  }
-
-
-  if (substr(fam.name,1,17)=="Negative Binomial") { 
-    scale <- 1; ## no choice
-    if (method%in%c("GCV.Cp","GACV.Cp")) criterion <- "UBRE"
-  }
-  ## Reset P-ML or P-REML in known scale parameter cases
-  if (scale>0) {
-    if (method=="P-ML") criterion <- method <- "ML" else 
-    if (method=="P-REML")  criterion <- method <- "REML"
-  } 
-
-  family <- G$family; nb.fam.reset <- FALSE
-  
-  if (substr(G$family$family[1],1,17)=="Negative Binomial") { ## initialize sensibly
-      scale <- G$sig2 <- 1
-      G$family <- negbin(max(family$getTheta()),link=family$link)
-      nb.fam.reset <- TRUE
-  }
-  
-  ## extended family may need to manipulate G...
+  mgcv.conv<-object$mgcv.conv
+  # need to check that i) following is wanted; (ii) there are free s.p.s to estimate...
+  if (!control$perf.iter&&((G$fit.method=="magic"&&G$m.free>0)||(G$fit.method=="mgcv"&&G$fixed.sp<0.5)))
+  { lsp<-log(object$sp)
+    um<-nlm(full.score,lsp,typsize=lsp,fscale=abs(object$gcv.ubre),stepmax=1,
+            ndigit=12,gradtol=1e-4,steptol=0.01,G=G,family=family,control=control,gamma=gamma)
+    lsp<-um$estimate
     
-  if (!is.null(G$family$preinitialize)) {
-    if (inherits(G$family,"general.family")) {
-      Gmod <- G$family$preinitialize(G) ## modifies some elements of G
-      for (gnam in names(Gmod)) G[[gnam]] <- Gmod[[gnam]] ## copy these into G  
-    } else {
-      ## extended family - usually just initializes theta and possibly y
-      if (!is.null(attr(G$family$preinitialize,"needG"))) attr(G$family,"G") <- G ## more complicated
-      pini <- G$family$preinitialize(G$y,G$family)
-      attr(G$family,"G") <- NULL
-      if (!is.null(pini$family)) G$family <- pini$family
-      if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
-      if (!is.null(pini$y)) G$y <- pini$y
-    }
+    object<-attr(full.score(lsp,G,family,control,gamma=gamma),"full.gam.object")
+    object$mgcv.conv<-mgcv.conv # want info on power iteration, not single evaluation calls used by nlm
+    object$mgcv.conv$nlm.iterations<-um$iterations
   }
-
-  if (length(G$sp)>0) lsp2 <- log(initial.spg(G$X,G$y,G$w,G$family,G$S,G$rank,G$off,
-                                  offset=G$offset,L=G$L,lsp0=G$lsp0,E=G$Eb,...))
-  else lsp2 <- rep(0,0)
-
-  if (!outer.looping) { ## additive GCV/UBRE
-    object <- am.fit(G,control=control,gamma=gamma,...)
-    lsp <- log(object$sp) 
-  } else {
-    if (!is.null(in.out)) { # initial s.p.s and scale provided
-      ok <- TRUE ## run a few basic checks
-      if (is.null(in.out$sp)||is.null(in.out$scale)) ok <- FALSE
-      if (length(in.out$sp)!=length(G$sp)) ok <- FALSE
-      if (!ok) stop("in.out incorrect: see documentation")
-      lsp <- log(in.out$sp) 
-    } else { 
-      lsp <- lsp2
-    } 
-
-    if (nb.fam.reset) G$family <- family ## restore, in case manipulated for negative binomial 
-       
-    ## Get an estimate of the coefs corresponding to maximum reasonable deviance,
-    ## and an estimate of the function scale, suitable for optimizers that need this.
-    ## Doesn't make sense for general families that have to initialize coefs directly.
-  
-    null.stuff  <- if (inherits(G$family,"general.family")) list() else { 
-      if (is.null(G$family$get.null.coef)) get.null.coef(G,...) else G$family$get.null.coef(G,...)
-    }
-
-    scale.as.sp <- (criterion%in%c("REML","ML")||(criterion=="NCV"&&inherits(G$family,"extended.family")))&&scale<=0
- 
-    if (scale.as.sp) { ## log(scale) to be estimated as a smoothing parameter
-      if (is.null(in.out)) {
-          log.scale <- log(null.stuff$null.scale/10)
-      } else {
-          log.scale <- log(in.out$scale)
-      }
-      lsp <- c(lsp,log.scale) ## append log initial scale estimate to lsp
-      ## extend G$L, if present...
-      if (!is.null(G$L)) { 
-        G$L <- cbind(rbind(G$L,rep(0,ncol(G$L))),c(rep(0,nrow(G$L)),1))
-      }
-      if (!is.null(G$lsp0)) G$lsp0 <- c(G$lsp0,0)
-    } 
-    ## check if there are extra parameters to estimate
-    if (inherits(G$family,"extended.family")&&!inherits(G$family,"general.family")&&G$family$n.theta>0) {
-      th0 <- G$family$getTheta() ## additional (initial) parameters of likelihood 
-      nth <- length(th0)
-      nlsp <- length(lsp)
-      ind <- 1:nlsp + nth ## only used if nlsp>0
-      lsp <- c(th0,lsp) ## append to start of lsp
-      ## extend G$L, G$lsp0 if present...
-      if (!is.null(G$L)&&nth>0) { 
-        L <- rbind(cbind(diag(nth),matrix(0,nth,ncol(G$L))),
-                   cbind(matrix(0,nrow(G$L),nth),G$L))
-        #sat <- attr(G$L,"scale")
-        G$L <- L
-        #attr(G$L,"scale") <- sat
-        #attr(G$L,"not.sp") <- nth ## first not.sp params are not smoothing params
-      }
-      if (!is.null(G$lsp0)) G$lsp0 <- c(th0*0,G$lsp0)
-    } else nth <- 0
-
-   
-    G$null.coef <- null.stuff$null.coef
-
-    object <- gam.outer(lsp,fscale=null.stuff$null.scale, ##abs(object$gcv.ubre)+object$sig2/length(G$y),
-                        family=G$family,control=control,criterion=criterion,method=method,
-                        optimizer=optimizer,scale=scale,gamma=gamma,G=G,start=start,nei=nei,...)
-    
-    if (scale.as.sp)  object$sp <- object$sp[-length(object$sp)] ## drop scale estimate from sp array
-    
-    if (inherits(G$family,"extended.family")&&nth>0) object$sp <- object$sp[-(1:nth)] ## drop theta params
- 
-  } ## finished outer looping
-
-  ## correct null deviance if there's an offset [Why not correct calc in gam.fit/3???]....
-
-  if (!inherits(G$family,"extended.family")&&G$intercept&&any(G$offset!=0)) object$null.deviance <-
-         glm(object$y~offset(G$offset),family=object$family,weights=object$prior.weights)$deviance
-
-  object$method <- if (method=="NCV"&&G$family$qapprox) "QNCV" else criterion
-
-  object$smooth<-G$smooth
-
-  names(object$edf) <- G$term.names
-  names(object$edf1) <- G$term.names
-
-  if (inherits(family,"general.family")) {
-    object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
+  object$fit.method<-G$fit.method
+  object$covariate.shift<-G$covariate.shift # basis stabilizing linear translations  
+  names(object$covariate.shift)<-G$vnames[(dim(G$x)[1]-length(G$covariate.shift)+1):dim(G$x)[1]]
+  if (scale<0) object$gcv.used<-TRUE else object$gcv.used<-FALSE
+  object$xp<-G$xp  # position of knots for cubic regression splines
+  object$UZ<-G$UZ  # truncated basis for tprs terms
+  object$Xu<-G$Xu # unique covariate combinations for tprs terms
+  object$xu.length<-G$xu.length # array of numbers of unique covariate combinations for tprs terms  
+  # return correct d.f. for fixed d.f. terms
+  if (G$m>0) for (i in 1:G$m) if (G$fix[i]) object$edf[i]<-G$df[i]-1
+  # now re-assign variable names to coefficients etc. 
+  term.names<-array("",length(object$coefficients))
+  if (G$nsdf>0) for (i in 1:G$nsdf) term.names[i]<-G$names[i]
+  i<-G$nsdf+1
+  if (G$m>0)
+  for (k in 1:G$m)
+  for (j in 1:G$df[k])
+  { term.names[i]<-paste(G$names[G$nsdf+k],".",as.character(j),sep="")
+    i<-i+1
   }
-  
-  ## extended family may need to manipulate fit object. Code
-  ## will need to include the following line if G$X used...
-  ## G$X <- Sl.initial.repara(G$Sl,G$X,inverse=TRUE,cov=FALSE,both.sides=FALSE)
-  if (!is.null(G$family$postproc)) {
-    if (inherits(G$family,"general.family")) eval(G$family$postproc) else {
-      posr <- G$family$postproc(family=object$family,y=G$y,prior.weights=object$prior.weights,
-              fitted=object$fitted.values,linear.predictors=object$linear.predictors,offset=G$offset,
-	      intercept=G$intercept)
-      if (!is.null(posr$family)) object$family$family <- posr$family
-      if (!is.null(posr$deviance)) object$deviance <- posr$deviance
-      if (!is.null(posr$null.deviance)) object$null.deviance <- posr$null.deviance	      
-    }
-  } 
-
-  if (!is.null(G$P)) { ## matrix transforming from fit to prediction parameterization
-    object$coefficients <- as.numeric(G$P %*% object$coefficients)
-    object$Vp <- G$P %*% object$Vp %*% t(G$P)
-    object$Ve <- G$P %*% object$Ve %*% t(G$P)
-    rownames(object$Vp) <- colnames(object$Vp) <- G$term.names
-    rownames(object$Ve) <- colnames(object$Ve) <- G$term.names
-  }
-  names(object$coefficients) <- G$term.names 
-  
+  names(object$coefficients)<-term.names  # note - won't work on matrices!!
+  object$full.formula<-as.formula(G$full.formula)
+  environment(object$full.formula)<-environment(formula) 
+  object$formula<-formula
+  object$model<-mf # store the model frame
+  object$by<-G$by;object$by.exists<-G$by.exists
+  object$s.type<-G$s.type
+  object$p.order<-G$p.order
+  object$dim<-G$dim
+  object$min.edf<-G$min.edf
+  object$call<-cl # needed for update() to work
+  class(object)<-"gam"
   object
-} ## end estimate.gam
+}
 
-variable.summary <- function(pf,dl,n) {
-## routine to summarize all the variables in dl, which is a list
-## containing raw input variables to a model (i.e. no functions applied)
-## pf is a formula containing the strictly parametric part of the
-## model for the variables in dl. A list is returned, with names given by 
-## the variables. For variables in the parametric part, then the list elements
-## may be:
-## * a 1 column matrix with elements set to the column medians, if variable 
-##   is a matrix.
-## * a 3 figure summary (min,median,max) for a numeric variable.
-## * a factor variable, with the most commonly occuring factor (all levels)
-## --- classes are as original data type, but anything not numeric, factor or matrix
-## is coerced to numeric. 
-## For non-parametric variables, any matrices are coerced to numeric, otherwise as 
-## parametric.      
-## medians in the above are always observed values (to deal with variables coerced to 
-## factors in the model formulae in a nice way).
-## variables with less than `n' entries are discarded
-   v.n <- length(dl)
-   ## if (v.n) for (i in 1:v.n) if (length(dl[[i]])<n) dl[[i]] <- NULL 
-   
-   v.name <- v.name1 <- names(dl)
-   if (v.n) ## need to strip out names of any variables that are too short.
-   { k <- 0 ## counter for retained variables
-     for (i in 1:v.n) if (length(dl[[i]])>=n) { 
-       k <- k+1
-       v.name[k] <- v.name1[i] ## save names of variables of correct length
-     }
-     if (k>0) v.name <- v.name[1:k] else v.name <- rep("",k)
-   }
-
-   ## v.name <- names(dl)    ## the variable names
-   p.name <- all.vars(pf[-2]) ## variables in parametric part (not response)
-   vs <- list()
-   v.n <- length(v.name)
-   if (v.n>0) for (i in 1:v.n) {
-     if (v.name[i]%in%p.name) para <- TRUE else para <- FALSE ## is variable in the parametric part?
-
-     if (para&&is.matrix(dl[[v.name[i]]])&&ncol(dl[[v.name[i]]])>1) { ## parametric matrix --- a special case
-       x <- matrix(apply(dl[[v.name[i]]],2,quantile,probs=0.5,type=3,na.rm=TRUE),1,ncol(dl[[v.name[i]]])) ## nearest to median entries
-     } else { ## anything else
-       x <- dl[[v.name[i]]]
-       if (is.character(x)) x <- as.factor(x)
-       if (is.factor(x)) {
-         x <- x[!is.na(x)]
-         lx <- levels(x)
-         freq <- tabulate(x)
-         ii <- min((1:length(lx))[freq==max(freq)])
-         x <- factor(lx[ii],levels=lx) 
-       } else {
-         x <- as.numeric(x)
-         x <- c(min(x,na.rm=TRUE),as.numeric(quantile(x,probs=.5,type=3,na.rm=TRUE)) ,max(x,na.rm=TRUE)) ## 3 figure summary
-       }
-     }
-     vs[[v.name[i]]] <- x
-   }
-   vs
-} ## end variable.summary
-
-
-nanei <- function(nb,k) {
-## nb is an NCV neighbourhood defining list, k an array of points to drop.
-## this function adjusts nb to remove the dropped points and adjust the
-## indices accordingly, so that the structure works with a data frame
-## from which rows in k have been dropped.
-  if (!length(k)) return()
-  if (is.null(nb$k)||is.null(nb$m)||is.null(nb$mi)||is.null(nb$i)) stop("full nei list needed if data incomplete")
-  ## first work on dropped folds...
-  kk <- which(nb$k %in% k) ## position of dropped in nb$k
-  ## adjust m for the fact that points are to be dropped...
-  nb$m <- nb$m - cumsum(tabulate(findInterval(kk-1,nb$m)+1,nbins=length(nb$m)))
-  ii <- which(diff(c(0,nb$m))==0) ## identify zero length folds
-  if (length(ii)) nb$m <- nb$m[-ii] ## drop zero length folds
-  nb$k <- nb$k[-kk] ## drop the elements of k
-  nb$k <- nb$k - findInterval(nb$k,sort(k)) ## and shift indices to account for dropped
-
-  ## now the prediction folds...
-  kk <- which(nb$i %in% k) ## position of dropped in nb$i
-  ## adjust mi for the fact that points are to be dropped...
-  nb$mi <- nb$mi - cumsum(tabulate(findInterval(kk-1,nb$mi)+1,nbins=length(nb$m)))
-  ii <- which(diff(c(0,nb$mi))==0) ## identify zero length folds
-  if (length(ii)) nb$mi <- nb$mi[-ii] ## drop zero length folds
-  nb$i <- nb$i[-kk] ## drop the elements of k
-  nb$i <- nb$i - findInterval(nb$i,sort(k)) ## and shift indices to account for dropped
-  nb 
-} ## nanei
-
-## don't be tempted to change to control=list(...) --- messes up passing on other stuff via ...
-
-gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
-                method="GCV.Cp",optimizer=c("outer","newton"),control=list(),#gam.control(),
-                scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,
-                paraPen=NULL,G=NULL,in.out=NULL,drop.unused.levels=TRUE,drop.intercept=NULL,
-		nei=NULL,discrete=FALSE,...) {
-## Routine to fit a GAM to some data. The model is stated in the formula, which is then 
-## interpreted to figure out which bits relate to smooth terms and which to parametric terms.
-## Basic steps:
-## 1. Formula is split up into parametric and non-parametric parts,
-##    and a fake formula constructed to be used to pick up data for
-##    model frame. pterms "terms" object(s) created for parametric 
-##    components, model frame created along with terms object.
-## 2. 'gam.setup' called to do most of basis construction and other
-##    elements of model setup.
-## 3. 'estimate.gam' is called to estimate the model. This performs further 
-##    pre- and post- fitting steps and calls either 'gam.fit' (performance
-##    iteration) or 'gam.outer' (default method). 'gam.outer' calls the actual 
-##    smoothing parameter optimizer ('newton' by default) and then any post 
-##    processing. The optimizer calls 'gam.fit3/4/5' to estimate the model 
-##    coefficients and obtain derivatives w.r.t. the smoothing parameters.
-## 4. Finished 'gam' object assembled.
-   control <- do.call("gam.control",control)
-   if (is.null(G) && discrete) { ## get bam to do the setup
-     cl <- match.call() ## NOTE: check all arguments more carefully
-     cl[[1]] <- quote(bam)
-     cl$fit = FALSE
-     G <- eval(cl,parent.frame()) ## NOTE: cl probaby needs modifying in G to work properly (with fit=FALSE reset?? also below??)
-   }
-   if (is.null(G)) {
-    ## create model frame..... 
-    gp <- interpret.gam(formula) # interpret the formula 
-    cl <- match.call() # call needed in gam object for update to work
-    mf <- match.call(expand.dots=FALSE)
-    mf$formula <- gp$fake.formula 
-    mf$family <- mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp<-mf$H<-mf$select <- mf$drop.intercept <- mf$nei <-
-                 mf$gamma<-mf$method<-mf$fit<-mf$paraPen<-mf$G<-mf$optimizer <- mf$in.out <- mf$discrete <- mf$...<-NULL
-    mf$drop.unused.levels <- drop.unused.levels
-    mf[[1]] <- quote(stats::model.frame) ## as.name("model.frame")
-    pmf <- mf
-    mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
-    if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
-    terms <- attr(mf,"terms")
-
-    if (!is.null(nei)) { ## check if data dropped
-      k <- attr(mf,"na.action")
-      if (!is.null(k)) { ## need to adjust nei for dropped data
-        nei <- nanei(nei,as.numeric(k))
+gam.check<-function(b)
+# takes a fitted gam object and produces some standard diagnostic plots
+{ { old.par<-par(mfrow=c(2,2))
+    if (b$gcv.used) sc.name<-"GCV" else sc.name<-"UBRE"
+    if (b$fit.method=="mgcv")
+    { if (b$mgcv.conv$iter>0)
+      { plot(b$mgcv.conv$edf,b$mgcv.conv$score,xlab="Estimated Degrees of Freedom",
+         ylab=paste(sc.name,"Score"),main=paste(sc.name,"w.r.t. model EDF"),type="l")
+        points(b$nsdf+sum(b$edf),b$gcv.ubre,col=2,pch=20)
       }
-    }
-    ## summarize the *raw* input variables
-    ## note can't use get_all_vars here -- buggy with matrices
-    vars <- all_vars1(gp$fake.formula[-2]) ## drop response here
-    inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
-
-    ## allow a bit of extra flexibility in what `data' is allowed to be (as model.frame actually does)
-    if (!is.list(data)&&!is.data.frame(data)) data <- as.data.frame(data) 
-
-    dl <- eval(inp, data, parent.frame())
-    names(dl) <- vars ## list of all variables needed
-    var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
-    rm(dl) ## save space    
-
-    ## pterms are terms objects for the parametric model components used in 
-    ## model setup - don't try obtaining by evaluating pf in mf - doesn't
-    ## work in general (e.g. with offset)...
-
-    if (is.list(formula)) { ## then there are several linear predictors
-      environment(formula) <- environment(formula[[1]]) ## e.g. termplots needs this
-      pterms <- list()
-      tlab <- rep("",0)
-      for (i in 1:length(formula)) {
-        pmf$formula <- gp[[i]]$pf 
-        pterms[[i]] <- attr(eval(pmf, parent.frame()),"terms")
-        tlabi <- attr(pterms[[i]],"term.labels")
-        if (i>1&&length(tlabi)>0) tlabi <- paste(tlabi,i-1,sep=".")
-        tlab <- c(tlab,tlabi)
+    } else qqnorm(residuals(b))
+    plot(fitted(b),residuals(b),main="Residuals vs. Fitted",xlab="Fitted Values",ylab="Residuals");
+    hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
+    plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
+    if (b$mgcv.conv$iter>0)   
+    cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")
+    else 
+    cat("\nModel required no smoothing parameter selection")
+    if (b$mgcv.conv$iter>1) cat("s")
+    
+    if ((b$fit.method=="mgcv"&&b$mgcv.conv$step.fail)||(b$fit.method=="magic"&&!b$mgcv.conv$fully.converged)) 
+    cat(" by steepest\ndescent step failure.\n") else cat(".\n")
+    if (b$fit.method=="mgcv")
+    { if (length(b$df)>1&&b$mgcv.conv$iter>0)
+      { cat("The mean absolute",sc.name,"score gradient at convergence was ",mean(abs(b$mgcv.conv$g)),".\n")
+        if (sum(b$mgcv.conv$e<0)) cat("The Hessian of the",sc.name ,"score at convergence was not positive definite.\n")
+        else cat("The Hessian of the",sc.name,"score at convergence was positive definite.\n")
       }
-      attr(pterms,"term.labels") <- tlab ## labels for all parametric terms, distinguished by predictor
-    } else { ## single linear predictor case
-      pmf$formula <- gp$pf
-      pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part
-      pterms <- attr(pmf,"terms") ## pmf only used for this
+      if (!b$mgcv.conv$init.ok&&(b$mgcv.conv$iter>0)) cat("Note: the default second smoothing parameter guess failed.\n")
+    } else
+    { cat("The RMS",sc.name,"score gradiant at convergence was",b$mgcv.conv$rms.grad,".\n")
+      if (b$mgcv.conv$hess.pos.def)
+      cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
+      cat("The estimated model rank was ",b$mgcv.conv$rank," (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
     }
-
-    if (is.character(family)) family <- eval(parse(text=family))
-    if (is.function(family)) family <- family()
-    if (is.null(family$family)) stop("family not recognized")
-  
-    if (family$family[1]=="gaussian" && family$link=="identity") am <- TRUE
-    else am <- FALSE
-    
-    if (!control$keepData) rm(data) ## save space
-
-    ## check whether family requires intercept to be dropped...
-    # drop.intercept <- if (is.null(family$drop.intercept) || !family$drop.intercept) FALSE else TRUE
-    # drop.intercept <- as.logical(family$drop.intercept)
-    if (is.null(family$drop.intercept)) { ## family does not provide information
-      lengthf <- if (is.list(formula)) length(formula) else 1
-      if (is.null(drop.intercept)) drop.intercept <- rep(FALSE, lengthf) else {
-        drop.intercept <- rep(drop.intercept,length=lengthf) ## force drop.intercept to correct length
-	if (sum(drop.intercept)) family$drop.intercept <- drop.intercept ## ensure prediction works
-      }
-    } else drop.intercept <- as.logical(family$drop.intercept) ## family overrides argument
-    
-    if (inherits(family,"general.family")&&!is.null(family$presetup)) eval(family$presetup)
-
-    gsname <- if (is.list(formula)) "gam.setup.list" else "gam.setup" 
-
-    G <- do.call(gsname,list(formula=gp,pterms=pterms,
-                 data=mf,knots=knots,sp=sp,min.sp=min.sp,
-                 H=H,absorb.cons=TRUE,sparse.cons=0,select=select,
-                 idLinksBases=control$idLinksBases,scale.penalty=control$scalePenalty,
-                 paraPen=paraPen,drop.intercept=drop.intercept))
-    
-    G$var.summary <- var.summary
-    G$family <- family
-   
-    if ((is.list(formula)&&(is.null(family$nlp)||family$nlp!=gp$nlp))||
-        (!is.list(formula)&&!is.null(family$npl)&&(family$npl>1))) stop("incorrect number of linear predictors for family")
-       
-    G$terms<-terms;
-    G$mf<-mf;G$cl<-cl;
-    G$am <- am
-
-    if (is.null(G$offset)) G$offset<-rep(0,G$n)
-     
-    G$min.edf <- G$nsdf ## -dim(G$C)[1]
-    if (G$m) for (i in 1:G$m) G$min.edf<-G$min.edf+G$smooth[[i]]$null.space.dim
-
-    G$formula <- formula
-    G$pred.formula <- gp$pred.formula
-    environment(G$formula)<-environment(formula)
-  } else { ## G not null
-    if (!is.null(sp)&&any(sp>=0)) { ## request to modify smoothing parameters
-      if (is.null(G$L)) G$L <- diag(length(G$sp))
-      if (length(sp)!=ncol(G$L)) stop('length of sp must be number of free smoothing parameters in original model')
-      ind <- sp>=0 ## which smoothing parameters are now fixed
-      spind <- log(sp[ind]); 
-      spind[!is.finite(spind)] <- -30 ## set any zero parameters to effective zero
-      G$lsp0 <- G$lsp0 + drop(G$L[,ind,drop=FALSE] %*% spind) ## add fix to lsp0
-      G$L <- G$L[,!ind,drop=FALSE] ## drop the cols of G
-      G$sp <- rep(-1,ncol(G$L))
-    }
+    cat("\n")
+    par(old.par)
   }
-
-  if (!fit) {
-    class(G) <- "gam.prefit"
-    return(G)
-  }  
-
-
-  ## if (ncol(G$X)>nrow(G$X)) warning("Model has more coefficients than data") ##stop("Model has more coefficients than data") 
-
-  G$conv.tol <- control$mgcv.tol      # tolerence for mgcv
-  G$max.half <- control$mgcv.half # max step halving in Newton update mgcv
-
-  object <- estimate.gam(G,method,optimizer,control,in.out,scale,gamma,nei=nei,...)
-
-  
-  if (!is.null(G$L)) { 
-    object$full.sp <- as.numeric(exp(G$L%*%log(object$sp)+G$lsp0))
-    names(object$full.sp) <- names(G$lsp0)
-  }
-  names(object$sp) <- names(G$sp)
-  object$paraPen <- G$pP
-  object$formula <- G$formula
-  ## store any lpi attribute of G$X for use in predict.gam...
-  if (is.list(object$formula)) attr(object$formula,"lpi") <- attr(G$X,"lpi")
-  object$var.summary <- G$var.summary 
-  object$cmX <- G$cmX ## column means of model matrix --- useful for CIs
-  object$model<-G$mf # store the model frame
-  object$na.action <- attr(G$mf,"na.action") # how to deal with NA's
-  object$control <- control
-  object$terms <- G$terms
-  object$pred.formula <- G$pred.formula
-
-  attr(object$pred.formula,"full") <- reformulate(all.vars(object$terms))
-  
-  object$pterms <- G$pterms
-  object$assign <- G$assign # applies only to pterms
-  object$contrasts <- G$contrasts
-  object$xlevels <- G$xlevels
-  object$offset <- G$offset
-  if (!is.null(G$Xcentre)) object$Xcentre <- G$Xcentre
-  if (control$keepData) object$data <- data
-  object$df.residual <- nrow(G$X) - sum(object$edf)
-  object$min.edf <- G$min.edf
-  if (G$am&&!(method%in%c("REML","ML","P-ML","P-REML"))) object$optimizer <- "magic" else object$optimizer <- optimizer
-  object$call <- G$cl # needed for update() to work
-  class(object) <- c("gam","glm","lm")
-  if (is.null(object$deviance)) object$deviance <- sum(residuals(object,"deviance")^2)
-  names(object$gcv.ubre) <- method
-  ## The following lines avoid potentially very large objects in hidden environments being stored
-  ## with fitted gam objects. The downside is that functions like 'termplot' that rely on searching in
-  ## the environment of the formula can fail...
-  environment(object$formula) <- environment(object$pred.formula) <-
-  environment(object$terms) <- environment(object$pterms) <- .GlobalEnv
-  if (!is.null(object$model))  environment(attr(object$model,"terms"))  <- .GlobalEnv
-  if (!is.null(attr(object$pred.formula,"full"))) environment(attr(object$pred.formula,"full")) <- .GlobalEnv
-  object
-} ## gam
-
-
+}
 
 print.gam<-function (x,...) 
 # default print function for gam objects
 { print(x$family)
   cat("Formula:\n")
-  if (is.list(x$formula)) for (i in 1:length(x$formula)) print(x$formula[[i]]) else
-     print(x$formula)
-  n.smooth<-length(x$smooth)
-  if (n.smooth==0)
-  cat("Total model degrees of freedom",sum(x$edf),"\n")
+  print(x$formula)
+  if (x$dim[1]==0)
+  cat("Total model degrees of freedom",x$nsdf,"\n")
   else
-  { edf<-0
-    cat("\nEstimated degrees of freedom:\n")
-    for (i in 1:n.smooth)
-    edf[i]<-sum(x$edf[x$smooth[[i]]$first.para:x$smooth[[i]]$last.para])
-    edf.str <- format(round(edf,digits=4),digits=3,scientific=FALSE)
-    for (i in 1:n.smooth) {   
-    cat(edf.str[i]," ",sep="")
-      if (i%%7==0) cat("\n")
-    }
-    cat(" total =",round(sum(x$edf),digits=2),"\n")
+  cat("\nEstimated degrees of freedom:\n",x$edf,"  total = ",sum(x$edf)+x$nsdf,"\n")
+  if (is.null(x$gcv.used)) # then it's an old object
+  { gcv<-x$df.null*x$sig2/(x$df.null-sum(x$edf)-x$nsdf)
+    cat("\nGCV score: ",gcv," (old gam object: < 0.8)\n")
+  } else
+  { if (x$gcv.used)  
+    cat("\nGCV score: ",x$gcv.ubre,"\n")
+    else
+    cat("\nUBRE score: ",x$gcv.ubre,"\n")
   }
-  if (!is.null(x$method)&&!(x$method%in%c("PQL","lme.ML","lme.REML")))  
-  cat("\n",x$method," score: ",x$gcv.ubre,"     ",sep="")
-  if (!is.null(x$rank) && x$rank< length(x$coefficients)) cat("rank: ",x$rank,"/",length(x$coefficients),sep="") 
-  cat("\n")
-  invisible(x)
-} ## print.gam
+}
 
-gam.control <- function (nthreads=1,ncv.threads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
-                         mgcv.tol=1e-7,mgcv.half=15,trace =FALSE,
-                         rank.tol=.Machine$double.eps^0.5,
-                         nlm=list(),optim=list(),newton=list(),#outerPIsteps=0,
-                         idLinksBases=TRUE,scalePenalty=TRUE,efs.lspmax=15,efs.tol=.1,
-                         keepData=FALSE,scale.est="fletcher",edge.correct=FALSE) 
+gam.control<-function (irls.reg=0.0,epsilon = 1e-04, maxit = 20,globit = 20,mgcv.tol=1e-6,mgcv.half=15, 
+                       nb.theta.mult=10000,trace = FALSE,fit.method="magic",perf.iter=TRUE,rank.tol=.Machine$double.eps^0.5) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
-# of IRLS iterations to use. mgcv.tol is the tolerance to use in the mgcv call within each IRLS. mgcv.half is the 
+# of IRLS iterations to use with local search for optimal s.p. after globit iterations have used global 
+# searches. mgcv.tol is the tolerance to use in the mgcv call within each IRLS. mgcv.half is the 
 # number of step halvings to employ in the mgcv search for the optimal GCV score, before giving up 
 # on a search direction. trace turns on or off some de-bugging information.
+# nb.theta.mult controls the upper and lower limits on theta estimates - for use with negative binomial  
+# fit.method can be "magic" for QR/SVD method or "mgcv" for Wood (2000) method, or "fastest" to use "mgcv" for single s.p. 
+# case and "magic" otherwise. 
+# perf.iter TRUE to use Gu's performance iteration, FALSE to follow it up with O'Sullivan's slower approach.
 # rank.tol is the tolerance to use for rank determination
-# outerPIsteps was the number of performance iteration steps used to intialize
-#                         outer iteration (unused for a while) 
-{   scale.est <- match.arg(scale.est,c("fletcher","pearson","deviance"))
-    if (!is.logical(edge.correct)&&(!is.numeric(edge.correct)||edge.correct<0)) stop(
-        "edge.correct must be logical or a positive number")
-    if (!is.numeric(nthreads) || nthreads <1) stop("nthreads must be a positive integer")
-    if (!is.numeric(ncv.threads) || ncv.threads <1) stop("ncv.threads must be a positive integer") 
-    if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
+{   if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
         stop("value of epsilon must be > 0")
     if (!is.numeric(maxit) || maxit <= 0) 
         stop("maximum number of iterations must be > 0")
+    if (!is.numeric(globit) || globit <= 0) 
+        stop("maximum number of iterations must be > 0")
+    if (!is.numeric(nb.theta.mult)||nb.theta.mult<2) 
+        stop("nb.theta.mult must be >= 2")
+    if (!is.logical(perf.iter)) stop("power.iter must be one of TRUE or FALSE.")
     if (rank.tol<0||rank.tol>1) 
     { rank.tol=.Machine$double.eps^0.5
       warning("silly value supplied for rank.tol: reset to square root of machine precision.")
     }
-    # work through nlm defaults
-    if (is.null(nlm$ndigit)||nlm$ndigit<2) nlm$ndigit <- max(2,ceiling(-log10(epsilon)))
-    nlm$ndigit <- round(nlm$ndigit)
-    ndigit <- floor(-log10(.Machine$double.eps))
-    if (nlm$ndigit>ndigit) nlm$ndigit <- ndigit
-    if (is.null(nlm$gradtol)) nlm$gradtol <- epsilon*10
-    nlm$gradtol <- abs(nlm$gradtol)
-    ## note that nlm will stop after hitting stepmax 5 consecutive times
-    ## hence should not be set too small ... 
-    if (is.null(nlm$stepmax)||nlm$stepmax==0) nlm$stepmax <- 2
-    nlm$stepmax <- abs(nlm$stepmax)
-    if (is.null(nlm$steptol)) nlm$steptol <- 1e-4
-    nlm$steptol <- abs(nlm$steptol)
-    if (is.null(nlm$iterlim)) nlm$iterlim <- 200
-    nlm$iterlim <- abs(nlm$iterlim)
-    ## Should be reset for a while anytime derivative code altered...
-    if (is.null(nlm$check.analyticals)) nlm$check.analyticals <- FALSE
-    nlm$check.analyticals <- as.logical(nlm$check.analyticals) 
-
-    # and newton defaults
-    if (is.null(newton$conv.tol)) newton$conv.tol <- 1e-6
-    if (is.null(newton$maxNstep)) newton$maxNstep <- 5
-    if (is.null(newton$maxSstep)) newton$maxSstep <- 2
-    if (is.null(newton$maxHalf)) newton$maxHalf <- 30
-    if (is.null(newton$use.svd)) newton$use.svd <- FALSE
-
-    # and optim defaults
-    if (is.null(optim$factr)) optim$factr <- 1e7
-    optim$factr <- abs(optim$factr)
-    if (efs.tol<=0) efs.tol <- .1
-
-    list(nthreads=round(nthreads),ncv.threads=round(ncv.threads),irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,
-         trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,
-         rank.tol=rank.tol,nlm=nlm,
-         optim=optim,newton=newton,#outerPIsteps=outerPIsteps,
-         idLinksBases=idLinksBases,scalePenalty=scalePenalty,efs.lspmax=efs.lspmax,efs.tol=efs.tol,
-         keepData=as.logical(keepData[1]),scale.est=scale.est,edge.correct=edge.correct)
+    list(irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,globit = globit, trace = trace, mgcv.tol=mgcv.tol,
+         mgcv.half=mgcv.half,nb.theta.mult=nb.theta.mult,fit.method=fit.method,perf.iter=perf.iter,rank.tol=rank.tol)
     
-} ## gam.control
+}
 
 
 
 mgcv.get.scale<-function(Theta,weights,good,mu,mu.eta.val,G)
 # Get scale implied by current fit and trial -ve binom Theta, I've used
 # mu and mu.eta.val used in fit rather than implied by it....
-{ variance<- negbin(Theta)$variance
+{ variance<-neg.bin(Theta)$variance
   w<-sqrt(weights[good]*mu.eta.val[good]^2/variance(mu)[good])
   wres<-w*(G$y-G$X%*%G$p)
-  sum(wres^2)/(G$n-sum(G$edf))
+  scale<-sum(wres^2)/(G$n-sum(G$edf)-G$nsdf)
 }
 
 
@@ -2387,169 +1119,78 @@ mgcv.find.theta<-function(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,tol)
 }
 
 
-full.score <- function(sp,G,family,control,gamma,...)
+full.score<-function(sp,G,family,control,gamma)
 # function suitable for calling from nlm in order to polish gam fit
 # so that actual minimum of score is found in generalized cases
-{ .Deprecated(msg="Internal mgcv function full.score is no longer used and will be removed soon.")
-  if (is.null(G$L)) {
-    G$sp<-exp(sp);
-  } else {
-    G$sp <- as.numeric(exp(G$L%*%sp + G$lsp0))
+{ G$sp<-exp(sp);G$fixed.sp<-TRUE
+  if (G$fit.method=="magic") # magic requires a different penalty matrix format to mgcv
+  { k<-1;G$m.free<-0;G$m.off<-0;q<-NCOL(G$X)
+    if (is.null(G$H)) G$H<-matrix(0,q,q)
+    for (i in 1:G$m)
+    { j<-G$df[i]
+      off1<-G$off[i]+1;off2<-off1+j-1
+      G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*G$S[[i]]
+    }
+    G$S<-list() # have to reset since magic uses length of this as number of penalties
   }
-  # set up single fixed penalty....
-  q<-NCOL(G$X)
-  if (is.null(G$H)) G$H<-matrix(0,q,q)
-  for (i in 1:length(G$S))
-  { j<-ncol(G$S[[i]])
-    off1<-G$off[i];off2<-off1+j-1
-    G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*G$S[[i]]
-  }
-  G$S<-list() # have to reset since length of this is used as number of penalties
-  G$L <- NULL
-  xx<-gam.fit(G,family=family,control=control,gamma=gamma,...)
-  res <- xx$gcv.ubre.dev
+  xx<-gam.fit(G,family=family,control=control,gamma=gamma)
+  res<-xx$gcv.ubre
   attr(res,"full.gam.object")<-xx
   res
-} ## full.score
+}
 
-am.fit <- function (G, #start = NULL, etastart = NULL, 
-    #mustart = NULL,# family = gaussian(), 
-    control = gam.control(),gamma=1,...) {
-    ## fit additive model using 'magic' returning gam type object.
-
-    family <- gaussian()
-    intercept<-G$intercept
-    n <- nobs <- NROW(G$y) ## n just there to keep codetools happy
-    y <- G$y # original data
-    X <- G$X # original design matrix
-    if (ncol(G$X) == 0) stop("Model seems to contain no terms")
-    olm <- G$am   # only need 1 iteration as it's a pure additive model.
-    
-    # obtain average element sizes for the penalties
-    n.S <- length(G$S)
-    if (n.S>0) {
-      S.size <- rep(0,n.S)
-      for (i in 1:n.S) S.size[i] <- mean(abs(G$S[[i]])) 
-    }
-    weights<-G$w # original weights
-
-    n.score <- sum(weights!=0) ## n to use in GCV score (i.e. don't count points with no influence)   
-
-    offset<-G$offset 
-
-    variance <- family$variance;dev.resids <- family$dev.resids
-    aic <- family$aic
-    if (NCOL(y) > 1) stop("y must be univariate unless binomial")
-    
-    scale <- G$sig2
-
-    msp <- G$sp
-    magic.control<-list(tol=G$conv.tol,step.half=G$max.half,#maxit=control$maxit+control$globit,
-                          rank.tol=control$rank.tol)
-
-    ## solve the penalized LS problem ...
-    good <- weights > 0
-    G$y <- y[good] - offset[good]
-    G$X <- X[good,,drop=FALSE]
-    G$w <- sqrt(weights[good]) ## note magic assumes sqrt weights
-    mr <- magic(G$y,G$X,msp,G$S,G$off,L=G$L,lsp0=G$lsp0,G$rank,G$H,matrix(0,0,ncol(G$X)),
-                G$w,gamma=gamma,G$sig2,G$sig2<0,
-                ridge.parameter=control$irls.reg,control=magic.control,n.score=n.score,nthreads=control$nthreads)
-    coef <- mr$b;msp <- mr$sp;G$sig2 <- mr$scale;G$gcv.ubre <- mr$score;
-
-    if (any(!is.finite(coef))) warning(gettextf("Non-finite coefficients at iteration"))
-  
-    mu <- eta <- drop(X %*% coef + offset) 
-    dev <- sum(dev.resids(y, mu, weights))
-    
-    residuals <- rep(NA, nobs)
-    residuals[good] <- G$y - (mu - offset)[good]
-       
-    wtdmu <- if (intercept) sum(weights * y)/sum(weights) else offset
-    nulldev <- sum(dev.resids(y, wtdmu, weights))
-    n.ok <- nobs - sum(weights == 0)
-    nulldf <- n.ok - as.integer(intercept)
-    
-    ## Extract a little more information from the fit....
-
-    mv <- magic.post.proc(G$X,mr,w=G$w^2)
-    G$Vp<-mv$Vb;G$hat<-mv$hat;
-    G$Ve <- mv$Ve # frequentist cov. matrix
-    G$edf<-mv$edf
-    G$conv<-mr$gcv.info
-    G$sp<-msp
-    rank<-G$conv$rank
-
-    ## use MLE of scale in Gaussian case - best estimate otherwise. 
-    dev1 <- if (scale>0) scale*sum(weights) else dev 
-
-    aic.model <- aic(y, n, mu, weights, dev1) + 2 * sum(G$edf)
-    if (scale < 0) { ## deviance based GCV
-      gcv.ubre.dev <- n.score*dev/(n.score-gamma*sum(G$edf))^2
-    } else { # deviance based UBRE, which is just AIC
-      gcv.ubre.dev <- dev/n.score + 2 * gamma * sum(G$edf)/n.score - G$sig2
-    }
-
-    list(coefficients = as.vector(coef), residuals = residuals, fitted.values = mu, 
-        family = family,linear.predictors = eta, deviance = dev,
-        null.deviance = nulldev, iter = 1, weights = weights, prior.weights = weights,  
-        df.null = nulldf, y = y, converged = TRUE,sig2=G$sig2,edf=G$edf,edf1=mv$edf1,hat=G$hat,
-        R=mr$R,
-        boundary = FALSE,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,rV=mr$rV,mgcv.conv=G$conv,
-        gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev,scale.estimated = (scale < 0))
-} ## am.fit
-
-
-gam.fit <- function (G, start = NULL, etastart = NULL, 
+gam.fit<-function (G, start = NULL, etastart = NULL, 
     mustart = NULL, family = gaussian(), 
-    control = gam.control(),gamma=1,
-    fixedSteps=(control$maxit+1),...) 
+    control = gam.control(),gamma=1) 
 # fitting function for a gam, modified from glm.fit.
 # note that smoothing parameter estimates from one irls iterate are carried over to the next irls iterate
 # unless the range of s.p.s is large enough that numerical problems might be encountered (want to avoid 
 # completely flat parts of gcv/ubre score). In the latter case autoinitialization is requested.
-# fixedSteps < its default causes at most fixedSteps iterations to be taken,
-# without warning if convergence has not been achieved. This is useful for
-# obtaining starting values for outer iteration.
-{   .Deprecated(msg="Internal mgcv function gam.fit is no longer used - see gam.fit3.")
-    intercept<-G$intercept
+
+{
+   
     conv <- FALSE
-    n <- nobs <- NROW(G$y) ## n just there to keep codetools happy
+    nobs <- NROW(G$y)
     nvars <- NCOL(G$X) # check this needed
     y<-G$y # original data
     X<-G$X # original design matrix
     if (nvars == 0) stop("Model seems to contain no terms")
-    olm <- G$am   # only need 1 iteration as it's a pure additive model.
-    if (!olm)  .Deprecated(msg="performance iteration with gam is deprecated, use bam instead")
+    if (family$family=="gaussian" && family$link=="identity") olm<-TRUE # i.e. only one iteration needed
+    else olm<-FALSE 
     find.theta<-FALSE # any supplied -ve binomial theta treated as known, G$sig2 is scale parameter
-    if (substr(family$family[1],1,17)=="Negative Binomial")
-    { Theta <- family$getTheta()
-      if (length(Theta)==1) { ## Theta fixed
-        find.theta <- FALSE
-        G$sig2 <- 1
-      } else {
-        if (length(Theta)>2)
-        warning("Discrete Theta search not available with performance iteration")
-        Theta <- range(Theta)
-        T.max <- Theta[2]          ## upper search limit
-        T.min <- Theta[1]          ## lower search limit
-        Theta <- sqrt(T.max*T.min) ## initial value
-        find.theta <- TRUE
+    if (substr(family$family,1,17)=="Negative Binomial")
+    { if (G$sig2<=0) find.theta<-TRUE # find theta by GCV
+      # now get theta/initial theta
+      V<-mu<-0.5
+      while(all.equal(V,mu)==TRUE)
+      { mu<-mu*2;V<-family$variance(mu)
+        if (all.equal(V,mu)!=TRUE) Theta<-mu^2/(V-mu)
       }
-      nb.link<-family$link # negative.binomial family, there's a choise of links
+      T.max<-Theta*control$nb.theta.mult;T.min<-Theta/control$nb.theta.mult
+      if (family$family=="Negative Binomial") nb.link<-NULL # neg.bin family, no link choises
+      else nb.link<-family$link # negative.binomial family, there's a choise of links
     }
 
     
     # obtain average element sizes for the penalties
-    n.S<-length(G$S)
-    if (n.S>0)
-    { S.size<-0
-      for (i in 1:n.S) S.size[i]<-mean(abs(G$S[[i]])) 
+    if (G$m>0)
+    { if (G$fit.method=="mgcv")
+      { k1<-0;
+        S.size<-array(0,G$m)
+        for (i in 1:G$m)
+        { k0<-k1
+          k1<-k0+G$df[i]^2
+          k0<-k0+1
+          S.size[i]<-mean(abs(G$S[k0:k1]))
+        }
+      } else # method is "magic"
+      if (G$m.free>0)
+      { S.size<-0
+        for (i in 1:G$m.free) S.size[i]<-mean(abs(G$S[[i]])) 
+      }
     }
     weights<-G$w # original weights
-
-    n.score <- sum(weights!=0) ## n to use in GCV score (i.e. don't count points with no influence)   
-
+   
     offset<-G$offset 
 
     variance <- family$variance;dev.resids <- family$dev.resids
@@ -2579,7 +1220,8 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
 
     else if (!is.null(start)) 
     if (length(start) != nvars) 
-    stop(gettextf("Length of start should equal %d and correspond to initial coefs.",nvars)) 
+    stop(paste("Length of start should equal", nvars,
+        "and correspond to initial coefs.")) # 1.5.0
     else 
     { coefold<-start                        #1.5.0
       offset+as.vector(if (NCOL(G$X) == 1)
@@ -2593,13 +1235,12 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     devold <- sum(dev.resids(y, mu, weights))
    
     boundary <- FALSE
-    scale <- G$sig2
-
-    msp <- G$sp
-    magic.control<-list(tol=G$conv.tol,step.half=G$max.half,#maxit=control$maxit+control$globit,
-                          rank.tol=control$rank.tol)
-
-    for (iter in 1:(control$maxit)) 
+    scale<-G$sig2
+    if (G$fit.method=="magic") 
+    { msp<-rep(-1,G$m.free) # free smoothing parameter vector for magic
+      magic.control<-list(tol=G$conv.tol,step.half=G$max.half,maxit=control$maxit+control$globit,rank.tol=control$rank.tol)
+    }
+    for (iter in 1:(control$maxit+control$globit)) 
     {
         good <- weights > 0
         varmu <- variance(mu)[good]
@@ -2613,50 +1254,61 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         good <- (weights > 0) & (mu.eta.val != 0) # note good modified here => must re-calc each iter
         if (all(!good)) {
             conv <- FALSE
-            warning(gettextf("No observations informative at iteration %d", 
+            warning(paste("No observations informative at iteration", 
                 iter))
             break
         }
    
-        mevg <- mu.eta.val[good];mug <- mu[good];yg <- y[good]
-        weg <- weights[good];##etag <- eta[good]
-        var.mug<-variance(mug)
-
-        G$y <- z <- (eta - offset)[good] + (yg - mug)/mevg
-        w <- sqrt((weg * mevg^2)/var.mug)
+        z<-G$y <- (eta - offset)[good] + (y - mu)[good]/mu.eta.val[good]
+        w<- sqrt((weights[good] * mu.eta.val[good]^2)/variance(mu)[good])
+        #w<-(w+control$irls.reg*mean(w))/(1+control$irls.reg) # optional weight regularization         
         
         G$w<-w
-        G$X<-X[good,,drop=FALSE]  # truncated design matrix       
-     
+        G$X<-X[good,]  # truncated design matrix       
+		if (dim(X)[2]==1) dim(G$X)<-c(length(X[good,]),1) # otherwise dim(G$X)==NULL !!
+        ngoodobs <- as.integer(nobs - sum(!good))
+        ncols <- as.integer(1)
         # must set G$sig2 to scale parameter or -1 here....
-        G$sig2 <- scale
+        G$sig2<-scale
 
-
+        if (G$fit.method=="mgcv"&&G$m>0&&sum(!G$fix)>0&&!G$fixed.sp) # check that s.p.'s haven't drifted too far apart
+        { temp.sp<-G$sp[!G$fix];temp.S.size<-S.size[!G$fix]*temp.sp
+          # check if there is a danger of getting stuck on a flat section of gcv/ubre score...
+          if (min(temp.sp)>0 && min(temp.S.size)<.Machine$double.eps^0.5*max(temp.S.size)) 
+          G$sp[!G$fix]<- -1.0 # .... if so use use auto-initialization in mgcv
+          if (control$trace) cat("Re-initializing smoothing parameters\n")
+        } 
+        if (iter>control$globit) # solution could be cycling - use more cautious optimization approach
+        { G$target.edf<-G$nsdf+sum(G$edf)
+        } else
+        G$target.edf<- -1 # want less cautious optimization - better at local minimum avoidance
+        
         if (sum(!is.finite(G$y))+sum(!is.finite(G$w))>0) 
         stop("iterative weights or data non-finite in gam.fit - regularization may help. See ?gam.control.")
 
-        ## solve the working weighted penalized LS problem ...
-
-        mr <- magic(G$y,G$X,msp,G$S,G$off,L=G$L,lsp0=G$lsp0,G$rank,G$H,matrix(0,0,ncol(G$X)),  #G$C,
-                    G$w,gamma=gamma,G$sig2,G$sig2<0,
-                    ridge.parameter=control$irls.reg,control=magic.control,n.score=n.score,nthreads=control$nthreads)
-        G$p<-mr$b;msp<-mr$sp;G$sig2<-mr$scale;G$gcv.ubre<-mr$score;
-
-        if (find.theta) {# then family is negative binomial with unknown theta - estimate it here from G$sig2
-            ##  need to get edf array
-          mv <- magic.post.proc(G$X,mr,w=G$w^2)
-          G$edf <- mv$edf
-
-          Theta<-mgcv.find.theta(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,.Machine$double.eps^0.5)
-          family<-do.call("negbin",list(theta=Theta,link=nb.link))
-          variance <- family$variance;dev.resids <- family$dev.resids
-          aic <- family$aic
-          family$Theta <- Theta ## save Theta estimate in family
+        if (G$fit.method=="mgcv") G<-mgcv(G) 
+        else
+        { mr<-magic(G$y,G$X,msp,G$S,G$m.off,G$rank,G$H,G$C,G$w,gamma=gamma,G$sig2,G$sig2<0,
+                    ridge.parameter=control$irls.reg,control=magic.control)
+          G$p<-mr$b;msp<-mr$sp;G$sig2<-mr$scale;G$gcv.ubre<-mr$score
         }
 
+        if (find.theta) # then family is negative binomial with unknown theta - estimate it here from G$sig2
+        { Theta<-mgcv.find.theta(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,.Machine$double.eps^0.5)
+          if (is.null(nb.link)) family<-neg.bin(Theta)
+          else family<-do.call("negative.binomial",list(theta=Theta,link=nb.link))
+          variance <- family$variance;dev.resids <- family$dev.resids
+          aic <- family$aic
+        }
+
+        if (control$trace&&G$fit.method=="mgcv")
+        { cat("sp: ",G$sp,"\n")
+          plot(G$conv$edf,G$conv$score,xlab="EDF",ylab="GCV/UBRE score",type="l");
+          points(G$nsdf+sum(G$edf),G$gcv.ubre,pch=20,col=2)
+        }
         if (any(!is.finite(G$p))) {
             conv <- FALSE   
-            warning(gettextf("Non-finite coefficients at iteration %d",iter))
+            warning(paste("Non-finite coefficients at iteration",iter))
             break
         }
 
@@ -2667,7 +1319,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         eta <- linkfun(mu) # force eta/mu consistency even if linkinv truncates
         dev <- sum(dev.resids(y, mu, weights))
         if (control$trace) 
-            message(gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv"))
+            cat("Deviance =", dev, "Iterations -", iter, "\n")
         boundary <- FALSE
         if (!is.finite(dev)) {
             if (is.null(coefold))
@@ -2706,13 +1358,9 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
             if (control$trace) 
                 cat("Step halved: new deviance =", dev, "\n")
         }
-
-        ## Test for convergence here ...
-
-        if (abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon || olm ||
-            iter >= fixedSteps) {
+        if (abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon || olm) {
             conv <- TRUE
-            coef <- start #1.5.0
+            coef<-start #1.5.0
             break
         }
         else {
@@ -2726,11 +1374,11 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     if (boundary) 
         warning("Algorithm stopped at boundary value")
     eps <- 10 * .Machine$double.eps
-    if (family$family[1] == "binomial") {
+    if (family$family == "binomial") {
         if (any(mu > 1 - eps) || any(mu < eps)) 
             warning("fitted probabilities numerically 0 or 1 occurred")
     }
-    if (family$family[1] == "poisson") {
+    if (family$family == "poisson") {
         if (any(mu < eps)) 
             warning("fitted rates numerically 0 occurred")
     }
@@ -2738,1983 +1386,780 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     residuals <- rep(NA, nobs)
     residuals[good] <- z - (eta - offset)[good]
     
+    nr <- min(sum(good), nvars)
+
     wt <- rep(0, nobs)
     wt[good] <- w^2
    
-    wtdmu <- if (intercept) sum(weights * y)/sum(weights) else linkinv(offset)
+    wtdmu <- sum(weights * y)/sum(weights)
     nulldev <- sum(dev.resids(y, wtdmu, weights))
     n.ok <- nobs - sum(weights == 0)
-    nulldf <- n.ok - as.integer(intercept)
-    
-    ## Extract a little more information from the fit....
-
-    mv <- magic.post.proc(G$X,mr,w=G$w^2)
-    G$Vp<-mv$Vb;G$hat<-mv$hat;
-    G$Ve <- mv$Ve # frequentist cov. matrix
-    G$edf<-mv$edf
-    G$conv<-mr$gcv.info
-    G$sp<-msp
-    rank<-G$conv$rank
-
-    ## use MLE of scale in Gaussian case - best estimate otherwise. 
-    dev1 <- if (scale>0) scale*sum(weights) else if (family$family=="gaussian") dev else G$sig2*sum(weights)  
-
-    aic.model <- aic(y, n, mu, weights, dev1) + 2 * sum(G$edf)
-    if (scale < 0) { ## deviance based GCV
-      gcv.ubre.dev <- n.score*dev/(n.score-gamma*sum(G$edf))^2
-    } else { # deviance based UBRE, which is just AIC
-      gcv.ubre.dev <- dev/n.score + 2 * gamma * sum(G$edf)/n.score - G$sig2
+    nulldf <- n.ok 
+    if (G$fit.method=="magic") # then some post processing is needed to extract covariance matrix etc...
+    { mv<-magic.post.proc(G$X,mr,w=G$w)
+      G$Vp<-mv$Vb;G$hat<-mv$hat;
+      G$edf<-array(0,0) # Now some edf's for each term....
+      if (G$m) for (i in 1:G$m) G$edf[i]<-sum(mv$edf[G$off[i]:(G$off[i]+G$df[i]-1)])
+      G$conv<-mr$gcv.info
+      G$sp[G$sp<0]<-msp
     }
-  
 	list(coefficients = as.vector(coef), residuals = residuals, fitted.values = mu, 
-        family = family,linear.predictors = eta, deviance = dev,
+        family = family,linear.predictor = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,  
-        df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,edf1=mv$edf1,hat=G$hat,
-        ##F=mv$F,
-        R=mr$R,
-        boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,rV=mr$rV,mgcv.conv=G$conv,
-        gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev,scale.estimated = (scale < 0))
-} ## gam.fit
-
-
-model.matrix.gam <- function(object,...)
-{ if (!inherits(object,"gam")) stop("`object' is not of class \"gam\"")
-  predict(object,type="lpmatrix",...)
+        df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,hat=G$hat,
+        boundary = boundary,sp = G$sp,df=G$df,nsdf=G$nsdf,Vp=G$Vp,mgcv.conv=G$conv,gcv.ubre=G$gcv.ubre)
 }
 
-get.na.action <- function(na.action) {
-## get the name of the na.action whether function or text string.
-## avoids deparse(substitute(na.action)) which is easily broken by 
-## nested calls.
-  if (is.character(na.action)) {
-    if (na.action%in%c("na.omit","na.exclude","na.pass","na.fail")) 
-      return(na.action) else stop("unrecognised na.action")
-  } 
-  if (!is.function(na.action)) stop("na.action not character or function")
-  a <- try(na.action(c(0,NA)),silent=TRUE)
-  if (inherits(a,"try-error")) return("na.fail")
-  if (inherits((attr(a,"na.action")),"omit")) return("na.omit")
-  if (inherits((attr(a,"na.action")),"exclude")) return("na.exclude")
-  return("na.pass")
-} ## get.na.action
 
+predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
 
-predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
-                       block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
-                       unconditional=FALSE,iterms.type=NULL,...) {
-
-# This function is used for predicting from a GAM. 'object' is a gam object, newdata a dataframe to
-# be used in prediction......
+# This function is used for predicting from a GAM. object is a gam object, newdata a dataframe to
+# be used in prediction..... it's all done via a call to the compiled C routine RGAMpredict().
 #
-# Type == "link"     - for linear predictor (may be several for extended case)
-#      == "response" - for fitted values: may be several if several linear predictors,
-#                      and may return something other than inverse link of l.p. for some families
+# Type == "link"     - for linear predictor
+#      == "response" - for fitted values
 #      == "terms"    - for individual terms on scale of linear predictor 
-#      == "iterms"   - exactly as "terms" except that se's include uncertainty about mean  
-#      == "lpmatrix" - for matrix mapping parameters to l.p. - has "lpi" attribute if multiple l.p.s
-#      == "newdata"  - returns newdata after pre-processing 
-# Steps are:
-#  1. Set newdata to object$model if no newdata supplied
-#  2. split up newdata into manageable blocks if too large
-#  3. Obtain parametric model matrix (safely!)
-#  4. Work through smooths calling prediction.matrix constructors for each term
-#  5. Work out required quantities
-# 
-# The splitting into blocks enables blocks of compiled code to be called efficiently
-# using smooth class specific prediction matrix constructors, without having to 
-# build up potentially enormous prediction matrices.
-# if newdata.guaranteed == TRUE then the data.frame is assumed complete and
-# ready to go, so that only factor levels are checked for sanity.
-# 
-# if `terms' is non null then it should be a list of terms to be returned 
-# when type=="terms" or "iterms". 
-# if `object' has an attribute `para.only' then only parametric terms of order
-# 1 are returned for type=="terms"/"iterms" : i.e. only what termplot can handle.
-#
-# if no new data is supplied then na.action does nothing, otherwise 
-# if na.action == "na.pass" then NA predictors result in NA predictions (as lm
-#                   or glm)
-#              == "na.omit" or "na.exclude" then NA predictors result in
-#                       dropping
-# if GC is TRUE then gc() is called after each block is processed
+#      == "lpmatrix" - for matrix mapping parameters to l.p.
+#  Steps are:
+#  1. Construct x[i,j] - the explanatory data array for which predictions are required, this means
+#     using the model formulae from the gam object, "object" to extract the model variables from 
+#     the data-frame "newdata". Note np - the number of elements to predict for.
+#  2. Convert the knot position data to a form usable by the C routine RGAMpredict(). 
+#  3. Initialize storage space for eta and se.   
+#  4. Call RGAMpredict()
+#  5. Use eta and se to construct the returned vector, matrix or list.
+#  6. Tidy up and return.  
 
-  ## para acts by adding all smooths to the exclude list. 
-  ## it also causes any lp matrix to be smaller than it would otherwise have been.
-  #if (para) exclude <- c(exclude,unlist(lapply(object$smooth,function(x) x$label)))
 
-  if (unconditional) {
-    if (is.null(object$Vc)) warning("Smoothness uncertainty corrected covariance not available") else 
-    object$Vp <- object$Vc
-  }
-
-  if (type!="link"&&type!="terms"&&type!="iterms"&&type!="response"&&type!="lpmatrix"&&type!="newdata")  { 
-    warning("Unknown type, reset to terms.")
+  if (type!="link"&&type!="terms"&&type!="response"&&type!="lpmatrix")  
+  { warning("Unknown type, reset to terms.")
     type<-"terms"
   }
-  if (!inherits(object,"gam")) stop("predict.gam can only be used to predict from gam objects")
-
-  ## to mimic behaviour of predict.lm, some resetting is required ...
-  if (missing(newdata)) na.act <- object$na.action else {
-    if (is.null(na.action)) na.act <- NULL 
-    else {
-      na.txt <- if (is.character(na.action)||is.function(na.action)) get.na.action(na.action) else "na.pass"
-      #if (is.character(na.action))
-      #na.txt <- na.action else ## substitute(na.action) else
-      #if (is.function(na.action)) na.txt <- deparse(substitute(na.action))
-      if (na.txt=="na.pass") na.act <- "na.exclude" else
-      if (na.txt=="na.exclude") na.act <- "na.omit" else
-      na.act <- na.action
-    }
-  } ## ... done
+  if (class(object)!="gam") stop("predict.gam can only be used to predict from gam objects")
 
   # get data from which to predict.....  
-  nd.is.mf <- FALSE # need to flag if supplied newdata is already a model frame 
-  ## get name of response...
-  # yname <- all.vars(object$terms)[attr(object$terms,"response")]
-  yname <- attr(attr(object$terms,"dataClasses"),"names")[attr(object$terms,"response")]
-  if (newdata.guaranteed==FALSE) {
-    if (missing(newdata)) { # then "fake" an object suitable for prediction 
-      newdata <- object$model
-      new.data.ok <- FALSE
-      nd.is.mf <- TRUE
-      response <- newdata[[yname]] ## ok even with "cbind(foo,bar)" as yname 
-    } else {  # do an R ``standard'' evaluation to pick up data
-      new.data.ok <- TRUE
-      if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) { # it's a model frame
-        if (sum(!(names(object$model)%in%names(newdata)))) stop(
-        "newdata is a model.frame: it should contain all required variables\n")
-         nd.is.mf <- TRUE
-	 response <- newdata[[yname]]
-      } else {
-        ## Following is non-standard to allow convenient splitting into blocks
-        ## below, and to allow checking that all variables are in newdata ...
-
-        ## get names of required variables, less response, but including offset variable
-        ## see ?terms.object and ?terms for more information on terms objects
-        # yname <- all.vars(object$terms)[attr(object$terms,"response")] ## redundant
-        resp <- get.var(yname,newdata,FALSE)
-        naresp <- FALSE
-        #if (!is.null(object$family$predict)&&!is.null(newdata[[yname]])) {
-	if (!is.null(object$family$predict)&&!is.null(resp)) {
-          ## response provided, and potentially needed for prediction (e.g. Cox PH family)
-          if (!is.null(object$pred.formula)) object$pred.formula <- attr(object$pred.formula,"full")
-          response <- TRUE
-          Terms <- terms(object)
-          #resp <- newdata[[yname]]
-	  if (is.matrix(resp)) {
-            if (sum(is.na(rowSums(resp)))>0) stop("no NAs allowed in response data for this model")
-          } else { ## vector response
-            if (sum(is.na(resp))>0) {
-              naresp <- TRUE ## there are NAs in supplied response
-              ## replace them with a numeric code, so that rows are not dropped below
-              rar <- range(resp,na.rm=TRUE)
-              thresh <- rar[1]*1.01-rar[2]*.01
-              resp[is.na(resp)] <- thresh
-              newdata[[yname]] <- thresh 
-            }
-	  }  
-        } else { ## response not provided
-          response <- FALSE 
-          Terms <- delete.response(terms(object))
-        }
-        allNames <- if (is.null(object$pred.formula)) all.vars(Terms) else all.vars(object$pred.formula)
-        if (length(allNames) > 0) { 
-          ff <- if (is.null(object$pred.formula)) reformulate(allNames) else  object$pred.formula
-          if (sum(!(allNames%in%names(newdata)))) { 
-            warning("not all required variables have been supplied in  newdata!\n")
-          }
-          ## note that `xlev' argument not used here, otherwise `as.factor' in 
-          ## formula can cause a problem ... levels reset later.
-          newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame())
-          if (naresp) newdata[[yname]][newdata[[yname]]<=thresh] <- NA ## reinstate as NA  
-        } ## otherwise it's intercept only and newdata can be left alone
-        na.act <- attr(newdata,"na.action")
-        #response <- if (response) newdata[[yname]] else NULL
-	response <- if (response) get.var(yname,newdata,FALSE) else NULL
-      }
-    }
-  } else { ## newdata.guaranteed == TRUE
-    na.act <- NULL
-    new.data.ok=TRUE ## it's guaranteed!
-    if (!is.null(attr(newdata,"terms"))) nd.is.mf <- TRUE
-    #response <- newdata[[yname]]
-    response <- get.var(yname,newdata,FALSE)
+  
+  if (missing(newdata)) # then "fake" an object suitable for prediction 
+  { if (object$dim[1]==0) m<-0
+    else m<-length(object$sp)
+    n<-length(object$y)
+    x<-gam.setup(object$full.formula,object$model)$x
+    nc<-0;for (i in 1:m) nc<-nc+object$dim[i]
+    G<-list(x=x,nsdf=object$nsdf,m=m,n=n,dim=object$dim,by=object$by)
+     no.data<-TRUE # used to signal that no data provided, later
   }
-
-
-  ## now check the factor levels and split into blocks...
-
-  if (new.data.ok) {
-    ## check factor levels are right ...
+  else 
+  { # check that factor levels match for prediction and original fit 
     names(newdata)->nn # new data names
-    colnames(object$model)->mn # original names
-    for (i in 1:length(newdata)) 
-    if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) { # then so should newdata[[i]] be 
-      levm <- levels(object$model[,nn[i]]) ## original levels
-      ## need to avoid dropping NAs if they are a factor level in origianl model
-      levn <- if (any(is.na(levm))) levels(factor(newdata[[i]],exclude=NULL)) else levels(factor(newdata[[i]])) ## new levels
-      if (sum(!levn%in%levm)>0) { ## check not trying to sneak in new levels 
-        msg <- paste("factor levels",paste(levn[!levn%in%levm],collapse=", "),"not in original fit",collapse="")
-        warning(msg)
-      }
-      ## set prediction levels to fit levels...
-      if (is.matrix(newdata[[i]])) {
-        dum <- factor(newdata[[i]],levels=levm,exclude=NULL)
-	dim(dum) <- dim(newdata[[i]])
-	newdata[[i]] <- dum
-      } else newdata[[i]] <- factor(newdata[[i]],levels=levm,exclude=NULL)
+    for (i in 1:dim(newdata)[2]) 
+    if (is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
+    { newdata[[i]]<-factor(newdata[[i]],levels=levels(object$model[,nn[i]])) # set prediction levels to fit levels
     }
-    if (type=="newdata") return(newdata)
-
-    # split prediction into blocks, to avoid running out of memory
-    if (length(newdata)==1) newdata[[2]] <- newdata[[1]] # avoids data frame losing its labels and dimensions below!
-    if (is.null(dim(newdata[[1]]))) np <- length(newdata[[1]]) 
-    else np <- dim(newdata[[1]])[1] 
-    nb <- length(object$coefficients)
-    if (is.null(block.size)) block.size <- 1000
-    if (block.size < 1) block.size <- np
-  } else { # no new data, just use object$model
-    np <- nrow(object$model)
-    nb <- length(object$coefficients)
+    G<-gam.setup(object$full.formula,newdata,predict=TRUE)    
+    if (G$nsdf!=object$nsdf) stop("Problem in predict.gam: number of model parameters don't match between fit and prediction??")
+    no.data<-FALSE
   }
+  np<-G$n
   
-  if (type=="lpmatrix") block.size <- NULL ## nothing gained by blocking in this case - and offset handling easier this way
-
-  ## split prediction into blocks, to avoid running out of memory
-  if (is.null(block.size)) { 
-    ## use one block as predicting using model frame
-    ## and no block size supplied... 
-    n.blocks <- 1
-    b.size <- array(np,1)
-  } else {
-    n.blocks <- np %/% block.size
-    b.size <- rep(block.size,n.blocks)
-    last.block <- np-sum(b.size)
-    if (last.block>0) {
-      n.blocks <- n.blocks+1  
-      b.size[n.blocks] <- last.block
-    }
+  # now set up the other information for prediction.....
+  control<-0
+  if (type=="lpmatrix")
+  { X<-matrix(0,np,length(object$coefficients))
+    eta<-se<-0;control<-4
+  } else 
+  if (type=="terms") 
+  { control<-2
+    eta<-array(0,dim=c(G$nsdf+G$m,np))
+    se<-array(0,dim=c(G$nsdf+G$m,np))
+    X<-0
+  } else
+  { eta<-array(0,dim=c(np))
+    se<-array(0,dim=c(np))
+    X<-0
   }
-
-
-  # setup prediction arrays...
-  ## in multi-linear predictor models, lpi[[i]][j] is the column of model matrix contributing the jth col to lp i 
-  lpi <- if (is.list(object$formula)) attr(object$formula,"lpi") else NULL
-  nlp <- if (is.null(lpi)) 1 else length(lpi)  ## number of linear predictors
-  n.smooth<-length(object$smooth)
-  if (type=="lpmatrix") {
-    H <- matrix(0,np,nb)
-  } else if (type=="terms"||type=="iterms") { 
-    term.labels <- attr(object$pterms,"term.labels")
-    para.only <- attr(object,"para.only")
-    if (is.null(para.only)) para.only <- FALSE  # if TRUE then only return information on parametric part
-    n.pterms <- length(term.labels)
-    fit <- array(0,c(np,n.pterms+as.numeric(para.only==0)*n.smooth))
-    if (se.fit) se <- fit
-    ColNames <- term.labels
-  } else { ## "response" or "link"
-    ## get number of linear predictors, in case it's more than 1...
-    #if (is.list(object$formula)) {
-    #  nlp <- length(lpi) ## number of linear predictors
-    #} else nlp <- 1 
+  if (se.fit&&object$Vp[1,1]<=0)
+  { se.fit<-FALSE
+    warning("No variance estimates available")
+  }
+  if (se.fit&&control<4) control<-control+1
+  if (G$m)
+  { nc<-0;for (i in 1:G$m) nc<-nc+G$dim[i]
+    for (i in 1:nc) G$x[i+G$nsdf,] <- G$x[i+G$nsdf,] - object$covariate.shift[i]  # stabilizing shift
+  }
+  # call compiled code for prediction ....... NOTE: change for new basis....
+  o<-.C("RGAMpredict", as.integer(object$xu.length),as.double(object$Xu),as.double(object$UZ),
+             as.double(object$xp),as.integer(G$nsdf),as.integer(object$dim),as.integer(object$s.type),
+            as.integer(object$df),as.integer(object$p.order), as.integer(G$m),as.integer(length(object$y)),as.double(G$x),
+            as.integer(np),as.double(object$coefficients),as.double(object$Vp),as.double(eta),as.double(se),as.double(X),
+            as.integer(control),as.integer(object$by.exists),as.double(G$by),PACKAGE="mgcv")
+  # now eta contains linear predictor (terms) and se may contain corresponding standard errors, or
+  # X contains the matrix mapping params to l.p.    
+  if (type=="lpmatrix")
+  { H<-matrix(o[[18]],np,length(object$coefficients)) 
+  } else  
+  { if (type=="terms")
+    { s.name<-array("",0)
+      if (G$m>0) # get names for each smooth
+      { stop<-object$nsdf
+        by.count<-1
+        for (i in 1:G$m)
+        { start<-stop+1;stop<-stop+object$df[i]
+          er<-names(object$coefficients)[start]
+          er<-substring(er,1,nchar(er)-2)
+          if (object$by.exists[i]) 
+          { er<-paste(er,":",rownames(object$by)[by.count],sep="");by.count<-by.count+1} 
+          s.name[i]<-er 
+        }
+      }
+      all.names<-c(names(object$coefficients)[1:object$nsdf],s.name)
+      eta<-array(o[[16]],c(G$nsdf+G$m,np));
+      rownames(eta)<-all.names
+      se<-array(o[[17]],c(G$nsdf+G$m,np));
+      rownames(se)<-all.names 
+   } else
+    { eta<-array(o[[16]],c(np));
+      se<-array(o[[17]],c(np));
+      if (no.data) # reconstrunct original offset
+      { link<-object$family$linkfun
+        fv<-fitted(object) # original fitted predictor
+        offset<-link(fv)-eta # offset is original l.p. minus l.p. calculated without offset 
+      } else
+      offset<-G$offset
+      if (!is.null(offset)) eta<-eta+offset # add offset to l.p.
+      if (type=="response") # transform onto scale of data
+      { fam<-object$family;linkinv<-fam$linkinv;dmu.deta<-fam$mu.eta  
+        se<-se*abs(dmu.deta(eta)) 
+        eta<-linkinv(eta)
+      }
+    }
+    if (se.fit)
+    { H<-list(fit=eta,se.fit=se) }
+    else
+    { H<-eta}
+  } 
    
-    fit <- if (nlp>1) matrix(0,np,nlp) else array(0,np)
-    if (se.fit) se <- fit
-    fit1 <- NULL ## "response" returned by fam$fv can be non-vector 
-  }
-  stop <- 0
-  if (is.list(object$pterms)) { ## multiple linear predictors
-    if (type=="iterms") {
-      warning("type iterms not available for multiple predictor cases")
-      type <- "terms"
-    }
-    pstart <- attr(object$nsdf,"pstart") ## starts of parametric blocks in coef vector
-    pind <- rep(0,0) ## index of parametric coefs
-    Terms <- list();pterms <- object$pterms
-    for (i in 1:length(object$nsdf)) {
-      Terms[[i]] <- delete.response(object$pterms[[i]])
-      if (object$nsdf[i]>0) pind <- c(pind,pstart[i]-1+1:object$nsdf[i])
-    }
-  } else { ## normal single predictor case
-    Terms <- list(delete.response(object$pterms)) ## make into a list anyway
-    pterms <- list(object$pterms)
-    pstart <- 1
-    pind <- 1:object$nsdf ## index of parameteric coefficients
-  }
-
-  ## check if extended family required intercept to be dropped...
-  #drop.intercept <- FALSE 
-  #if (!is.null(object$family$drop.intercept)&&object$family$drop.intercept) {
-  #  drop.intercept <- TRUE;
-  #  ## make sure intercept explicitly included, so it can be cleanly dropped...
-  #  for (i in 1:length(Terms)) attr(Terms[[i]],"intercept") <- 1 
-  #} 
-  drop.intercept <- object$family$drop.intercept
-  if (is.null(drop.intercept)) {
-    drop.intercept <- rep(FALSE, length(Terms))
-  } else {
-    ## make sure intercept explicitly included, so it can be cleanly dropped...
-    for (i in 1:length(Terms)) {
-      if (drop.intercept[i] == TRUE) attr(Terms[[i]],"intercept") <- 1 
-    }
-  }
-  ## index of any parametric terms that have to be dropped
-  ## this is used to help with identifiability in multi-
-  ## formula models...
-
-  drop.ind <- attr(object$nsdf,"drop.ind") 
-
-  ####################################
-  ## Actual prediction starts here...
-  ####################################
-
-  s.offset <- NULL # to accumulate any smooth term specific offset
-  any.soff <- FALSE # indicator of term specific offset existence
-  if (n.blocks > 0) for (b in 1:n.blocks) { # work through prediction blocks
-    start <- stop+1
-    stop <- start + b.size[b] - 1
-    if (n.blocks==1) data <- newdata else data <- newdata[start:stop,]
-    X <- matrix(0,b.size[b],nb+length(drop.ind))
-    Xoff <- matrix(0,b.size[b],n.smooth) ## term specific offsets 
-    offs <- list()
-    for (i in 1:length(Terms)) { ## loop for parametric components (1 per lp)
-      ## implements safe prediction for parametric part as described in
-      ## http://developer.r-project.org/model-fitting-functions.txt
-      if (new.data.ok) {
-        if (nd.is.mf) mf <- model.frame(data,xlev=object$xlevels) else {
-          mf <- model.frame(Terms[[i]],data,xlev=object$xlevels)
-          if (!is.null(cl <- attr(pterms[[i]],"dataClasses"))) .checkMFClasses(cl,mf)
-        }
-	## next line is just a work around to prevent a spurious warning (e.g. R 3.6) from
-	## model.matrix if contrast relates to a term in mf which is not
-	## part of Terms[[i]] (model.matrix doc actually defines contrast w.r.t. mf,
-	## not Terms[[i]])...
-	oc <- if (length(object$contrasts)==0) object$contrasts else
-	      object$contrasts[names(object$contrasts)%in%attr(Terms[[i]],"term.labels")]
-        Xp <- model.matrix(Terms[[i]],mf,contrasts=oc) 
-      } else { 
-        Xp <- model.matrix(Terms[[i]],object$model)
-        mf <- newdata # needed in case of offset, below
-      }
-      if (!is.null(terms)||!is.null(exclude)) { ## work out which parts of Xp to zero
-        assign <- attr(Xp,"assign") ## assign[i] is the term to which Xp[,i] relates
-	if (min(assign)==0&&("(Intercept)"%in%exclude||(!is.null(terms)&&!"(Intercept)"%in%terms))) Xp[,which(assign==0)] <- 0
-	tlab <- attr(Terms[[i]],"term.labels")
-	ii <- which(assign%in%which(tlab%in%exclude))
-	if (length(ii)) Xp[,ii] <- 0
-	if (!is.null(terms)) {
-	  ii <- which(assign%in%which(!tlab%in%terms))
-	  if (length(ii)) Xp[,ii] <- 0
-	}   
-      }
-      offi <- attr(Terms[[i]],"offset")
-      if (is.null(offi)) offs[[i]] <- 0 else { ## extract offset
-        offs[[i]] <- mf[[names(attr(Terms[[i]],"dataClasses"))[offi+1]]]
-      }
-      if (drop.intercept[i]) { 
-        xat <- attributes(Xp);ind <- xat$assign>0 
-        Xp <- Xp[,xat$assign>0,drop=FALSE] ## some extended families need to drop intercept
-        xat$assign <- xat$assign[ind];xat$dimnames[[2]]<-xat$dimnames[[2]][ind];
-        xat$dim[2] <- xat$dim[2]-1;attributes(Xp) <- xat 
-      }
-      if (object$nsdf[i]>0) X[,pstart[i]-1 + 1:object$nsdf[i]] <- Xp
-    } ## end of parametric loop
- ##   if (length(offs)==1) offs <- offs[[1]] ## messes up later handling
-     
-    if (!is.null(drop.ind)) X <- X[,-drop.ind]
-
-    if (n.smooth) for (k in 1:n.smooth) { ## loop through smooths
-      klab <- object$smooth[[k]]$label
-      if ((is.null(terms)||(klab%in%terms))&&(is.null(exclude)||!(klab%in%exclude))) {
-        Xfrag <- PredictMat(object$smooth[[k]],data)		 
-        X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para] <- Xfrag
-        Xfrag.off <- attr(Xfrag,"offset") ## any term specific offsets?
-        if (!is.null(Xfrag.off)) { Xoff[,k] <- Xfrag.off; any.soff <- TRUE }
-      }
-      if (type=="terms"||type=="iterms") ColNames[n.pterms+k] <- klab
-    } ## smooths done
-
-    
-
-    if (!is.null(object$Xcentre)) { ## Apply any column centering
-      X <- sweep(X,2,object$Xcentre)
-    }
-
-    # Now have prediction matrix, X, for this block, need to do something with it...
-
-    if (type=="lpmatrix") { 
-      H[start:stop,] <- X
-      if (any.soff) s.offset <- rbind(s.offset,Xoff)
-    } else if (type=="terms"||type=="iterms") { ## split results into terms
-      lass <- if (is.list(object$assign)) object$assign else list(object$assign)
-      k <- 0
-      for (j in 1:length(lass)) if (length(lass[[j]])) { ## work through assign list
-        ind <- 1:length(lass[[j]]) ## index vector for coefs involved
-        nptj <- max(lass[[j]]) ## number of terms involved here
-        if (nptj>0) for (i in 1:nptj) { ## work through parametric part
-          k <- k + 1 ## counts total number of parametric terms
-          ii <- ind[lass[[j]]==i] + pstart[j] - 1 
-          fit[start:stop,k] <- X[,ii,drop=FALSE]%*%object$coefficients[ii]
-          if (se.fit) se[start:stop,k] <-
-          sqrt(pmax(0,rowSums((X[,ii,drop=FALSE]%*%object$Vp[ii,ii])*X[,ii,drop=FALSE])))
-        }
-      } ## assign list done
-      if (n.smooth&&!para.only) {
-        for (k in 1:n.smooth) # work through the smooth terms 
-        { first <- object$smooth[[k]]$first.para; last <- object$smooth[[k]]$last.para
-          fit[start:stop,n.pterms+k] <- X[,first:last,drop=FALSE] %*% object$coefficients[first:last] + Xoff[,k]
-          if (se.fit) { # diag(Z%*%V%*%t(Z))^0.5; Z=X[,first:last]; V is sub-matrix of Vp
-            if (type=="iterms"&& attr(object$smooth[[k]],"nCons")>0) { ## termwise se to "carry the intercept
-              ## some general families, add parameters after cmX created, which are irrelevant to cmX... 
-              if (length(object$cmX) < ncol(X)) object$cmX <- c(object$cmX,rep(0,ncol(X)-length(object$cmX)))
-              if (!is.null(iterms.type)&&iterms.type==2) object$cmX[-(1:object$nsdf)] <- 0 ## variability of fixed effects mean only
-              X1 <- matrix(object$cmX,nrow(X),ncol(X),byrow=TRUE)
-              meanL1 <- object$smooth[[k]]$meanL1
-              if (!is.null(meanL1)) X1 <- X1 / meanL1              
-              X1[,first:last] <- X[,first:last]
-              se[start:stop,n.pterms+k] <- sqrt(pmax(0,rowSums((X1%*%object$Vp)*X1)))
-            } else se[start:stop,n.pterms+k] <- ## terms strictly centred
-            sqrt(pmax(0,rowSums((X[,first:last,drop=FALSE]%*%
-                          object$Vp[first:last,first:last,drop=FALSE])*X[,first:last,drop=FALSE])))
-          } ## end if (se.fit)
-        } 
-        colnames(fit) <- ColNames
-        if (se.fit) colnames(se) <- ColNames
-      } else {
-        if (para.only&&is.list(object$pterms)) { 
-          ## have to use term labels that match original data, or termplot fails 
-          ## to plot. This only applies for 'para.only==1' calls which are 
-          ## designed for use from termplot called from plot.gam
-          term.labels <- unlist(lapply(object$pterms,attr,"term.labels"))
-        }
-        colnames(fit) <- term.labels
-        if (se.fit) colnames(se) <- term.labels
-        if (para.only) { 
-          # retain only terms of order 1 - this is to make termplot work
-          order <- if (is.list(object$pterms)) unlist(lapply(object$pterms,attr,"order")) else attr(object$pterms,"order")
-          term.labels <- term.labels[order==1]
-          ## fit <- as.matrix(as.matrix(fit)[,order==1])
-          fit <- fit[,order==1,drop=FALSE]
-          colnames(fit) <- term.labels
-          if (se.fit) { ## se <- as.matrix(as.matrix(se)[,order==1])
-            se <- se[,order==1,drop=FALSE]
-            colnames(se) <- term.labels 
-          }
-        } 
-      } 
-    } else { ## "link" or "response" case
-      fam <- object$family
-      if (!is.null(object$family$setInd)) object$family$setInd(start:stop) ## family may need to know subset index - e.g gfam
-      k <- attr(attr(object$model,"terms"),"offset")
-      if (nlp>1) { ## multiple linear predictor case
-        if (is.null(fam$predict)||type=="link") {
-          ##pstart <- c(pstart,ncol(X)+1)
-          ## get index of smooths with an offset...
-          off.ind <- (1:n.smooth)[as.logical(colSums(abs(Xoff)))]
-          for (j in 1:nlp) { ## looping over the model formulae
-            ind <- lpi[[j]] ##pstart[j]:(pstart[j+1]-1)
-            fit[start:stop,j] <- X[,ind,drop=FALSE]%*%object$coefficients[ind] + offs[[j]]
-            if (length(off.ind)) for (i in off.ind) { ## add any term specific offsets
-              if (object$smooth[[i]]$first.para%in%ind)  fit[start:stop,j] <- fit[start:stop,j] + Xoff[,i]
-            }
-            if (se.fit) se[start:stop,j] <- 
-            sqrt(pmax(0,rowSums((X[,ind,drop=FALSE]%*%object$Vp[ind,ind,drop=FALSE])*X[,ind,drop=FALSE])))
-            ## model offset only handled for first predictor... fixed
-            ##if (j==1&&!is.null(k))  fit[start:stop,j] <- fit[start:stop,j] + model.offset(mf)
-            if (type=="response") { ## need to transform lp to response scale
-              linfo <- object$family$linfo[[j]] ## link information
-              if (se.fit) se[start:stop,j] <- se[start:stop,j]*abs(linfo$mu.eta(fit[start:stop,j]))
-              fit[start:stop,j] <- linfo$linkinv(fit[start:stop,j])
-            }
-          } ## end of lp loop
-        } else { ## response case with own predict code
-          #lpi <- list();pst <- c(pstart,ncol(X)+1)
-          #for (i in 1:(length(pst)-1)) lpi[[i]] <- pst[i]:(pst[i+1]-1)
-          attr(X,"lpi") <- lpi  
-          ffv <- fam$predict(fam,se.fit,y= if (is.matrix(response)) response[start:stop,] else response[start:stop],
-                             X=X,beta=object$coefficients,off=offs,Vb=object$Vp)
-          if (is.matrix(fit)&&!is.matrix(ffv[[1]])) {
-            fit <- fit[,1]; if (se.fit) se <- se[,1]
-          }
-          if (is.matrix(ffv[[1]])&&(!is.matrix(fit)||ncol(ffv[[1]])!=ncol(fit))) {
-            fit <- matrix(0,np,ncol(ffv[[1]])); if (se.fit) se <- fit
-          }
-          if (is.matrix(fit)) {
-            fit[start:stop,] <- ffv[[1]]
-            if (se.fit) se[start:stop,] <- ffv[[2]]
-          } else {
-            fit[start:stop] <- ffv[[1]]
-            if (se.fit) se[start:stop] <- ffv[[2]]
-          }
-        } ## end of own response prediction code
-      } else { ## single linear predictor
-        offs <- if (is.null(k)) rowSums(Xoff) else rowSums(Xoff) + model.offset(mf)
-        fit[start:stop] <- X%*%object$coefficients + offs
-        if (se.fit) se[start:stop] <- sqrt(pmax(0,rowSums((X%*%object$Vp)*X)))
-        if (type=="response") { # transform    
-          linkinv <- fam$linkinv
-          if (is.null(fam$predict)) {
-            dmu.deta <- fam$mu.eta  
-            if (se.fit) se[start:stop]<-se[start:stop]*abs(dmu.deta(fit[start:stop])) 
-            fit[start:stop] <- linkinv(fit[start:stop])
-          } else { ## family has its own prediction code for response case
-            ffv <- fam$predict(fam,se.fit,y= if (is.matrix(response)) response[start:stop,] else response[start:stop],
-                               X=X,beta=object$coefficients,off=offs,Vb=object$Vp)
-            if (is.null(fit1)&&is.matrix(ffv[[1]])) {
-              fit1 <- matrix(0,np,ncol(ffv[[1]]))
-              if (se.fit) se1 <- fit1
-            }
-            if (is.null(fit1)) {
-              fit[start:stop] <- ffv[[1]]
-              if (se.fit) se[start:stop] <- ffv[[2]]
-            } else {
-              fit1[start:stop,] <- ffv[[1]]
-              if (se.fit) se1[start:stop,] <- ffv[[2]]
-            }
-          }
-        }
-      } ## single lp done
-    } ## end of link or response case 
-    rm(X)
-  } ## end of prediction block loop
- 
-  if (!is.null(object$family$setInd)) object$family$setInd(NULL) ## reset any set subset index
-  
-  if ((type=="terms"||type=="iterms")&&(!is.null(terms)||!is.null(exclude))) { # return only terms requested via `terms'
-    cnames <- colnames(fit)
-    if (!is.null(terms)) {
-      if (sum(!(terms %in%cnames))) 
-        warning("non-existent terms requested - ignoring")
-      else { 
-        fit <- fit[,terms,drop=FALSE]
-        if (se.fit) {
-           se <- se[,terms,drop=FALSE]
-        }
-      }
-    }
-    if (!is.null(exclude)) {
-      if (sum(!(exclude %in%cnames))) 
-        warning("non-existent exclude terms requested - ignoring")
-      else { 
-        exclude <- which(cnames%in%exclude) ## convert to numeric column index
-        fit <- fit[,-exclude,drop=FALSE]
-        if (se.fit) {
-          se <- se[,-exclude,drop=FALSE]
-        }
-      }
-    }
-  }
-
-  if (type=="response"&&!is.null(fit1)) {
-    fit <- fit1
-    if (se.fit) se <- se1
-  }
-
-  rn <- rownames(newdata)
-  if (type=="lpmatrix") { 
-    colnames(H) <- names(object$coefficients);rownames(H)<-rn
-    if (!is.null(s.offset)) { 
-      s.offset <- napredict(na.act,s.offset)
-      attr(H,"offset") <- s.offset ## term specific offsets...
-    }
-    #if (!is.null(attr(attr(object$model,"terms"),"offset"))) {
-    #  attr(H,"model.offset") <- napredict(na.act,model.offset(mf)) 
-    #}
-    if (!is.null(offs)) {
-      offs <- offs[1:nlp]
-      for (i in 1:nlp) offs[[i]] <- napredict(na.act,offs[[i]])
-      attr(H,"model.offset") <- if (nlp==1) offs[[1]] else offs
-    }
-    H <- napredict(na.act,H)
-    if (length(object$nsdf)>1) { ## add "lpi" attribute if more than one l.p.
-      #lpi <- list();pst <- c(pstart,ncol(H)+1)
-      #for (i in 1:(length(pst)-1)) lpi[[i]] <- pst[i]:(pst[i+1]-1)  
-      attr(H,"lpi") <- lpi
-    }
-  } else { 
-    if (se.fit) { 
-      if (is.null(nrow(fit))) {
-        names(fit) <- rn
-        names(se) <- rn
-        fit <- napredict(na.act,fit)
-        se <- napredict(na.act,se) 
-      } else { 
-        rownames(fit)<-rn
-        rownames(se)<-rn
-        fit <- napredict(na.act,fit)
-        se <- napredict(na.act,se)
-      }
-      H<-list(fit=fit,se.fit=se) 
-    } else { 
-      H <- fit
-      if (is.null(nrow(H))) names(H) <- rn else
-      rownames(H)<-rn
-      H <- napredict(na.act,H)
-    }
-  }
-  if ((type=="terms"||type=="iterms")&&attr(object$terms,"intercept")==1) attr(H,"constant") <- object$coefficients[1]
   H # ... and return
-} ## end of predict.gam
+}
+
+plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,...)
+
+# Create an appropriate plot for each smooth term of a GAM.....
+# x is a gam object
+# rug determines whether a rug plot should be added to each plot
+# se determines whether twice standard error bars are to be added
+# pages is the number of pages over which to split output - 0 implies that 
+# graphic settings should not be changed for plotting
+# scale -1 for same y scale for each plot
+#        0 for different y scales for each plot
+# n - number of x axis points to use for plotting each term
+# n2 is the square root of the number of grid points to use for contouring
+# 2-d terms.
+# Calls RGAMpredict() directly rather than go via predict.gam() - this is more
+# efficient and avoids needing multiple prediction calls to deal with repeated 
+# covariates. 
+{ sp.contour<-function (x,y,z,zse,xlab="",ylab="",zlab="main",se.plot=TRUE,se.mult=1)   
+  # internal function for contouring 2-d smooths with 1 s.e. limits
+  { gap<-median(zse)  
+    zr<-max(z+zse)-min(z-zse) # plotting range  
+    n<-10  
+    while (n>1 && zr/n<2.5*gap) n<-n-1    
+    zrange<-c(min(z-zse),max(z+zse))  
+    zlev<-pretty(zrange,n)  
+    yrange<-range(y);yr<-yrange[2]-yrange[1]  
+    xrange<-range(x);xr<-xrange[2]-xrange[1]  
+    ypos<-yrange[2]+yr/10
+    plot(x,y,type="n",xlab="",ylab="",axes=FALSE)
+    cs<-(yr/10)/strheight(zlab);if (cs>1) cs<-1 # text scaling based on height  
+    cw<-par()$cxy[1]  
+    tl<-strwidth(zlab);  
+    if (tl*cs>3*xr/10) cs<-(3*xr/10)/tl  
+    contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
+    axis(1,cex.axis=cs);axis(2,cex.axis=cs);box();  
+    mtext(xlab,1,2.5,cex=cs);mtext(ylab,2,2.5,cex=cs)  
+    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
+    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
+    
+    xpos<-xrange[1]  
+    xl<-c(xpos,xpos+xr/10);yl<-c(ypos,ypos)  
+    lines(xl,yl,xpd=TRUE,lty=3,col=3)  
+    text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+  
+    xpos<-xpos+3*xr/10  
+    xl<-c(xpos,xpos+xr/10);  
+    lines(xl,yl,xpd=TRUE,lwd=2)  
+    text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+    
+    xpos<-xrange[2]-xr/5  
+    xl<-c(xpos,xpos+xr/10);  
+    lines(xl,yl,xpd=TRUE,lty=2,col=2)  
+    text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+  }   
 
 
+  # start of main function
 
-concurvity <- function(b,full=TRUE) {
-## b is a gam object
-## full==TRUE means that dependence of each term on rest of model 
-##            is considered.
-## full==FALSE => pairwise comparison.
-  if (!inherits(b,"gam")) stop("requires an object of class gam")
-  m <- length(b$smooth)
-  if (m<1) stop("nothing to do for this model")
-  X <- model.matrix(b)
-  X <- X[rowSums(is.na(X))==0,]
-  ## this step speeds up remaining computation...
-  X <- qr.R(qr(X,tol=0,LAPACK=FALSE)) 
-  stop <- start <- rep(1,m)
-  lab <- rep("",m)
-  for (i in 1:m) { ## loop through smooths
-    start[i] <- b$smooth[[i]]$first.para
-    stop[i] <- b$smooth[[i]]$last.para
-    lab[i] <- b$smooth[[i]]$label
+  if (x$dim[1]==0) stop("Model has no smooth terms - nothing for plot.gam() to do.")
+  if (se)
+  { if (is.numeric(se)) se2.mult<-se1.mult<-se else { se1.mult<-2;se2.mult<-1} 
+    if (se1.mult<0) se1.mult<-0;if (se2.mult<0) se2.mult<-0
+  } else se1.mult<-se2.mult<-1
+  m<-length(x$df) # number of smooth terms
+  if (se && x$Vp[1,1]<=0) 
+  { se<-FALSE
+    warning("No variance estimates available")
   }
-  if (min(start)>1) { ## append parametric terms
-    start <- c(1,start)
-    stop <- c(min(start)-1,stop)
-    lab <- c("para",lab)
-    m <- m + 1
+  # plot should ignore all "by" variables
+  by.exists<-rep(FALSE,m);by<-0
+  
+  # sort out number of pages and plots per page
+  if (pages>m) pages<-m
+  if (pages<0) pages<-0
+  if (pages!=0)    # figure out how to display things
+  { ppp<-m%/%pages
+    if (m%%pages!=0) 
+    { ppp<-ppp+1
+      while (ppp*(pages-1)>=m) pages<-pages-1
+      if (m%%pages) last.pages<-0 else last.ppp<-m-ppp*pages
+    } 
+    else last.ppp<-0
+    # now figure out number of rows and columns
+    c<-trunc(sqrt(ppp))
+	if (c<1) c<-1
+    r<-ppp%/%c
+    if (r<1) r<-1
+    while (r*c<ppp) r<-r+1
+    while (r*c-ppp >c && r>1) r<-r-1
+    while (r*c-ppp >r && c>1) c<-c-1 
+    oldpar<-par(mfrow=c(r,c),...)
+	ylim<-c(r,c)
+  } else
+  { ppp<-1;oldpar<-par(...)}
+  
+  # now array for 1-d terms to send to predict.gam() to return smooth terms
+  
+  x.x<-gam.setup(x$full.formula,x$model)$x  
+  xx1<-array(0,c(dim(x.x)[1],n))
+  if (m>0) # should be able to do following by recycling, but it fails (non conformable array error?)
+  for (i in (x$nsdf+1):(x$nsdf+length(x$covariate.shift) ) ) x.x[i,]<-x.x[i,] -x$covariate.shift[i-x$nsdf]
+  j<-1;md2<-FALSE
+  for (i in 1:m)
+  { if (x$dim[i]==1)
+    { x0<-min(x.x[j+x$nsdf,])
+      x1<-max(x.x[j+x$nsdf,])
+      dx<-(x1-x0)/(n-1) 
+      xx1[j+x$nsdf,]<-seq(x0,x1,dx)
+      j<-j+1
+    } else
+    { for (k in 1:x$dim[i])
+      { xx1[j+x$nsdf,]<-rep(0,n);j<-j+1 # multi-dim terms padded with zeroes
+        if (x$dim[i]==2) md2<-TRUE
+      }  
+    }  
   }
+  rownames(xx1)<-rownames(x.x)
 
-  n.measures <- 3
-  measure.names <- c("worst","observed","estimate")
+  X<-0;
+  if (se) control<-3 else control<-2
 
-  ##n <- nrow(X)
-  if (full) { ## get dependence of each smooth on all the rest...
-    conc <- matrix(0,n.measures,m)
-    for (i in 1:m) {
-      Xi <- X[,-(start[i]:stop[i]),drop=FALSE]
-      Xj <- X[,start[i]:stop[i],drop=FALSE]
-      r <- ncol(Xi) 
-      R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
-       
-      ##u worst case...
-      Rt <- qr.R(qr(R,tol=0)) 
-      conc[1,i] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
-       
-      ## observed...
-      beta <- b$coef[start[i]:stop[i]]
-      conc[2,i] <- sum((R[1:r,,drop=FALSE]%*%beta)^2)/sum((Rt%*%beta)^2)
+  eta<-array(0,dim=c(x$nsdf+m,n))
+  se.fit<-array(0,dim=c(x$nsdf+m,n))
 
-      ## less pessimistic...
-      conc[3,i] <- sum(R[1:r,]^2)/sum(R^2)
-    }
-    colnames(conc) <- lab
-    rownames(conc) <- measure.names
-  } else { ## pairwise measures
-    conc <- list()
-    for (i in 1:n.measures) conc[[i]] <- matrix(1,m,m) ## concurvity matrix
-    for (i in 1:m) { ## concurvity calculation loop
-      Xi <- X[,start[i]:stop[i],drop=FALSE]
-      r <- ncol(Xi)
-      for (j in 1:m) if (i!=j) { 
-        Xj <- X[,start[j]:stop[j],drop=FALSE]
-        R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
+  o<-.C("RGAMpredict", as.integer(x$xu.length),as.double(x$Xu),as.double(x$UZ),
+             as.double(x$xp),as.integer(x$nsdf),as.integer(x$dim),as.integer(x$s.type),
+            as.integer(x$df),as.integer(x$p.order), as.integer(m),as.integer(length(x$y)),as.double(xx1),
+            as.integer(n),as.double(x$coefficients),as.double(x$Vp),as.double(eta),as.double(se.fit),as.double(X),
+            as.integer(control),as.integer(by.exists),as.double(by),PACKAGE="mgcv")
+  # now eta contains linear predictor (terms) and se may contain corresponding standard errors
+  eta<-array(o[[16]],c(x$nsdf+m,n));
+  se.fit<-array(o[[17]],c(x$nsdf+m,n))*se1.mult;
+  if (se) pl1<-list(fit=eta,se.fit=se.fit) else pl1<-eta
+  rm(o)
+  # shift covariates back
+  j<-1;
+  for (i in 1:m)
+  { if (x$dim[i]==1)
+    { xx1[j+x$nsdf,]<-xx1[j+x$nsdf,]+x$covariate.shift[j]
+      j<-j+1
+    } else j<-j+x$dim[i]
+  }
+ 
+  if (md2) # then create data frames for 2-d plots
+  { if (n2<10) n2<-10
+    xx2<-array(0,c(dim(x.x)[1],(n2*n2)))   # new x array for prediction
+    xm<-data.frame(1:n2);ym<-data.frame(1:n2) # grid points for plotting
+    if (x$nsdf>0) 
+    for (i in 1:x$nsdf) xx2[i,]<-rep(0,n2*n2)
+    j<-1
+    for (i in 1:m)
+    { if (x$dim[i]==2)
+      { x0<-min(x.x[j+x$nsdf,]);x1<-max(x.x[j+x$nsdf,])
+        dx<-(x1-x0)/(n2-1);
+        y0<-min(x.x[j+x$nsdf+1,]);y1<-max(x.x[j+x$nsdf+1,])
+        dy<-(y1-y0)/(n2-1)
         
-        ## worst case...
-        Rt <- qr.R(qr(R,tol=0)) 
-        conc[[1]][i,j] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
-       
-        ## observed...
-        beta <- b$coef[start[j]:stop[j]]
-        conc[[2]][i,j] <- sum((R[1:r,,drop=FALSE]%*%beta)^2)/sum((Rt%*%beta)^2)
+        xm[i]<-seq(x0,x1,dx) 
+        ym[i]<-seq(y0,y1,dy)
+        xx2[j+x$nsdf,]<-rep(xm[[i]],n2)
+        xx2[j+x$nsdf+1,]<-rep(ym[[i]],rep(n2,n2))
+        xm[i]<-xm[i]+x$covariate.shift[j]
+        ym[i]<-ym[i]+x$covariate.shift[j+1]
+        j<-j+2
+      } else
+      {  for (k in 1:x$dim[i])
+         { xx2[j+x$nsdf,]<-rep(0,n2*n2);j<-j+1
+           xm[i]<-rep(0,n2);ym[i]<-xm[i];
+         }
 
-        ## less pessimistic...
-        conc[[3]][i,j] <- sum(R[1:r,]^2)/sum(R^2)
-        
-        ## Alternative less pessimistic
-       # log.det.R <- sum(log(abs(diag(R[(r+1):nrow(R),,drop=FALSE]))))
-       # log.det.Rt <- sum(log(abs(diag(Rt))))
-       # conc[[4]][i,j] <- 1 - exp(log.det.R-log.det.Rt) 
-        rm(Xj,R,Rt)
       }
-    } ## end of conc loop
-    for (i in 1:n.measures) rownames(conc[[i]]) <- colnames(conc[[i]]) <- lab
-    names(conc) <- measure.names
-  } ## end of pairwise
-  conc ## 
-} ## end of concurvity
+    } 
+    rownames(xx2)<-rownames(x.x)
+    X<-0;
+    if (se) control<-3 else control<-2
 
+    eta<-array(0,dim=c(x$nsdf+m,n2*n2))
+    se.fit<-array(0,dim=c(x$nsdf+m,n2*n2))
 
-residuals.gam <-function(object, type = "deviance",...)
-## calculates residuals for gam object 
-{ ## if family has its own residual function, then use that...
-  if (!is.null(object$family$residuals)) {
-    res <- object$family$residuals(object,type,...)
-    res <- naresid(object$na.action,res)
-    return(res)
+    o<-.C("RGAMpredict", as.integer(x$xu.length),as.double(x$Xu),as.double(x$UZ),
+             as.double(x$xp),as.integer(x$nsdf),as.integer(x$dim),as.integer(x$s.type),
+            as.integer(x$df),as.integer(x$p.order), as.integer(m),as.integer(length(x$y)),as.double(xx2),
+            as.integer(n2*n2),as.double(x$coefficients),as.double(x$Vp),as.double(eta),as.double(se.fit),as.double(X),
+            as.integer(control),as.integer(by.exists),as.double(by),PACKAGE="mgcv")
+    # now eta contains linear predictor (terms) and se may contain corresponding standard errors
+    eta<-array(o[[16]],c(x$nsdf+m,n2*n2));
+    se.fit<-array(o[[17]],c(x$nsdf+m,n2*n2))*se2.mult;
+    if (se) pl2<-list(fit=eta,se.fit=se.fit) else pl2<-eta
+    rm(o)
+    # shift covariates back
+    j<-1;
+    for (i in 1:m)
+    { if (x$dim[i]==2)
+      { xx1[j+x$nsdf,]<-xx1[j+x$nsdf,]+x$covariate.shift[j]
+        j<-j+1
+        xx1[j+x$nsdf,]<-xx1[j+x$nsdf,]+x$covariate.shift[j]
+        j<-j+1
+      } else j<-j+x$dim[i]
+    }
+
   }
-  type <- match.arg(type,c("deviance", "pearson","scaled.pearson", "working", "response"))
-  #if (sum(type %in% c("deviance", "pearson","scaled.pearson", "working", "response") )==0) 
-  #      stop(paste(type," residuals not available"))
-  ## default computations...
+  if (se)   # pl$fit and pl$se.fit
+  { k<-0
+    if (scale==-1) # getting common scale for 1-d terms
+    for (i in 1:m)
+    { if (x$dim[i]==1)
+      { ul<-pl1$fit[x$nsdf+i,]+pl1$se.fit[x$nsdf+i,]
+        ll<-pl1$fit[x$nsdf+i,]-pl1$se.fit[x$nsdf+i,]
+        if (k==0) { ylim<-c(min(ll),max(ul));k<-1;}
+        else
+        { if (min(ll)<ylim[1]) ylim[1]<-min(ll)
+	  if (max(ul)>ylim[2]) ylim[2]<-max(ul)
+        }
+      }
+    }
+    j<-1
+    for (i in 1:m)
+    { if (is.null(select)||i==select)
+      { if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+        if (x$dim[i]==1)
+        { ul<-pl1$fit[x$nsdf+i,]+pl1$se.fit[x$nsdf+i,]
+          ll<-pl1$fit[x$nsdf+i,]-pl1$se.fit[x$nsdf+i,]
+          if (scale==0) { ylim<-c(min(ll),max(ul))}
+          title<-paste("s(",rownames(x.x)[j+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
+          plot(xx1[x$nsdf+j,],pl1$fit[x$nsdf+i,],type="l",xlab=rownames(x.x)[j+x$nsdf],ylim=ylim,ylab=title)
+	  lines(xx1[x$nsdf+j,],ul,lty=2)
+          lines(xx1[x$nsdf+j,],ll,lty=2)
+	  if (rug) 
+          { if (jit) rug(jitter(as.numeric(x.x[x$nsdf+j,]+x$covariate.shift[j])))
+             else rug(as.numeric(x.x[x$nsdf+j,]+x$covariate.shift[j]))
+	  }
+        } else if (x$dim[i]==2)
+        { xla<-rownames(x.x)[j+x$nsdf];yla<-rownames(x.x)[j+x$nsdf+1]
+          title<-paste("s(",xla,",",yla,",",as.character(round(x$edf[i],2)),")",sep="")
+          if (pers) 
+          { persp(xm[[i]],ym[[i]],matrix(pl2$fit[x$nsdf+i,],n2,n2),xlab=xla,ylab=yla,zlab=title,theta=theta,phi=phi)
+          } else
+          { sp.contour(xm[[i]],ym[[i]],matrix(pl2$fit[x$nsdf+i,],n2,n2),matrix(pl2$se.fit[x$nsdf+i,],n2,n2),
+                     xlab=xla,ylab=yla,zlab=title,se.mult=se2.mult)
+            if (rug) points(x.x[j+x$nsdf,]+x$covariate.shift[j],x.x[j+1+x$nsdf,]+x$covariate.shift[j+1],pch=".")
+          } 
+        } else
+        { warning("no automatic plotting for smooths of more than one variable")
+        }
+      }  
+      j<-j+x$dim[i]
+    }
+  } else # don't plot confidence limits
+  { k<-0
+    if (scale==-1)
+    for (i in 1:m)
+    { if (x$dim[i]==1)
+      { if (k==0) { ylim<-range(pl1[x$nsdf+i,]);k<-1 }
+	else
+        { if (min(pl1[x$nsdf+i,])<ylim[1]) ylim[1]<-min(pl1[x$nsdf+i,])
+	  if (max(pl1[x$nsdf+i,])>ylim[2]) ylim[2]<-max(pl1[x$nsdf+i,])
+	}
+      }
+    }
+    j<-1
+    for (i in 1:m)
+    { if (is.null(select)||i==select)
+      { if (interactive() && x$dim[i]<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
+        if (x$dim[i]==1)
+        { title<-paste("s(",rownames(x.x)[j+x$nsdf],",",as.character(round(x$edf[i],2)),")",sep="")
+          if (scale==0) ylim<-range(pl1[x$nsdf+i,])
+          plot(xx1[x$nsdf+j,],pl1[x$nsdf+i,],type="l",,xlab=rownames(x.x)[j+x$nsdf],ylab=title,ylim=ylim)
+          if (rug) 
+	  	{ if (jit) rug(jitter(as.numeric(x.x[x$nsdf+j,]+x$covariate.shift[j])))
+          else rug(as.numeric(x.x[x$nsdf+j,]+x$covariate.shift[j]))
+		}
+        } else if (x$dim[i]==2)
+        { xla<-rownames(x.x)[j+x$nsdf];yla<-rownames(x.x)[j+x$nsdf+1]
+          title<-paste("s(",xla,",",yla,",",as.character(round(x$edf[i],2)),")",sep="")
+          if (pers) persp(xm[[i]],ym[[i]],matrix(pl2[x$nsdf+i,],n2,n2),xlab=xla,ylab=yla,zlab=title,theta=theta,phi=phi)
+          else
+          { contour(xm[[i]],ym[[i]],matrix(pl2[x$nsdf+i,],n2,n2),xlab=xla,ylab=yla,main=title)
+            if (rug) points(x.x[j+x$nsdf,]+x$covariate.shift[j],x.x[j+1+x$nsdf,]+x$covariate.shift[j+1],pch=".")
+          }  
+
+        } else
+        { warning("no automatic plotting for smooths of more than one variable")}
+      }
+      j<-j+x$dim[i]
+    } 
+  }
+  if (pages>0) par(oldpar)
+}
+
+
+residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
+# calculates residuals for gam object - defualt for glm (from which this is adapted) seems to be buggy
+{ type <- match.arg(type)
   y <- object$y
   mu <- object$fitted.values
+  family <- object$family
   wts <- object$prior.weights
-  if (type == "working") { 
-    res <- object$residuals 
-  } else if (type == "response") {
-    res <- y - mu 
-  } else if (type == "deviance") {
-    res <- object$family$dev.resids(y,mu,wts)
-    s <- attr(res,"sign")
-    if (is.null(s)) s <- sign(y-mu)
-    res <- sqrt(pmax(res,0)) * s 
-  } else { ## some sort of Pearson
-    var <- object$family$variance
-    if (is.null(var)) {
-      warning("Pearson residuals not available for this family - returning deviance residuals")
-      return(residuals.gam(object))
-    }
-    res <- (y-mu)*sqrt(wts)/sqrt(var(mu))
-    if (type == "scaled.pearson") res <- res/sqrt(object$sig2)
-  }
-  res <- naresid(object$na.action,res)
-  res
-} ## residuals.gam
-
-
-## Start of anova and summary (with contributions from Henric Nilsson) ....
-
-psum.chisq <- function(q,lb,df=rep(1,length(lb)),nc=rep(0,length(lb)),sigz=0,
-                            lower.tail=FALSE,tol=2e-5,nlim=100000,trace=FALSE) {
-## compute Pr(q>\sum_j lb[j] X_j + sigz Z) where X_j ~ chisq(df[j],nc[j]), Z~N(0,1) and nc is
-## a vector of non-centrality parameters. lb can be either sign. df should be integer. 
-  p <- q
-  r <- length(lb)
-  if (length(df)==1) df <- rep(df,r)
-  if (length(nc)==1) nc <- rep(nc,r)
-  if (length(df)!=r||length(nc)!=r) stop("lengths of lb, df and nc must match")
-  df <- round(df)
-  if (any(df<1)) stop("df must be positive integers")
-  if (all(lb==0)) stop("at least one element of lb must be non-zero")
-  if (sigz<0) sigz <- 0
-  for (i in 1:length(q)) {  
-    oo <- .C(C_davies,as.double(lb),as.double(nc),as.integer(df),as.integer(r),as.double(sigz),
-             c=as.double(q[i]),as.integer(nlim),as.double(tol),trace=as.double(rep(0,7)),
-             ifault=as.integer(0))
-    if (oo$ifault!=0) {
-      if (oo$ifault==2) { 
-        warning("danger of round-off error")
-        p[i] <- if (lower.tail) oo$c else 1 - oo$c
-      } else { 
-        warning("failure of Davies method, falling back on Liu et al approximtion")
-        p[i] <- if (all(nc==0)) liu2(q[i],lb,h=df) else NA
-      }
-    } else p[i] <- if (lower.tail) oo$c else 1 - oo$c
-  } 
-  if (trace) {
-    attr(p,"trace") <- oo$trace
-    attr(p,"ifault") <- oo$ifault
-  }
-  p
-} ##psum.chisq
-
-liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
-# Evaluate Pr[sum_i \lambda_i \chi^2_h_i < x] approximately.
-# Code adapted from CompQuadForm package of Pierre Lafaye de Micheaux 
-# and directly from....
-# H. Liu, Y. Tang, H.H. Zhang, A new chi-square approximation to the 
-# distribution of non-negative definite quadratic forms in non-central 
-# normal variables, Computational Statistics and Data Analysis, Volume 53, 
-# (2009), 853-856. Actually, this is just Pearson (1959) given that
-# the chi^2 variables are central. 
-# Note that this can be rubbish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
-  
-#  if (FALSE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
-#    require(CompQuadForm)
-#    r <- x
-#    for (i in 1:length(x)) r[i] <- davies(x[i],lambda,h)$Qq
-#    return(pmin(r,1))
-#  }
-
-  if (length(h) != length(lambda)) stop("lambda and h should have the same length!")
- 
-  lh <- lambda*h
-  muQ <- sum(lh)
-  
-  lh <- lh*lambda
-  c2 <- sum(lh)
-  
-  lh <- lh*lambda
-  c3 <- sum(lh)
-  
-  xpos <- x > 0
-  res <- 1 + 0 * x
-  if (sum(xpos)==0 || c2 <= 0) return(res)
-
-  s1 <- c3/c2^1.5
-  s2 <- sum(lh*lambda)/c2^2
-
-  sigQ <- sqrt(2*c2)
-
-  t <- (x[xpos]-muQ)/sigQ
-
-  if (s1^2>s2) {
-    a <- 1/(s1-sqrt(s1^2-s2))
-    delta <- s1*a^3-a^2
-    l <- a^2-2*delta
-  } else {
-    a <- 1/s1
-    delta <- 0
-    if (c3==0) return(res)
-    l <- c2^3/c3^2
-  }
-
-  muX <- l+delta
-  sigX <- sqrt(2)*a
-  res[xpos] <- pchisq(t*sigX+muX,df=l,ncp=delta,lower.tail=lower.tail)
-  res
-} ## liu2
-
-
-
-simf <- function(x,a,df,nq=50) {
-## suppose T = sum(a_i \chi^2_1)/(chi^2_df/df). We need
-## Pr[T>x] = Pr(sum(a_i \chi^2_1) > x *chi^2_df/df). Quadrature 
-## used here. So, e.g.
-## 1-pf(4/3,3,40);simf(4,rep(1,3),40);1-pchisq(4,3)
-## DEPRECATED in favour of psum.chisq...
-  p <- (1:nq-.5)/nq
-  q <- qchisq(p,df)
-  x <- x*q/df
-  pr <- sum(liu2(x,a)) ## Pearson/Liu approx to chi^2 mixture
-  pr/nq 
+  switch(type,working = object$residuals,
+       scaled.pearson = (y-mu)*sqrt(wts)/sqrt(object$sig2*object$family$variance(mu)),
+              pearson = (y-mu)*sqrt(wts)/sqrt(object$family$variance(mu)),
+              deviance = { d.res<-sqrt(pmax(object$family$dev.resids(y,mu,wts),0))
+                           ifelse(y>mu , d.res, -d.res)             
+                         },
+              response = y - mu)
 }
 
-packing.ind <- function(first,last,p,n) {
-## Let A be a matrix with n rows, and B be a p by p matrix.
-## A[first:last,first:last] is to be filled using B. If
-## B is of the corect dimension then A[first:last,first:last] <-B
-## but if p is a submultiple of (last-first+1) then the leading
-## block diagonal of the block is to be filled repeatedly with
-## B. In either case this routine returns an index ii such that
-## A[ii] <- B fills the block appropriately
-  if (last-first == p-1) {
-    ii <- first:last
-    return(rep(ii,p) + n*rep(ii-1,each=p))
-  } else {
-    k <- round((last-first+1)/p)
-    if (k*p!=last-first+1) stop("incorrect sub-block size")
-    ii <- rep(1:p,p) + n*rep(1:p-1,each=p)
-    p2 <- p*p
-    ind <- rep(0,p2*k)
-    jj <- 1:(p2)
-    for (i in 1:k) {
-      bs <- first + (i-1)*p -1 
-      ind[jj] <- ii + bs + bs*n
-      jj <- jj + p2
-    }
-    return(ind)
-  }
-} ## packing.ind
-
-recov <- function(b,re=rep(0,0),m=0) {
-## b is a fitted gam object. re is an array of indices of 
-## smooth terms to be treated as fully random....
-## Returns frequentist Cov matrix based on the given
-## mapping from data to params, but with dist of data
-## corresponding to that implied by treating terms indexed
-## by re as random effects... (would be usual frequentist 
-## if nothing treated as random)
-## if m>0, then this indexes a term, not in re, whose
-## unpenalized cov matrix is required, with the elements of re
-## dropped.
-  if (!inherits(b,"gam")) stop("recov works with fitted gam objects only") 
-  if (is.null(b$full.sp)) sp <- b$sp else sp <- b$full.sp
-  if (length(re)<1) { 
-    if (m>0) {
-      ## annoyingly, need total penalty  
-      np <- length(coef(b))
-      k <- 1;S1 <- matrix(0,np,np)
-      for (i in 1:length(b$smooth)) { 
-        ns <- length(b$smooth[[i]]$S)
-        #ind <- b$smooth[[i]]$first.para:b$smooth[[i]]$last.para
-        if (ns>0) {
-          ii <- packing.ind(b$smooth[[i]]$first.para,b$smooth[[i]]$last.para,ncol(b$smooth[[i]]$S[[1]]),np) 
-          for (j in 1:ns) {
-            #S1[ind,ind] <- S1[ind,ind] + sp[k]*b$smooth[[i]]$S[[j]]
-            S1[ii] <- S1[ii] + sp[k]*as.numeric(b$smooth[[i]]$S[[j]])
-            k <- k + 1
-          }
-        }
-      }
-      LRB <- rbind(b$R,t(mroot(S1)))
-      ii <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para 
-      ## ii is cols of LRB related to smooth m, which need 
-      ## to be moved to the end...
-      LRB <- cbind(LRB[,-ii],LRB[,ii])
-      ii <- (ncol(LRB)-length(ii)+1):ncol(LRB)
-      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
-    } else Rm <- NULL
-    return(list(Ve=(t(b$Ve)+b$Ve)*.5,Rm=Rm)) 
-  }
-
-  if (m%in%re) stop("m can't be in re")
-  ## partition R into R1 ("fixed") and R2 ("random"), with S1 and S2
-  p <- length(b$coefficients)
-  rind <- rep(FALSE,p) ## random coefficient index
-  for (i in 1:length(re)) {
-    rind[b$smooth[[re[i]]]$first.para:b$smooth[[re[i]]]$last.para] <- TRUE
-  }
-  p2 <- sum(rind) ## number random
-  p1 <- p - p2 ## number fixed
-  map <- rep(0,p) ## remaps param indices to indices in split version
-  map[rind] <- 1:p2 ## random
-  map[!rind] <- 1:p1 ## fixed
-  
-  ## split R...
-  R1 <- b$R[,!rind]  ## fixed effect columns
-  R2 <- b$R[,rind]   ## random effect columns
-  ## seitdem ich dich kennen, hab ich ein probleme,
-
-  ## assemble S1 and S2
-  S1 <- matrix(0,p1,p1);S2 <- matrix(0,p2,p2)
- 
-  k <- 1
-  for (i in 1:length(b$smooth)) { 
-    ns <- length(b$smooth[[i]]$S)
-    #ind <- map[b$smooth[[i]]$first.para:b$smooth[[i]]$last.para]
-    is.random <- i%in%re
-    if (ns>0) { 
-     ii <- packing.ind(map[b$smooth[[i]]$first.para],map[b$smooth[[i]]$last.para],ncol(b$smooth[[i]]$S[[1]]),if (is.random) p2 else p1)
-     for (j in 1:ns) {
-        #if (is.random) S2[ind,ind] <- S2[ind,ind] +  sp[k]*b$smooth[[i]]$S[[j]] else
-        #   S1[ind,ind] <- S1[ind,ind] + sp[k]*b$smooth[[i]]$S[[j]]
-        if (is.random) S2[ii] <- S2[ii] +  sp[k]*as.numeric(b$smooth[[i]]$S[[j]]) else
-           S1[ii] <- S1[ii] + sp[k]*as.numeric(b$smooth[[i]]$S[[j]])
-        k <- k + 1
-      }
+summary.gam<-function (object,...) 
+# summary method for gam object - provides approximate p values for terms + other diagnostics
+{ pinv<-function(V,M)
+  { D<-La.svd(V)
+    M1<-length(D$d[D$d>1e-12*D$d[1]]);if (M>M1) M<-M1 # avoid problems with zero eigen-values
+    D$d[(M+1):length(D$d)]<-1
+    D$d<- 1/D$d
+    D$d[(M+1):length(D$d)]<-0
+    D$u%*%diag(D$d)%*%D$v
+  } 
+  se<-0;for (i in 1:length(object$coefficients)) se[i]<-object$Vp[i,i]^0.5
+  residual.df<-length(object$y)-object$nsdf-sum(object$edf)
+  if (object$nsdf>0)
+  { p.coeff<-object$coefficients[1:object$nsdf]
+    p.t<-p.coeff/se[1:object$nsdf]
+    if (object$gcv.used)
+    p.pv<-2*pt(abs(p.t),df=residual.df,lower.tail=FALSE)
+    else
+    p.pv<-2*pnorm(abs(p.t),lower.tail=FALSE)
+  } 
+  else {p.coeff<-p.t<-p.pv<-array(0,0)}
+  m<-length(object$edf)
+  s.pv<-chi.sq<-array(0,0)
+  if (m>0) # form test statistics for each smooth
+  { stop<-object$nsdf
+    by.count<-1
+    for (i in 1:m)
+    { start<-stop+1;stop<-stop+object$df[i]
+      V<-object$Vp[start:stop,start:stop] # cov matrix for smooth
+      p<-object$coefficients[start:stop]  # params for smooth
+      # now get null space dimension for this term
+      M1<-object$df[i]-1
+      M<-round(object$edf[i])
+      V<-pinv(V,M1) # get rank M pseudoinverse of V
+      chi.sq[i]<-t(p)%*%V%*%p
+      er<-names(object$coefficients)[start]
+      er<-substring(er,1,nchar(er)-2)
+      if (object$by.exists[i]) 
+      { er<-paste(er,":",rownames(object$by)[by.count],sep="");by.count<-by.count+1} 
+      names(chi.sq)[i]<-er
+      if (object$gcv.used)
+      s.pv[i]<-pf(chi.sq[i]/object$edf[i],df1=max(1,object$edf[i]),df2=residual.df,lower.tail=FALSE) 
+      else
+      s.pv[i]<-pchisq(chi.sq[i],df=max(1,object$edf[i]),lower.tail=FALSE)
     }
   }
-  ## pseudoinvert S2
-  if (nrow(S2)==1) {
-    S2[1,1] <- 1/sqrt(S2[1,1])
-  } else if (max(abs(diag(diag(S2))-S2))==0) {
-    ds2 <- diag(S2)
-    ind <- ds2 > max(ds2)*.Machine$double.eps^.8
-    ds2[ind] <- 1/ds2[ind];ds2[!ind] <- 0
-    diag(S2) <- sqrt(ds2)
-  } else {
-    ev <- eigen((S2+t(S2))/2,symmetric=TRUE)
-    ind <- ev$values > max(ev$values)*.Machine$double.eps^.8
-    ev$values[ind] <- 1/ev$values[ind];ev$values[!ind] <- 0 
-    ## S2 <- ev$vectors%*%(ev$values*t(ev$vectors))
-    S2 <- sqrt(ev$values)*t(ev$vectors)
-  }
-  ## choleski of cov matrix....
-  ## L <- chol(diag(p)+R2%*%S2%*%t(R2)) ## L'L = I + R2 S2^- R2'
-  L <- chol(diag(p) + crossprod(S2%*%t(R2)))  
-
-  ## now we need the square root of the unpenalized
-  ## cov matrix for m
-  if (m>0) {
-      ## llr version
-      LRB <- rbind(L%*%R1,t(mroot(S1)))
-      ii <- map[b$smooth[[m]]$first.para:b$smooth[[m]]$last.para] 
-      ## ii is cols of LRB related to smooth m, which need 
-      ## to be moved to the end...
-      LRB <- cbind(LRB[,-ii],LRB[,ii])
-      ii <- (ncol(LRB)-length(ii)+1):ncol(LRB) ## need to pick up final block
-      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii,drop=FALSE] ## unpivoted QR
-  } else Rm <- NULL
-
-  list(Ve= crossprod(L%*%b$R%*%b$Vp)/b$sig2, ## Frequentist cov matrix
-       Rm=Rm)
- # mapi <- (1:p)[!rind] ## indexes mapi[j] is index of total coef vector to which jth row/col of Vb/e relates
-  
-} ## end of recov
-
-
-reTest <- function(b,m) {
-## Test the mth smooth for equality to zero
-## and accounting for all random effects in model 
-  
-  ## check that smooth penalty matrices are full size.  
-  ## e.g. "fs" type smooths estimated by gamm do not 
-  ## have full sized S matrices, and we can't compute 
-  ## p-values here - actually we can see recov!
-  #if (ncol(b$smooth[[m]]$S[[1]]) != b$smooth[[m]]$last.para-b$smooth[[m]]$first.para+1) {
-  #  return(list(stat=NA,pval=NA,rank=NA)) 
-  #}
-
-  ## find indices of random effects other than m
-  rind <- rep(0,0)
-  for (i in 1:length(b$smooth)) if (!is.null(b$smooth[[i]]$random)&&b$smooth[[i]]$random&&i!=m) rind <- c(rind,i)
-  ## get frequentist cov matrix of effects treating smooth terms in rind as random
-  rc <- recov(b,rind,m) 
-  Ve <- rc$Ve
-  ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
-  B <- mroot(Ve[ind,ind,drop=FALSE]) ## BB'=Ve
- 
-  Rm <- rc$Rm
-  
-  b.hat <- coef(b)[ind]
-  d <- Rm%*%b.hat
-  stat <- sum(d^2)/b$sig2
-  ev <- eigen(crossprod(Rm%*%B)/b$sig2,symmetric=TRUE,only.values=TRUE)$values
-  ev[ev<0] <- 0
-  rank <- sum(ev>max(ev)*.Machine$double.eps^.8)
-  
-  if (b$scale.estimated) {
-    #pval <- simf(stat,ev,b$df.residual)
-    k <- max(1,round(b$df.residual))
-    pval <- psum.chisq(0,c(ev,-stat/k),df=c(rep(1,length(ev)),k))
-  } else { 
-    #pval <- liu2(stat,ev)
-    pval <- psum.chisq(stat,ev) 
-  }
-  list(stat=stat,pval=pval,rank=rank)
-} ## end reTest
-
-
-
-testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
-## Implements Wood (2013) Biometrika 100(1), 221-228
-## The type argument specifies the type of truncation to use.
-## on entry `rank' should be an edf estimate
-## 0. Default using the fractionally truncated pinv.
-## 1. Round down to k if k<= rank < k+0.05, otherwise up.
-## res.df is residual dof used to estimate scale. <=0 implies
-## fixed scale.
-
-  qrx <- qr(X,tol=0)
-  R <- qr.R(qrx)
-  V <- R%*%V[qrx$pivot,qrx$pivot,drop=FALSE]%*%t(R)
-  V <- (V + t(V))/2
-  ed <- eigen(V,symmetric=TRUE)
-  ## remove possible ambiguity from statistic...
-  siv <- sign(ed$vectors[1,]);siv[siv==0] <- 1
-  ed$vectors <- sweep(ed$vectors,2,siv,"*")
-
-  k <- max(0,floor(rank)) 
-  nu <- abs(rank - k)     ## fractional part of supplied edf
-  if (type==1) { ## round up is more than .05 above lower
-    if (rank > k + .05||k==0) k <- k + 1
-    nu <- 0;rank <- k
-  }
-
-  if (nu>0) k1 <- k+1 else k1 <- k
-
-  ## check that actual rank is not below supplied rank+1
-  r.est <- sum(ed$values > max(ed$values)*.Machine$double.eps^.9)
-  if (r.est<k1) {k1 <- k <- r.est;nu <- 0;rank <- r.est}
-
-  ## Get the eigenvectors...
-  # vec <- qr.qy(qrx,rbind(ed$vectors,matrix(0,nrow(X)-ncol(X),ncol(X))))
-  vec <- ed$vectors
-  if (k1<ncol(vec)) vec <- vec[,1:k1,drop=FALSE]
-
-  ## deal with the fractional part of the pinv...
-  if (nu>0&&k>0) {
-     if (k>1) vec[,1:(k-1)] <- t(t(vec[,1:(k-1)])/sqrt(ed$val[1:(k-1)]))
-     b12 <- .5*nu*(1-nu)
-     if (b12<0) b12 <- 0
-     b12 <- sqrt(b12)
-     B <- matrix(c(1,b12,b12,nu),2,2)
-     ev <- diag(ed$values[k:k1]^-.5,nrow=k1-k+1)
-     B <- ev%*%B%*%ev
-     eb <- eigen(B,symmetric=TRUE)
-     rB <- eb$vectors%*%diag(sqrt(eb$values))%*%t(eb$vectors)
-     vec1 <- vec
-     vec1[,k:k1] <- t(rB%*%diag(c(-1,1))%*%t(vec[,k:k1]))
-     vec[,k:k1] <- t(rB%*%t(vec[,k:k1]))
-  } else {
-    vec1 <- vec <- if (k==0) t(t(vec)*sqrt(1/ed$val[1])) else
-            t(t(vec)/sqrt(ed$val[1:k]))
-    if (k==1) rank <- 1
-  }
-  ## there is an ambiguity in the choise of test statistic, leading to slight
-  ## differences in the p-value computation depending on which of 2 alternatives 
-  ## is arbitrarily selected. Following allows both to be computed and p-values
-  ## averaged (can't average test stat as dist then unknown) 
-  d <- t(vec)%*%(R%*%p)
-  d <- sum(d^2) 
-  d1 <- t(vec1)%*%(R%*%p)
-  d1 <- sum(d1^2)
-  ##d <- d1 ## uncomment to avoid averaging
-
-  rank1 <- rank ## rank for lower tail pval computation below
-
-  ## note that for <1 edf then d is not weighted by EDF, and instead is 
-  ## simply refered to a chi-squared 1
-
-  if (nu>0) { ## mixture of chi^2 ref dist
-     if (k1==1) rank1 <- val <- 1 else { 
-       val <- rep(1,k1) ##ed$val[1:k1]
-       rp <- nu+1
-       val[k] <- (rp + sqrt(rp*(2-rp)))/2
-       val[k1] <- (rp - val[k])
-     }
-   
-     if (res.df <= 0) pval <- (psum.chisq(d,val)+psum.chisq(d1,val))/2 else {  ## (liu2(d,val) + liu2(d1,val))/2 else
-       k0 <- max(1,round(res.df))
-       pval <- (psum.chisq(0,c(val,-d/k0),df=c(rep(1,length(val)),k0)) + psum.chisq(0,c(val,-d1/k0),df=c(rep(1,length(val)),k0)) )/2 
-       #pval <- (simf(d,val,res.df) + simf(d1,val,res.df))/2
-     }
-  } else { pval <- 2 }
-  ## integer case still needs computing, 
-  ## OLD: also liu/pearson approx only good in 
-  ## upper tail. In lower tail, 2 moment approximation is better (Can check this 
-  ## by simply plotting the whole interesting range as a contour plot!)
-  ##if (pval > .5) 
-  if (pval > 1) { 
-    if (res.df <= 0) pval <- (pchisq(d,df=rank1,lower.tail=FALSE)+pchisq(d1,df=rank1,lower.tail=FALSE))/2 else
-    pval <- (pf(d/rank1,rank1,res.df,lower.tail=FALSE)+pf(d1/rank1,rank1,res.df,lower.tail=FALSE))/2
-  }
-  list(stat=d,pval=min(1,pval),rank=rank)
-} ## end of testStat
-
-
-
-
-summary.gam <- function (object, dispersion = NULL, freq = FALSE,re.test = TRUE, ...) {
-## summary method for gam object - provides approximate p values 
-## for terms + other diagnostics
-## Improved by Henric Nilsson
-## * freq determines whether a frequentist or Bayesian cov matrix is 
-##   used for parametric terms. Usually the default TRUE will result
-##   in reasonable results with paraPen.
-## If a smooth has a field 'random' and it is set to TRUE then 
-## it is treated as a random effect for some p-value dist calcs 
-
-
-  pinv<-function(V,M,rank.tol=1e-6) {
-  ## a local pseudoinverse function
-    D <- eigen(V,symmetric=TRUE)
-    M1<-length(D$values[D$values>rank.tol*D$values[1]])
-    if (M>M1) M<-M1 # avoid problems with zero eigen-values
-  
-    if (M+1<=length(D$values)) D$values[(M+1):length(D$values)]<-1
-    D$values<- 1/D$values
-    if (M+1<=length(D$values)) D$values[(M+1):length(D$values)]<-0
-    res <- D$vectors%*%(D$values*t(D$vectors))  ##D$u%*%diag(D$d)%*%D$v
-    attr(res,"rank") <- M
-    res
-  } ## end of pinv
-  
-  if (is.null(object$R)) { ## Factor from QR decomp of sqrt(W)X
-    warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
-    useR <- FALSE
-  } else useR <- TRUE
-
-  p.table <- pTerms.table <- s.table <- NULL
-
-  if (freq) covmat <- object$Ve else covmat <- object$Vp
-  name <- names(object$edf)
-  dimnames(covmat) <- list(name, name)
-  covmat.unscaled <- covmat/object$sig2
-  est.disp <- object$scale.estimated
-  if (!is.null(dispersion)) { 
-    covmat <- dispersion * covmat.unscaled
-    object$Ve <- object$Ve*dispersion/object$sig2 ## freq
-    object$Vp <- object$Vp*dispersion/object$sig2 ## Bayes
-    est.disp <- FALSE
-  } else dispersion <- object$sig2
- 
-
-  ## Now the individual parameteric coefficient p-values...
-
-  se <- diag(covmat)^0.5
-  residual.df<-length(object$y)-sum(object$edf)
-  if (sum(object$nsdf) > 0) { # individual parameters
-    if (length(object$nsdf)>1) { ## several linear predictors 
-      pstart <- attr(object$nsdf,"pstart")
-      ind <- rep(0,0)
-      for (i in 1:length(object$nsdf)) if (object$nsdf[i]>0) ind <- 
-          c(ind,pstart[i]:(pstart[i]+object$nsdf[i]-1))
-    } else { pstart <- 1;ind <- 1:object$nsdf} ## only one lp
-    p.coeff <- object$coefficients[ind]
-    p.se <- se[ind]
-    p.t<-p.coeff/p.se
-    if (!est.disp) {
-      p.pv <- 2*pnorm(abs(p.t),lower.tail=FALSE)
-      p.table <- cbind(p.coeff, p.se, p.t, p.pv)   
-      dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "z value", "Pr(>|z|)"))
-    } else {
-      p.pv <- 2*pt(abs(p.t),df=residual.df,lower.tail=FALSE)
-      p.table <- cbind(p.coeff, p.se, p.t, p.pv)
-      dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "t value", "Pr(>|t|)"))
-    }    
-  } else {p.coeff <- p.t <- p.pv <- array(0,0)}
-
-  ## Next the p-values for parametric terms, so that factors are treated whole... 
-  
-  pterms <- if (is.list(object$pterms)) object$pterms else list(object$pterms)
-  if (!is.list(object$assign)) object$assign <- list(object$assign)
-  npt <- length(unlist(lapply(pterms,attr,"term.labels")))
-  if (npt>0)  pTerms.df <- pTerms.chi.sq <- pTerms.pv <- array(0,npt)
-  term.labels <- rep("",0)
-  k <- 0 ## total term counter
-  for (j in 1:length(pterms)) {
-    tlj <- attr(pterms[[j]],"term.labels") 
-    nt <- length(tlj)
-    if (j>1 && nt>0) tlj <- paste(tlj,j-1,sep=".")
-    term.labels <- c(term.labels,tlj)
-    if (nt>0) { # individual parametric terms
-      np <- length(object$assign[[j]])
-      ind <- pstart[j] - 1 + 1:np 
-      Vb <- covmat[ind,ind,drop=FALSE]
-      bp <- array(object$coefficients[ind],np)
-    
-      for (i in 1:nt) { 
-        k <- k + 1
-        ind <- object$assign[[j]]==i
-        b <- bp[ind];V <- Vb[ind,ind]
-        ## pseudo-inverse needed in case of truncation of parametric space 
-        if (length(b)==1) { 
-          V <- 1/V 
-          pTerms.df[k] <- nb <- 1      
-          pTerms.chi.sq[k] <- V*b*b
-        } else {
-          V <- pinv(V,length(b),rank.tol=.Machine$double.eps^.5)
-          pTerms.df[k] <- nb <- attr(V,"rank")      
-          pTerms.chi.sq[k] <- t(b)%*%V%*%b
-        }
-        if (!est.disp)
-        pTerms.pv[k] <- pchisq(pTerms.chi.sq[k],df=nb,lower.tail=FALSE)
-        else
-        pTerms.pv[k] <- pf(pTerms.chi.sq[k]/nb,df1=nb,df2=residual.df,lower.tail=FALSE)      
-      } ## for (i in 1:nt)
-    } ## if (nt>0)
-  }
-
-  if (npt) {
-    attr(pTerms.pv,"names") <- term.labels
-    if (!est.disp) {      
-      pTerms.table <- cbind(pTerms.df, pTerms.chi.sq, pTerms.pv)   
-      dimnames(pTerms.table) <- list(term.labels, c("df", "Chi.sq", "p-value"))
-    } else {
-      pTerms.table <- cbind(pTerms.df, pTerms.chi.sq/pTerms.df, pTerms.pv)   
-      dimnames(pTerms.table) <- list(term.labels, c("df", "F", "p-value"))
-    }
-  } else { pTerms.df<-pTerms.chi.sq<-pTerms.pv<-array(0,0)}
-
-  ## Now deal with the smooth terms....
-
-  m <- length(object$smooth) # number of smooth terms
-  
-  df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
-  if (m>0) { # form test statistics for each smooth
-    ## Bayesian p-values required 
-    if (useR)  X <- object$R else {
-      sub.samp <- max(1000,2*length(object$coefficients)) 
-      if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
-        kind <- temp.seed(11)
-        #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-        #if (inherits(seed,"try-error")) {
-        #  runif(1)
-        #  seed <- get(".Random.seed",envir=.GlobalEnv)
-        #}
-        #kind <- RNGkind(NULL)
-        #RNGkind("default","default")
-        #set.seed(11) ## ensure repeatability
-        ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
-        X <- predict(object,object$model[ind,],type="lpmatrix")
-        #RNGkind(kind[1],kind[2])
-        #assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
-        temp.seed(kind)
-      } else { ## don't need to subsample 
-        X <- model.matrix(object)
-      }
-      X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)    
-    } ## end if (m>0)
-    ii <- 0
-    for (i in 1:m) { ## loop through smooths
-
-      start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
-
-      V <- object$Vp[start:stop,start:stop,drop=FALSE] ## Bayesian
-      
-      p <- object$coefficients[start:stop]  # params for smooth
-      edf1i <- edfi <- sum(object$edf[start:stop]) # edf for this smooth
-      ## extract alternative edf estimate for this smooth, if possible...
-      if (!is.null(object$edf1)) edf1i <-  sum(object$edf1[start:stop])
-      Xt <- X[,start:stop,drop=FALSE]  
-      fx <- if (inherits(object$smooth[[i]],"tensor.smooth")&&
-                !is.null(object$smooth[[i]]$fx)) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
-      if (!fx&&object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
-        res <- if (re.test) reTest(object,i) else NULL
-      } else { ## Inverted Nychka interval statistics
-       
-        if (est.disp) rdf <- residual.df else rdf <- -1
-        res <- testStat(p,Xt,V,min(ncol(Xt),edf1i),type=0,res.df = rdf)
-      }
-      if (!is.null(res)) {
-        ii <- ii + 1
-        df[ii] <- res$rank
-        chi.sq[ii] <- res$stat
-        s.pv[ii] <- res$pval 
-        edf1[ii] <- edf1i 
-        edf[ii] <- edfi 
-        names(chi.sq)[ii]<- object$smooth[[i]]$label
-      }
-    } 
-    if (ii==0) df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, 0) else {
-      df <- df[1:ii];chi.sq <- chi.sq[1:ii];edf1 <- edf1[1:ii]
-      edf <- edf[1:ii];s.pv <- s.pv[1:ii]
-    }
-    if (!est.disp) {
-      s.table <- cbind(edf, df, chi.sq, s.pv)      
-      dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "Chi.sq", "p-value"))
-    } else {
-      s.table <- cbind(edf, df, chi.sq/df, s.pv)      
-      dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "F", "p-value"))
-    }
-  }
-  w <- as.numeric(object$prior.weights)
-  mean.y <- sum(w*object$y)/sum(w)
-  w <- sqrt(w)
-  nobs <- nrow(object$model)
-  r.sq <- if (inherits(object$family,"general.family")||!is.null(object$family$no.r.sq)) NULL else  
-          1 - var(w*(as.numeric(object$y)-object$fitted.values))*(nobs-1)/(var(w*(as.numeric(object$y)-mean.y))*residual.df) 
+  r.sq<- 1 - var(object$y-object$fitted.values)*(object$df.null-1)/(var(object$y)*residual.df) 
   dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
-  if (object$method%in%c("REML","ML")) object$method <- paste("-",object$method,sep="")
-  ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
-       s.pv=s.pv,scale=dispersion,r.sq=r.sq,family=object$family,formula=object$formula,n=nobs,
-       dev.expl=dev.expl,edf=edf,dispersion=dispersion,pTerms.pv=pTerms.pv,pTerms.chi.sq=pTerms.chi.sq,
-       pTerms.df = pTerms.df, cov.unscaled = covmat.unscaled, cov.scaled = covmat, p.table = p.table,
-       pTerms.table = pTerms.table, s.table = s.table,method=object$method,sp.criterion=object$gcv.ubre,
-       rank=object$rank,np=length(object$coefficients))
- 
+  ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,edf=object$edf,
+       s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=object$df.null,
+       dev.expl=dev.expl)
+  if (is.null(object$gcv.used))  # then it's an old object
+  {  ret$gcv<-object$df.null*object$sig2/residual.df
+  } else # new object
+  if (object$gcv.used) ret$gcv<-object$gcv.ubre else ret$ubre<-object$gcv.ubre
   class(ret)<-"summary.gam"
   ret
-} ## end summary.gam
+}
 
-print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3), 
-                              signif.stars = getOption("show.signif.stars"), ...)
-# print method for gam summary method. Improved by Henric Nilsson
+print.summary.gam<-function(x,...)
+# print method for gam summary method.
 { print(x$family)
-  cat("Formula:\n") 
-
-  if (is.list(x$formula)) for (i in 1:length(x$formula)) print(x$formula[[i]]) else
-     print(x$formula)
-
+  cat("Formula:\n")
+  print(x$formula)
   if (length(x$p.coeff)>0)
   { cat("\nParametric coefficients:\n")
-    printCoefmat(x$p.table, digits = digits, signif.stars = signif.stars, na.print = "NA", ...)
+    width<-max(nchar(names(x$p.coeff)))
+    cat(rep(" ",width),"   Estimate  std. err.    t ratio    Pr(>|t|)\n",sep="")
+    for (i in 1:length(x$p.coeff))
+    cat(formatC(names(x$p.coeff)[i],width=width)," ",formatC(x$p.coeff[i],width=10,digits=5)," ",
+    formatC(x$se[i],width=10,digits=4)," ",formatC(x$p.t[i],width=10,digits=4),"    ",format.pval(x$p.pv[i]),"\n",sep="")
   }
   cat("\n")
   if(x$m>0)
   { cat("Approximate significance of smooth terms:\n")
-    printCoefmat(x$s.table, digits = digits, signif.stars = signif.stars, has.Pvalue = TRUE, na.print = "NA",cs.ind=1, ...)
+    width<-max(nchar(names(x$chi.sq)))
+    cat(rep(" ",width),"        edf       chi.sq     p-value\n",sep="")
+    for (i in 1:x$m)
+    cat(formatC(names(x$chi.sq)[i],width=width)," ",formatC(x$edf[i],width=10,digits=4),"   ",
+    formatC(x$chi.sq[i],width=10,digits=5),"     ",format.pval(x$s.pv[i]),"\n",sep="")
   }
-  cat("\n")
-  if (!is.null(x$rank) && x$rank< x$np) cat("Rank: ",x$rank,"/",x$np,"\n",sep="") 
-  if (!is.null(x$r.sq)) cat("R-sq.(adj) = ",formatC(x$r.sq,digits=3,width=5),"  ")
-  if (length(x$dev.expl)>0) cat("Deviance explained = ",formatC(x$dev.expl*100,digits=3,width=4),"%",sep="")
-  cat("\n")
-  if (!is.null(x$method)&&!(x$method%in%c("PQL","lme.ML","lme.REML")))  
-    cat(x$method," = ",formatC(x$sp.criterion,digits=5),sep="")
- 
-  cat("  Scale est. = ",formatC(x$scale,digits=5,width=8,flag="-"),"  n = ",x$n,"\n",sep="")
-  invisible(x)
-} ## print.summary.gam
-
-
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE)
-# improved by Henric Nilsson
-{   # adapted from anova.glm: R stats package
-    dotargs <- list(...)
-    named <- if (is.null(names(dotargs)))
-        rep(FALSE, length(dotargs))
-    else (names(dotargs) != "")
-    if (any(named))
-        warning("The following arguments to anova.glm(..) are invalid and dropped: ",
-            paste(deparse(dotargs[named]), collapse = ", "))
-    dotargs <- dotargs[!named]
-    is.glm <- unlist(lapply(dotargs, function(x) inherits(x,
-        "glm")))
-    dotargs <- dotargs[is.glm]
-    if (length(dotargs) > 0) {
-      if (!is.null(test)&&!test%in%c("Chisq","LRT","F")) stop("un-supported test")
-      ## check for multiple formulae to avoid problems...
-      if (is.list(object$formula)) object$formula <- object$formula[[1]]
-      ## reset df.residual to value appropriate for GLRT...
-      n <- if (is.matrix(object$y)) nrow(object$y) else length(object$y)
-      dfc <- if (is.null(object$edf2)) 0 else sum(object$edf2) - sum(object$edf) 
-      object$df.residual <- n - sum(object$edf1) - dfc
-      ## reset the deviance to -2*logLik for general families...
-      if (inherits(object$family,"extended.family")) {  
-        min.df <- object$df.residual
-        disp <- if (is.null(dispersion)) object$sig2 else dispersion
-        object$deviance <- -2 * as.numeric(logLik(object)) ## deviance returned is not always suitable for e.g. F test
-        if (!is.null(test)) test <- "Chisq"
-      }
-      ## repeat above 3 steps for each element of dotargs...
-      for (i in 1:length(dotargs)) {
-        if (is.list(dotargs[[i]]$formula)) dotargs[[i]]$formula <- dotargs[[i]]$formula[[1]]
-        dfc <- if (is.null(dotargs[[i]]$edf2)) 0 else sum(dotargs[[i]]$edf2) - sum(dotargs[[i]]$edf) 
-        dotargs[[i]]$df.residual <- n - sum(dotargs[[i]]$edf1) - dfc
-        if (inherits(dotargs[[i]]$family,"extended.family")) {
-          if (object$df.residual < min.df) {
-            object$df.residual -> min.df
-            disp <- if (is.null(dispersion))  dotargs[[i]]$sig2 else dispersion
-          }
-          dotargs[[i]]$deviance <- -2 * as.numeric(logLik(dotargs[[i]]))
-        } 
-      } 
-      if (inherits(object$family,"extended.family")) { ## multiply by dispersion as anova.glm will divide by it!
-         object$deviance <- object$deviance * disp
-         for (i in 1:length(dotargs)) dotargs[[i]]$deviance <- dotargs[[i]]$deviance * disp
-      } 
-      return(anova(structure(c(list(object), dotargs), class="glmlist"), 
-            dispersion = dispersion, test = test))
-    } 
-    if (!is.null(test)) warning("test argument ignored")
-    if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
-    sg <- summary(object, dispersion = dispersion, freq = freq)
-    class(sg) <- "anova.gam"
-    sg
-} ## anova.gam
-
-
-print.anova.gam <- function(x, digits = max(3, getOption("digits") - 3), ...)
-{ # print method for class anova.gam resulting from single
-  # gam model calls to anova. Improved by Henric Nilsson.
-  print(x$family)
-  cat("Formula:\n") 
-  if (is.list(x$formula)) for (i in 1:length(x$formula)) print(x$formula[[i]]) else
-  print(x$formula)
-  if (length(x$pTerms.pv)>0)
-  { cat("\nParametric Terms:\n")
-    printCoefmat(x$pTerms.table, digits = digits, signif.stars = FALSE, has.Pvalue = TRUE, na.print = "NA", ...)
-  }
-  cat("\n")
-  if(x$m>0)
-  { cat("Approximate significance of smooth terms:\n")
-    printCoefmat(x$s.table, digits = digits, signif.stars = FALSE, has.Pvalue = TRUE, na.print = "NA", ...)
-  }
-  invisible(x)
-} ## print.anova.gam
-
-## End of improved anova and summary code. 
-
-
-pen.edf <- function(x) {
-## obtains the edf associated with each penalty. That is the edf 
-## of the group of coefficients penalized by each penalty.
-## hard to interpret for overlapping penalties. brilliant for t2
-## smooths!
-  if (!inherits(x,"gam")) stop("not a gam object")
-  if (length(x$smooth)==0) return(NULL)
-  k <- 0 ## penalty counter
-  edf <- rep(0,0)
-  edf.name <- rep("",0)
-  for (i in 1:length(x$smooth)) { ## work through smooths
-    if (length(x$smooth[[i]]$S)>0) {
-      pind <- x$smooth[[i]]$first.para:x$smooth[[i]]$last.para ## range of coefs relating to this term
-      Snames <- names(x$smooth[[i]]$S)
-      if (is.null(Snames)) Snames <- as.character(1:length(x$smooth[[i]]$S))
-      if (length(Snames)==1) Snames <- ""
-      for (j in 1:length(x$smooth[[i]]$S)) {
-        ind <- rowSums(x$smooth[[i]]$S[[j]]!=0)!=0 ## index of penalized coefs (within pind)
-        k <- k+1
-        edf[k] <- sum(x$edf[pind[ind]]) 
-        edf.name[k] <- paste(x$smooth[[i]]$label,Snames[j],sep="")
-      }    
-    }
-  } ## finished all penalties
-  names(edf) <- edf.name
-  if (k==0) return(NULL)
-  edf
-} ## end of pen.edf
-
-
-
-cooks.distance.gam <- function(model,...)
-{ res <- residuals(model,type="pearson")
-  dispersion <- model$sig2
-  hat <- model$hat
-  p <- sum(model$edf)
-  (res/(1 - hat))^2 * hat/(dispersion * p)
+  cat("\nR-sq.(adj) = ",formatC(x$r.sq,digits=3,width=5),
+      "   Deviance explained = ",formatC(x$dev.expl*100,digits=3,width=4),"%",sep="")
+  if (is.null(x$ubre)) cat("\nGCV score = ",formatC(x$gcv,digits=5)," ",sep="")
+  else cat("\nUBRE score = ",formatC(x$ubre,digits=5),sep="")
+   cat("  Scale est. = ",formatC(x$scale,digits=5,width=8,flag="-"),"  n = ",x$n,"\n",sep="")
 }
 
 
-sp.vcov <- function(x,edge.correct=TRUE,reg=1e-3) {
-## get cov matrix of smoothing parameters, if available
-  if (!inherits(x,"gam")) stop("argument is not a gam object")
-  if (x$method%in%c("ML","P-ML","REML","P-REML","fREML")&&!is.null(x$outer.info$hess)) {
-    hess <- x$outer.info$hess
-    p <- ncol(hess)
-    if (edge.correct&&!is.null(attr(hess,"hess1"))) {
-      V <- solve(attr(hess,"hess1")+diag(p)*reg) 
-      attr(V,"lsp") <- attr(hess,"lsp1")
-      return(V)
-    } else return(solve(hess+reg))
-  } else return(NULL)
+exclude.too.far<-function(g1,g2,d1,d2,dist)
+# if g1 and g2 are the co-ordinates of grid modes and d1,d2 are co-ordinates of data
+# then this routine returns a vector with TRUE if the grid node is too far from
+# any data and FALSE otherwise. Too far is judged using dist: a positive number indicating
+# distance on the unit square into which the grid is scaled prior to calculation
+{ mig<-min(g1)
+  d1<-d1-mig;g1<-g1-mig
+  mag<-max(g1)
+  d1<-d1/mag;g1<-g1/mag
+  mig<-min(g2)
+  d2<-d2-mig;g2<-g2-mig
+  mag<-max(g2)
+  d2<-d2/mag;g2<-g2/mag
+  # all now in unit square
+  n<-length(g1)
+  if (length(g2)!=n) stop("grid vectors are different lengths")
+  if (length(d1)!=length(d2)) stop("data vectors are of different lengths")
+  if (dist<0) stop("supplied dist negative")
+  res<-array(FALSE,n)
+  for (i in 1:n)
+  { md<-min(((d1-g1[i])^2+(d2-g2[i])^2)^0.5)
+    if (md>dist) res[i]<-TRUE # grid is too far from data
+  }
+  res
 }
 
-gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
-## Routine to convert smoothing parameters to variance components
-## in a fitted `gam' object.
-  if (!inherits(x,"gam")) stop("requires an object of class gam")
-  if (!is.null(x$reml.scale)&&is.finite(x$reml.scale)) scale <- x$reml.scale else scale <- x$sig2
-  if (length(x$sp)==0) return()
-  if (rescale) { ## undo any rescaling of S[[i]] that may have been done
-    m <- length(x$smooth)
-    if (is.null(x$paraPen)) { 
-      k <- 1;
-      if (is.null(x$full.sp)) kf <- -1 else kf <- 1 ## place holder in full sp vector
-    } else { ## don't rescale paraPen related stuff
-      k <- sum(x$paraPen$sp<0)+1 ## count free sp's for paraPen
-      if (is.null(x$full.sp)) kf <- -1 else kf <- length(x$paraPen$full.sp.names)+1
+vis.gam<-function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="topo",se=-1,type="link",zlim=NULL,...)
+# takes a gam object and plots 2D views of it, supply ticktype="detailed" to get proper axis anotation
+# (c) Simon N. Wood 23/2/03
+{ fac.seq<-function(fac,n.grid)
+  # generates a sequence of factor variables of length n.grid
+  { fn<-length(levels(fac));gn<-n.grid;
+    if (fn>gn) mf<-factor(levels(fac))[1:gn]
+    else
+    { ln<-floor(gn/fn) # length of runs               
+      mf<-rep(levels(fac)[fn],gn)
+      mf[1:(ln*fn)]<-rep(levels(fac),rep(ln,fn))
+      mf<-factor(mf,levels=levels(fac))
     }
-    idx <- rep("",0) ## vector of ids used
-    idxi <- rep(0,0) ## indexes ids in smooth list
-    if (m>0) for (i in 1:m) { ## loop through all smooths
-      if (!is.null(x$smooth[[i]]$id)) { ## smooth has an id
-        if (x$smooth[[i]]$id%in%idx) { 
-          ok <- FALSE ## id already dealt with --- ignore smooth
-        } else {
-          idx <- c(idx,x$smooth[[i]]$id) ## add id to id list
-          idxi <- c(idxi,i) ## so smooth[[idxi[k]]] is prototype for idx[k]
-          ok <- TRUE
-        } 
-      } else { ok <- TRUE} ## no id so proceed
-      if (ok) { 
-       if (length(x$smooth[[i]]$S.scale)!=length(x$smooth[[i]]$S))
-         warning("S.scale vector doesn't match S list - please report to maintainer")
-        for (j in 1:length(x$smooth[[i]]$S.scale)) {
-          if (x$smooth[[i]]$sp[j]<0) { ## sp not supplied
-            x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
-            k <- k + 1
-            if (kf>0) {
-              x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
-              kf <- kf + 1
-            }
-          } else { ## sp supplied
-            x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
-            kf <- kf + 1
-          } 
-        }
-      } else { ## this id already dealt with, but full.sp not scaled yet 
-        ii <- idxi[idx%in%x$smooth[[i]]$id] ## smooth prototype
-        for (j in 1:length(x$smooth[[ii]]$S.scale)) {
-          x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[ii]]$S.scale[j]
-          kf <- kf + 1
-        }
-      } 
-    } ## finished rescaling
+    mf
   }
-  ## variance components (original scale)
-  vc <- c(scale/x$sp)
-  names(vc) <- names(x$sp)
-
-  if (is.null(x$full.sp)) vc.full <- NULL else { 
-    vc.full <- c(scale/x$full.sp)
-    names(vc.full) <- names(x$full.sp)
+  # end of local functions
+  
+  if (is.null(view)) # get default view if none supplied
+  { gp<-gam.parser(x$full.formula)
+    view<-c(all.vars(gp$pf),gp$v.names[-1],gp$by.names[gp$by.names!="NA"])
+    if (length(view)>1) view<-view[1:2]
+    else stop("Model doesn't seem to have enough terms to do anything useful")
   }
-  ## If a Hessian exists, get CI's for variance components...
+  if (length(unique(x$model[,view[1]]))<=1||length(unique(x$model[,view[2]]))<=1) 
+  stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
 
-  if (x$method%in%c("ML","P-ML","REML","P-REML","fREML")&&!is.null(x$outer.info$hess)) {
-    if (is.null(x$family$n.theta)||x$family$n.theta<=0) H <- x$outer.info$hess ## the hessian w.r.t. log sps and log scale
-    else {
-      ind <- 1:x$family$n.theta
-      H <- x$outer.info$hess[-ind,-ind,drop=FALSE]
-    }
-
-    if (ncol(H)>length(x$sp)) scale.est <- TRUE else scale.est <- FALSE
-    
-    ## get derivs of log sqrt var comps wrt log sp and log scale....
-    J <- matrix(0,nrow(H),ncol(H)) 
-    if (scale.est) { 
-      diag(J) <- -.5 # -2
-      J[,ncol(J)] <- .5 # 2
-      vc <- c(vc,scale);names(vc) <- c(names(x$sp),"scale")
-    } else {
-      diag(J) <- -0.5 #-2
-    }
-    #H <- t(J)%*%H%*%J ## hessian of log sqrt variances
-    eh <- eigen(H,symmetric=TRUE)
-    ind <- eh$values>max(eh$values)*.Machine$double.eps^75 ## index of non zero eigenvalues 
-    rank <- sum(ind) ## rank of hessian
-    iv <- eh$values*0;iv[ind] <- 1/eh$values[ind]
-    V <- eh$vectors%*%(iv*t(eh$vectors)) ## cov matrix for sp's ## log sqrt variances
-    V <- J%*%V%*%t(J) ## cov matrix for log sqrt variance
-    lsd <- log(sqrt(vc)) ## log sqrt variances
-    sd.lsd <- sqrt(diag(V))
-    if (conf.lev<=0||conf.lev>=1) conf.lev <- 0.95
-    crit <- qnorm(1-(1-conf.lev)/2)
-    ll <- lsd - crit * sd.lsd
-    ul <- lsd + crit * sd.lsd
-    res <- cbind(exp(lsd),exp(ll),exp(ul))
-    rownames(res) <- names(vc)
-    colnames(res) <- c("std.dev","lower","upper")
-    cat("\n")
-    cat(paste("Standard deviations and",conf.lev,"confidence intervals:\n\n"))
-    print(res)
-    cat("\nRank: ");cat(rank);cat("/");cat(ncol(H));cat("\n")
-    if (!is.null(vc.full)) { 
-      cat("\nAll smooth components:\n")
-      print(sqrt(vc.full))
-      res <- list(all=sqrt(vc.full),vc=res)
-    }
-    invisible(res)
-  } else {
-    if (is.null(vc.full)) return(sqrt(vc)) else return(list(vc=sqrt(vc),all=sqrt(vc.full)))
-  } 
-} ## end of gam.vcomp
-
-
-gam.sandwich <- function(b,freq=FALSE) {
-## computes sandwich estimator of variance
-  B2 <- if (freq) 0 else b$Vp - b$Ve ## Bayes squared bias estimate
-  X <- model.matrix(b)
-  m <- nrow(X); m <- m/(m-sum(b$edf))
-  if (inherits(b$family,"extended.family")) {
-    if (inherits(b$family,"general.family")) {
-       if (is.null(b$family$sandwich)) stop("no sandwich estimate available for this model")
-       Vs <- m*b$Vp%*%b$family$sandwich(b$y,X,b$coefficients,b$prior.weights,b$family,offset=attr(X,"offset"))%*%b$Vp + B2
-    } else {
-      dd <- dDeta(b$y,b$fitted.values,b$prior.weights,b$family$getTheta(),b$family,deriv=0)
-      Vs <- m*b$Vp%*%crossprod(0.5/b$sig2*dd$Deta*X)%*%b$Vp + B2 
-    }
-  } else { ## exponential family
-    mu <- b$fitted.values
-    w <- b$family$mu.eta(b$linear.predictors)*(b$y - mu)/(b$sig2*b$family$variance(mu))
-    Vs <- m*b$Vp%*%crossprod(w*X)%*%b$Vp + B2
-  }
-  Vs
-} ## gam.sandwich
-
-
-vcov.gam <- function(object, sandwich=FALSE, freq = FALSE, dispersion = NULL,unconditional=FALSE, ...)
-## supplied by Henric Nilsson <henric.nilsson@statisticon.se> 
-{ if (sandwich) vc <- gam.sandwich(object,freq) else { 
-    if (freq)
-      vc <- object$Ve
-    else { 
-      vc <- if (unconditional&&!is.null(object$Vc)) object$Vc else object$Vp
+  # now get the values of the variables which are not the arguments of the plotted surface
+  marg<-x$model[1,]
+  m.name<-names(x$model)
+  for (i in 1:length(marg))
+  { ma<-cond[[m.name[i]]][1]
+    if (is.null(ma)) 
+    { if (is.factor(x$model[[i]]))
+      marg[i]<-factor(levels(x$model[[i]])[1],levels(x$model[[i]]))
+      else marg[i]<-mean(x$model[[i]]) 
+    } else
+    { if (is.factor(x$model[[i]]))
+      marg[i]<-factor(ma,levels(x$model[[i]]))
+      else marg[i]<-ma
     }
   }
-  if (!is.null(dispersion))
-    vc <- dispersion * vc / object$sig2
-  name <- names(object$edf)
-  dimnames(vc) <- list(name, name)
-  vc
+  # marg includes conditioning values for view variables, but these will be ignored
+  
+  # Make dataframe....
+  if (is.factor(x$model[,view[1]]))
+  m1<-fac.seq(x$model[,view[1]],n.grid)
+  else { r1<-range(x$model[,view[1]]);m1<-seq(r1[1],r1[2],length=n.grid)}
+  if (is.factor(x$model[,view[2]]))
+  m2<-fac.seq(x$model[,view[2]],n.grid)
+  else {r2<-range(x$model[,view[2]]);m2<-seq(r2[1],r2[2],length=n.grid)}
+  v1<-rep(m1,n.grid);v2<-rep(m2,rep(n.grid,n.grid))
+  newd<-data.frame(v1=rep(marg[[1]],n.grid*n.grid))
+  for (i in 2:dim(x$model)[2]) newd[[i]]<-rep(marg[[i]],n.grid*n.grid)
+  names(newd)<-m.name
+  newd[[view[1]]]<-v1
+  newd[[view[2]]]<-v2
+  # call predict.gam to get predictions.....
+  if (type=="link") zlab<-paste("linear predictor")
+  else if (type=="response") zlab<-type
+  else stop("type must be \"link\" or \"response\"")
+  fv<-predict.gam(x,newdata=newd,se=TRUE,type=type)
+  z<-fv$fit # store NA free copy now
+  if (too.far>0) # exclude predictions too far from data
+  { ex.tf<-exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
+    fv$se.fit[ex.tf]<-fv$fit[ex.tf]<-NA
+  }
+  # produce a continuous scale in place of any factors
+  if (is.factor(m1)) 
+  { m1<-as.numeric(m1);m1<-seq(min(m1)-0.5,max(m1)+0.5,length=n.grid) }
+  if (is.factor(m2)) 
+  { m2<-as.numeric(m2);m2<-seq(min(m1)-0.5,max(m2)+0.5,length=n.grid) }
+  if (se<=0)
+  { old.warn<-options(warn=-1)
+    av<-matrix(c(0.5,0.5,rep(0,n.grid-1)),n.grid,n.grid-1)
+    options(old.warn)
+    # z is without any exclusion of gridpoints, so that averaging works nicely
+    z<-matrix(z,n.grid,n.grid) # convert to matrix
+    surf.col<-t(av)%*%z%*%av   # average over tiles  
+    # use only non-NA data to set colour limits
+    if (!is.null(zlim))
+    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
+      min.z<-zlim[1]
+      max.z<-zlim[2]
+    } else
+    { min.z<-min(fv$fit,na.rm=TRUE)
+      max.z<-max(fv$fit,na.rm=TRUE)
+    }
+    surf.col<-surf.col-min.z
+    surf.col<-surf.col/(max.z-min.z)  
+    surf.col<-round(surf.col*50)
+    if (color=="heat") pal<-heat.colors(50)
+    else if (color=="topo") pal<-topo.colors(50)
+    else if (color=="cm") pal<-cm.colors(50)
+    else if (color=="terrain") pal<-terrain.colors(50)
+    else stop("color scheme not recognised")
+    surf.col[surf.col<1]<-1;surf.col[surf.col>50]<-50 # otherwise NA tiles can get e.g. -ve index
+    if (is.na(col)) col<-pal[as.array(surf.col)]
+    z<-matrix(fv$fit,n.grid,n.grid)
+    persp(m1,m2,z,xlab=view[1],ylab=view[2],zlab=zlab,col=col,zlim=c(min.z,max.z),...)
+  } else # add standard error surfaces
+  { subs<-paste("red/green are +/-",se,"s.e.")
+    if (!is.null(zlim))
+    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
+      min.z<-zlim[1]
+      max.z<-zlim[2]
+    } else
+    { z.max<-max(fv$fit+fv$se.fit*se,na.rm=TRUE)
+      z.min<-min(fv$fit-fv$se.fit*se,na.rm=TRUE)
+    }
+    zlim<-c(z.min,z.max)
+    z<-fv$fit-fv$se.fit*se;z<-matrix(z,n.grid,n.grid)
+    persp(m1,m2,z,xlab=view[1],ylab=view[2],col=col,zlab=zlab,zlim=zlim,border="green",sub=subs,...)
+    par(new=TRUE) # don't clean device
+    z<-fv$fit;z<-matrix(z,n.grid,n.grid)
+    persp(m1,m2,z,xlab=view[1],ylab=view[2],col=col,zlim=zlim,zlab=zlab,border="black",sub=subs,...)
+    par(new=TRUE) # don't clean device
+    z<-fv$fit+se*fv$se.fit;z<-matrix(z,n.grid,n.grid)
+    persp(m1,m2,z,xlab=view[1],ylab=view[2],col=col,zlim=zlim,zlab=zlab,border="red",sub=subs,...)
+  }
 }
-
-
-
-
-influence.gam <- function(model,...) { model$hat }
-
-
-
-
-logLik.gam <- function (object,...)
-{  # based on logLik.glm - is ordering of p correction right???
-   # if (length(list(...)))
-   #     warning("extra arguments discarded")
-   
-    ##fam <- family(object)$family
-    sc.p <- as.numeric(object$scale.estimated)
-    p <- sum(object$edf) + sc.p
-    val <- p - object$aic/2
-    #if (fam %in% c("gaussian", "Gamma", "inverse.gaussian","Tweedie"))
-    #    p <- p + 1
-    if (!is.null(object$edf2)) p <- sum(object$edf2) + sc.p
-    np <- length(object$coefficients) + sc.p 
-    if (p > np) p <- np 
-    if (inherits(object$family,"extended.family")&&!is.null(object$family$n.theta)) p <- p + object$family$n.theta 
-    attr(val, "df") <- p
-    class(val) <- "logLik"
-    val
-} ## logLik.gam
-
-
 
 # From here on is the code for magic.....
 
-mroot <- function(A,rank=NULL,method="chol")
+
+mroot<-function(A,rank=NULL,method="chol")
 # finds the smallest square root of A, or the best approximate square root of 
 # given rank. B is returned where BB'=A. A assumed non-negative definite. 
 # Current methods "chol", "svd". "svd" is much slower, but much better at getting the 
 # correct rank if it isn't known in advance. 
-{ if (is.null(rank)) rank <- 0 
-  if (!isTRUE(all.equal(A,t(A)))) stop("Supplied matrix not symmetric")
-  if (method=="svd") { 
-    um <- La.svd(A)
+{ if (!all.equal(A,t(A))) stop("Supplied matrix not symmetric")
+  if (method=="svd")
+  { um<-La.svd(A)
     if (sum(um$d!=sort(um$d,decreasing=TRUE))>0) 
     stop("singular values not returned in order")
-    if (rank < 1) # have to work out rank
-    { rank <- dim(A)[1]
-      if (um$d[1]<=0) rank <- 1 else
+    if (is.null(rank)) # have to work out rank
+    { rank<-dim(A)[1]
       while (rank>0&&(um$d[rank]/um$d[1]<.Machine$double.eps||
                            all.equal(um$u[,rank],um$vt[rank,])!=TRUE)) rank<-rank-1 
       if (rank==0) stop("Something wrong - matrix probably not +ve semi definite")    
     }
     d<-um$d[1:rank]^0.5
-    return(t(t(um$u[,1:rank])*as.vector(d))) # note recycling rule used for efficiency
+    return(t(t(um$u[,1:rank])*d)) # note recycling rule used for efficiency
   } else
-  if (method=="chol") { 
-    ## don't want to be warned it's not +ve def...
-    L <- suppressWarnings(chol(A,pivot=TRUE,tol=0))
-    piv <- order(attr(L,"pivot"))
-    ## chol does not work as documented (reported), have to explicitly zero
-    ## the trailing block...
-    r <- attr(L,"rank")
-    p <- ncol(L)
-    if (r < p) L[(r+1):p,(r+1):p] <- 0
-    if (rank < 1) rank <- r
-    L <- L[,piv,drop=FALSE]; L <- t(L[1:rank,,drop=FALSE])
+  if (method=="chol")
+  { L<-chol(A,pivot=TRUE)
+    piv<-order(attr(L,"pivot"))
+    if (is.null(rank)) rank<-attr(L,"rank")
+    L<-L[,piv];L<-t(L[1:rank,])
     return(L)
   } else
   stop("method not recognised.")
-} ## mroot
+}
 
 
 
-magic.post.proc <- function(X,object,w=NULL)
+magic.post.proc<-function(X,object,w=NULL)
 # routine to take list returned by magic and extract:
-# Vb the estimated bayesian parameter covariance matrix. rV%*%t(rV)*scale
-# Ve the frequentist parameter estimator covariance matrix.
+# Vb the estimated parameter covariance matrix. rV%*%t(rV)*scale
 # edf the array of estimated degrees of freedom per parameter Vb%*%t(X)%*%W%*%X /scale
 # hat the leading diagonal of the hat/influence matrix 
-# NOTE: W=diag(w) if w non-matrix, otherwise w is a matrix square root. 
+# NOTE: W=diag(w^2). 
 # flop count is O(nq^2) if X is n by q... this is why routine not part of magic
-{ ## V<-object$rV%*%t(object$rV)
-  V <- tcrossprod(object$rV)
-  if (!is.null(w)) 
-  { if (is.matrix(w)) WX <- X <- w%*%X else 
-    WX <- as.vector(w)*X # use recycling rule to form diag(w)%*%X cheaply 
-    
-  } else {WX <- X}
-  ##if (nthreads <= 1) M <- WX%*%V else M <- pmmult(WX,V,tA=FALSE,tB=FALSE,nt=nthreads)
-  M <- WX%*%V  ## O(np^2) part
-  ##Ve <- (V%*%t(X))%*%M*object$scale # frequentist cov. matrix
-  XWX <- crossprod(object$R) #t(X)%*%WX
-  F <- Ve <- V%*%XWX
-  edf1 <- rowSums(t(Ve)*Ve) ## this is diag(FF), where F is edf matrix
-  Ve <- Ve%*%V*object$scale ## frequentist cov matrix
-  B <- X*M
-  rm(M)
-  hat <- rowSums(B) #apply(B,1,sum) # diag(X%*%V%*%t(WX))
-  edf <- colSums(B) #apply(B,2,sum) # diag(V%*%t(X)%*%WX)
-  Vb <- V*object$scale;rm(V)
-  list(Ve=Ve,Vb=Vb,hat=hat,edf=edf,edf1=2*edf-edf1,F=F)
-} ## magic.post.proc
-
-single.sp <- function(X,S,target=.5,tol=.Machine$double.eps*100)
-## function to find smoothing parameter corresponding to particular 
-## target e.d.f. for a single smoothing parameter problem. 
-## X is model matrix; S is penalty matrix; target is target 
-## average e.d.f. per penalized term.
-{ R <- qr.R(qr(X)) ### BUG? pivoting?
-  te <- try(RS <- backsolve(R,S,transpose=TRUE),silent=TRUE)
-  if (inherits(te,"try-error")) return(-1)
-  te <- try(RSR <- backsolve(R,t(RS),transpose=TRUE),silent=TRUE)
-  if (inherits(te,"try-error")) return(-1)
-  RSR <- (RSR+t(RSR))/2
-  d <- eigen(RSR,symmetric=TRUE)$values
-  d <- d[d>max(d)*tol]
-  ff <- function(lambda,d,target) { 
-    mean(1/(1+exp(lambda)*d))-target
-  }
-  lower <- 0
-  while (ff(lower,d,target) <= 0) lower <- lower - 1
-  upper <- lower
-  while (ff(upper,d,target) > 0) upper <- upper + 1
-  exp(uniroot(ff,c(lower,upper),d=d,target=target)$root)
+{ V<-object$rV%*%t(object$rV)
+  if (!is.null(w)) X<-w*X # use recycling rule to form diag(w)%*%X cheaply 
+  M<-V%*%t(X);B<-X*t(M);rm(M)
+  hat<-apply(B,1,sum) # diag(X%*%V%*%t(X))
+  edf<-apply(B,2,sum) # diag(V%*%t(X)%*%X)
+  Vb<-V*object$scale;rm(V)
+  list(Vb=Vb,hat=hat,edf=edf)
 }
 
 
-initial.spg <- function(x,y,weights,family,S,rank,off,offset=NULL,L=NULL,lsp0=NULL,type=1,
-                        start=NULL,mustart=NULL,etastart=NULL,E=NULL,...) {
-## initial smoothing parameter values based on approximate matching 
-## of Frob norm of XWX and S. If L is non null then it is assumed
-## that the sps multiplying S elements are given by L%*%sp+lsp0 and 
-## an appropriate regression step is used to find `sp' itself.
-## This routine evaluates initial guesses at W.
-  ## Get the initial weights...
-  if (length(S)==0) return(rep(0,0))
-  ## start <- etastart <- mustart <- NULL
-  nobs <- nrow(x) ## ignore codetools warning - required for initialization
-  if (is.null(mustart)) mukeep <- NULL else mukeep <- mustart 
-  eval(family$initialize) 
-  if (inherits(family,"general.family")) { ## Cox, gamlss etc...   
-    lbb <- family$ll(y,x,start,weights,family,offset=offset,deriv=1)$lbb ## initial Hessian 
-    ## initially work out the number of times that each coefficient is penalized
-    pcount <- rep(0,ncol(lbb))
-    for (i in 1:length(S)) {
-      ind <- off[i]:(off[i]+ncol(S[[i]])-1)
-      dlb <- -diag(lbb[ind,ind,drop=FALSE])
-      indp <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0
-      ind <- ind[indp] ## drop indices of unpenalized
-      pcount[ind] <- pcount[ind] + 1 ## add up times penalized
-    }
-
-    lambda <- rep(0,length(S))
-    ## choose lambda so that corresponding elements of lbb and S[[i]]
-    ## are roughly in balance...
-    for (i in 1:length(S)) {
-      ind <- off[i]:(off[i]+ncol(S[[i]])-1)
-      lami <- 1
-      #dlb <- -diag(lbb[ind,ind])
-      dlb <- abs(diag(lbb[ind,ind,drop=FALSE])) 
-      dS <- diag(S[[i]])
-      pc <- pcount[ind]
-      ## get index of elements doing any actual penalization...
-      ind <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0 ## dlb > 0
-      ## drop elements that are not penalizing
-      dlb <- dlb[ind]/pc[ind] ## idea is to share out between penalties
-      dS <- dS[ind]
-      rm <- max(length(dS)/rank[i],1) ## rough correction for rank deficiency in penalty
-      #while (mean(dlb/(dlb + lami * dS * rm)) > 0.4) lami <- lami*5
-      #while (mean(dlb/(dlb + lami * dS * rm )) < 0.4) lami <- lami/5 
-      while (sqrt(mean(dlb/(dlb + lami * dS * rm))*mean(dlb)/mean(dlb+lami*dS*rm)) > 0.4) lami <- lami*5
-      while (sqrt(mean(dlb/(dlb + lami * dS * rm))*mean(dlb)/mean(dlb+lami*dS*rm)) < 0.4) lami <- lami/5
-      lambda[i] <- lami 
-      ## norm(lbb[ind,ind])/norm(S[[i]])
-    }
-  } else { ## some sort of conventional regression
-    if (is.null(mukeep)) {
-      if (!is.null(start)) etastart <- drop(x%*%start)
-      if (!is.null(etastart)) mustart <- family$linkinv(etastart)
-    } else mustart <- mukeep
-    if (inherits(family,"extended.family")) {
-      theta <- family$getTheta()
-      ## use 'as.numeric' - 'drop' can leave result as 1D array...
-      Ddo <- family$Dd(y,mustart,theta,weights)
-      mu.eta2 <-family$mu.eta(family$linkfun(mustart))^2 
-      w <- .5 * as.numeric(Ddo$Dmu2 * mu.eta2)
-      if (any(w<0)) w <- .5 * as.numeric(Ddo$EDmu2 * mu.eta2) 
-      #w <- .5 * as.numeric(family$Dd(y,mustart,theta,weights)$EDmu2*family$mu.eta(family$linkfun(mustart))^2)  
-    } else w <- as.numeric(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
-    w <- sqrt(w)
-    if (type==1) { ## what PI would have used
-      lambda <-  initial.sp(w*x,S,off)
-    } else { ## balance frobenius norms
-      csX <- colSums((w*x)^2) 
-      lambda <- rep(0,length(S))
-      for (i in 1:length(S)) {
-        ind <- off[i]:(off[i]+ncol(S[[i]])-1)
-        lambda[i] <- sum(csX[ind])/sqrt(sum(S[[i]]^2))
-      }
-    }
-  }
-  if (!is.null(L)) {
-    lsp <- log(lambda)
-    if (is.null(lsp0)) lsp0 <- rep(0,nrow(L))
-    lsp <- as.numeric(coef(lm(lsp~L-1+offset(lsp0))))
-    lambda <- exp(lsp)
-  }
-
-  lambda ## initial values
-
-}
-
-initial.sp <- function(X,S,off,expensive=FALSE,XX=FALSE)
-# Find initial smoothing parameter guesstimates based on model matrix X 
-# and penalty list S. off[i] is the index of the first parameter to
-# which S[[i]] applies, since S[[i]]'s only store non-zero submatrix of 
-# penalty coefficient matrix.
-# if XX==TRUE then X contains X'X, not X!
-{ n.p <- length(S) 
-  if (XX) expensive <- FALSE 
-  def.sp <- array(0,n.p)
-  if (n.p) { 
-    ldxx <- if (XX) diag(X) else colSums(X*X) # yields diag(t(X)%*%X)
-    ldss <- ldxx*0       # storage for combined penalty l.d. 
-    if (expensive) St <- matrix(0,ncol(X),ncol(X)) 
-    pen <- rep(FALSE,length(ldxx)) # index of what actually gets penalized
-    for (i in 1:n.p) { # loop over penalties
-      maS <- max(abs(S[[i]])) 
-      rsS <- rowMeans(abs(S[[i]]))
-      csS <- colMeans(abs(S[[i]]))
-      dS <- diag(abs(S[[i]])) ## new 1.8-4
-      thresh <- .Machine$double.eps^.8 * maS ## .Machine$double.eps*maS*10
-      ind <- rsS > thresh & csS > thresh & dS > thresh # only these columns really penalize
-      ss <- diag(S[[i]])[ind] # non-zero elements of l.d. S[[i]]
-      start <- off[i];finish <- start+ncol(S[[i]])-1
-      xx <- ldxx[start:finish]
-      xx <- xx[ind]
-      pen[start:finish] <- pen[start:finish]|ind
-      sizeXX <- mean(xx)
-      sizeS <- mean(ss)
-      if (sizeS <= 0) stop(gettextf("S[[%d]] matrix is not +ve definite.", i)) 
-      def.sp[i] <- sizeXX/ sizeS # relative s.p. estimate
-      ## accumulate leading diagonal of \sum sp[i]*S[[i]]
-      ldss[start:finish] <- ldss[start:finish] + def.sp[i]*diag(S[[i]]) 
-      
-      if (expensive) St[start:finish,start:finish] <- 
-                     St[start:finish,start:finish] + def.sp[i]*S[[i]]
-    }
-    if (expensive) { ## does full search for overall s.p.
-      msp <- single.sp(X,St)           
-      if (msp>0) def.sp <- def.sp*msp  
-    } else {
-      ind <- ldss > 0 & pen & ldxx > 0 # base following only on penalized terms
-      ldxx<-ldxx[ind];ldss<-ldss[ind]
-      while (mean(ldxx/(ldxx+ldss))>.4) { def.sp <- def.sp*10;ldss <- ldss*10 }
-      while (mean(ldxx/(ldxx+ldss))<.4) { def.sp <- def.sp/10;ldss <- ldss/10 }
-    }
-  } 
-  as.numeric(def.sp)
-} ## initial.sp
-
-
-
- 
-magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=TRUE,
-                ridge.parameter=NULL,control=list(tol=1e-6,step.half=25,
-                rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y),nthreads=1)
+magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=TRUE,
+                ridge.parameter=NULL,control=list(maxit=50,tol=1e-6,step.half=25,
+                rank.tol=.Machine$double.eps^0.5))
 # Wrapper for C routine magic. Deals with constraints weights and square roots of 
-# penalties. 
+# penalties. Currently only a diagonal weight matrix is allowed, but this 
+# is easy to change.
 # y is data vector, X is model matrix, sp is array of smoothing parameters,
 # S is list of penalty matrices stored as smallest square submatrix excluding no 
 # non-zero entries, off[i] is the location on the leading diagonal of the
 # total penalty matrix of element (1,1) of S[[i]], rank is an array of penalty 
-# ranks, L is a matrix mapping the log underlying smoothing parameters to the 
-# smoothing parameters that actually multiply the penalties. i.e. the 
-# log smoothing parameters are L%*%sp + lsp0
-# H is any fixed penalty, C is a linear constraint matrix and w is the 
+# ranks, H is any fixed penalty, C is a linear constraint matrix and w is the 
 # weight vector. gamma is the dof inflation factor, scale is the scale parameter, only 
 # used with UBRE, gcv TRUE means use GCV, if false, use UBRE.  
 # Return list includes rV such that cov(b)=rV%*%t(rV)*scale and the leading diagonal
 # of rV%*%t(rV)%*%t(X)%*%X gives the edf for each parameter.
 # NOTE: W is assumed to be square root of inverse of covariance matrix. i.e. if
 # W=diag(w) RSS is ||W(y-Xb||^2  
-# If `ridge.parameter' is a positive number then then it is assumed to be the multiplier
+# If ridge.parameter is a positive number then then it is assumed to be the multiplier
 # for a ridge penalty to be applied during fitting. 
-# `extra.rss' is an additive constant by which the RSS is modified in the
-#  GCV/UBRE or scale calculations, n.score is the `n' to use in the GCV/UBRE
-#  score calcualtions (Useful for dealing with huge datasets).
-{ if (is.null(control)) control <- list()
-  if (is.null(control$tol)) control$tol <- 1e-6
-  if (is.null(control$step.half)) control$step.half <- 25
-  if (is.null(control$rank.tol)) control$rank.tol <- .Machine$double.eps^0.5
-
-  n.p<-length(S)
+{ n.p<-length(S)
   n.b<-dim(X)[2] # number of parameters
-  # get initial estimates of smoothing parameters, using better method than is
-  # built in to C code. This must be done before application of general 
-  # constraints.
-  if (n.p) def.sp <- initial.sp(X,S,off) else def.sp <- sp
-
-  if (!is.null(L)) { ## have to estimate appropriate starting coefs
-    if (!inherits(L,"matrix")) stop("L must be a matrix.")
-    if (nrow(L)<ncol(L)) stop("L must have at least as many rows as columns.")
-    if (nrow(L)!=n.p||ncol(L)!=length(sp)) stop("L has inconsistent dimensions.")
-    if (is.null(lsp0)) lsp0 <- rep(0,nrow(L))
-    if (ncol(L)) def.sp <- exp(as.numeric(coef(lm(log(def.sp)~L-1+offset(lsp0)))))
-  }
-
   # get square roots of penalties using supplied ranks or estimated 
   if (n.p>0)
   { for (i in 1:n.p) 
-    { if (is.null(rank)) B <- mroot(S[[i]],method="svd") 
-      else B <- mroot(S[[i]],rank=rank[i],method="chol")
-      m <- dim(B)[2]
+    { if (is.null(rank)) B<-mroot(S[[i]],method="svd") 
+      else B<-mroot(S[[i]],rank=rank[i],method="chol")
+      m<-dim(B)[2]
       R<-matrix(0,n.b,m)
       R[off[i]:(off[i]+dim(B)[1]-1),]<-B
       S[[i]]<-R
@@ -4725,23 +2170,17 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
   # (from final columns of Q, from QR=C'). Then form XZ and Z'S_i^0.5 for all i 
   # and Z'HZ.
   # On return from mgcv2 set parameters to Zb (apply Q to [0,b']').   
-  ##Xo<-X
+  Xo<-X
   if (!is.null(C)) # then impose constraints 
    { n.con<-dim(C)[1]
     ns.qr<-qr(t(C)) # last n.b-n.con columns of Q are the null space of C
-    X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b,drop=FALSE] # last n.b-n.con cols of XQ (=(Q'X')')
+    X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b] # last n.b-n.con cols of XQ (=(Q'X')')
     # need to work through penalties forming Z'S_i^0.5 's
-    if (n.p>0) for (i in 1:n.p) { 
-      S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,,drop=FALSE]
-      ## following essential given assumptions of the C code...
-      if (ncol(S[[i]])>nrow(S[[i]])) { ## no longer have a min col square root.
-        S[[i]] <- t(qr.R(qr(t(S[[i]])))) ## better!
-      }
-    }
+    if (n.p>0) for (i in 1:n.p) S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,]
     # and Z'HZ too
     if (!is.null(H))
-    { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,,drop=FALSE] # Z'H
-      H<-t(qr.qty(ns.qr,t(H))[(n.con+1):n.b,,drop=FALSE]) # Z'HZ = (Z'[Z'H]')' 
+    { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,] # Z'H
+      H<-t(qr.qty(ns.qr,t(H))[(n.con+1):n.b,]) # Z'HZ = (Z'[Z'H]')' 
     }
     full.rank=n.b-n.con
   } else full.rank=n.b
@@ -4754,100 +2193,62 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
     } else
     { if (length(y)!=length(w)) stop("w different length from y!")
       y<-y*w
-      X<-as.vector(w)*X # use recycling rule to form diag(w)%*%X cheaply
+      X<-w*X # use recycling rule to form diag(w)%*%X cheaply
     }
   }
-  if (is.null(dim(X))) { # lost dimensions as result of being single columned! 
-    n <- length(y)
+  if (is.null(dim(X))) # lost dimensions as result of being single columned! 
+  { n<-length(y)
     if (n!=length(X)) stop("X lost dimensions in magic!!")
-    dim(X) <- c(n,1)
+    dim(X)<-c(n,1)
   }
   # call real mgcv engine...
   Si<-array(0,0);cS<-0
-  if (n.p>0) for (i in 1:n.p) { 
-    Si <- c(Si,S[[i]]);
-    cS[i] <- dim(S[[i]])[2]
+  if (n.p>0) for (i in 1:n.p) 
+  { Si<-c(Si,S[[i]]);
+    cS[i]<-dim(S[[i]])[2]
   }
-  rdef <- ncol(X) - nrow(X)
-  if (rdef>0) { ## need to zero pad model matrix
-    n.score <- n.score ## force evaluation *before* y lengthened
-    X <- rbind(X,matrix(0,rdef,ncol(X)))
-    y <- c(y,rep(0,rdef))
-  }
-
   icontrol<-as.integer(gcv);icontrol[2]<-length(y);q<-icontrol[3]<-dim(X)[2];
   if (!is.null(ridge.parameter)&&ridge.parameter>0)
   { if(is.null(H)) H<-diag(ridge.parameter,q) else H<-H+diag(ridge.parameter,q)}
-  icontrol[4]<-as.integer(!is.null(H));icontrol[5]<- n.p;icontrol[6]<-control$step.half
-  if (is.null(L)) { icontrol[7] <- -1;L <- diag(n.p) } else icontrol[7]<-ncol(L)
-  if (is.null(lsp0)) lsp0 <- rep(0,nrow(L))
- 
+  icontrol[4]<-as.integer(!is.null(H));icontrol[5]<-length(sp);icontrol[6]<-control$step.half
+  icontrol[7]<-control$maxit
   b<-array(0,icontrol[3])
   # argument names in call refer to returned values.
-  if (nthreads<1) nthreads <- 1 ## can't set up storage without knowing nthreads
-  if (nthreads>1) extra.x <- q^2 * nthreads else extra.x <- 0 
-  um<-.C(C_magic,as.double(y),X=as.double(c(X,rep(0,extra.x))),sp=as.double(sp),as.double(def.sp),
-          as.double(Si),as.double(H),as.double(L),
-          lsp0=as.double(lsp0),score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
+  um<-.C("magic",as.double(y),as.double(X),sp=as.double(sp),as.double(Si),as.double(H),
+          score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
           as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q),
-          as.double(extra.rss),as.integer(n.score),as.integer(nthreads))
-  res<-list(b=um$b,scale=um$scale,score=um$score,sp=um$sp,sp.full=as.numeric(exp(L%*%log(um$sp))))
-  res$R <- matrix(um$X[1:q^2],q,q)
+          PACKAGE="mgcv")
+  res<-list(b=um$b,scale=um$scale,score=um$score,sp=um$sp)
   res$rV<-matrix(um$rV[1:(um$info[1]*q)],q,um$info[1])
   gcv.info<-list(full.rank=full.rank,rank=um$info[1],fully.converged=as.logical(um$info[2]),
       hess.pos.def=as.logical(um$info[3]),iter=um$info[4],score.calls=um$info[5],rms.grad=um$rms.grad)
   res$gcv.info<-gcv.info
-  if (!is.null(C)) { # need image of constrained parameter vector in full space
-    b <- c(rep(0,n.con),res$b)
-    res$b <- qr.qy(ns.qr,b) # Zb 
-    b <- matrix(0,n.b,dim(res$rV)[2])
-    b[(n.con+1):n.b,] <- res$rV 
-    res$rV <- qr.qy(ns.qr,b)# ZrV
+  if (!is.null(C)) # need image of constrained parameter vector in full space
+  { b<-c(rep(0,n.con),res$b)
+    res$b<-qr.qy(ns.qr,b) # Zb 
+    b<-matrix(0,n.b,dim(res$rV)[2])
+    b[(n.con+1):n.b,]<-res$rV 
+    res$rV<-qr.qy(ns.qr,b)# ZrV
   } 
+ 
   res
-} ## magic
-
-
-print.mgcv.version <- function()
-{ library(help=mgcv)$info[[1]] -> version
-  version <- version[pmatch("Version",version)]
-  um <- strsplit(version," ")[[1]]
-  version <- um[nchar(um)>0][2]
-  hello <- paste("This is mgcv ",version,". For overview type 'help(\"mgcv-package\")'.",sep="")
-  packageStartupMessage(hello)
 }
 
-set.mgcv.options <- function()
-## function used to set optional value used in notLog
-## and notExp...
-{ ##runif(1) ## ensure there is a seed (can be removed by user!)
-  options(mgcv.vc.logrange=25)
+
+
+
+
+
+.First.lib <- function(lib, pkg) {
+    library.dynam("mgcv", pkg, lib)
+    cat("This is mgcv 0.9-3 \n")
 }
-
-.onLoad <- function(...) {
-  set.mgcv.options()
-}
-
-.onAttach <- function(...) { 
-  print.mgcv.version()
-  set.mgcv.options()
-}
-
-.onUnload <- function(libpath) library.dynam.unload("mgcv", libpath)
-
 
 
 ###############################################################################
 ### ISSUES.....
-#
-#* Could use R_CheckUserInterrupt() to allow user interupt of
-#  mgcv code. (6.12) But then what about memory?#
-#
-#* predict.gam and plot.gam "iterms" and `seWithMean' options
-#  don't deal properly with case in which centering constraints
-#  are not conventional sum to zero ones.
-#
-# * add randomized residuals (see Mark B email)?
-#
-# * sort out all the different scale parameters floating around, and explain the 
-#   sp variance link better.
+
+
+
+
+

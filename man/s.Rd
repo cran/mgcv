@@ -7,81 +7,54 @@
   smooth - it exists purely to help set up a model using spline based smooths.
 }
 
-\usage{s(..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL,pc=NULL)}
-
+\usage{s(..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)}
+}
 %- maybe also `usage' for other objects documented here.
 \arguments{
-\item{...}{ a list of variables that are the covariates that this
-    smooth is a function of. Transformations whose form depends on
-    the values of the data are best avoided here: e.g. \code{s(log(x))}
-    is fine, but \code{s(I(x/sd(x)))} is not (see \code{\link{predict.gam}}).}
-
-\item{k}{ the dimension of the basis used to represent the smooth term.
+  \item{...}{ a list of variables that are the covariates that this
+    smooth is a function of.}
+  \item{k}{ the dimension of the basis used to represent the smooth term.
     The default depends on the number of variables that the smooth is a
     function of. \code{k} should not be less than the dimension of the
     null space of the penalty for the term (see
     \code{\link{null.space.dimension}}), but will be reset if
-  it is. See \code{\link{choose.k}} for further information.}
-
-\item{fx}{indicates whether the term is a fixed d.f. regression
+  it is.}
+  \item{fx}{indicates whether the term is a fixed d.f. regression
   spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
-
-\item{bs}{a two letter character string indicating the (penalized) smoothing basis to use.
-(eg \code{"tp"} for thin plate regression spline, \code{"cr"} for cubic regression spline).
-see \code{\link{smooth.terms}} for an over view of what is available.
-}
-
-\item{m}{The order of the penalty for this term (e.g. 2 for
-    normal cubic spline penalty with 2nd derivatives when using 
-   default t.p.r.s basis). \code{NA} signals
-    autoinitialization. Only some smooth classes use this. The \code{"ps"} 
-    class can use a 2 item array giving the basis and penalty order separately.}
-
-\item{by}{a numeric or factor variable of the same dimension as each covariate. 
-In the numeric vector case the elements multiply the smooth, evaluated at the corresponding 
-covariate values (a `varying coefficient model' results). For the numeric \code{by} variable case the 
-resulting smooth is not usually subject to a centering constraint (so the \code{by variable} should 
-not be added as an additional main effect). 
-In the factor \code{by} variable case a replicate of the smooth is produced for
-each factor level (these smooths will be centered, so the factor usually needs to be added as 
-a main effect as well). See \code{\link{gam.models}} for further details. A \code{by} variable may also be a matrix 
-if covariates are matrices: in this case implements linear functional of a smooth 
-(see \code{\link{gam.models}} and \code{\link{linear.functional.terms}} for details).
-}
-
-\item{xt}{Any extra information required to set up a particular basis. Used
-  e.g. to set large data set handling behaviour for \code{"tp"} basis. If \code{xt$sumConv}
-  exists and is \code{FALSE} then the summation convention for matrix arguments is turned off. }
-
-\item{id}{A label or integer identifying this term in order to link its smoothing
-          parameters to others of the same type. If two or more terms have the same 
-          \code{id} then they will have the same smoothing paramsters, and, by default,
-          the same bases (first occurance defines basis type, but data from all terms 
-          used in basis construction). An \code{id} with a factor \code{by} variable causes the smooths
-          at each factor level to have the same smoothing parameter.} 
-
-\item{sp}{any supplied smoothing parameters for this term. Must be an array of the same
-length as the number of penalties for this smooth. Positive or zero elements are taken as fixed 
-smoothing parameters. Negative elements signal auto-initialization. Over-rides values supplied in 
-\code{sp} argument to \code{\link{gam}}. Ignored by \code{gamm}.}
-\item{pc}{If not \code{NULL}, signals a point constraint: the smooth should pass through zero at the
-point given here (as a vector or list with names corresponding to the smooth names). Never ignored
-if supplied. See \code{\link{identifiability}}. }
+  \item{bs}{this can be \code{"cr"} for a cubic regression spline or
+    \code{"tp"} for a thin plate regression spline. Only thin plate
+    regression splines can be used for multidimensional smooths, so this
+    argument only has an effect for univariate smooths. Note that the
+    \code{"cr"} basis is faster than the \code{"tp"} basis, particularly
+  on large data sets.}
+  \item{m}{The order of the penalty for this t.p.r.s. term (e.g. 2 for
+    normal cubic spline penalty with 2nd derivatives). O signals
+    autoinitialization, which sets the order to the lowest value
+    satisfying 2m>d+1, where d is the number of covariates: this choise
+    ensures visual smoothness. In addition, m must satisfy the technical
+    restriction 2m>d, otherwise it will be autoinitialized.}
+  \item{by}{specifies a covariate by which the whole smooth term is to
+    be multiplied. This is particularly useful for creating models in
+    which a smooth interacts with a factor: in this case the \code{by}
+    variable would usually be the dummy variable coding one level of the
+  factor. See the examples below.}
   }
-
-\details{The function does not evaluate the variable arguments. To use this function to specify use of
-your own smooths, note the relationships between the inputs and the output object and see the example
-in \code{\link{smooth.construct}}.
 }
-\value{ A class \code{xx.smooth.spec} object, where \code{xx} is a basis identifying code given by
-the \code{bs} argument of \code{s}. These \code{smooth.spec} objects define smooths and are turned into
-bases and penalties by \code{smooth.construct} method functions. 
+\details{The function does not evaluate the variable arguments. It will
+  correctly interpret calls like \code{s(x,14|f)} (results in pure
+  regression spline smooth of one variable with a 14 knot cubic
+  regression spline basis), \code{s(x,z,20)} (a penalized regression
+  spline of 2 covariates using a 20 dimensional t.p.r.s. basis),
+  etc. but this feature is purely for back compatibility reasons, and
+  may not be maintained indefinitely. 
 
-The returned object contains the following items:
-
+}
+\value{ A list with the following items:
   \item{term}{An array of text strings giving the names of the covariates that 
 the term is a function of.}
   \item{bs.dim}{The dimension of the basis used to represent the smooth.}
+  \item{bs.type}{The type of basis. 0 is cubic regression spline. 1 is
+    thin plate regression spline. 0 can only be used for 1-d smooths.}
   \item{fixed}{TRUE if the term is to be treated as a pure regression
     spline (with fixed degrees of freedom); FALSE if it is to be treated
   as a penalized regression spline}
@@ -89,34 +62,28 @@ the term is a function of.}
     covariates that it is a function of.}
   \item{p.order}{The order of the t.p.r.s. penalty, or 0 for
     auto-selection of the penalty order.}
-  \item{by}{is the name of any \code{by} variable as text (\code{"NA"} for none).}
-
-
-\item{label}{A suitable text label for this smooth term.}
-\item{xt}{The object passed in as argument \code{xt}.}
-\item{id}{An identifying label or number for the smooth, linking it to other
-smooths. Defaults to \code{NULL} for no linkage. }
-\item{sp}{array of smoothing parameters for the term (negative for
-auto-estimation). Defaults to \code{NULL}.}
+  \item{by}{is the name of any \code{by} variable as text ("NA" for none).}
+  \item{full.call}{Text for pasting into a string to be converted to a
+    gam formula, which has the values of function options given explicitly -
+  this is useful for constructing a fully expanded gam formula which can
+be used without needing access to any variables that may have been used
+to define k, fx, bs or m in the original call. i.e. this is text which
+when parsed and evaluated generates a call to \code{s()} with all the
+options spelled out explicitly.}
 }
 
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
-
-
-\references{
+\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
-and Hall/CRC Press.
-
-
-\url{https://www.maths.ed.ac.uk/~swood34/}
+\url{http://www.stats.gla.ac.uk/~simon/}
 
 }
 
-\seealso{ \code{\link{te}}, \code{\link{gam}}, \code{\link{gamm}}}
+\seealso{   \code{\link{gam}}}
 
 \examples{
 # example utilising `by' variables
@@ -128,12 +95,12 @@ fac<-c(rep(1,n/2),rep(2,n/2)) # create factor
 fac.1<-rep(0,n)+(fac==1);fac.2<-1-fac.1 # and dummy variables
 fac<-as.factor(fac)
 f1 <-  exp(2 * x1) - 3.75887
-f2 <-  0.2 * x1^11 * (10 * (1 - x1))^6 + 10 * (10 * x1)^3 * (1 - x1)^10
+f2 <-  0.2 * x1^11 * (10 * (1 - x1))^6 + 10 * (10 * x1)^3 * (1 - x1)^10 - 1.396
 f<-f1*fac.1+f2*fac.2+x2
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e
 # NOTE: smooths will be centered, so need to include fac in model....
-b<-gam(y~fac+s(x1,by=fac)+x2) 
+b<-gam(y~fac+s(x1,by=fac.1)+s(x1,by=fac.2)+x2) 
 plot(b,pages=1)
 }
 
