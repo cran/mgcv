@@ -95,9 +95,9 @@ ignored if supplied and a one dimensional term will always use a cubic
 regression spline basis. Note that a term of the form \code{s(x)} will
 result in a term with a \code{"tp"} basis.} 
  \item{family}{
-This is a family object specifying the distribution and link to use on
+This is a family object specifying the distribution and link to use in
 fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
-details. Where the family is \code{neg.bin} then a negative binomial
+details. Where the family is \code{ \link{neg.binom}} then a negative binomial
 family is used based on the implementation in the MASS library.
 In this case, if the value of \code{theta} is not given, a version of
 \code{glm.nb} :\code{\link{gam.nbut}} is used to estimate theta iteratively, starting from a 
@@ -117,10 +117,10 @@ prior weights on the data.
 	      items: \code{mgcv.tol} controls the convergence tolerance
 	      to use in smoothing parameter estimation, while
 	      \code{mgcv.half.max} controls the maximum number of step
-	      halvings to try in each Newton step if the step fails to
+	      halvings to try in each optimization step if the step fails to
 	      reduce the GCV score.}
 \item{scale}{ If this is zero then GCV is used for all distributions
-except Poisson binomial and negative binomial where UBRE is used with scale parameter
+except Poisson, binomial and negative binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
 parameter/variance and UBRE is used. If \code{scale} is negative  GCV 
 is always used (for binomial models in particular, it is probably worth 
@@ -174,7 +174,7 @@ expected value for  each datum.}
 \item{nsdf}{number of parametric, non-smooth, model terms including the
           intercept.}
 
-\item{Vp}{estimated covariance matrix for parameters.}
+\item{Vp}{estimated covariance matrix for parameter estimators.}
 
 \item{covariate.shift}{covariates get shifted so that they are centred
   around zero - this is by how much.}
@@ -199,12 +199,23 @@ expected value for  each datum.}
 
 \item{x}{parametric design matrix columns (including intercept)
           followed by the data that form arguments of the smooths.}
-\item{s.type}{type of spline basis used: 0 for cubic, 1 for t.p.r.s.}
+\item{s.type}{type of spline basis used: 0 for conventional cubic regression spline, 1 for t.p.r.s.}
 \item{p.order}{the order of the penalty used for each term. 0 signals
   auto-selection.}
 \item{dim}{number of covariates of which term is a function}
 \item{call}{a mode \code{call} object containing the call to \code{gam()} that produced 
             this \code{gam} object (useful for constructing model frames).}
+  \item{mgcv.conv}{A list of smoothing parameter convergence diagnostics, with the following elements (irrelevant for models with only one smoothing parameter to estimate):
+\item{g}{the gradient of the GCV/UBRE score w.r.t. the smoothing parameters at termination.}
+\item{h}{the second derivatives corresponding to \code{g} above - i.e. the leading diagonal of the Hessian.}
+\item{e}{the eigen-values of the Hessian. These should all be non-negative!}
+\item{iter}{the number of iterations taken.}
+\item{in.ok}{\code{TRUE} if the second smoothing parameter guess improved the GCV/UBRE score. (Please report examples 
+where this is \code{FALSE})}
+\item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by "converging". 
+Not necessarily a problem, but check the above derivative information quite carefully.}
+
+}
 
 }
 
@@ -239,8 +250,7 @@ Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
 model matrix -it will likely just fail instead!
 
 You must have more unique combinations of covariates than the model has total
-parameters. (Total parameters is sum of knots plus sum of non-spline terms
-less the number of spline terms). 
+parameters. (Total parameters is sum of basis dimensions plus sum of non-spline terms less the number of spline terms). 
 
 Automatic smoothing parameter selection is not likely to work well when 
 fitting models to very few response data.
@@ -257,11 +267,11 @@ and find \code{gam} too slow, please let me know - and I'll up the
 priority for fixing this!
  } 
 
-\seealso{  \code{\link{predict.gam}} \code{\link{plot.gam}}}
+\seealso{ \code{\link{s}} \code{\link{predict.gam}} \code{\link{plot.gam}}}
 
 \examples{
 library(mgcv)
-set.seed(8)
+set.seed(1)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)
@@ -290,8 +300,9 @@ y<-rpois(rep(1,n),g)
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
 plot(b2,pages=1)
 # negative binomial data
+set.seed(1)
 y<-rnbinom(g,size=2,mu=g)
-b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=neg.bin)
+b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=neg.binom)
 plot(b3,pages=1)
 # and a pretty 2-d smoothing example....
 test1<-function(x,z,sx=0.3,sz=0.4)  
@@ -315,3 +326,7 @@ par(old.par)
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+

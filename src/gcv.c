@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include "matrix.h"
 #include "gcv.h"
+#include <R.h>
+void ErrorMessage(char *msg, int fatal);
+
 /* routines based on singular value decomposition.... They are not as well
    structured as they could be and have been largely superceeded by the
    more efficient tridiagonalisation based routines that follow */
@@ -292,7 +295,7 @@ double TrInf(matrix *X,matrix *Z,matrix *w,matrix *S,double rho)
   return(zz);
 }
 
-double EScv(matrix *T,matrix *l0,matrix *l1,matrix *x,double nx, matrix *z,double r,long n,
+double EScv(double *ldt,matrix *T,matrix *l0,matrix *l1,matrix *x,double nx, matrix *z,double r,long n,
             double *trace,double *ress,double *sig2)
 
 /* service routine for EasySmooth - obtains GCV score (*sig<=0.0) or UBRE score */
@@ -301,14 +304,14 @@ double EScv(matrix *T,matrix *l0,matrix *l1,matrix *x,double nx, matrix *z,doubl
   int ubre=0;
   double rss=0.0,el,tr;
   if (*sig2>0.0) ubre=1;
-  for (i=0;i<T->r;i++) T->M[i][i] += r;  /* forming I*r + T */
+  for (i=0;i<T->r;i++) { ldt[i]=T->M[i][i];T->M[i][i] += r;}  /* forming I*r + T */
   tricholeski(T,l0,l1);                  /* get LL'=I*r + T */
   tr=1.0-triTrInvLL(l0,l1)*r/n;
 
   z->r=x->r;
   bicholeskisolve(x,z,l0,l1);
   for (i=0;i<x->r;i++)
-  { el=z->V[i]- r * x->V[i];rss+=el*el;T->M[i][i] -= r;
+  { el=z->V[i]- r * x->V[i];rss+=el*el;T->M[i][i] = ldt[i];
   }
   rss+=nx;
   if (!ubre) *sig2=rss/(n*tr); /* variance estimate - GCV only */
@@ -320,6 +323,47 @@ double EScv(matrix *T,matrix *l0,matrix *l1,matrix *x,double nx, matrix *z,doubl
   *ress=rss;*trace=tr;
   /* debugging */
   return(el)/*(n-tr*n-5)*(n-tr*n-5))*/;
+}
+
+double EScheck(matrix *y,matrix Q,matrix *LZSZL,double *rw,double *trial,int m,double rho)
+
+    /* debugging routine to check GCV score according to EScv, given trial eta and rho */
+
+{ double sig2,xx,**MM,**M1M,rss,tr,nx,V,*ldt;
+  int i,l,n,j;
+  matrix T,U,z,l0,l1,x;
+  n=y->r;
+  T=initmat(LZSZL[0].r,LZSZL[0].c);
+  ldt=(double *)calloc((size_t)T.r,sizeof(double));
+  l0=initmat(T.r,1L);l1=initmat(T.r-1,1L);x=initmat(l0.r,1L);
+  U=initmat(T.r,T.c);
+  z=initmat(y->r,1L);
+  xx=exp(trial[0]);MM=LZSZL[0].M;M1M=T.M;
+  for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
+  M1M[i][j]=xx*MM[i][j];
+  for (l=1;l<m;l++) 
+  { xx=exp(trial[l]);MM=LZSZL[l].M;
+    for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
+    M1M[i][j] += xx*MM[i][j];
+  }
+  
+  UTU(&T,&U);    /* Form S=UTU' */
+  
+  z.r=n;
+  for (i=0;i<n;i++) z.V[i]=rw[i]*y->V[i]; /* z=W^{1/2}y */
+  /* matrixintegritycheck(); */
+  OrthoMult(&Q,&z,0,Q.r,0,1,1);           /* z=QW^{1/2}y */
+  z.r=T.r;                                /* z=[I,0]QW^{1/2}y */
+  OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
+  z.r=n;                                  /* z->[z,x_1]' */
+  nx=0.0;for (i=x.r;i<n;i++) nx+=z.V[i]*z.V[i]; /* ||x||^2 */
+  sig2=-1.0; /* setting to signal GCV rather than ubre */
+  V=EScv(ldt,&T,&l0,&l1,&x,nx,&z,rho,n,&tr,&rss,&sig2);
+ 
+  
+  freemat(l0);freemat(l1);freemat(x);freemat(T);freemat(U);freemat(z);
+  free(ldt); 
+ return(V);
 }
 
 double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,double tol)
@@ -341,60 +385,71 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
    tol is golden section search tolerence 1e-6 usually ok
 
    returns smoothing parameter and minimum gcv/ubre score.
+
+   NOTE: there is a problem if r/rho is allowed to be too small, since T is 
+   only positive *semi* definite. For this reason search proceeds from high 
+   r/rho to low.   
 */
 
 { matrix l0,l1,x;
-  double r,V,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx;
-  long k,mesh=50L,i;
-  int gcv=1;
+  double r,V,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt;
+  long k,mesh=100L,i;
+  int gcv=1,ok=0,stop=0;
   minV=0.0;
   if (*sig2>0.0) gcv=0;
   /* Initialise work space matrices */
+  ldt=(double *)calloc((size_t)T->r,sizeof(double)); /* storage for leading diagonal of T*/
   l0=initmat(T->r,1L);l1=initmat(T->r-1,1L);x=initmat(l0.r,1L);
   /* get initial smooth estimates */
   tr=0.0;for (i=0;i<T->r;i++) tr+=T->M[i][i];tr/=T->r;
-  minr=tr*0.0000001;maxr=tr*100000.0;rm=exp(log(maxr/minr)/mesh);
-  r=minr/rm;
+  minr=tr*1e-20;maxr=tr*1e12;
+  rm=exp(log(maxr/minr)/mesh);
+  r=maxr*rm;
   nx=0.0;for (i=x.r;i<n;i++) nx+=z->V[i]*z->V[i]; /* ||x||^2 */
-  for (k=0;k<mesh;k++)
-  { r*=rm;
+  
+  for (k=mesh;k>0;k--)
+  { r/=rm;
     if (gcv) *sig2=-1.0;
-    V=EScv(T,&l0,&l1,&x,nx,z,r,n,&tr,&rss,sig2);
-    if (V<minV||k==0L) 
-    { minV=V;minr=r;
-      if (k==mesh-1) ErrorMessage("Failure to find a minimum of GCV score w.r.t. overall smoothing parameter",0);
+    V=EScv(ldt,T,&l0,&l1,&x,nx,z,r,n,&tr,&rss,sig2);
+    if (V<minV||k==mesh) 
+    { minV=V;minr=r;if (k<mesh) ok=1;
+      if (k==1) /* GCV score still declining at lower boundary of search */
+      ErrorMessage("Failure to find a minimum of GCV score w.r.t. overall smoothing parameter",0); 
     }
-    if (n*tr<1.0)
-    break;
+    if ((k<mesh/2)&&ok&&(V>minV)) stop++;
+    if (stop>1) break;
+    /*if (n*tr<1.0) break;*/
   }
+  if (!ok)  /* GCV score never decreased from first value */
+  ErrorMessage("Failure of overall smoothing parameter search - GCV score never decreased",0);
   /* golden section search to polish minimisation */
   r0=minr/rm;r1=rm*minr;
   tau=2.0/(1.0+sqrt(5.0));
   rt=r0+(r1-r0)*tau;
   if (gcv) *sig2=-1.0;
-  ft=EScv(T,&l0,&l1,&x,nx,z,rt,n,&tr,&rss,sig2);
+  ft=EScv(ldt,T,&l0,&l1,&x,nx,z,rt,n,&tr,&rss,sig2);
   r1t=r0+(r1-r0)*(1.0-tau);
   if (gcv) *sig2=-1.0;
-  f1t=EScv(T,&l0,&l1,&x,nx,z,r1t,n,&tr,&rss,sig2);
+  f1t=EScv(ldt,T,&l0,&l1,&x,nx,z,r1t,n,&tr,&rss,sig2);
   while ((rt-r1t)>tol*fabs(rt+r1t))
   { if (ft<f1t)
     { r0=r1t;r1t=rt;f1t=ft;rt=r0+(r1-r0)*tau;
       if (gcv) *sig2=-1.0;
-      ft=EScv(T,&l0,&l1,&x,nx,z,rt,n,&tr,&rss,sig2);
+      ft=EScv(ldt,T,&l0,&l1,&x,nx,z,rt,n,&tr,&rss,sig2);
     } else
     { r1=rt;rt=r1t;ft=f1t;r1t=r0+(r1-r0)*(1.0-tau);
       if (gcv) *sig2=-1.0;
-      f1t=EScv(T,&l0,&l1,&x,nx,z,r1t,n,&tr,&rss,sig2);
+      f1t=EScv(ldt,T,&l0,&l1,&x,nx,z,r1t,n,&tr,&rss,sig2);
     }
   }
   minr=rt;
   minV=ft;
-
   *v = minV;
   *df=(1.0-sqrt(tr))*n;
   if (gcv) *sig2=-1.0;
-  EScv(T,&l0,&l1,&x,nx,z,minr,n,&tr,&rss,sig2); /* here for debugging purposes */
-  freemat(l0);freemat(l1);freemat(x);
+  *v=EScv(ldt,T,&l0,&l1,&x,nx,z,minr,n,&tr,&rss,sig2); /* here for debugging purposes */
+  
+  freemat(l0);freemat(l1);freemat(x);free(ldt);
   return(minr);
 }
 
@@ -493,7 +548,7 @@ double tediouscv(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
 
 { long i,j,l,n;
   matrix T,U,z,l0,l1,x;
-  double v,nx;
+  double v,nx,*ldt;
   n=y->r;
   T=initmat(LZSZL[0].r,LZSZL[0].r);
   U=initmat(T.r,T.r);
@@ -511,7 +566,9 @@ double tediouscv(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
   OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
   z.r=n;
   l0=initmat(T.r,1L);l1=initmat(T.r-1,1L);x=initmat(T.r,1L);
-  v=EScv(&T,&l0,&l1,&x,nx,&z,rho,n,tr,rss,&sig2);
+  ldt=(double *)calloc((size_t)T.r,sizeof(double));
+  v=EScv(ldt,&T,&l0,&l1,&x,nx,&z,rho,n,tr,rss,&sig2);
+  free(ldt);
   freemat(l0);freemat(l1);freemat(x);freemat(T);freemat(U);freemat(z);
   return(v);
 }
@@ -527,18 +584,18 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
          
   int i,j,k;
   matrix a,M,p;
-  printf("\nHit Return ... ");getc(stdin);
+  Rprintf("\nHit Return ... ");getc(stdin);
   v=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&tr,&rss,sig2);t=tr;r=rss;
-  printf("\ntedious cv = %g\n",v);
-  for (i=0;i<m;i++)
+  Rprintf("\ntedious cv = %g\n",v);
+  for (i=0;i<m;i++) /* the gradients of the gcv function */
   { trial[i]+=dt1;
     v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&tr1,&rss1,sig2);
     trial[i] -= dt1;
     tr1=(tr1-tr)/(dt1);
     rss1=(rss1-rss)/(dt1);
-    printf("\ng%d = %g drss=%g  dtr=%g",i,(v1-v)/dt1,rss1,tr1);
+    Rprintf("\ng%d = %g drss=%g  dtr=%g",i,(v1-v)/dt1,rss1,tr1);
   }
-  printf("\n");
+  Rprintf("\n");
   for (i=0;i<m;i++) for (j=0;j<=i;j++)
   { if (i!=j)
     { /*trial[i] += dt1/2;trial[j]+=dt2/2;
@@ -560,36 +617,36 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
       trial[i]+=dt1/2;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=0;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]=dt1/2;M.M[k][2]=0.0;M.M[k][3]=0.0;
+      M.M[k][4]=dt1*dt1/4;M.M[k][5]=0.0;a.V[k]=v1;
       trial[i]-=dt1;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=1;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]= -dt1/2;M.M[k][2]=0.0;M.M[k][3]=0.0;
+      M.M[k][4]=dt1*dt1/4;M.M[k][5]=0.0;a.V[k]=v1;
       trial[i]-=dt1/2;trial[j]-=dt1;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=2;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]= -dt1;M.M[k][2]= -dt1;M.M[k][3]= dt1*dt1;
+      M.M[k][4]=dt1*dt1;M.M[k][5]=dt1*dt1;a.V[k]=v1;
       trial[j]+=2*dt1;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=3;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]= -dt1;M.M[k][2]= dt1;M.M[k][3]= -dt1*dt1;
+      M.M[k][4]=dt1*dt1;M.M[k][5]= dt1*dt1;a.V[k]=v1;
       trial[i]+=2*dt1;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=4;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]=dt1;M.M[k][2]=dt1;M.M[k][3]=dt1*dt1;
+      M.M[k][4]=dt1*dt1;M.M[k][5]=dt1*dt1;a.V[k]=v1;
       trial[j]-=2*dt1;
       v1=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t1,&r1,sig2);
       k=5;
-      M.M[k][0]=1.0;M.M[k][1]=trial[i];M.M[k][2]=trial[j];M.M[k][3]=trial[i]*trial[j];
-      M.M[k][4]=trial[i]*trial[i];M.M[k][5]=trial[j]*trial[j];a.V[k]=v1;
+      M.M[k][0]=1.0;M.M[k][1]=dt1;M.M[k][2]=-dt1;M.M[k][3]=-dt1*dt1;
+      M.M[k][4]=dt1*dt1;M.M[k][5]=dt1*dt1;a.V[k]=v1;
       trial[i]-=dt1;trial[j]+=dt1;
       svdLS(M,p,a,1e-10);
-      printf("%8.4g  ",p.V[3]);
+      Rprintf("%8.4g  ",p.V[3]);
       freemat(p);freemat(M);freemat(a);
     } else
     { trial[i] += dt1;
@@ -601,13 +658,262 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
     /*  f=(r1-2*r+r2);f/=dt1*dt1; */
      /* f=(t1-2*t+t2);f/=dt1*dt1; */
 
-      printf("%8.4g\n",f);
+      Rprintf("%8.4g\n",f);
     }
   }
 }
 
+
+
+void MSgH(int ubre,int m,matrix *LZrS,matrix *ULZrS,matrix *ULZSZLU,matrix *U,matrix *T,matrix *l0,matrix *l1,matrix *A,matrix *H
+	  ,matrix *d,matrix *c,matrix *Wy,matrix *Ay,matrix *dAy,matrix *dpAy,matrix *Q,matrix *g,matrix *Hess,double rho,double sig2
+,double *trdA,double **trd2A,double *eta,double *da,double **d2a,double *db,double **d2b)
+/* service routine for MultiSmooth - calculates gradient and Hessian of GCV score w.r.t. smoothing parameters */
+{ int l,i,j,k,n;
+  double **MM,**M1M,x,*pp,*pp1,trA,a,b; 
+  /* form U'L'Z'S_i^{0.5} and U'L'Z'S_iZLU - This is the expensive part -
+         <= O(n^3) worth further optimization of address calculation later.... */
+  for (l=0;l<m;l++)
+  { mcopy(LZrS+l,ULZrS+l);
+    OrthoMult(U,ULZrS+l,1,T->r-2,1,1,0);
+    MM=ULZrS[l].M;M1M=ULZSZLU[l].M;
+    for (i=0;i<ULZrS[l].r;i++) for (j=0;j<=i;j++)
+    { x=0.0;pp=MM[i];pp1=MM[j];
+      for (k=0;k<ULZrS[l].c;k++) {x+= *pp * *pp1;pp++;pp1++;}
+      M1M[i][j]=M1M[j][i]=x;
+    }
+  }
+     
+  /* now calculate the various traces needed in the calculation.
+     These will be stored in trA, trdA[], trd2A[][]. These calculations
+     are up to O(n^2)*/
+  trA=triTrInvLL(l0,l1)*rho;
+  for (l=0;l<m;l++)
+  { A->r=ULZrS[l].r;A->c=ULZrS[l].c;
+    bicholeskisolve(A,ULZrS+l,l0,l1);
+    trdA[l]=0.0;
+    for (i=0;i<A->r;i++) for (j=0;j<A->c;j++)
+    trdA[l] -= A->M[i][j]*A->M[i][j];
+    trdA[l]*=rho;
+  }
+    
+  /* first form (Ir+T)^{-1}U'L'Z'S_iZLU(Ir+T)^{-0.5} for all i */
+  for (l=0;l<m;l++)
+  { A->r=ULZSZLU[l].r;A->c=ULZSZLU[l].c;
+    bicholeskisolve(A,ULZSZLU+l,l0,l1);
+    for (i=0;i<A->r;i++) H[l].M[i][0]=A->M[i][0]/l0->V[0];
+    for (j=1;j<A->c;j++) for (i=0;i<A->r;i++)
+    H[l].M[i][j]=(A->M[i][j]-H[l].M[i][j-1]*l1->V[j-1])/l0->V[j];
+        /* H algorithm checked directly - ok */
+  }
+  for (l=0;l<m;l++) for (k=0;k<=l;k++)
+  { x=0.0;
+    for (i=0;i<H[l].r;i++) for (j=0;j<H[k].c;j++)
+    x+=H[l].M[i][j]*H[k].M[i][j];
+    trd2A[l][k]=trd2A[k][l]=2*x*rho;
+    if (l==k) trd2A[l][k]+=trdA[l]/exp(eta[l]);
+  }
+  /* Now form b, db[], d2b[][] ...... */
+  n=(int)Wy->r;
+  b=1-trA/Wy->r;b=b*b;
+  for (l=0;l<m;l++) db[l]= exp(eta[l])*2.0/n*(trA/n-1)*trdA[l];
+  for (l=0;l<m;l++) for (k=0;k<=l;k++)
+  d2b[k][l]=d2b[l][k]=
+  exp(eta[l]+eta[k])*2.0/n*(trdA[l]*trdA[k]/n-(1-trA/n)*trd2A[l][k]);
+  /* Need the derivatives of the rss term next. Use W^{0.5}y in place of y.
+     Form and store vector Ay = Q'[I,0]'U(I*r+T)^{-1}U'[I,0]Qy */
+  d->r=n;for (i=0;i<n;i++) d->V[i]=Wy->V[i];  /* W^{0.5}y */
+  OrthoMult(Q,d,0,Q->r,0,1,1);
+  Ay->r=d->r=T->r;
+  OrthoMult(U,d,1,T->r-2,1,1,0);
+  bicholeskisolve(Ay,d,l0,l1); /* Ay = (I*r+T)^{-1}U'[I,0]Qy */
+  /* now for the dAy[] and dpAy[] terms, before finishing off Ay :
+     dpAy[i] = (I*r+T)^{-1}U'L'Z'S_iZLU(I*r+T)^{-1}U'[I,0]Qy
+     dAy[i] = -Q'[I,0]'U dpAy[i]
+     the dpAy[] terms save time in calculating d^2A/dt_idt_j
+  */
+  for (l=0;l<m;l++)
+  { A->r=T->r;A->c=1L;
+    matmult(*A,ULZSZLU[l],*Ay,0,0);
+    bicholeskisolve(dpAy+l,A,l0,l1);
+    for (i=0;i<dpAy[l].r;i++) dAy[l].V[i]= -dpAy[l].V[i];
+    for (i=dpAy[l].r;i<dAy[l].r;i++) dAy[l].V[i]=0.0;
+    dAy[l].r= dpAy[l].r;
+    OrthoMult(U,dAy+l,1,T->r-2,0,1,0);
+    dAy[l].r=Wy->r;
+    OrthoMult(Q,dAy+l,0,Q->r,1,1,1);
+    for (i=0;i<dAy[l].r;i++) dAy[l].V[i]*=rho;
+  }
+  /* now finish Ay.... */
+  OrthoMult(U,Ay,1,T->r-2,0,1,0);
+  Ay->r=Wy->r;for (i=T->r;i<Wy->r;i++) Ay->V[i]=0.0;
+  OrthoMult(Q,Ay,0,Q->r,1,1,1);
+  for (i=0;i<Ay->r;i++) Ay->V[i]*=rho;
+  /* form a, da[] & d2a[][]..... */
+  for (l=0;l<m;l++) for (k=0;k<=l;k++)  /* starting with d2a[][]... */
+  { matmult(*A,ULZSZLU[k],dpAy[l],0,0); /* forming (A=) U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
+    c->r=T->r;
+    bicholeskisolve(c,A,l0,l1);  /* forming (c=) (I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
+    matmult(*A,ULZSZLU[l],dpAy[k],0,0);  /* This line and next 3 are a bug */
+    d->r=T->r;                            /* fix for incorrect original */
+    bicholeskisolve(d,A,l0,l1);     /* derivation - 18/8/99 */
+    for (i=0;i<c->r;i++) c->V[i]+=d->V[i];
+    OrthoMult(U,c,1,T->r-2,0,1,0);  /* forming (c=) U(I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
+    c->r=Wy->r;
+    for (i=T->r;i<Wy->r;i++) c->V[i]=0.0; /* and premutiplying result by (0',I')' */
+    OrthoMult(Q,c,0,Q->r,1,1,1);      /* premultiplying by Q' */
+    for (i=0;i<c->r;i++) c->V[i]*=rho; /* c=d^2A/dt_idt_j y */
+    if (l==k) /* then operator needs additional term dA/dt_i y / e^eta_i*/
+    { for (i=0;i<c->r;i++)
+      c->V[i]+=dAy[l].V[i]/exp(eta[l]);
+    }
+
+    x=0.0;
+    for (i=0;i<Wy->r;i++) x+= dAy[l].V[i]*dAy[k].V[i]+(Ay->V[i]-Wy->V[i])*c->V[i];
+    x*=2.0/n;d2a[l][k]=d2a[k][l]=exp(eta[l]+eta[k])*x;
+  }  /* form da[] */
+  for (l=0;l<m;l++)
+  { x=0.0;
+    for (i=0;i<Wy->r;i++) x+=(Ay->V[i]-Wy->V[i])*dAy[l].V[i];
+    x*=2.0/n;
+    da[l]=x*exp(eta[l]);
+  }
+  a=0.0;
+  for (i=0;i<Wy->r;i++) a+=Wy->V[i]*Wy->V[i]+(Ay->V[i]-2*Wy->V[i])*Ay->V[i];
+  a/=n;
+  /* with luck and a fair wind we now have the ingredients for the gradient
+     and Hessian */
+  for (i=0;i<m;i++)
+  { if (ubre)
+    { g->V[i]=da[i]- sig2/sqrt(b)*db[i];
+      for (j=0;j<=i;j++)
+      Hess->M[j][i]=Hess->M[i][j]=d2a[i][j]- sig2/sqrt(b)*d2b[i][j] +
+                                    sig2/(2*sqrt(b)*b)*db[i]*db[j];
+    } else /* it's GCV */
+      { g->V[i]=da[i]/b - a*db[i]/(b*b);
+        for (j=0;j<=i;j++)
+        Hess->M[j][i]=Hess->M[i][j]=d2a[i][j]/b-(da[i]*db[j]+da[j]*db[i])/(b*b)
+                              +2*a*db[i]*db[j]/(b*b*b)-a*d2b[i][j]/(b*b);
+      }
+   }
+  
+}
+
+void MSsetup(int m,long n,long np,long nz, long *off,matrix *A,matrix *c,matrix *d,matrix *Ay,matrix *Hess,matrix *g,
+matrix *Wy,matrix *R,matrix *J,matrix *z,matrix *Z,matrix *Q,matrix **LZrS,matrix **LZSZL,matrix **ULZSZLU,matrix **H,
+matrix **ULZrS,matrix *w,matrix *y,matrix *S,matrix *T,matrix *U,matrix *l0,matrix *l1,matrix **dAy,matrix **dpAy,double **trdA,
+double **da,double **db,double ***trd2A,double ***d2a,double ***d2b,double **ninf,double **pinf,double **rw)
+
+/* Routine to do various initialization tasks for MultiSmooth */ 
+
+{ int i,j,k,l;
+  double *pp,x,**RM,**MM,**M1M,**M2M;
+  matrix ZC,C;
+  *A=initmat(np,np); /* workspace matrix */
+  *c=initmat(n,1L); /*     "     vector  */
+  *d=initmat(n,1L);
+  *Ay=initmat(n,1L);
+  *Hess=initmat((long)m,(long)m);*g=initmat((long)m,1L);
+  *trdA=(double *)calloc((size_t)m,sizeof(double));
+  *da=(double *)calloc((size_t)m,sizeof(double));
+  *db=(double *)calloc((size_t)m,sizeof(double));
+  *trd2A=(double **)calloc((size_t)m,sizeof(double));
+  *d2a=(double **)calloc((size_t)m,sizeof(double));
+  *d2b=(double **)calloc((size_t)m,sizeof(double));
+  *ninf=(double *)calloc((size_t)m,sizeof(double));
+  *pinf=(double *)calloc((size_t)m,sizeof(double));
+  for (k=0;k<m;k++)
+  { (*trd2A)[k]=(double *)calloc((size_t)m,sizeof(double));
+    (*d2a)[k]=(double *)calloc((size_t)m,sizeof(double));
+    (*d2b)[k]=(double *)calloc((size_t)m,sizeof(double));
+  }
+  /* Get Q'R=W^{0.5} J Z */
+  *rw=(double *)calloc((size_t)n,sizeof(double));
+  for (i=0;i<n;i++) (*rw)[i]=sqrt(w->V[i]);   /* rw contains l.d. of W^{0.5} */
+  *Wy=initmat(n,1L);
+  for (i=0;i<n;i++) Wy->V[i] = (*rw)[i] * y->V[i];
+  if (Z->r)
+  { *R=initmat(n,np);mcopy(J,R);
+    HQmult(*R,*Z,0,0);R->c=nz;
+    /* matmult(R,*J,*Z,0,0); FZ */ /* R=JZ - up to O(n^3) */
+  } else
+  { *R=initmat(n,np);mcopy(J,R);}          /* case when Z=I */
+  RM=R->M;
+  for (i=0;i<n;i++)
+  { x=(*rw)[i];for (pp=RM[i];pp<RM[i]+R->c;pp++) *pp *= x;}  /* R=W^{0.5} JZ */
+  *Q=initmat(np,n);/* altered for efficient storage */
+  QR(Q,R);  /* done in up to O(n^3) */
+  /* invert R - it is this step that requires n>=nz*/
+  R->r=R->c; /* getting rid of zero part */
+  InvertTriangular(R);   /* R now contains L - explicit R formation isn't very efficient */
+  /* Form the matrices L'Z'S^{0.5} and L'Z'S_iZL */
+  ZC=initmat(np,np);
+  *LZrS=(matrix *)calloc((size_t)m,sizeof(matrix));
+  *LZSZL=(matrix *)calloc((size_t)m,sizeof(matrix));
+  *ULZSZLU=(matrix *)calloc((size_t)m,sizeof(matrix));
+  *H= (matrix *)calloc((size_t)m,sizeof(matrix));
+  *ULZrS=(matrix *)calloc((size_t)m,sizeof(matrix));
+  for (l=0;l<m;l++)   /* Initialization Loop */
+  { root(S+l,&C,1e-14);    /* S[l]=CC' - initializes C */
+    if (Z->r)
+    { ZC.c=C.c;ZC.r=np;
+      /* set ZC = [0,C',0]' */
+      for (i=0;i<off[l];i++) for (j=0;j<C.c;j++) ZC.M[i][j]=0.0;
+      for (i=off[l];i<off[l]+C.r;i++)
+      for (j=0;j<C.c;j++) ZC.M[i][j]=C.M[i-off[l]][j];
+      for (i=off[l]+C.r;i<np;i++)
+      for (j=0;j<C.c;j++) ZC.M[i][j]=0.0;
+      /* ...and apply Z efficiently, to get Z'C... */
+      HQmult(ZC,*Z,1,1);ZC.r=nz;  /* bug fixed here 17/8/99 - Z was untransposed! */
+    } else
+    { ZC.c=C.c;ZC.r=np;
+      for (i=0;i<ZC.r;i++) for (j=0;j<ZC.c;j++) ZC.M[i][j]=0.0;
+      for (i=0;i<C.r;i++) for (j=0;j<C.c;j++) ZC.M[i+off[l]][j]=C.M[i][j];
+    }
+    freemat(C);
+    (*LZrS)[l]=initmat(R->c,ZC.c);
+    MM= (*LZrS)[l].M;M1M=R->M;M2M=ZC.M;
+    for (i=0;i<(*LZrS)[l].r;i++) for (j=0;j<(*LZrS)[l].c;j++)
+    for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
+    (*LZSZL)[l]=initmat(R->c,R->c); /* this memory requirement could be halved */
+    matmult((*LZSZL)[l],(*LZrS)[l],(*LZrS)[l],0,1);
+    if (R->c>=ZC.c) (*H)[l]=initmat(R->c,R->c);    /* need to make sure that matrix is big enough for storage sharing with ULZrS */
+    else { (*H)[l]=initmat(R->c,ZC.c);(*H)[l].c=R->c;}
+    (*ULZSZLU)[l]=initmat(R->c,R->c); /* memory requirement could be halved, but would need own choleskisolve */
+    (*ULZrS)[l].M=(*H)[l].M;(*ULZrS)[l].r=R->c;(*ULZrS)[l].c=ZC.c; /* sharing memory with H[l] */
+  }
+  freemat(ZC);
+
+  *T=initmat(R->c,R->c);
+  *U=initmat(T->r,T->r);
+  *z=initmat(n,1L);
+  *l0=initmat(T->r,1L);*l1=initmat(T->r-1,1L);
+  *dAy=(matrix *)calloc((size_t)m,sizeof(matrix));
+  *dpAy=(matrix *)calloc((size_t)m,sizeof(matrix));
+  for (l=0;l<m;l++) { (*dAy)[l]=initmat(n,1L);(*dpAy)[l]=initmat(T->r,1L);}
+}
+
+
+void init_msrep(msrep_type *msrep,int m)
+/* Initialize the memory for a MultiSmooth diagnostic report object */
+{ msrep->g=(double *)calloc((size_t)m,sizeof(double));
+  msrep->h=(double *)calloc((size_t)m,sizeof(double));
+  msrep->e=(double *)calloc((size_t)m,sizeof(double));
+}
+
+
+void free_msrep(msrep_type *msrep)
+/* free the memory for a MultiSmooth diagnostic report object */
+{ free(msrep->g);
+  free(msrep->h);
+  free(msrep->e);
+}
+
+
+
 double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
-                 double *theta,long *off,int m,double *sig2,msctrl_type *msctrl)
+                 double *theta,long *off,int m,double *sig2,msctrl_type *msctrl,
+				 msrep_type *msrep)
 
 /* routine for multiple smoothing parameter problems, with influence matrix:
    A=r*JZ(Z'J'WJZ*r + \sum_{i=1}^m \theta_i Z'S_iZ)^{-1} Z'J'W
@@ -631,10 +937,31 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
    of smoothing parameters takes place. Otherwise the supplied theta[i]s are
    used as initial estimates. On exit theta[i] contains best estimates of
    theta[i]/rho.
+   
+   Autoinitialization is performed as follows:
 
-   NOTE that for some problems it may make sense to initialise by 
-   running first with very low s.p.s and then using the Wahba suggested 2nd
-   guesses - not implemented yet.
+   1. Initialize theta[i] to 1/(tr(S[i])) and estimate rho and p.
+   2. re-initilize theta[i] to rank(S[i])/(p'S[i]p)
+
+   Step 2. is heuristic. Suppose that we were to fit model as least squares problem
+   min ||y* - X* p||^2 where X*=[X',(la[0]*S[0])^0.5,(la[1]*S[1])^0.5,...]' and
+   y*=[y',0,0 ... ]', where la[i] are absolute smoothing parameters. If the implied 
+   constant variance assumtion were true then all la[i]*p'S[i]p/rank(S[i]) should be 
+   equal (to the resiudal ||y-Xp||^2, in fact).
+
+   The minimisation strategy alternates exact searches for an overall s.p. with trial
+   steps for the log relative parameters eta[]. The trial steps are determined as follows:
+   
+   If the Hessian is +ve definite use a Newton step, but scale the step length so that 
+   no component of the step is greater than 5. Half the step length up to 4 times if the 
+   step is not successful, if the direction still doesn't work, switch to steepest descent.
+
+   If the Hessian is not +ve definite then use steepest descent, scaling the direction
+   so that the largest component has unit length. Half the direction while it's failing.
+
+   Steps are *never* expanded, even if this would decrease the score further: this guards
+   against stepping into regions of the score that are flat w.r.t. some eta[i].
+
 
    Z is actually supplied as a matrix containing a series of householder
    transformations, as produced by QT when fullQ==0... this improves efficiency
@@ -644,194 +971,134 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
    Supplying *sig2 as a positive number signals the routine to use UBRE, rather
    than GCV, since *sig2 is known. Supplying *sig2 as zero or negative causes
    the routine to use GCV. (added 15/1/99)
-   
+
+
    msctrl->conv_tol controls the convergence tolerence (1e-6 usually ok)
    msctrl->max_step_half gives the number of step halvings to try during Newton 
-                         updates (15 is usdually ok)
+                         updates (15 is usually ok)
  
    Returns gcv/ubre score. 
+
+   msrep is a structure that is loaded with various convergence diagnostics (assuming m>1).
+
+   msrep.g is an array of GCV/UBRE score gradients w.r.t. smoothing params.
+   msrep.h is array of GCV/UBRE second derivatives w.r.t. s.p.s (leading diagonal of Hessian)
+   msrep.e is array of eigenvalues of Hessian [all should be +ve at convergence]
+   msrep.iter is number of iterations taken
+   msrep.inok is 1 if second guess was ok (or not auto-initialized) 0 otherwise.
+   msrep.m is number of s.p.s
+   
 */
 
-{ double *rw,tr,*eta,*del,*trial,trA,a,b,*trdA,**trd2A,*db,**d2b,*da,**d2a,
-          rho,v,vmin=0.0,x,**RM,*pp,**MM,**M1M,**M2M,*pp1,tdf,xx1,xx2,tol,
-          *pinf,*ninf;
-  long i,j,k,l,n,np,nz;
-  int iter,reject,ok=1,autoinit=0,op=0,trials,ubre=0,accept=0;
-  matrix z,l0,l1,Q,R,C,ZC,*LZrS,*LZSZL,T,U,A,Wy,Hess,g,c,*H,*ULZSZLU,
-         *ULZrS,*dAy,*dpAy,d,Ay;
+{ double *rw,tr,*eta,*del,*trial,*trdA,**trd2A,*db,**d2b,*da,**d2a,
+          rho,v,vmin=0.0,x,**MM,**M1M,tdf,xx1,tol,
+          *pinf,*ninf,*ldt;
+  long i,j,l,n,np,nz;
+  int iter,reject,ok=1,autoinit=0,op=0,ubre=0,accept=0,steepest=0;
+  matrix z,l0,l1,Q,R,*LZrS,*LZSZL,T,U,A,Wy,Hess,g,c,*H,*ULZSZLU,
+         *ULZrS,*dAy,*dpAy,d,Ay,dum;
   if (*sig2>0.0) ubre=1; /* use UBRE rather than GCV */
   n=y->r;  /* number of datapoints */
   np=J->c; /* number of parameters */
   for (i=0;i<m;i++) if (theta[i]<=0.0) autoinit=1;
-  if (Z->r) /*nz=Z->c FZ */ nz=np-Z->r;else nz=np; /* dimension of null space */
-  A=initmat(np,np); /* workspace matrix */
-  c=initmat(n,1L); /*     "     vector  */
-  d=initmat(n,1L);
-  Ay=initmat(n,1L);
-  Hess=initmat((long)m,(long)m);g=initmat((long)m,1L);
-  /*for (l=0;l<m;l++) ... appears to be totally redundant matrix allocation */
-  { trdA=(double *)calloc((size_t)m,sizeof(double));
-    da=(double *)calloc((size_t)m,sizeof(double));
-    db=(double *)calloc((size_t)m,sizeof(double));
-    trd2A=(double **)calloc((size_t)m,sizeof(double));
-    d2a=(double **)calloc((size_t)m,sizeof(double));
-    d2b=(double **)calloc((size_t)m,sizeof(double));
-    ninf=(double *)calloc((size_t)m,sizeof(double));
-    pinf=(double *)calloc((size_t)m,sizeof(double));
-    for (k=0;k<m;k++)
-    { trd2A[k]=(double *)calloc((size_t)m,sizeof(double));
-      d2a[k]=(double *)calloc((size_t)m,sizeof(double));
-      d2b[k]=(double *)calloc((size_t)m,sizeof(double));
-    }
-  }
-  /* Get Q'R=W^{0.5} J Z */
-  rw=(double *)calloc((size_t)n,sizeof(double));
-  for (i=0;i<n;i++) rw[i]=sqrt(w->V[i]);   /* rw contains l.d. of W^{0.5} */
-  Wy=initmat(n,1L);
-  for (i=0;i<n;i++) Wy.V[i]=rw[i]*y->V[i];
-  if (Z->r)
-  { R=initmat(n,np);mcopy(J,&R);
-    HQmult(R,*Z,0,0);R.c=nz;
-    /* matmult(R,*J,*Z,0,0); FZ */ /* R=JZ - up to O(n^3) */
-  } else
-  { R=initmat(n,np);mcopy(J,&R);}          /* case when Z=I */
-  RM=R.M;
-  for (i=0;i<n;i++)
-  { x=rw[i];for (pp=RM[i];pp<RM[i]+R.c;pp++) *pp *= x;}  /* R=W^{0.5} JZ */
-  Q=initmat(np,n);/* altered for efficient storage */
-  QR(&Q,&R);  /* done in up to O(n^3) */
-  /* invert R - it is this step that requires n>=nz*/
-  R.r=R.c; /* getting rid of zero part */
-  InvertTriangular(&R);   /* R now contains L - explicit R formation isn't very efficient */
-  /* Form the matrices L'Z'S^{0.5} and L'Z'S_iZL */
-  ZC=initmat(np,np);
-  LZrS=(matrix *)calloc((size_t)m,sizeof(matrix));
-  LZSZL=(matrix *)calloc((size_t)m,sizeof(matrix));
-  ULZSZLU=(matrix *)calloc((size_t)m,sizeof(matrix));
-  H= (matrix *)calloc((size_t)m,sizeof(matrix));
-  ULZrS=(matrix *)calloc((size_t)m,sizeof(matrix));
-  for (l=0;l<m;l++)
-  { root(S+l,&C,1e-14);    /* S[l]=CC' */
-    if (Z->r)
-    { ZC.c=C.c;ZC.r=np;
-      /* set ZC = [0,C',0]' */
-      for (i=0;i<off[l];i++) for (j=0;j<C.c;j++) ZC.M[i][j]=0.0;
-      for (i=off[l];i<off[l]+C.r;i++)
-      for (j=0;j<C.c;j++) ZC.M[i][j]=C.M[i-off[l]][j];
-      for (i=off[l]+C.r;i<np;i++)
-      for (j=0;j<C.c;j++) ZC.M[i][j]=0.0;
-      /* ...and apply Z efficiently, to get Z'C... */
-      HQmult(ZC,*Z,1,1);ZC.r=nz;  /* bug fixed here 17/8/99 - Z was untransposed! */
 
-      /* MM=ZC.M;M1M=Z->M;M2M=C.M;
-      ZC.c=C.c;ZC.r=nz;
-      for (i=0;i<ZC.r;i++) for (j=0;j<ZC.c;j++)
-      { MM[i][j]=0.0;
-        for (k=0;k<C.r;k++)
-        MM[i][j]+=M1M[k+off[l]][i]*M2M[k][j];
-      }  FZ*/
-    } else
-    { ZC.c=C.c;ZC.r=np;
-      for (i=0;i<ZC.r;i++) for (j=0;j<ZC.c;j++) ZC.M[i][j]=0.0;
-      for (i=0;i<C.r;i++) for (j=0;j<C.c;j++) ZC.M[i+off[l]][j]=C.M[i][j];
-    }
-    freemat(C);
-    LZrS[l]=initmat(R.c,ZC.c);
-    MM=LZrS[l].M;M1M=R.M;M2M=ZC.M;
-    for (i=0;i<LZrS[l].r;i++) for (j=0;j<LZrS[l].c;j++)
-    for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
-    LZSZL[l]=initmat(R.c,R.c); /* this memory requirement could be halved */
-    matmult(LZSZL[l],LZrS[l],LZrS[l],0,1);
-    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    /* need to make sure that matrix is big enough for storage sharing with ULZrS */
-    else { H[l]=initmat(R.c,ZC.c);H[l].c=R.c;}
-    ULZSZLU[l]=initmat(R.c,R.c); /* memory requirement could be halved, but would need own choleskisolve */
-    /*ULZrS[l]=initmat(R.c,ZC.c); */
-    ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; /* sharing memory with H[l] */
-  }
-  /* Start the main loop */
-  freemat(ZC);
+  if (Z->r) nz=np-Z->r;else nz=np; /* dimension of null space */
+  
+  MSsetup(m,n,np,nz,off,&A,&c,&d,&Ay,&Hess,&g,&Wy,&R,J,&z,Z,&Q,&LZrS,&LZSZL,&ULZSZLU,&H,
+	   &ULZrS,w,y,S,&T,&U,&l0,&l1,&dAy,&dpAy,&trdA,&da,&db,&trd2A,&d2a,&d2b,&ninf,&pinf,&rw);
+  
+  ldt=(double *)calloc((size_t)T.r,sizeof(double)); /* used for storing leading diagonal of T */
+  dum=initmat((long)m,1L); /* dummy matrix for use in Newton step */
   eta=(double *)calloc((size_t)m,sizeof(double));
   del=(double *)calloc((size_t)m,sizeof(double)); /* change in s.p.s */
   trial=(double *)calloc((size_t)m,sizeof(double));
   /* get initial estimates for theta_i and eta_i=log(theta_i) */
+  msrep->step_fail=0;
+  msrep->inok=1;
   if (autoinit)
   for (l=0;l<m;l++)
   { tr=0.0;for (i=0;i<LZSZL[l].r;i++) tr+=LZSZL[l].M[i][i];
-    eta[l]=log(1.0/(n*tr));/*eta[l]= -40.0; */
+    eta[l]=log(1.0/(n*tr));
+  /*    eta[l]=log(n*tr);*/
+    rho=1.0;
   } else
   { x=0.0;for (i=0;i<m;i++) { eta[i]=log(theta[i]);x+=eta[i];}
-    x/=m;
+    x/=m;rho=1.0;
     for (i=0;i<m;i++) { ninf[i]=eta[i]-x-300.0;pinf[i]=ninf[i]+600.0;}
   }
-  T=initmat(R.c,R.c);
-  U=initmat(T.r,T.r);
-  z=initmat(n,1L);
-  l0=initmat(T.r,1L);l1=initmat(T.r-1,1L);
-  dAy=(matrix *)calloc((size_t)m,sizeof(matrix));
-  dpAy=(matrix *)calloc((size_t)m,sizeof(matrix));
-  for (l=0;l<m;l++) { dAy[l]=initmat(n,1L);dpAy[l]=initmat(T.r,1L);}
   iter=0;  /* iteration counter */
-  while (ok)
+  while (ok) /* The main loop */
   { /* form combined smoothness measure */
     reject=1;
     while (reject) /* try current search direction (unless first step) */
     { x=0.0;for (i=0;i<m;i++) { trial[i]=eta[i]+del[i];x+=trial[i];}
       x/=m;
-      for (i=0;i<m;i++) trial[i] -= x; /* normalising smooths */
+      for (i=0;i<m;i++) {trial[i] -= x;} /* normalising smooths */
       if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
       { for (i=0;i<m;i++)
         if (trial[i]<ninf[i])
-        trial[i]=ninf[i];
+	    { trial[i]=ninf[i];ErrorMessage("resetting -ve inf",0);}
         else if (trial[i]>pinf[i])
-        trial[i]=pinf[i];
+	    { trial[i]=pinf[i];ErrorMessage("resetting +ve inf",0);}
       } 
       /* form S the combined smooth measure */
+      x=exp(trial[0]);MM=LZSZL[0].M;M1M=T.M;
       for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
-      T.M[i][j]=exp(trial[0])*LZSZL[0].M[i][j];
-      for (l=1;l<m;l++) for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
-      T.M[i][j] += exp(trial[l])*LZSZL[l].M[i][j];
+      M1M[i][j]=x*MM[i][j];
+      for (l=1;l<m;l++) 
+      { x=exp(trial[l]);MM=LZSZL[l].M;
+        for (i=0;i<T.r;i++) for (j=0;j<T.c;j++)
+        M1M[i][j] += x*MM[i][j];
+      }
       UTU(&T,&U);    /* Form S=UTU' */
       z.r=n;
       for (i=0;i<n;i++) z.V[i]=rw[i]*y->V[i]; /* z=W^{1/2}y */
-     /* matrixintegritycheck(); */
       OrthoMult(&Q,&z,0,Q.r,0,1,1);           /* z=QW^{1/2}y */
       z.r=R.r;                                /* z=[I,0]QW^{1/2}y */
       OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
       z.r=n;                                  /* z->[z,x_1]' */
       if (!ubre) *sig2=-1.0; /* setting to signal GCV rather than ubre */
-      rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,msctrl->conv_tol);    /* do a cheap minimisation in rho */
-   
+	  rho=EasySmooth(&T,&z,&v,&tdf,n,sig2,1e-14);    /* do a cheap minimisation in rho */
       z.r=R.r;
-      if (!iter||v<vmin) /* accept current step */
+      if ((!iter||v<vmin)&&(reject!=msctrl->max_step_half-1)) /* accept current step - last condition avoids prob. with bad guess 2 */
       { if (autoinit) { if (iter>1) accept++;} else accept++; /* counting successful updates */
-        reject=0;
-        /* test for convergence */
-        tol=msctrl->conv_tol;ok=0;
-        if (vmin-v>tol*(1+v)) ok=1;
-        xx1=0.0;for (i=0;i<m;i++) { xx2=eta[i]-trial[i];xx1+=xx2*xx2;}
-        xx1=sqrt(xx1);
-        xx2=0.0;for (i=0;i<m;i++) xx2+=trial[i]*trial[i];
-        xx2=sqrt(xx2);xx2=(1+xx2)*sqrt(tol);
-        if (xx1>xx2) ok=1;
-        xx1=0.0;for (i=0;i<m;i++) xx1+=g.V[i]*g.V[i];xx1=sqrt(xx1);
-        if (xx1>pow(tol,1.0/3)*(1+v)) ok=1;
-        for (i=0;i<m;i++) eta[i]=trial[i];
-        vmin=v;
+        if (m==1) ok=0; /* there is only one smooth term, so terminate immediately */
+		else
+		if (iter<3) ok=1; /* never terminate too soon */ 
+		else /* test for convergence - don't look at trial step length - can be long at valid convergence if score flat */
+        { tol=msctrl->conv_tol;ok=0;
+          if (vmin-v>tol*(1+v)) ok=1;
+          xx1=0.0;for (i=0;i<m;i++) xx1+=g.V[i]*g.V[i];xx1=sqrt(xx1);
+          if (xx1>pow(tol,1.0/3)*(1+v)) ok=1;
+        }  
+	    for (i=0;i<m;i++) eta[i]=trial[i];reject=0;
+		vmin=v;
       } else   /* contract step */
       { reject++;
-        for (i=0;i<m;i++) del[i]*=0.5;
+   		if (iter>1&&reject==4&&steepest==0) /* switch from Newton to steepest descent */
+        { steepest=1;
+          x=0.0;for (i=0;i<m;i++) { xx1=fabs(g.V[i]); if (xx1>x) x=xx1;}
+		  for (i=0;i<m;i++) del[i] = - g.V[i]/x; /* reset step to steepest descent - length such that biggest component is 1 */
+        } else
+	    for (i=0;i<m;i++) del[i]*=0.5;
         if (reject==msctrl->max_step_half-1) for (i=0;i<m;i++) del[i]=0.0;
-        if (reject==msctrl->max_step_half)
-        reject=0;
-        if (!reject&&iter>3) ok=0;
+        if (reject==msctrl->max_step_half) reject=0; 
+        if (!reject)
+		{ if (iter==1&&autoinit) msrep->inok=0; /* report that second guess failed */
+		  else if (iter>3) /* terminate as step has failed */
+		  { ok=0; 
+		    msrep->step_fail=1;
+		  }
+        }
       }
-      if (op) printf("\n%12.6g  %12.6g",v,vmin);
+      if (op==1) Rprintf("\n%12.6g  %12.6g",v,vmin);
     }
+    
     /* get choleski decomposition of (I*rho+T) */
-    for (i=0;i<T.r;i++) T.M[i][i] += rho;
+    for (i=0;i<T.r;i++) {ldt[i]=T.M[i][i];T.M[i][i] += rho;}
     tricholeski(&T,&l0,&l1);
-    for (i=0;i<T.r;i++) T.M[i][i] -= rho;
-    if ((!iter&&autoinit)||!ok) /* do second update guess at start parameters */
+    for (i=0;i<T.r;i++) T.M[i][i] = ldt[i]; /* note this way avoids serious rounding error */
+	if ((!iter&&autoinit)||!ok) /* do second update guess at start parameters, or finish (ok==0) */
     { /* get the current best parameter vector ZLU(I*r+T)^{-1}z */
       c.r=z.r;
       bicholeskisolve(&c,&z,&l0,&l1);
@@ -846,7 +1113,8 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
           { c.V[i]=0.0;for (j=0;j<LZrS[l].r;j++) c.V[i]+=p->V[j]*LZrS[l].M[j][i];
           }
           tr=0.0;for (i=0;i<LZrS[l].c;i++) tr+=c.V[i]*c.V[i];
-          if (tr>0.0) trial[l]=log(exp(eta[l])*exp(eta[l])*n*tr);
+		  /*if (tr>0.0) trial[l]=log(1/(exp(eta[l])*exp(eta[l])*n*tr)); - this is version from Wahba 1990 - should work */ 
+		  if (tr>0.0) trial[l]=log(LZrS[l].c/tr); else trial[l]=0.0;
           del[l]=trial[l]-eta[l];
         }
         /* now estimate effective -ve and +ve infinities */
@@ -859,176 +1127,48 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
         { p->r=np;for (i=0;i<nz;i++) p->V[i]=c.V[i];
           for (i=nz;i<np;i++) p->V[i]=0.0;
           HQmult(*p,*Z,1,0);  /* Q [c,0]'= [Z,Y][c,0]' = Zc */
-         /* p->r=Z->r;matmult(*p,*Z,c,0,0); FZ */
         } else
         { p->r=np;for (i=0;i<np;i++) p->V[i]=c.V[i];}
         for (l=0;l<m;l++) theta[l]=exp(eta[l])/rho; /* return smoothing parameters */
       }
     } else /* full  Newton update */
-    { /* form U'L'Z'S_i^{0.5} and U'L'Z'S_iZLU - This is the expensive part -
-         <= O(n^3) worth further optimization of address calculation later.... */
-      for (l=0;l<m;l++)
-      { mcopy(LZrS+l,ULZrS+l);
-        OrthoMult(&U,&ULZrS[l],1,T.r-2,1,1,0);
-        MM=ULZrS[l].M;M1M=ULZSZLU[l].M;
-        for (i=0;i<ULZrS[l].r;i++) for (j=0;j<=i;j++)
-        { x=0.0;pp=MM[i];pp1=MM[j];
-          for (k=0;k<ULZrS[l].c;k++) {x+= *pp * *pp1;pp++;pp1++;}
-          M1M[i][j]=M1M[j][i]=x;
-        }
-      }
-     
-      /* now calculate the various traces needed in the calculation.
-         These will be stored in trA, trdA[], trd2A[][]. These calculations
-         are up to O(n^2)*/
-      trA=triTrInvLL(&l0,&l1)*rho;
-      for (l=0;l<m;l++)
-      { A.r=ULZrS[l].r;A.c=ULZrS[l].c;
-        bicholeskisolve(&A,ULZrS+l,&l0,&l1);
-        trdA[l]=0.0;
-        for (i=0;i<A.r;i++) for (j=0;j<A.c;j++)
-        trdA[l] -= A.M[i][j]*A.M[i][j];
-        trdA[l]*=rho;
-      }
-    
-      /* first form (Ir+T)^{-1}U'L'Z'S_iZLU(Ir+T)^{-0.5} for all i */
-      for (l=0;l<m;l++)
-      { A.r=ULZSZLU[l].r;A.c=ULZSZLU[l].c;
-        bicholeskisolve(&A,ULZSZLU+l,&l0,&l1);
-        for (i=0;i<A.r;i++) H[l].M[i][0]=A.M[i][0]/l0.V[0];
-        for (j=1;j<A.c;j++) for (i=0;i<A.r;i++)
-        H[l].M[i][j]=(A.M[i][j]-H[l].M[i][j-1]*l1.V[j-1])/l0.V[j];
-        /* H algorithm checked directly - ok */
-      }
-      for (l=0;l<m;l++) for (k=0;k<=l;k++)
-      { x=0.0;
-        for (i=0;i<H[l].r;i++) for (j=0;j<H[k].c;j++)
-        x+=H[l].M[i][j]*H[k].M[i][j];
-        trd2A[l][k]=trd2A[k][l]=2*x*rho;
-        if (l==k) trd2A[l][k]+=trdA[l]/exp(eta[l]);
-      }
-      /* Now form b, db[], d2b[][] ...... */
-      b=1-trA/n;b=b*b;
-      for (l=0;l<m;l++) db[l]= exp(eta[l])*2.0/n*(trA/n-1)*trdA[l];
-      for (l=0;l<m;l++) for (k=0;k<=l;k++)
-      d2b[k][l]=d2b[l][k]=
-      exp(eta[l]+eta[k])*2.0/n*(trdA[l]*trdA[k]/n-(1-trA/n)*trd2A[l][k]);
-      /* Need the derivatives of the rss term next. Use W^{0.5}y in place of y.
-         Form and store vector Ay = Q'[I,0]'U(I*r+T)^{-1}U'[I,0]Qy */
-      d.r=n;for (i=0;i<n;i++) d.V[i]=Wy.V[i];  /* W^{0.5}y */
-      OrthoMult(&Q,&d,0,Q.r,0,1,1);
-      Ay.r=d.r=T.r;
-      OrthoMult(&U,&d,1,T.r-2,1,1,0);
-      bicholeskisolve(&Ay,&d,&l0,&l1); /* Ay = (I*r+T)^{-1}U'[I,0]Qy */
-      /* now for the dAy[] and dpAy[] terms, before finishing off Ay :
-         dpAy[i] = (I*r+T)^{-1}U'L'Z'S_iZLU(I*r+T)^{-1}U'[I,0]Qy
-          dAy[i] = -Q'[I,0]'U dpAy[i]
-         the dpAy[] terms save time in calculating d^2A/dt_idt_j
-      */
-      for (l=0;l<m;l++)
-      { A.r=T.r;A.c=1L;
-        matmult(A,ULZSZLU[l],Ay,0,0);
-        bicholeskisolve(dpAy+l,&A,&l0,&l1);
-        for (i=0;i<dpAy[l].r;i++) dAy[l].V[i]= -dpAy[l].V[i];
-        for (i=dpAy[l].r;i<dAy[l].r;i++) dAy[l].V[i]=0.0;
-        dAy[l].r= dpAy[l].r;
-        OrthoMult(&U,dAy+l,1,T.r-2,0,1,0);
-        dAy[l].r=y->r;
-        OrthoMult(&Q,dAy+l,0,Q.r,1,1,1);
-        for (i=0;i<dAy[l].r;i++) dAy[l].V[i]*=rho;
-      }
-      /* now finish Ay.... */
-      OrthoMult(&U,&Ay,1,T.r-2,0,1,0);
-      Ay.r=y->r;for (i=T.r;i<y->r;i++) Ay.V[i]=0.0;
-      OrthoMult(&Q,&Ay,0,Q.r,1,1,1);
-      for (i=0;i<Ay.r;i++) Ay.V[i]*=rho;
-      /* form a, da[] & d2a[][]..... */
-      for (l=0;l<m;l++) for (k=0;k<=l;k++)  /* starting with d2a[][]... */
-      { matmult(A,ULZSZLU[k],dpAy[l],0,0); /* forming (A=) U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
-        c.r=T.r;
-        bicholeskisolve(&c,&A,&l0,&l1);  /* forming (c=) (I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
-        matmult(A,ULZSZLU[l],dpAy[k],0,0);  /* This line and next 3 are a bug */
-        d.r=T.r;                            /* fix for incorrect original */
-        bicholeskisolve(&d,&A,&l0,&l1);     /* derivation - 18/8/99 */
-        for (i=0;i<c.r;i++) c.V[i]+=d.V[i];
-        OrthoMult(&U,&c,1,T.r-2,0,1,0);  /* forming (c=) U(I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
-        c.r=y->r;
-        for (i=T.r;i<y->r;i++) c.V[i]=0.0; /* and premutiplying result by (0',I')' */
-        OrthoMult(&Q,&c,0,Q.r,1,1,1);      /* premultiplying by Q' */
-        for (i=0;i<c.r;i++) c.V[i]*=rho; /* c=d^2A/dt_idt_j y */
-        if (l==k) /* then operator needs additional term dA/dt_i y / e^eta_i*/
-        { for (i=0;i<c.r;i++)
-          c.V[i]+=dAy[l].V[i]/exp(eta[l]);
-        }
+    { /* call routine to do gradient and Hessian calculations */
+      
+	  MSgH(ubre,m,LZrS,ULZrS,ULZSZLU,&U,&T,&l0,&l1,&A,H,&d,&c,&Wy,&Ay,dAy,dpAy,&Q,&g,&Hess,rho,*sig2,trdA,trd2A,eta,da,d2a,db,d2b);
+      /* boringHg(R,Q,LZSZL,y,rw,eta,rho,m,ubre*(*sig2),1e-4); - this can be used for f.d. checking */
 
-        x=0.0;
-        for (i=0;i<n;i++)
-        x+= dAy[l].V[i]*dAy[k].V[i]+(Ay.V[i]-Wy.V[i])*c.V[i];
-        x*=2.0/n;d2a[l][k]=d2a[k][l]=exp(eta[l]+eta[k])*x;
-      }  /* form da[] */
-      for (l=0;l<m;l++)
-      { x=0.0;
-        for (i=0;i<n;i++) x+=(Ay.V[i]-Wy.V[i])*dAy[l].V[i];
-        x*=2.0/n;
-        da[l]=x*exp(eta[l]);
-      }
-      a=0.0;
-      for (i=0;i<n;i++) a+=Wy.V[i]*Wy.V[i]+(Ay.V[i]-2*Wy.V[i])*Ay.V[i];
-      a/=n;
-      /* with luck and a fair wind we now have the ingredients for the gradient
-         and Hessian */
-      for (i=0;i<m;i++)
-      { if (ubre)
-        { g.V[i]=da[i]- *sig2/sqrt(b)*db[i];
-          for (j=0;j<=i;j++)
-          Hess.M[j][i]=Hess.M[i][j]=d2a[i][j]- *sig2/sqrt(b)*d2b[i][j] +
-                                    *sig2/(2*sqrt(b)*b)*db[i]*db[j];
-        } else /* it's GCV */
-        { g.V[i]=da[i]/b - a*db[i]/(b*b);
-          for (j=0;j<=i;j++)
-          Hess.M[j][i]=Hess.M[i][j]=d2a[i][j]/b-(da[i]*db[j]+da[j]*db[i])/(b*b)
-                              +2*a*db[i]*db[j]/(b*b*b)-a*d2b[i][j]/(b*b);
-        }
-      }
-      /* DEBUGGING CODE Checking Hessian and other 2nd derivative results */
-      /*boringHg(R,Q,LZSZL,y,rw,trial,rho,m,ubre*(*sig2),1e-3); */
-      if (op)
-      { printf("\n");
-        for (i=0;i<m;i++)
-        { for (j=0;j<=i;j++)
-          printf("%8.4g  ",Hess.M[i][j]);
-      /*    printf("%8.4g  ",d2a[i][j]); */
-          printf("\n");
-        }
-        for (i=0;i<m;i++)
-        printf("\n%g",g.V[i]);
-        /*printf("\n%g",da[i]); */
-      }
-      /* and finally the update ........ */
-      A.c=A.r=Hess.r;
-      x=0.0;for (i=0;i<m;i++) x+=Hess.M[i][i];x/=m;x*=0.0001;
-      x=fabs(x);trials=0;
-      while(!chol(Hess,A,0,0)&&(trials<500))
-      { for (i=0;i<m;i++) Hess.M[i][i]+=x;
-        x*=2.0;trials++;
-      }
-      if (trials==500)
-      ok=0;
-      else
-      { c.r=g.r;
-        choleskisolve(A,c,g);
-        for (i=0;i<m;i++) del[i]= -c.V[i];
+      /* and finally work out the update direction........ */
+      c.r=A.c=A.r=Hess.r;
+	  for (i=0;i<c.r;i++) { msrep->g[i]=g.V[i];msrep->h[i]=Hess.M[i][i];} /* fill in diagnostic structure */
+      specd(Hess,c); /* get the spectral decomposition of H */
+	  for (i=0;i<c.r;i++) msrep->e[i]=c.V[i]; /* fill in diagnostic structure */
+
+	  if (c.V[c.r-1]<=0.0) /* saddle point approx => Newton's method unhelpful => use steepest descent */
+      { x=0.0;for (i=0;i<g.r;i++) if (fabs(g.V[i])>x) x=fabs(g.V[i]);
+	    for (i=0;i<g.r;i++) del[i]= -g.V[i]/x; /* scale so that longest component of trial step is length 1 */
+		steepest=1;
+      } else /* Newton should work  */
+	  { for (i=0;i<c.r;i++) c.V[i]=1/(c.V[i]);
+        matmult(dum,Hess,g,1,0);
+        for (i=0;i<c.r;i++) dum.V[i]*=c.V[i];
+        matmult(c,Hess,dum,0,0); /* -c is search direction */
+		x=5.0;
+		for (i=0;i<c.r;i++) if (fabs(c.V[i])>x) x=fabs(c.V[i]);
+		x=5.0/x; /* multiplier ensuring step is short enough that no component is larger than 5 */
+		for (i=0;i<c.r;i++) del[i] = -c.V[i]*x;
+		steepest=0;
       }
     }
     iter++;
   }
+  msrep->iter=iter; /* filling in diagnostic structure */
   if (!accept&&m>1) 
-      { /*if (autoinit) ErrorMessage("Multiple GCV didn't improve autoinitialized relative smoothing parameters",0); */
+      { if (autoinit) ErrorMessage("Multiple GCV didn't improve autoinitialized relative smoothing parameters",0); 
   } 
   freemat(A);freemat(c);freemat(Ay);freemat(d);
   freemat(Wy);freemat(Q);freemat(R);
   freemat(T);freemat(U);freemat(z);freemat(l0);
-  freemat(l1);freemat(g);freemat(Hess);
+  freemat(l1);freemat(g);freemat(Hess);freemat(dum);
   for (i=0;i<m;i++)
   { freemat(LZrS[i]);freemat(LZSZL[i]);
     freemat(H[i]);
@@ -1037,7 +1177,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
     freemat(dAy[i]);freemat(dpAy[i]);
     free(trd2A[i]);free(d2b[i]);free(d2a[i]);
   }
-  free(LZrS);free(LZSZL);free(H);free(ULZrS);free(ULZSZLU);
+  free(ldt);free(LZrS);free(LZSZL);free(H);free(ULZrS);free(ULZSZLU);
   free(dAy);free(dpAy);free(ninf);free(pinf);
   free(trd2A);free(d2b);free(d2a);free(trdA);free(db);free(da);
   free(rw);free(eta);free(del);free(trial);
@@ -1528,6 +1668,39 @@ Bug fix log:
              values. It also now takes a control structure to allow tightening/loosening of tolerences.
 14/11/2001 - Fixed a bug whereby if data are all zero, MultiSmooth never returns - problem was that
              second s.p. guesses in this case would all be zero, since parameters are all zero.
+
+2/1/2002   - OUCH! following problems uncovered in Multismooth:
+             i) Routine can terminate if 2nd GUESS is poor!! [FIXED] 
+             ii) In EScv and multismooth I set T<-T+rI and then T<-T-rI, leading to drastic precision loss.
+                 [FIXED]
+             iii) default range in Easysmooth too narrow - sometimes failed to trap minimum - altered and
+                  checks/warnings added [FIXED]
+             iv) Newton steps often fail to find exact optimum: but steepest descent works. Suggest 
+                 modifying Multismooth to a Hybrid Newton/steepest - will need step length selection. 
+             v) Hessian/gradient calculations double checked and are good, and results of *really* minimising gcv 
+                score are also good! 
+9/1/2002 - Major overhaul of Multismooth() method:
+           Problems occurr if we step into a region that is flat w.r.t. one of the smoothing parameters. 
+		   The following steps help greatly:
+		   i) Second guesses taken from Wahba 1990 are so poor that they almost never improve the GCV score:
+		      have altered to second guesses - they work for every example I've tried so far.
+           ii) Method now uses steepest descent if the Hessian is negative - this makes more sense that
+		       simply regularizing - if the Hessian is not positive definte then we know that the Newton
+			   model is poor, so it's silly to use it.
+           iii) Method switches to steepest descent if a Newton direction is still failing after 4 step length
+		        reductions, since by then we again know that the Newton model is very poor.
+           iv) Newton steps are scaled if necessary so that no component is increased by more than 5.
+		   v) Steepest descent steps are initially set to the length that makes the largest component have
+		      length 1. 
+           vi) If a trial step fails, it's length is halved (halving repeated to some limit). Successful steps 
+		       are never extended - this is to avoid the danger of pushing one component erroneously into
+			   a flat region. 
+           vii) Multismooth now returns a convergence diagnostics object.
+		   viii) Quite extensive testing on the standard problems in mgcv package suggests that convergence is 
+		         now very reliable.
+           ix) It is important to avoid initial guesses that will lead to wildly different element sizes in combined
+		       wiggliness matrix - better to use auto-initialization in such cases.
+
 */
 /*******************************************************************************************************/
 

@@ -241,10 +241,8 @@ void dumpmat(M,filename) matrix M;char *filename;
   long i,j=0L;
   out=fopen(filename,"wb");
   j+=fwrite(&(M.r),sizeof(long),1,out);j+=fwrite(&(M.c),sizeof(long),1,out);
-  for (i=0;i<M.r;i++)
-  j+=fsafewrite(M.M[i],sizeof(double),M.c,out);
-  if (j!=M.c*M.r+2*sizeof(long))
-  { ErrorMessage("Output problem in dumpmat().",1);}
+  for (i=0;i<M.r;i++) 
+  fwrite(M.M[i],sizeof(double),(size_t)M.c,out);
   fclose(out);
 }
 
@@ -258,9 +256,7 @@ void readmat(M,filename) matrix *M;char *filename;
   fread(&j,sizeof(long),1,in);
   (*M)=initmat(i,j);
   for (k=0L;k<M->r;k++)
-  { i=fsaferead((*M).M[k],sizeof(double),M->c,in);
-    if (i!=M->c)
-    { sprintf(str,"\n problem with %s !!",filename);ErrorMessage(str,1);}
+  { fread((*M).M[k],sizeof(double),(size_t)M->c,in);
   }
   fclose(in);
 }
@@ -548,15 +544,23 @@ double triTrInvLL(matrix *l0,matrix *l1)
 
 /* this routine finds the trace of inv(LL') where L is a bi-diagonal lower
    triangular choleski factor, with leading diagonal l0 and leading sub diagonal
-   l1. */
+   l1. Returns -1 on failure (i.e. none +ve definite matrix) */
 
 { double trC,x,z,*l1V,*l0V;
   long i,l0r;
   l0V=l0->V;l1V=l1->V;l0r=l0->r;
-  x=l0V[l0r-1];z=1.0/(x*x);trC=z;
+  x=l0V[l0r-1];x*=x;
+  if (x==0.0) return(-1.0);
+  z=1.0/x;trC=z;
   for (i=l0r-2;i>=0;i--)
   { x=l1V[i];z=(1.0+x*x*z);x=l0V[i];
-    z/=x*x;trC+=z;
+    x*=x;
+    if (z==0.0) z=0.0;
+    else
+    { if (x==0.0) return(-1.0); 
+      z/=x;
+    }
+    trC+=z;
   }
   return(trC);
 }
@@ -1462,7 +1466,7 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
 	 
 */
 
-{ double m,s,g,temp,**AM,**VM,*p,*p1;
+{ double m,s=0.0,g,temp,**AM,**VM,*p,*p1;
   int i,j,k,nv,nu;
   nv=0; /* counts up number of v_i's */
   AM=A->M;VM=V->M;
@@ -2378,6 +2382,7 @@ matrix svdroot(matrix A,double reltol)
 
 { long k=0l,i,j;
   double tol=0.0,prod;
+  char err[100];
   matrix a,v,w;
   a=initmat(A.r,A.c);mcopy(&A,&a);
   v=initmat(A.r,A.c);
@@ -2388,8 +2393,11 @@ matrix svdroot(matrix A,double reltol)
   for (i=0;i<w.r;i++)
   { if (w.V[i]>tol)
     { for (j=0;j<a.c;j++) v.M[j][k]=a.M[j][i]*w.V[i];k++;
-      prod=0.0;for (j=0;j<a.r;j++) prod+=a.M[j][i]*v.M[i][j];
-      if (prod<0.0) ErrorMessage("Matrix passed to svdroot is not positive semi-definite",1); 
+      prod=0.0;for (j=0;j<a.r;j++) prod+=a.M[j][i]*v.M[j][i];
+      if (prod<0.0) 
+	  { sprintf(err,"svdroot matrix not +ve semi def. %g",w.V[i]*w.V[i]);
+		ErrorMessage(err,1); 
+	  }
     }
   }
   v.c=k;
@@ -2486,7 +2494,7 @@ void specd(U,W) matrix U,W;
   { dot=0.0;for (i=0;i<U.r;i++) dot+=U.M[i][j]*V.M[i][j]; /* have to do all elements to avoid round off near zero problems */
     if (dot<0.0) W.V[j]= -W.V[j];
   }
-  for (i=0;i<W.r-1;i++) /* sorting into decending order */
+  for (i=0;i<W.r-1;i++) /* sorting into descending order */
   { k=i;max=W.V[k];for (j=i;j<W.r;j++) if (W.V[j]>=max) { max=W.V[j];k=j;}
     dum=W.V[i];W.V[i]=W.V[k];W.V[k]=dum;
     if (i!=k) for (j=0;j<W.r;j++) { dum=U.M[j][i];U.M[j][i]=U.M[j][k];U.M[j][k]=dum;}
@@ -2647,8 +2655,8 @@ void msort(matrix a)
    so on.....
 */
 
-{ double *zz;
-  real_elemcmp(zz,zz,a.c); 
+{ double z=0.0;
+  real_elemcmp(&z,&z,a.c); 
   qsort(a.M,(size_t)a.r,sizeof(a.M[0]),melemcmp);
 }
 
@@ -2665,7 +2673,7 @@ void lu_tri(double *d,double *g,double *u,int n)
    No restriction on T beyond full rank and symmetry.
 */
 
-{ double *dg,*dd,*du,*dd1,*du1,mult,maxm=0.0;
+{ double *dg,*dd,*du,*dd1,*du1,mult;
   /* LU decomposition .... */
   dd=d;dd1=d+1;du=u;du1=u+1;
   for (dg=g;dg<g+n-1;dg++)
@@ -2673,7 +2681,6 @@ void lu_tri(double *d,double *g,double *u,int n)
     *dd1 -= *dg * mult;
     *du1 -= *du * mult;
     dd++;du++;dd1++;du1++;
-    /*mult=fabs(mult); if (mult>maxm) maxm=mult;*/ /* DEBUG */
    }
   /* Backsubstitution ..... */
   u[n-1]/=d[n-1];
@@ -2713,7 +2720,7 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
 */
 
 { int end,start=0,finished=0,os,oe,counter=0,iter_limit=100,ok,k,i,j;
-  double big,small,d1,d2,g1,g2,sig,x,y,z,b,s,c,s2,c2,cs,r,*dg,*dg1,*dg2,*dd1,*dd2,v0,v1,*vv1,*vv0;
+  double big,small,d1,d2,g1,g2,sig,x,y,z,b,s,c,s2,c2,cs,r,*dg,*dg1,*dg2,*dd1,*dd2,v0,*vv1,*vv0;
   if (getvec) /* set eigenvector matrix to I */ 
   for (k=0;k<n;k++) { for (dd1=v[k];dd1<v[k]+n;dd1++) *dd1=0.0;v[k][k]=1.0;}  
   end=n-1;
@@ -2846,7 +2853,7 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
 
 */
 
-{ double *vo,*d1,*d2,*g1,vnorm,x,*dum,*dum1,*dum2,*dum4,*b,xx,bt,err,errmax;
+{ double *vo,*d1,*d2,*g1,vnorm,x,*dum,*dum1,*dum2,*dum4,*b,xx,bt;
   int i,k,ok,ok1,iter,iter_max=1000; 
   char msg[200];
   unsigned long jran=2,ia=106,ic=1283,im=6075;
@@ -2960,11 +2967,12 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
 */
 
 { double **v,*d,*b,*g,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
-         *z,*zd,*err,normTj,eps=1e-7,*dum,eps_stop=1e-15,max_err,l1,l2;
+         *z,*zd,*err,normTj,*dum,eps_stop=1e-15,max_err;
   int i,j,k,n,ok,l,kk,vlength=0;
   unsigned long jran=1,ia=106,ic=1283,im=6075;
   
   AM=A->M;
+  v=AM; /* purely to avoid spurious compiler warning */
   n=(int)A->r;
   q=(double **)calloc((size_t)n+1,sizeof(double *));
   /* initialize first q vector */
@@ -3195,7 +3203,7 @@ void fprintmat(matrix A,char *fname,char *fmt)
       stable version, but doesn't obtain the complete eigen-decomposition of T_k so
       early or so often, to ofset the increase in eigenvector cost from 0(j^2) to O(j^3).
       Also svdroot() now signals an error if it gets passed a matrix that has any -ve 
-      eigenvalues. 
+      eigenvalues. 6/1/02 - svdroot() error check had a bug - fixed.
 
 */
 

@@ -6,7 +6,7 @@
 for data where the error distribution is known to follow the Negative Binomial, but the 
 value of theta is unknown. Based on \code{glm.nb()} from the MASS library, it calls
 \code{gam.fit()} repeatedly while iteratively improving its estimate of
-theta, starting from a poisson error model and uses the \code{neg.bin}
+theta, starting from a poisson error model and uses the \code{neg.binom}
 error family (based again on code from the MASS library).
 }
 
@@ -14,7 +14,7 @@ error family (based again on code from the MASS library).
 
 \author{ Mike Lonergan \email{mel@st-and.ac.uk} }
 
-\seealso{  \code{\link{gam}} \code{\link{neg.bin}} \code{\link{gam.nbut} }}
+\seealso{  \code{\link{gam}} \code{\link{neg.binom}} \code{\link{gam.nbut} }}
 
 \keyword{models}
 \keyword{smooth}
