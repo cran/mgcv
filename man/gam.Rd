@@ -22,7 +22,7 @@ selection see \code{\link{gam.selection}}. For large datasets see warnings.
   terms can have more than one argument, implying an isotropic smooth and (b) \code{te} smooths are
   provided as an effective means for modelling smooth interactions of any
   number of variables via scale invariant tensor product smooths. If you want
-  a clone of what S-PLUS provides use \link[gam]{gam}.
+  a clone of what S-PLUS provides use \link[gam]{gam} from package \code{gam}.
 }
 \usage{
 
@@ -387,7 +387,7 @@ e <- rnorm(n, 0, sig)
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 summary(b)
-plot(b,pages=1)
+plot(b,pages=1,residuals=TRUE)
 # same fit in two parts .....
 G<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE)
 b<-gam(G=G)

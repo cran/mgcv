@@ -3009,10 +3009,10 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     partial.resids <- TRUE
   } else partial.resids <- residuals # use working residuals or none
   m<-length(x$smooth) # number of smooth terms
+  order <- attr(x$pterms,"order") # array giving order of each parametric term
   if (all.terms) # plot parametric terms as well
-  { order <- attr(x$pterms,"order")
-    n.para <- sum(order==1) # plotable parametric terms   
-  } else n.para <- 0
+  n.para <- sum(order==1) # plotable parametric terms   
+  else n.para <- 0 
   if (m+n.para==0) stop("No terms to plot - nothing for plot.gam() to do.")
   if (se)
   { if (is.numeric(se)) se2.mult<-se1.mult<-se else { se1.mult<-2;se2.mult<-1} 
@@ -3131,7 +3131,6 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 
   
   # now plot .....
- 
   if (se)   # pd$fit and pd$se
   { k<-0
     if (scale==-1&&is.null(ylim)) # getting common scale for 1-d terms
@@ -3275,7 +3274,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
   { class(x) <- c("gam","glm","lm") # needed to get termplot to call model.frame.glm 
     if (is.null(select)) {
       attr(x,"para.only") <- TRUE
-      if (interactive() && m && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) 
+      if (interactive() && m && i%%ppp==0) 
       readline("Press return for next page....")
       termplot(x,se=se,rug=rug,col.se=1,col.term=1)
     } else { # figure out which plot is required
@@ -3284,7 +3283,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
         term.labels <- attr(x$pterms,"term.labels")
         term.labels <- term.labels[order==1]
         if (select <= length(term.labels)) {
-        if (interactive() && m && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) 
+        if (interactive() && m &&i%%ppp==0) 
         readline("Press return for next page....")
         termplot(x,terms=term.labels[select],se=se,rug=rug,col.se=1,col.term=1)
         }  
@@ -3861,12 +3860,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-3 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-4 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-3 \n")
+    cat("This is mgcv 1.1-4 \n")
 }
 
 
