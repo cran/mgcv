@@ -758,7 +758,7 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),predict=T
       }        
     }	
   } else
-  { if (m==0) Stop("Model appears to have no terms") 
+  { if (m==0) stop("Model appears to have no terms") 
     G$nsdf<-0
   }
   if (!predict) # obtain the "y variable"  
@@ -2241,7 +2241,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.9-3 \n")
+    cat("This is mgcv 0.9-4 \n")
 }
 
 
