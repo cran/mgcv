@@ -85,7 +85,7 @@ void old_svd(matrix *A, matrix *w, matrix *V);    /* NOTE: delete eventually */
 void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V);
 int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm);
 void eigenvv_tri(double *d,double *g,double **v, int n);
-void eigen_tri(double *d,double *g,int n);
+void eigen_tri(double *d,double *g,double **v,int n,int getvec);
 void lu_tri(double *d,double *g,double *u,int n);
 void msort(matrix a);
 #endif
