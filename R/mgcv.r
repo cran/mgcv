@@ -220,7 +220,7 @@ gam.side.conditions<-function(G)
 
 
 
-pcls<-function(M)
+pcls <- function(M)
 # Function to perform penalized constrained least squares.
 # Problem to be solved is:
 #
@@ -244,13 +244,31 @@ pcls<-function(M)
 #
 { nar<-c(length(M$y),length(M$p),dim(M$Ain)[1],dim(M$C)[1],0)
   H<-0
-   
+  ## sanity checking ...
+  if (nrow(M$X)!=nar[1]) stop("nrow(M$X) != length(M$y)") 
+  if (ncol(M$X)!=nar[2]) stop("ncol(M$X) != length(M$p)")
+  if (length(M$w)!=nar[1]) stop("length(M$w) != length(M$y)")
+  if (nar[3]!=length(M$bin)) stop("nrow(M$Ain) != length(M$bin)")
+  if (nrow(M$Ain)>0)
+  { if (ncol(M$Ain)!=nar[2]) stop("nrow(M$Ain) != length(M$p)") 
+    res <- as.numeric(M$Ain%*%M$p) - as.numeric(M$bin)
+    res <- mean(abs(res))
+    if (res<.Machine$double.eps^.5) 
+    warning("initial parameters very close to inequality constraints")
+  }
+  
+  if (nrow(M$C)>0) if (ncol(M$C)!=nar[2]) stop("ncol(M$C) != length(M$p)")  
+  if (length(M$S)!=length(M$off)) stop("M$S and M$off have different lengths")
+  if (length(M$S)!=length(M$sp)) stop("M$sp has different length to M$S and M$off")
+  
+  
   # pack the S array for mgcv call 
   m<-length(M$S)
   Sa<-array(0,0);df<-0
   if (m>0) for (i in 1:m)
   { Sa<-c(Sa,M$S[[i]])
     df[i]<-nrow(M$S[[i]])
+    if (M$off[i]+df[i]-1>nar[2]) stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
   }
 
   o<-.C("RPCLS",as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
@@ -305,7 +323,7 @@ mgcv<-function(y,X,sp,S,off,C=NULL,w=rep(1,length(y)),H=NULL,scale=1,gcv=TRUE,co
 # info - a list of convergence diagnostics
 #          g - gradients of gcv/ubre score at termination, h - leading diagonal of Hessian
 #          e - eigenvalues of Hessian, iter - iterations taken, init.ok - TRUE if second 
-#          autonitialization guess ok (or intial values supplied), step.fail - TRUE
+#          autoinitialization guess ok (or intial values supplied), step.fail - TRUE
 #          if algorithm terminated on step failure rather than convergence. 
 #          edf - array of model edf's from final grid search for overall s.p.
 #          score - array of gcv/ubre scores corresponding to edf.
@@ -1797,7 +1815,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     mf[[1]]<-as.name("model.frame")
     pmf <- mf
     mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
-
+    if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
     Terms <- attr(mf,"terms")    
   
     pmf$formula <- gp$pf
@@ -2272,7 +2290,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     mf[[1]]<-as.name("model.frame")
     pmf <- mf
     mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
-
+    if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
     terms <- attr(mf,"terms")
     
     pmf$formula <- gp$pf
@@ -4006,12 +4024,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-7 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-8 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-7 \n")
+    cat("This is mgcv 1.1-8 \n")
 }
 
 
