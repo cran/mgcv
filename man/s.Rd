@@ -74,8 +74,13 @@ options spelled out explicitly.}
 
 
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
-\references{ Wood (2003) Thin plate regression splines. JRSSB 65(1):95-114
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+\url{http://www.stats.gla.ac.uk/~simon/}
+
 }
 
 \seealso{   \code{\link{gam}}}

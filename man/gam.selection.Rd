@@ -46,10 +46,12 @@ Venables and Ripley (1999) Modern Applied Statistics with S-PLUS
 
 Wahba (1990) Spline Models of Observational Data. SIAM.
 
-Wood (2000) Modelling and Smoothing Parameter Estimation 
-with Multiple 
-   Quadratic Penalties. JRSSB 62(2):413-428
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+\url{http://www.stats.gla.ac.uk/~simon/}
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..

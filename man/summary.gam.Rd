@@ -29,22 +29,23 @@ the edf's to add up properly!
 \item{p.coeff}{is an array of estimates of the strictly parametric model coefficients.}
 \item{p.t}{is an array of the \code{p.coeff}'s divided by their standard errors.}
 \item{p.pv}{is an array of p-values for the null hypothesis that the corresponding parameter is zero. 
-Calculated with reference to the t distribution with the estimated residual degrees of freedom for the model fit (rounded, of course).}
+Calculated with reference to the t distribution with the estimated residual degrees of freedom for the model fit.}
 \item{m}{The number of smooth terms in the model.}
 \item{chi.sq}{An array of test statistics for assessing the significance of model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
 is the parameter vector for the ith smooth term, and this term has estimated covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
 statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k-1 
 pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is the basis dimension.}
 \item{s.pv}{An array of approximate p-values for the null hypotheses that each smooth term is zero. Be warned, these are only 
-approximate: they are obtained by comparing the chi.sq statistic given above to the chi-squared distribution with degrees of 
-freedom given by the estimated degrees of freedom for the term. Use at
-your own risk! Typically the p-values will be somewhat inaccurate
-because they are conditional on the smoothing parameters and any scale
-parameter estimate and the distributional assumption doesn't have a firm theoretical basis. A pragmatic approach
-to the latter issue is to check p-values by refitting the model using regression splines
+approximate. In the case in which UBRE has been used, they are obtained by comparing the chi.sq statistic given above to the 
+chi-squared distribution with degrees of  freedom given by the estimated degrees of freedom for the term. In the GCV case (in 
+which the scale parameter will have been estimated) the statistic is compared to an F distribution with upper d.f. given by
+the estimate degrees of freedom for the term, and lower d.f. given by the residual degrees of freedom for the model . 
+Use at your own risk! Typically the p-values will be somewhat inaccurate
+because they are conditional on the smoothing parameters and the distributional assumption doesn't have a firm theoretical basis. 
+A pragmatic approach to the latter issue is to check p-values by refitting the model using regression splines
 with each basis dimension set to one more than the rounded edf for
 the term (see example, below). In this latter case the distributional
-assumption would be fine if the scale and smoothing parameters were
+assumption would be fine if the smoothing parameters were
 known, but of course they are not, and conditioning on the smoothing
 parameters will always be problematic. The difficulty is that GCV has
 used the data to select the most plausible smoothing parameters for each
@@ -53,7 +54,6 @@ a little more `significant' than they should. Of course this problem
 is no different to the standard difficulty in interpreting p-values for
 model terms when the model has been selected by hypothesis testing
 methods such as backwards elimination.   
-
 }
 \item{se}{array of standard error estimates for all parameter estimates.}
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
@@ -76,18 +76,17 @@ explained is probably more appropriate for non-normal errors.}
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
-Wood (2000) Modelling and Smoothing Parameter Estimation 
-with Multiple 
-   Quadratic Penalties. JRSSB 62(2):413-428
-
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 \author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
 
 \section{WARNING }{ The supplied p-values are only approximate: they are
-  conditional on the smoothing and scale parameters, which will usually
+  conditional on the smoothing parameters, which will usually
   have been estimated.
 } 
 

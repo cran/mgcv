@@ -1,11 +1,12 @@
+exclude.too.far         Exclude prediction grid points too far from
+                        data
+full.score              GCV/UBRE score for use withn nlm
 gam.check               Some diagnostics for a fitted gam model.
-gam.control             Setting Generalized Additive Models fitting
-                        defaults
+gam.control             Setting GAM fitting defaults
 gam.fit                 Generalized Additive Models fitting using
                         penalized regression splines and GCV
 gam.models              Specifying generalized Additive Models.
-gam.nbut                Generalized Additive Models using Negative
-                        Binomial errors with unknown theta
+gam.neg.bin             GAMs with the negative binomial distribution
 gam.parser              Generalized Additive Model fitting using
                         penalized regression splines and GCV
 gam                     Generalized Additive Models using penalized
@@ -14,16 +15,17 @@ gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
 GAMsetup                Set up GAM using penalized regression splines
 gam.side.conditions     Identifiability side conditions for a GAM.
-get.family              Identifies families
+magic.post.proc         Auxilliary information from magic fit
+magic                   Stable Multiple Smoothing Parameter Estimation
+                        by GCV or UBRE, with optional fixed penalty
 mgcv                    Multiple Smoothing Parameter Estimation by GCV
                         or UBRE
 mono.con                Monotonicity constraints for a cubic
                         regression spline.
-neg.binom               Family function for Negative Binomial GAMs
+mroot                   Smallest square root of matrix
 null.space.dimension    The basis of the space of un-penalized
                         functions for a t.p.r.s.
 pcls                    Penalized Constrained Least Squares Fitting
-persp.gam               Perspective Plot of GAM objects
 plot.gam                Default GAM plotting
 predict.gam             Prediction from fitted GAM model
 print.gam               Generalized Additive Model default print
@@ -32,6 +34,5 @@ QT                      QT factorisation of a matrix
 residuals.gam           Generalized Additive Model residuals
 s                       Defining smooths in GAM formulae
 summary.gam             Summary for a GAM fit
-theta.maxl              Estimate theta of the Negative Binomial by
-                        Maximum Likelihood
 uniquecombs             find the unique rows in a matrix
+vis.gam                 Visualization of GAM objects

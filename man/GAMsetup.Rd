@@ -17,6 +17,7 @@ GAMsetup(G)
 \arguments{
 \item{G}{ is the single argument to this function: it is a list
   containing at least the elements listed below:
+\itemize{
 \item{m}{the number of smooth terms in the model}
 \item{df}{an array of \code{G$m} integers specifying the maximum d.f. for each spline 
   term.}
@@ -25,6 +26,10 @@ GAMsetup(G)
 model parts}
 \item{dim}{An array of dimensions for the smooths. \code{dim[i]} is the
   number of covariates that smooth \code{i} is a function of.}
+\item{sp}{array of supplied smoothing parameters. If \code{fit.method} is 
+\code{"magic"} then this may be a mixture of positive numbers, which are 
+used as the smoothing parameters, and negative to indicate that the 
+parameters are to be estimated. With \code{"mgcv"} this is unused.}
 \item{fix}{An array of logicals indicating whether each smooth term has fixed degrees of freedom or not.}
 \item{s.type}{An array giving the type of basis used for each term. 0 for
   cubic regression spline, 1 for t.p.r.s }
@@ -52,19 +57,30 @@ to the  row order in \code{G$x}. There are \code{G$dim[i]} arrays of length \cod
          smooth - all these arrays are packed end to end in 1-d array \code{G$knots} - 
         zero length 1 for no knots.}
 \item{n.knots}{ array giving number of user supplied knots of basis for each smooth term 0's for none supplied.}
-}
+\item{fit.method}{one of \code{"mgcv"} for the Wood (2000) method or 
+\code{"magic"} for a more recent and in principle more stable 
+alternative.} 
+\code{min.sp}{lower bounds on the smoothing parameters: only possible if 
+fit method is \code{"magic"}}
+\code{H}{the offset penalty matrix, \code{NULL} for none. This is the 
+coefficient matrix of any user supplied fixed penalty.}
+} % end of itemize
+} % end of G
 }
 \value{
   A list \code{H}, containing the elements of \code{G} (the input list) plus the 
 following:  
 \item{X}{the full design matrix.}
-\item{S}{ A one dimensional array containing the non-zero elements of the
+\item{S}{ If \code{fit.method} is \code{"magic"} then this is a one 
+dimensional array containing the non-zero elements of the
    penalty matrices. Let \code{start[k+1]<-start[k]+H$df[1:(k-1)]^2} and
    \code{start[1]<-0}. Then penalty matrix \code{k} has
    \code{H$S[start[k]+i+H$df[i]*(j-1)} on its ith row and jth column.
    To get the kth full penalty matrix the matrix so obtained would be
    inserted into a full matrix of zeroes with it's 1,1 element at \code{H$off[k],H$off[k]}. 
- }
+   If \code{fit.method} is \code{"mgcv"} then this is a list of penalty 
+matrices, again stored as smallest matrices including all the non-zero 
+elements of the penalty matrix concerned. }
 \item{off}{is an array of offsets, used to facilitate efficient storage of the penalty 
 matrices and to indicate where in the overall parameter vector the parameters of the ith 
 spline reside (e.g. first parameter of ith spline is at \code{p[off[i]+1]}).}
@@ -98,11 +114,20 @@ set \code{start[1]<-0} and
 parameters  of each cubic regression spline - the cubic regression splines are parameterized using their \eqn{y}{y}- 
 values at a series of \eqn{x}{x} values - these vectors contain those \eqn{x}{x} 
 values! Note that these will be covariate shifted.}
-}
-\references{ Wood, S.N. (2000) Modelling and smoothing parameter estimation with multiple
-quadratic penalties JRSSB 62(2):413-428 
+\item{rank}{an array giving the ranks of the penalty matrices.}
+\item{m.free}{this is only for use with \code{"magic"} and is the number 
+of smoothing parameters that must be estimated.}
+\item{m.off}{again only for \code{"magic"}: the offests for the penalty 
+matrices for the penalties with smoothing parameters that must be 
+estimated.} }
+\references{ 
 
-Wood, S.N. (2003) Thin plate regression splines. JRSSB 65(1):95-114.
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+\url{http://www.stats.gla.ac.uk/~simon/}
 }
 
 \author{Simon N. Wood \email{simon@stats.gla.ac.uk}}
@@ -110,7 +135,6 @@ Wood, S.N. (2003) Thin plate regression splines. JRSSB 65(1):95-114.
 \seealso{ \code{\link{mgcv}} \code{\link{gam}} }
 
 \examples{
-# This example modified from routine SANtest()
 set.seed(0)
 n<-100 # number of observations to simulate
 x <- runif(5 * n, 0, 1) # simulate covariates
@@ -130,7 +154,7 @@ x[1,]<-1
 # create list for passing to GAMsetup....
 G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15),dim=c(1,1,1,1),
      s.type=c(0,0,0,0),by=0,by.exists=c(FALSE,FALSE,FALSE,FALSE),
-     p.order=c(0,0,0,0),x = x,n.knots=rep(0,4))
+     p.order=c(0,0,0,0),x = x,n.knots=rep(0,4),fit.method="mgcv")
 H <- GAMsetup(G)
 H$y <- y    # add data to H
 H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H

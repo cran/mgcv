@@ -8,7 +8,9 @@ GCV}
   modification is that rather than solving a weighted least squares problem at each IRLS step, 
   a weighted, penalized least squares problem
   is solved at each IRLS step with smoothing parameters associated with each penalty chosen by GCV or UBRE,
-  using routine \code{mgcv}. For further information on usage see code for \code{gam}.
+  using routine \code{mgcv}. For further information on usage see code for \code{gam}. Some regularization of the 
+IRLS weights is also permitted as a way of addressing identifiability related problems (see 
+\code{\link{gam.control}}). Negative binomial parameter estimation is supported.
 }
 }
 
@@ -19,11 +21,10 @@ GCV}
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
-Wood (2000) Modelling and Smoothing Parameter Estimation 
-with Multiple 
-   Quadratic Penalties. JRSSB 62(2):413-428
-
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }

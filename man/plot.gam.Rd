@@ -65,7 +65,7 @@ always easy to achieve.
    calls to the compiled C code that \code{predict.gam} uses.   
 
    Smooths of more than 2 variables are not currently dealt with, but
-   simply generate a warning, but see \code{\link{persp.gam}}.
+   simply generate a warning, but see \code{\link{vis.gam}}.
    }
 
 \value{ The function simply generates plots.
@@ -77,10 +77,10 @@ Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 
-Wood (2000) Modelling and Smoothing Parameter Estimation 
-with Multiple 
-   Quadratic Penalties. JRSSB 62(2):413-428
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
@@ -92,7 +92,7 @@ with Multiple
   The function can not deal with smooths of more than 2 variables!
 } 
 
-\seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{persp.gam}}}
+\seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{vis.gam}}}
 
 \examples{
 library(mgcv)
@@ -117,7 +117,7 @@ op<-par(mfrow=c(2,2))
 plot(b1)
 par(op) 
 }
-\keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
+\keyword{models} \keyword{smooth} \keyword{regression} \keyword{hplot}%-- one or more ...
 
 
 

@@ -1,9 +1,7 @@
 Package: mgcv
-Version: 0.8-9
-Author: Simon Wood <simon@stats.gla..ac.uk> and  
-  Mike Lonergan <mel@mcs.st-and.ac.uk>
-  [mel: persp.gam() and negative binomial; snw: rest]   
-Maintainer: Simon Wood <snw@mcs.st-and.ac.uk>
+Version: 0.9-1
+Author: Simon Wood <simon@stats.gla.ac.uk>
+Maintainer: Simon Wood <simon@stats.gla.ac.uk>
 Title: Multiple smoothing parameter estimation and GAMs by GCV
 Description: Routines for GAMs and other generalized ridge regression problems 
              with multiple smoothing parameter selection by GCV or UBRE.
