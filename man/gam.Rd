@@ -287,7 +287,7 @@ y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b,pages=1)
 # now a GAM with 3df regression spline term & 2 penalized terms
-b1<-gam(y~s(x0,k=4,fx=T,bs="tp")+s(x1,k=12)+s(x2,15))
+b1<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,15))
 plot(b1,pages=1)
 # now fit a 2-d term to x0,x1
 b3<-gam(y~s(x0,x1)+s(x2)+s(x3))
@@ -318,7 +318,7 @@ truth<-matrix(test1(pr$x,pr$z),30,30)
 contour(xs,zs,truth)
 y<-test1(x,z)+rnorm(n)*0.1
 b4<-gam(y~s(x,z))
-fit1<-matrix(predict.gam(b4,pr,se=F),30,30)
+fit1<-matrix(predict.gam(b4,pr,se=FALSE),30,30)
 contour(xs,zs,fit1)
 persp(xs,zs,truth)
 persp(b4)

@@ -975,7 +975,8 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE,..
     else m<-length(object$sp)
     n<-length(object$y)
     x<-object$x
-    for (i in 1:m) x[object$nsdf+i,]<-x[object$nsdf+i,]+object$covariate.shift[i]
+    nc<-0;for (i in 1:m) nc<-nc+object$dim[i]
+    for (i in 1:nc) x[object$nsdf+i,]<-x[object$nsdf+i,]+object$covariate.shift[i]
     G<-list(x=x,nsdf=object$nsdf,m=m,n=n,dim=object$dim)
     no.data<-FALSE
   }
@@ -1077,8 +1078,8 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,p
     contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
     axis(1,cex.axis=cs);axis(2,cex.axis=cs);box();  
     mtext(xlab,1,2.5,cex=cs);mtext(ylab,2,2.5,cex=cs)  
-    contour(x,y,z+zse,levels=zlev,add=T,lty=2,col=2,labcex=cs*0.5)  
-    contour(x,y,z-zse,levels=zlev,add=T,lty=3,col=3,labcex=cs*0.5)  
+    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
+    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
     
     xpos<-xrange[1]  
     xl<-c(xpos,xpos+xr/10);yl<-c(ypos,ypos)  
@@ -1438,7 +1439,7 @@ se=2,theta=0,phi=15, r = sqrt(3), d = 1, scale = TRUE,
 
       for (v in variables)   {
           if(eval(parse(text=paste("length(persp.dat$",v,")==0",sep=""))))   {
-             this.slice<-eval(parse(text=slice[[v]]))
+             this.slice<-eval(parse(text=slice[[v]]),persp.dat)
              if (length(this.slice)==1)
                 this.slice<-rep(this.slice,dim(persp.dat)[1])
              eval(parse(text=paste("persp.dat$",v,"<-this.slice",sep="")))
@@ -1714,7 +1715,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.7.1\n")
+    cat("This is mgcv 0.7.2\n")
 }
 
 

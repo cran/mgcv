@@ -111,7 +111,7 @@ summary(b)
 # now check the p-values by using a pure regression spline.....
 b.d<-round(b$edf)+1 
 b.d<-pmax(b.d,3) # can't have basis dimension less than this!
-bc<-gam(y~s(x0,k=b.d[1],fx=T)+s(x1,k=b.d[2],fx=T)+s(x2,k=b.d[3],fx=T)+s(x3,k=b.d[4],fx=T))
+bc<-gam(y~s(x0,k=b.d[1],fx=TRUE)+s(x1,k=b.d[2],fx=TRUE)+s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE))
 plot(bc,pages=1)
 summary(bc)
 # p-value check - increase k to make this useful!
