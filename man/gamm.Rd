@@ -301,13 +301,14 @@ pr<-data.frame(x=rep(xs,30),z=rep(zs,rep(30,30)))
 truth <- matrix(test1(pr$x,pr$z),30,30)
 contour(xs,zs,truth)  # true function
 f <- test1(x,z)  # true expectation of response
-
+## Now simulate correlated errors...
 cstr <- corGaus(.1,form = ~x+z)  
 cstr <- Initialize(cstr,data.frame(x=x,z=z))
 V <- corMatrix(cstr) # correlation matrix for data
 Cv <- chol(V)
 e <- t(Cv) \%*\% rnorm(n)*0.05 # correlated errors
-y <- f + e 
+## next add correlated simulated errors to expected values
+y <- f + e ## ... to produce response
 b<- gamm(y~s(x,z,k=50),correlation=corGaus(.1,form=~x+z))
 plot(b$gam) # gamm fit accounting for correlation
 # overfits when correlation ignored.....  
