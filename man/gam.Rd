@@ -272,7 +272,7 @@ priority for fixing this!
 \examples{
 library(mgcv)
 set.seed(1)
-n<-200
+n<-400
 sig2<-4
 x0 <- runif(n, 0, 1)
 x1 <- runif(n, 0, 1)

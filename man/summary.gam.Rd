@@ -13,7 +13,7 @@ print.summary.gam(x,...)
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
 \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.}
-\item{x}{a \code{summary.gam} object prooduced by \code{summary.gam()}.} 
+\item{x}{a \code{summary.gam} object produced by \code{summary.gam()}.} 
 \item{...}{ other arguments.}
 }
 \details{ Model degrees of freedom are taken as the trace of the influence (or hat) matrix \eqn{ {\bf A}}{A} for the model fit.
@@ -34,12 +34,27 @@ Calculated with reference to the t distribution with the estimated residual degr
 \item{chi.sq}{An array of test statistics for assessing the significance of model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
 is the parameter vector for the ith smooth term, and this term has estimated covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
 statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k-1 
-pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is the basis dimension for the smooth. The pseudoinverse is truncated to the numerical rank of 
-\eqn{ {\bf V_i}}{V_i} if this is less than k-1.}
+pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is the basis dimension.}
 \item{s.pv}{An array of approximate p-values for the null hypotheses that each smooth term is zero. Be warned, these are only 
 approximate: they are obtained by comparing the chi.sq statistic given above to the chi-squared distribution with degrees of 
-freedom closest to the estimated degrees of freedom for the term. Use at your own risk (although limited simulation studies 
-seem to indicate that these are more reasonable than you might reasonably expect).}
+freedom given by the estimated degrees of freedom for the term. Use at
+your own risk! Typically the p-values will be somewhat inaccurate
+because they are conditional on the smoothing parameters and any scale
+parameter estimate and the distributional assumption doesn't have a firm theoretical basis. A pragmatic approach
+to the latter issue is to check p-values by refitting the model using regression splines
+with each basis dimension set to one more than the rounded edf for
+the term (see example, below). In this latter case the distributional
+assumption would be fine if the scale and smoothing parameters were
+known, but of course they are not, and conditioning on the smoothing
+parameters will always be problematic. The difficulty is that GCV has
+used the data to select the most plausible smoothing parameters for each
+term - not surprisingly this tends to mean that the terms appear
+a little more `significant' than they should. Of course this problem
+is no different to the standard difficulty in interpreting p-values for
+model terms when the model has been selected by hypothesis testing
+methods such as backwards elimination.   
+
+}
 \item{se}{array of standard error estimates for all parameter estimates.}
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
 residual variance are both estimated using unbiased estimators. This quantity can be negative if your model is worse than a one 
@@ -68,7 +83,9 @@ with Multiple
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\section{WARNING }{ The supplied p-values are only approximate.
+\section{WARNING }{ The supplied p-values are only approximate: they are
+  conditional on the smoothing and scale parameters, which will usually
+  have been estiamted.
 } 
 
 \seealso{  \code{\link{gam}} \code{\link{predict.gam}}}
@@ -91,6 +108,19 @@ y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b,pages=1)
 summary(b)
+# now check the p-values by using a pure regression spline.....
+b.d<-round(b$edf)+1 
+b.d<-pmax(b.d,3) # can't have basis dimension less than this!
+bc<-gam(y~s(x0,k=b.d[1],fx=T)+s(x1,k=b.d[2],fx=T)+s(x2,k=b.d[3],fx=T)+s(x3,k=b.d[4],fx=T))
+plot(bc,pages=1)
+summary(bc)
+# p-value check - increase k to make this useful!
+n<-200;p<-0;k<-20
+for (i in 1:k)
+{ b<-gam(y~s(x,z),data=data.frame(y=rnorm(n),x=runif(n),z=runif(n)))
+  p[i]<-summary(b)$s.p[1]
+}
+plot(((1:k)-0.5)/k,sort(p))
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
 

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "matrix.h"
 #include "gcv.h"
 #include <R.h>
@@ -392,9 +393,10 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
 */
 
 { matrix l0,l1,x;
-  double r,V,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt;
+  double xx,r,V,V0,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt,maxdV=0.0,firstdV=0.0;
   long k,mesh=100L,i;
   int gcv=1,ok=0,stop=0;
+  char msg[200];
   minV=0.0;
   if (*sig2>0.0) gcv=0;
   /* Initialise work space matrices */
@@ -402,7 +404,7 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
   l0=initmat(T->r,1L);l1=initmat(T->r-1,1L);x=initmat(l0.r,1L);
   /* get initial smooth estimates */
   tr=0.0;for (i=0;i<T->r;i++) tr+=T->M[i][i];tr/=T->r;
-  minr=tr*1e-20;maxr=tr*1e12;
+  minr=tr*1e-12;maxr=tr*1e12;
   rm=exp(log(maxr/minr)/mesh);
   r=maxr*rm;
   nx=0.0;for (i=x.r;i<n;i++) nx+=z->V[i]*z->V[i]; /* ||x||^2 */
@@ -413,15 +415,27 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
     V=EScv(ldt,T,&l0,&l1,&x,nx,z,r,n,&tr,&rss,sig2);
     if (V<minV||k==mesh) 
     { minV=V;minr=r;if (k<mesh) ok=1;
-      if (k==1) /* GCV score still declining at lower boundary of search */
-      ErrorMessage("Failure to find a minimum of GCV score w.r.t. overall smoothing parameter",0); 
+      if (k==1&&fabs(V-V0)>1e-5*minV) /* GCV score still declining at lower boundary of search */
+      { sprintf(msg,"Overall smoothing parameter estimate on lower boundary.\nBoundary GCV score change: %g. Largest change: %g",
+                fabs(V-V0),maxdV);
+        ErrorMessage(msg,0);
+      } 
     }
     if ((k<mesh/2)&&ok&&(V>minV)) stop++;
     if (stop>1) break;
+    if (k<mesh) /* need to store step sizes so that step sizes at boundary can be assessed if need be */
+    { xx=fabs(V-V0);  /* store biggest V change to compare with change at upper boundary */
+      if (k==mesh-1) firstdV=maxdV=xx;
+      else if (xx>maxdV) maxdV=xx; 
+    }
+    V0=V;
     /*if (n*tr<1.0) break;*/
   }
-  if (!ok)  /* GCV score never decreased from first value */
-  ErrorMessage("Failure of overall smoothing parameter search - GCV score never decreased",0);
+  if (!ok&&firstdV>1e-5*minV)  /* GCV score never decreased from first value and gradient not low enough at first value */
+  { sprintf(msg,"Overall smoothing parameter estimate on upper boundary.\nBoundary GCV score change: %g. Largest change: %g",
+                firstdV,maxdV);
+    ErrorMessage(msg,0);
+  }
   /* golden section search to polish minimisation */
   r0=minr/rm;r1=rm*minr;
   tau=2.0/(1.0+sqrt(5.0));
@@ -1701,6 +1715,11 @@ Bug fix log:
            ix) It is important to avoid initial guesses that will lead to wildly different element sizes in combined
 		       wiggliness matrix - better to use auto-initialization in such cases.
 
+25/1/2002 - rho search range in EasySmooth was too high - could lead to s.p. estimates so high that numerical 
+            problems lead to zero parameter estimates for the unpenalized terms and zero edf estimates.
+            Also in EasySmooth a warning was generated whenever the best rho was really at "zero" or "infinity" 
+            - this warning is now only generated if the gradient at the boundary is non-zero as judged relative
+            to the biggest drop seen in the score. 
 */
 /*******************************************************************************************************/
 

@@ -1355,7 +1355,7 @@ summary.gam<-function (object,...)
       er<-names(object$coefficients)[start]
       er<-substring(er,1,nchar(er)-2)
       names(chi.sq)[i]<-er
-      s.pv[i]<-pchisq(chi.sq[i],df=M,lower.tail=FALSE) 
+      s.pv[i]<-pchisq(chi.sq[i],df=object$edf[i],lower.tail=FALSE) 
     }
   }
   r.sq<- 1 - var(object$y-object$fitted.values)*(object$df.null-1)/(var(object$y)*residual.df) 
@@ -1714,7 +1714,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.7.0\n")
+    cat("This is mgcv 0.7.1\n")
 }
 
 
