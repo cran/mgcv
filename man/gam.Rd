@@ -196,6 +196,8 @@ expected value for  each datum.}
 
 \item{edf}{estimated degrees of freedom for each smooth.}
 
+\item{hat}{array of elements from the leading diagonal of the `hat' (or `influence') matrix. Same length as response data vector.}
+
 \item{boundary}{did parameters end up at boundary of parameter space?} 
 \item{sp}{smoothing parameter for each smooth.}
 

@@ -620,7 +620,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
           int *nd,int *qd,int *rd,double *sig2d,double *Vpd,double *edf,
           double *conv_tol,int *ms_max_half,double *ddiag, int *idiag,double *sdiag,
           int *direct_mesh,double *min_edf,double *gcvubre,double *target_edf,
-          int *fixed_sp)
+          int *fixed_sp,double *hat)
 
 
 /* Solves :
@@ -658,7 +658,9 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
    fixed_sp should be set to 1 if the supplied smoothing parameters are to be 
             treated as fixed, in which case model is fitted as an augmented 
             least squares problem. 
-  
+   
+   hat is an array of elements from the leading diagonal of the hat/influence matrix
+
    gcvubre is the minimum GCV or UBRE score achieved.
 
    There are 3 arrays of convergence diagnostics returned:
@@ -832,12 +834,17 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
       edf[i]+=X.M[j][k]*L.M[k][j];
     } 
+    /* work out elements on leading diagonal of hat matrix */
+    for (i=0;i<X.r;i++)
+    { hat[i]=0.0;
+      for (j=0;j<X.c;j++) hat[i]+=X.M[i][j]*L.M[j][i]; 
+    }
     /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */
     for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j] *= *sig2d;
     freemat(L);
     RArrayFromMatrix(Vpd,Vp.r,&Vp); /* convert to R format */
     freemat(Vp);
-  } else Vpd[0]=0.0;
+  } else { Vpd[0]=0.0;hat[0]=0.0;}
 
   /* tidy up */
 

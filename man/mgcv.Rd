@@ -123,6 +123,7 @@ following
 \item{M$gcv.ubre}{The minimized GCV/UBRE score.}
   \item{M$conv}{A list of convergence diagnostics, with the following elements:
 \item{edf}{Array of whole model estimated degrees of freedom.}
+\item{hat}{Array of elements from leading diagonal of `hat' matrix (`influence' matrix). Same length as \code{M$y}.}
 \item{score}{Array of ubre/gcv scores at the edfs for the final set of relatinve smoothing parameters.}
 \item{g}{the gradient of the GCV/UBRE score w.r.t. the smoothing parameters at termination.}
 \item{h}{the second derivatives corresponding to \code{g} above - i.e. the leading diagonal of the Hessian.}
