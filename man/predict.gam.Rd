@@ -71,6 +71,10 @@ gam object.
 To facilitate plotting with \code{\link{termplot}}, if \code{object} possesses
 an attribute \code{"para.only"} and \code{type=="terms"} then only parametric
 terms of order 1 are returned (i.e. those that \code{termplot} can handle).
+
+Note that, in common with other prediction functions, any offset supplied to
+\code{\link{gam}} as an argument is always ignored when predicting, unlike
+offsets specified in the gam model formula. 
 }
 
 \references{

@@ -152,7 +152,7 @@ Wahba, G. (1983) Bayesian confidence intervals for the cross validated smoothing
 JRSSB 45:133-150
 
 Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. Journal of the American Statistical Association.
+generalized additive models. Journal of the American Statistical Association. 99:637-686
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 

@@ -27,8 +27,8 @@ selection see \code{\link{gam.selection}}. For large datasets see warnings.
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action,control=gam.control(),scale=0,knots=NULL,sp=NULL,
-    min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
+    na.action,offset=NULL,control=gam.control(),scale=0,knots=NULL,
+    sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \details{ 
@@ -211,6 +211,11 @@ which \code{gam} is called.}
           of `options', and is `na.fail' if that is unset.  The
           ``factory-fresh'' default is `na.omit'.}
 
+\item{offset}{Can be used to supply a model offset for use in fitting. Note
+that this offset will always be completely ignored when predicting, unlike an offset 
+included in \code{formula}: this conforms to the behaviour of
+\code{lm} and \code{glm}.}
+
 \item{control}{A list of fit control parameters returned by 
 \code{\link{gam.control}}.}
 
@@ -293,7 +298,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass.
+generalized additive models. J. Amer. Statist. Ass. 99:637-686
 
 Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
 regression splines. Technical Report 04-12 Department of Statistics,

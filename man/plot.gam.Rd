@@ -10,7 +10,7 @@
 plot.gam(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,
          scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,
          xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
-         all.terms=FALSE,shade=FALSE,col.shade="gray80",...)
+         all.terms=FALSE,shade=FALSE,shade.col="gray80",...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -85,7 +85,7 @@ terms of order 1 can be plotted in this way.}
 \item{shade}{Set to \code{TRUE} to produce shaded regions as confidence bands
 for smooths (not avaliable for parametric terms, which are plotted using \code{termplot}).}
 
-\item{col.shade}{define the color used for shading confidence bands.}
+\item{shade.col}{define the color used for shading confidence bands.}
 
 \item{...}{ other graphics parameters to pass on to plotting commands.}
 
@@ -128,11 +128,13 @@ Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
 Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
-
 Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
 with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass. 99:637-686
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
@@ -171,7 +173,7 @@ e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 x0 <- factor(x0)
 b<-gam(y~x0+s(x1)+s(x2)+s(x3))
-plot(b,pages=1,residuals=TRUE,all.terms=TRUE,shade=TRUE,col.shade=2)
+plot(b,pages=1,residuals=TRUE,all.terms=TRUE,shade=TRUE,shade.col=2)
 # just parametric term alone
 termplot(b,terms="x0",se=TRUE)
 # example with 2-d plots
