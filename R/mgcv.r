@@ -1,4 +1,4 @@
-# These are the R routines for the package mgcv (c) Simon Wood 2000-2002
+# These are the R routines for the package mgcv (c) Simon Wood 2000-2003
 
 QT<-function(A) {
 
@@ -1254,7 +1254,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
   # get data from which to predict.....  
   
   if (missing(newdata)) # then "fake" an object suitable for prediction 
-  { if (object$dim==0) m<-0
+  { if (object$dim[1]==0) m<-0
     else m<-length(object$sp)
     n<-length(object$y)
     x<-object$x
@@ -2043,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8-8 \n")
+    cat("This is mgcv 0.8-9 \n")
 }
 
 

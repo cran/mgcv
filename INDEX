@@ -1,7 +1,3 @@
-GAMsetup                Set up GAM using penalized regression splines
-QT                      QT factorisation of a matrix 
-gam                     Generalized Additive Models using penalized
-                        regression splines and GCV
 gam.check               Some diagnostics for a fitted gam model.
 gam.control             Setting Generalized Additive Models fitting
                         defaults
@@ -12,15 +8,18 @@ gam.nbut                Generalized Additive Models using Negative
                         Binomial errors with unknown theta
 gam.parser              Generalized Additive Model fitting using
                         penalized regression splines and GCV
+gam                     Generalized Additive Models using penalized
+                        regression splines and GCV
 gam.selection           Generalized Additive Model Selection
 gam.setup               Generalized Additive Model set up.
+GAMsetup                Set up GAM using penalized regression splines
 gam.side.conditions     Identifiability side conditions for a GAM.
 get.family              Identifies families
 mgcv                    Multiple Smoothing Parameter Estimation by GCV
                         or UBRE
-mono.con                Monotonicity constraints for a cubic regression
-                        spline.
-neg.binom               Family function for Negative Binomial GAMs 
+mono.con                Monotonicity constraints for a cubic
+                        regression spline.
+neg.binom               Family function for Negative Binomial GAMs
 null.space.dimension    The basis of the space of un-penalized
                         functions for a t.p.r.s.
 pcls                    Penalized Constrained Least Squares Fitting
@@ -29,9 +28,10 @@ plot.gam                Default GAM plotting
 predict.gam             Prediction from fitted GAM model
 print.gam               Generalized Additive Model default print
                         statement
+QT                      QT factorisation of a matrix
 residuals.gam           Generalized Additive Model residuals
 s                       Defining smooths in GAM formulae
 summary.gam             Summary for a GAM fit
 theta.maxl              Estimate theta of the Negative Binomial by
-                        Maximum Likelihood 
-uniquecombs             find the unique rows in a matrix 
+                        Maximum Likelihood
+uniquecombs             find the unique rows in a matrix
