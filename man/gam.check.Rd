@@ -23,7 +23,20 @@ may have multiple local minima, but in a multiple smoothing parameter case this 
 through a function do not necessarily imply that the function has multiple local minima. A "good" plot here is a smooth curve with 
 only one local minimum (which is therefore its global minimum). In any case, note that possible problems with multiple local minima are 
 substantially reduced by the global line search with respect to the overall model smoothing parameter that is performed at 
-each iteration of the minimizer (and produces the data used in this plot).
+each iteration of the minimizer (and produces the data used in this plot). 
+
+The location of the minimum used for the fitted model is also marked on the first plot. Sometimes this location may be a local minimum
+that is not the global minimum on the plot. There is a legitimate reason for this to happen, and it does not always indicate problems.
+Smoothing parameter selection is based on applying GCV/UBRE to the approximating linear model produced by the GLM IRLS fitting method
+employed in \code{gam.fit()}. It is sometimes possible for these approximating models to develop "phantom" minima in their GCV/UBRE scores. These 
+minima usually imply a big change in model parameters, and have the characteristic that the minimia will not be present in the GCV/UBRE score 
+of the approximating model that would result from actually applying this parameter change. In other words, these are spurious minima in regions 
+of parameter space well beyond those for which the weighted least squares problem can be expected to represent the real underlying likelihood well.
+Such minima can lead to convergence problems. To help ensure convergence even in the presence of phantom minima, 
+\code{gam.fit} switches to a cautious optimization mode after a user controlled number of iterations of the IRLS algorithm (see \link{gam.control}).
+In the presence of local minima in the GCV/UBRE score, this method selects the minimum that leads to the smallest change in 
+model estimated degrees of freedom. This approach is usually sufficient to deal with phantom minima. Setting \code{trace} to \code{TRUE} in 
+\code{gam.control} will allow you to check exactly what is happening. 
 
 The other 3 plots are two residual plots and plot of fitted values against original data.
 

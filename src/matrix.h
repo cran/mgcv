@@ -50,7 +50,7 @@ void Hmult(matrix C,matrix u);
 void HQmult(matrix C,matrix U,int p,int t);
 void QT(matrix Q,matrix A,int Qfull);
 void InvertTriangular(matrix *R);
-void Rsolv(matrix *R,matrix *p,matrix *y);
+void Rsolv(matrix *R,matrix *p,matrix *y, int transpose);
 int QR(matrix *Q,matrix *R);
 void UTU(matrix *T,matrix *U);
 void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V);

@@ -36,6 +36,7 @@ USA. */
 #include "mgcv.h"
 #include "matrix.h"
 #include "qp.h"
+#include "general.h"
 
 #define round(a) ((a)-floor(a) <0.5 ? (int)floor(a):(int) floor(a)+1)
 
@@ -553,7 +554,9 @@ void GAMsetup(matrix *X,matrix *Z,matrix *S,matrix *UZ,matrix *Xu,matrix *xp,
     Z->r = T.r;
     if (T.r) freemat(T);
   } else     /* return T itself */
-  { *Z=T;} 
+  { *Z=T;}
+  free(knt);
+  
 }
 
 /*************************** End of cut and paste code! ***********************************/
@@ -616,7 +619,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
           double *pd, double *sp,int *offd,int *dimd,int *md,
           int *nd,int *qd,int *rd,double *sig2d,double *Vpd,double *edf,
           double *conv_tol,int *ms_max_half,double *ddiag, int *idiag,double *sdiag,
-          int *direct_mesh,double *min_edf,double *gcvubre)
+          int *direct_mesh,double *min_edf,double *gcvubre,double *target_edf)
 
 
 /* Solves :
@@ -704,6 +707,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     msctrl.conv_tol= *conv_tol;
     msctrl.max_step_half= *ms_max_half;
     msctrl.min_edf= *min_edf;
+    msctrl.target_edf= *target_edf;
     *gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2,&msctrl,&msrep,*direct_mesh);
     for (i=0;i<m;i++) /* copy out diagnostics for return */
     { ddiag[i]=msrep.g[i];
@@ -731,7 +735,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     if (n==p.r) sig2=0.0; else sig2/=(n-p.r);
     if (gcv) 
     { *sig2d=sig2;
-      *gcvubre=sig2/(n-p.r);
+      *gcvubre=n*sig2/(n-p.r);
     } else /* UBRE */
     { *gcvubre = sig2 / n * (n-p.r)-2.0 / n * *sig2d  * ( n - p.r) + *sig2d;  
     } 
@@ -762,7 +766,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     Vp.r -=Z.r;Vp.c -= Z.r;
     L=initmat(Vp.r,Vp.c);
     if (!chol(Vp,L,1,1)) /* try cheap inversion by choleski */  
-    pinv(&Vp,1e-14);     /* but use svd if this fails */
+    { pinv(&Vp,8*DOUBLE_EPS);     /* but use svd if this fails */
+    }
     Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
     HQmult(Vp,Z,1,0);
     HQmult(Vp,Z,0,1);  
@@ -792,6 +797,9 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
 
   if (Z.r) freemat(Z);
   if (m) {free(dim);free(off);free(S);}
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed(); 
+#endif
 }
 
 
@@ -812,6 +820,9 @@ void RuniqueCombs(double *X,int *r, int *c)
   RArrayFromMatrix(X,Xd.r,&Xd);  /* NOTE: not sure about rows here!!!! */
   *r = (int)Xd.r; 
   freemat(Xd);free(ind);
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif 
 }
 
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n)
@@ -841,7 +852,9 @@ void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double
   RArrayFromMatrix(bd,b.r,&b);
  
   freemat(x);freemat(A);freemat(b);  
- 
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif 
 }
 
 
@@ -867,11 +880,14 @@ void RQT(double *A,int *r,int*c)
 */
 
 { matrix Q,B;
-  B=Rmatrix(A,(long)(*r),(long)(*c)); B=Rmatrix(A,(long)(*r),(long)(*c));
+  B=Rmatrix(A,(long)(*r),(long)(*c));
   Q=initmat(B.r,B.c);
   QT(Q,B,0);
   RArrayFromMatrix(A,(long)(*r),&Q);
-  freemat(Q);freemat(B);
+  freemat(Q);freemat(B); 
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif
 }
 
 
@@ -941,7 +957,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
   nsdf= *nsdfd;
   /* deal with any "by" variables */
   nby=0;for (i=0;i<m;i++) nby+=by_exists[i];
-  by=(double **)calloc((size_t)nby,sizeof(double *));
+  if (nby) by=(double **)calloc((size_t)nby,sizeof(double *));
   for (i=0;i<nby;i++) 
   { by[i]=(double *)calloc((size_t)n,sizeof(double));
     for (j=0;j<n;j++) by[i][j]=byd[i+nby*j];
@@ -1004,7 +1020,10 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
     free(S);free(xp);free(off);free(df);free(M);
   }
   for (i=0;i<nx;i++) free(x[i]);free(x);
-  for (i=0;i<nby;i++) free(by[i]);free(by);
+  for (i=0;i<nby;i++) free(by[i]); if (nby) free(by);
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif 
 }
 
 void gam_map(matrix tm, matrix *t, double *x,double *by,matrix *UZ,matrix *Xu,int *s_type, int *dim, int *p_order,
@@ -1044,6 +1063,7 @@ void gam_map(matrix tm, matrix *t, double *x,double *by,matrix *UZ,matrix *Xu,in
     }
     free(D);
     terms=0;
+    tps_g(UZ,&p,x,0,0,&h,1); /* clear up here */ 
     if (bl) freemat(b);
     return;
   }
@@ -1095,7 +1115,8 @@ void gam_map(matrix tm, matrix *t, double *x,double *by,matrix *UZ,matrix *Xu,in
      
       offset+=dim[j];
     }
-  }  
+  } 
+ 
 }
 
 void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,int *s_type,int *df,int *p_order,int *m,
@@ -1273,7 +1294,9 @@ void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,
   freemat(Vp);freemat(eta);freemat(se);
 
   for (k=0;k< *m;k++) if (s_type[k]==0) freemat(xp[k]); if (*m>0) free(xp);
- 
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif 
 }    
 
 
@@ -1360,8 +1383,9 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   if (Ain.r) freemat(Ain);
   if (Af.r) freemat(Af);
   if (b.r) freemat(b);
- 
-
+#ifdef MEM_CHECK
+  dmalloc_log_unfreed();
+#endif
 }
 
 /*********************************************************************************************/

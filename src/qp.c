@@ -463,7 +463,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
     for (i=0;i<Pd.r;i++) Pd.V[i] = Py.V[i]-Pd.V[i]; /* Pd=P(y-Xp) */
     Rf.c=Rf.r=p->r-tk-Af->r; /* Restrict attention to QR factor of PXZ */
     for (i=0;i<Rf.c;i++) if (Rf.M[i][i]==0.0) ErrorMessage("QPCLS - Rank deficiency in model",1);
-    Rsolv(&Rf,&pz,&Pd);  /* solve R pz= Pd for pz - search direction in null space */
+    Rsolv(&Rf,&pz,&Pd,0);  /* solve R pz= Pd for pz - search direction in null space */
     Rf.r=X->r;Rf.c=X->c; /* Restore Rf */
     pz.r=p->r-tk-Af->r;
     /* Find pk = Z pz, the search direction */
@@ -506,7 +506,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
         /* free memory */
         freemat(T);freemat(Rf);freemat(PX);freemat(Py);freemat(p1);freemat(y1);
         freemat(s);freemat(c);freemat(Xy);freemat(Pd);freemat(pz);freemat(pk);
-        free(I);free(ignore);freemat(P);free(fixed);
+        free(I);free(ignore);freemat(P);free(fixed);free(delog);
         /* return */
         return;
       }

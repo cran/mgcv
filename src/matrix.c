@@ -1220,19 +1220,46 @@ void OrthoMult(matrix *Q,matrix *A,int off,int rows,int t,int pre,int o_pre)
 }
 
 
-void Rsolv(matrix *R,matrix *p,matrix *y)
+void Rsolv(matrix *R,matrix *p,matrix *y, int transpose)
 
 /* Solves Rp=y for p when R is upper triangular - i.e. lower left 0.
    dimensions of p and y are not checked
+   if transpose!=0 then solves: R'p=y
+   
 */
 
-{ int i,j;
-  double x,*pV,*yV,*RMi;
+{ int i,j,k;
+  double x,*pV,*yV,*RMi,**RM,*dum,**pM,**yM;
   pV=p->V;yV=y->V;
-  for (i=R->r-1;i>=0;i--)
-  { RMi=R->M[i];
-    x=0.0;for (j=i+1;j<R->r;j++) x+=RMi[j]*pV[j];
-    pV[i]=(yV[i]-x)/RMi[i];
+  if (y->r==1L) /* then p and y are vectors */
+  { if (transpose) /* solve R'p=y for p */
+    { RM=R->M;
+      for (i=0;i<R->r;i++)
+      { x=0.0;dum=pV;for (j=0;j<i;j++) { x+=RM[j][i] * *dum;dum++;}
+        *dum=(yV[i]-x)/RM[i][i];
+      } 
+    } else /* solve Rp=y for p */
+    for (i=R->r-1;i>=0;i--) 
+    { RMi=R->M[i];
+      x=0.0;for (j=i+1;j<R->r;j++) x+=RMi[j]*pV[j];
+      pV[i]=(yV[i]-x)/RMi[i];
+    }
+  } else /* p and y are matrices */
+  { pM=p->M;yM=y->M;
+    if (transpose) /* solve R'p=y for p */
+    { RM=R->M;
+      for (k=0;k<p->c;k++)
+      for (i=0;i<R->r;i++)
+      { x=0.0;for (j=0;j<i;j++) x+=RM[j][i] * pM[j][k];
+        pM[i][k]=(yM[i][k]-x)/RM[i][i];
+      } 
+    } else /* solve Rp=y for p */
+    for (k=0;k<p->c;k++)
+    for (i=R->r-1;i>=0;i--) 
+    { RMi=R->M[i];
+      x=0.0;for (j=i+1;j<R->r;j++) x+=RMi[j]*pM[j][k];
+      pM[i][k]=(yM[i][k]-x)/RMi[i];
+    }
   }
 }
 
@@ -1634,17 +1661,19 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
 
 */
 
-{ double wnorm=0.0,x,y,s,c,m,r,a,b,sig,**VM,**UM,*wV,*wsV,*p1,*p2; 
+{ double wnorm=0.0,x,y,s,c,m,r,a,b,sig,**VM,**UM,*wV,*wsV,*p1,*p2,tol; 
   int finished=0,end,start,i,j,k,maxreps=100;
-  
+  tol=2*DOUBLE_EPS; /* convergence tolerance */
   VM=V->M;UM=U->M;wV=w->V;wsV=ws->V;
   for (i=0;i<ws->r;i++) /* get something against which to judge zero */
   { x=fabs(wV[i]);y=fabs(wsV[i]);if (x<y) x=y;if (wnorm<x) wnorm=x;}
   end=w->r-1;
   while (!finished)
   { for (k=0;k<maxreps;k++) /* QR iteration loop */
-    { if (wV[end]+wnorm==wnorm) /* zero singular value - can deflate */
-      { if (wsV[end-1]+wnorm!=wnorm) /* need to zero wsV[end-1] before deflating */
+    { /*if (wV[end]+wnorm==wnorm)*/ /* zero singular value - can deflate */
+      if (fabs(wV[end])<=tol*wnorm)
+      { /*if (wsV[end-1]+wnorm!=wnorm)*/ /* need to zero wsV[end-1] before deflating */
+        if (fabs(wsV[end-1])>tol*wnorm)
         { /* Series of rotators (Givens rotations from right) zero this element */
           y=wsV[end-1];wsV[end-1]=0.0;
           for (i=end-1;i>=0;i--) /* work out sequence of rotations */
@@ -1675,7 +1704,7 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
         if (end<=0) finished=1;
         break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      if (fabs(wsV[end-1])<DOUBLE_EPS*wnorm)  /* inelegant condition needed because below can fail in R because of register optimizations */
+      if (fabs(wsV[end-1])<=tol*wnorm)  /* inelegant condition needed because below can fail in R because of register optimizations */
       /*if  (wsV[end-1]+wnorm==wnorm)*/ /*too restrictive?? wV[end] is a singular value => deflate  */
       { end--;
         if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
@@ -1683,10 +1712,10 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
       } else /* no deflation possible, search for start of sub-matrix  */
       { start=end-1;
         /* while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--; R needs less elegant version below*/
-        while ((fabs(wV[start])>DOUBLE_EPS*wnorm)&&(fabs(wsV[start])>DOUBLE_EPS*wnorm)&&(start>=0)) start--;
+        while ((fabs(wV[start])>tol*wnorm)&&(fabs(wsV[start])>tol*wnorm)&&(start>=0)) start--;
         start++; /* this is now the row and column starting the sub-matrix */
         /*if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) R needs sloppier version in order to use fp register opts. */
-        if ((start>0)&&(fabs(wV[start-1])<DOUBLE_EPS*wnorm)&&(fabs(wsV[start-1])<DOUBLE_EPS*wnorm)) 
+        if ((start>0)&&(fabs(wV[start-1])<=tol*wnorm)&&(fabs(wsV[start-1])>tol*wnorm)) 
         { /* ws.V[start-1] must be zeroed.... */
           y=wsV[start-1];wsV[start-1]=0.0;
           for (i=start;i<=end;i++) /* get sequence of rotators from left.... */
@@ -3122,6 +3151,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
   free(g);
   free(d);
   free(z);
+  free(zd);
   free(err);
   if (vlength) /* free up first */
   { for (i=0;i<vlength;i++) free(v[i]);free(v);}
@@ -3240,10 +3270,11 @@ void fprintmat(matrix A,char *fname,char *fmt)
       evaluating as false. This means that Watkins suggested convergence check
       if (big+small==big) can fail. Hence replaced in svd and eigen routines.
       All routines now default to using DOUBLE_EPS in place of any hard coded 
-      1e-14's! Also Watkins construction changed to: if (small<DOUBLE_EPS*big).
+      1e-14's! Also Watkins construction changed to: if (small<=DOUBLE_EPS*big).
       header called general.h is good place to define DOUBLE_EPS - will be defined 
       in R.h, which can be included there.   
-
+  20. 5/5/02 One convergence test in svd had been left unchanged - fixed this and loosened
+      convergence criteria by 2 bits.
 */
 
 

@@ -20,7 +20,7 @@ USA.*/
 #include <math.h>
 #include <stdlib.h>
 #include "matrix.h"
-#include <R.h>
+#include "general.h"
 /* Code for thin plate regression splines */
 
 #define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
@@ -183,11 +183,12 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
 { static int sd=0,sm=0,**pin,M;
   double r,g,z,**XM,*dum,*XMi;
   int i,j,k,off;
-  if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
+  if (2*m<=d&&d>0) { m=0;while (2*m<d+2) m++;} 
   if (sd!=d||sm!=m) /* then re-calculate the penalty null space basis */
   { if (sd>0&&sm>0) 
     { for (i=0;i<M;i++) free(pin[i]);free(pin);}
-    if (m>0&&d>0) /* get a new basis for the null space of the penalty */
+    sd=d;sm=m;
+    if (d>0) /* get a new basis for the null space of the penalty */
     { M=1;     /* dimension of penalty null space */
       for (i=0;i<d;i++) M*=d+m-1-i;
       for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
@@ -393,7 +394,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   for (i=0;i<M-1+constant;i++) UZ->M[UZ->r-i-1][UZ->c-i-1]=1.0;
   
   /* Now construct the design matrix X = [Udiag(v)Z,T] .... */
-  if (n_knots<k) /* then the basis prior to truncation is pure spline basis */
+  if (n_knots<k&&!pure_knot) /* then the basis prior to truncation is pure spline basis: 6/5/2002 - !pure_knots added as bug fix*/
   { X1=initmat(U.r,(long)k);
     mcopy(&U,&X1); /* now form Udiag(v) */
     for (i=0;i<X1.r;i++) for (j=0;j<X1.c;j++) X1.M[i][j]*=v.V[j];
@@ -467,7 +468,8 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
             error in the original tprs optimality derivation.
 2-3/2002  - tprs_setup modified to allow knot based tprs bases - pure knot based or knot
             and then eigen are both allowed.
-
+6/5/2002  - bug fix: full spline bases failed - part of tprs_setup treated them as knot based
+            and part as eigen-based - resulted in seg fault.
 */
 
 

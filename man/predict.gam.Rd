@@ -23,10 +23,10 @@ predict.gam(object,newdata,type="link",se.fit=FALSE,...)
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
-parametric model components, followed by each smooth component. When \code{type="response"} predictions 
+parametric model components, followed by each smooth component, but excludes any offset. When \code{type="response"} predictions 
 on the scale of the response are returned (possibly with approximate
 standard errors). When \code{type="lpmatrix"} then a matrix is returned
-which yields the values of the linear predictor when applied to the
+which yields the values of the linear predictor (minus any offset) when applied to the
 parameter vector (in this case \code{se.fit} is ignored). The latter
 option is most useful for getting variance estimates for integrated quantities. }
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
@@ -34,15 +34,15 @@ option is most useful for getting variance estimates for integrated quantities. 
 }
 
 \value{ If \code{type=="lpmatrix"} then a matrix is returned which will
-  give a vector of linear predictor values at the supplied covariate
-  values, when applied to the model coefficient vector. Otherwise, if \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
+  give a vector of linear predictor values (minus any offest) at the supplied covariate
+  values, when applied to the model coefficient vector. 
+Otherwise, if \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
 and \code{se.fit} containing predictions and associated standard error estimates, otherwise an 
 array of predictions is returned. The dimensions of the returned arrays depends on whether 
 \code{type} is \code{"terms"} or not: if it is then the array is 2 dimensional with each 
 term in the linear predictor separate, otherwise the array is 1 dimensional and contains the 
-linear predictor/predicted values (or corresponding s.e.s). 
-
-
+linear predictor/predicted values (or corresponding s.e.s). The linear predictor returned termwise will 
+not include the offset.
 }
 
 \references{
