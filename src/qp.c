@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2001 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -25,6 +25,7 @@ USA.*/
 #include <string.h>
 #include "matrix.h"
 #include "qp.h"
+#include "general.h"
 
 #define DELMAX 35L
 

@@ -1,7 +1,26 @@
+/* Copyright (C) 2000-2002 Simon N. Wood  snw@st-and.ac.uk
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License   
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+(www.gnu.org/copyleft/gpl.html)
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+USA.*/
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include "matrix.h"
+#include <R.h>
 /* Code for thin plate regression splines */
 
 #define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
@@ -23,7 +42,7 @@ double eta(int m,int d,double r)
     Ghalf=sqrt(pi);   /* Gamma function of 0.5 */
   }
   if (2*m<=d) ErrorMessage("You must have 2m>d for a thin plate spline.",1);
-  if (r<=0.0) return(0.0); 
+  if (r<=0.0) return(0.0); /* this is safe: even if eta() gets inlined so that r comes in in an fp register! */
   if (d%2==0) /* then d even */
   { if ((m+1+d/2)%2) f= -1.0; else f=1.0; /* finding (-1)^{m+1+d/2} */
     for (i=0;i<2*m-1;i++) f/=2;  /* dividing by 2^{2m-1} */
@@ -69,6 +88,10 @@ void gen_tps_poly_powers(int **pi,int M,int m, int d)
 /* generates the sequence of powers required to specify the M polynomials spanning the 
    null space of the penalty of a d-dimensional tps with wiggliness penalty order d 
    So, if x_i are the co-ordinates the kth polynomial is x_1^pi[k][1]*x_2^pi[k][2] ....
+   WARNING: the term ordering algorithm used here is also used in mgcv.r... if it is 
+   altered then so must R routines null.space.basis.labels() and null.space.basis.powers(). 
+   The exact sequence matters for putting appropriate side conditions on GAMs like:
+   y~s(x1,x2)+s(x2,x3)....
 */
 
 { int *index,i,j,sum;
@@ -158,7 +181,7 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
 */
 
 { static int sd=0,sm=0,**pin,M;
-  double r,g,z;
+  double r,g,z,**XM,*dum,*XMi;
   int i,j,k,off;
   if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
   if (sd!=d||sm!=m) /* then re-calculate the penalty null space basis */
@@ -173,9 +196,10 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
       gen_tps_poly_powers(pin, M, m, d);
     } else return(0.0);
   }
-  g=0.0;
+  g=0.0;XM=X->M;
   for (i=0;i<X->r;i++)
-  { r=0.0;for (j=0;j<d;j++) { z=X->M[i][j]-x[j];r+=z*z;}
+  { r=0.0;XMi=XM[i];
+    for (dum=x;dum<x+d;dum++) { z= *XMi - *dum;XMi++;r+=z*z;}
     r=sqrt(r);
     r=eta(m,d,r);
     if (p->r) g+=r*p->V[i];
@@ -257,8 +281,8 @@ int *Xd_strip(matrix *Xd)
   return(yxindex);
 }
 
-void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix *S,
-                matrix *UZ,matrix *Xu)
+void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,matrix *X,matrix *S,
+                matrix *UZ,matrix *Xu,int n_knots)
 
 /* Takes d covariates x_1,..,x_d and creates the truncated basis for an order m 
    smoothing spline, returning the design matrix and wiggliness penalty matrix 
@@ -279,6 +303,10 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
           dimension of the null space of the penalty, which is 
           M=(m+d-1)!/[d!(m-1)!]
    constant = 0 if there is to be no intercept term in the model, 1 otherwise
+   knt[i] array of n_knot knot location values for covariate i
+   n_knot number of knots supplied - 0 for none meaning that the values in x 
+          are the knots. n_knots<k equivalent to 0. If n_knot=k then eigen
+          decomposition is redundant and is not performed.
 
    The outputs are X, S and UZ such that the spline is fitted by minimising:
 
@@ -303,63 +331,107 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
    rescaling is transparent.
 */
 
-{ matrix X1,E,U,v,TU,T,Z;
-  int l,i,j,M,ek,*yxindex;
-  double w;
-  *Xu=initmat((long)n,(long)d+1);
-  for (i=0;i<n;i++) { for (j=0;j<d;j++) Xu->M[i][j]=x[j][i];Xu->M[i][d]=(double)i;}
+{ matrix X1,E,U,v,TU,T,Z,p;
+  int l,i,j,M,*yxindex,pure_knot=0;
+  double w,*xc,*XMi,**UZM,*X1V;
+  if (n_knots<k) /* then use the covariate points as knots */
+  { *Xu=initmat((long)n,(long)d+1);
+    for (i=0;i<n;i++) { for (j=0;j<d;j++) Xu->M[i][j]=x[j][i];Xu->M[i][d]=(double)i;}
+  } else /* knot locations supplied */
+  { *Xu=initmat((long)n_knots,(long)d+1);
+    for (i=0;i<n_knots;i++) { for (j=0;j<d;j++) Xu->M[i][j]=knt[j][i];Xu->M[i][d]=(double)i;}
+  }
   /* Now the number of unique covariate "points" must be obtained */
   /* and these points stored in Xu, to avoid problems with E */
   yxindex=Xd_strip(Xu); /*yxindex[i] is the row of Xu corresponding to y[i] */
  
+  
   Xu->c--; /* hide indexing column */
   if (Xu->r<k) ErrorMessage("A term has fewer unique covariate combinations than specified maximum degrees of freedom",1);
   if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
   tpsE(&E,Xu,m,d); /* The important matrix in the full t.p.s. problem */
   tpsT(&T,Xu,m,d); /* The tps constraint matrix */
   M=(int)T.c;       /* dimension of penalty null space */
-  if (k<M+1) k=M+1; 
-  ek=k-(d+1);  /*  must not delete -ve eigen-values, of which there are d+1 */
-  U=initmat(E.r,(long)ek+d+1); /* eigen-vector matrix for E */
-  v=initmat((long)ek+d+1,1L);      /* eigen-value matrix for E */
-  i=lanczos_spd(&E,&U,&v,ek,d+1);      /* get largest and smallest ek eigen-values of E */
-  /* Now form the constraint matrix for the truncated problem T'U */
-  TU=initmat((long)M,k);
-  matmult(TU,T,U,1,0);
-  /* Now TU \delta_k =0 is the constraint for this problem. To impose it use  */
-  /* a QT factorization on TU. i.e. TU Q = [0,B] where B is M by M and Q */
-  /* can be written Q=[Z,Y], where Z is the null space of the constraints. */
-  Z=initmat((long)M,TU.c);
-  QT(Z,TU,0);  /* Z now contains null space as series of householder rotations */
-  *UZ=initmat(U.r+M-1+constant,U.c);UZ->r=U.r;
-  mcopy(&U,UZ);
-  HQmult(*UZ,Z,0,0);UZ->c -= M;      /* Now UZ multiplied by truncated delta gives full delta */
-  UZ->c += M-1+constant;UZ->r +=M-1+constant;  /* adding cols for un-constrained terms to UZ */
-  for (i=0;i<U.r;i++) for (j=U.c-M;j<UZ->c;j++) UZ->M[i][j]=0.0;
-  for (i=0;i<M-1+constant;i++) UZ->M[UZ->r-i-1][UZ->c-i-1]=1.0;
-  /* Now construct the design matrix X = [Udiag(v)Z,T] .... */
-  X1=initmat(U.r,(long)k);
-  mcopy(&U,&X1); /* now form Udiag(v) */
-  for (i=0;i<X1.r;i++) for (j=0;j<X1.c;j++) X1.M[i][j]*=v.V[j];
-  HQmult(X1,Z,0,0);  /* form Udiag(v)Z */
-  for (i=0;i<X1.r;i++) for (j=X1.c-M;j<X1.c;j++) X1.M[i][j]=0.0;
-  /*now add in T (minus first column if constant=0) */
-  if (constant)
-  for (i=0;i<X1.r;i++) for (j=0;j<T.c;j++) X1.M[i][X1.c-M+j]=T.M[i][j];
-  else 
-  { for (i=0;i<X1.r;i++) for (j=1;j<T.c;j++) X1.M[i][X1.c-M+j-1]=T.M[i][j];X1.c--;}
-  /* now map the design matrix back onto the design matrix for the original data */
-  /* undoing what had to be done to deal with tied covariates ...... */
-  *X=initmat((long)n,X1.c);
-  for (i=0;i<n;i++)
-  { l=yxindex[i];
-    for (j=0;j<X1.c;j++) X->M[i][j]=X1.M[l][j];
+  /*ek=k-(d+1);*/  /* erroneous code - when I thought that -ve's must not be deleted */
+  if (k<M+1)  /* re-set basis dimension if it is impossibly small */
+  {  k=M+1;
+     if (Xu->r<k) ErrorMessage("A term has fewer unique covariate combinations than specified maximum degrees of freedom",1);
   }
- 
-  freemat(X1);
+  if (Xu->r==k) pure_knot=1; /* basis dimension is number of knots - don't need eigen step */
+
+
+  /*i=lanczos_spd(&E,&U,&v,ek,d+1);*/      /* error - was keeping -ve's under all circumstances */
+  if (pure_knot) /* don't need the lanczos step, but need to "fake" various matrices to make up for it! */
+  { *UZ=initmat(T.r+M-1+constant,T.r);
+    UZ->r=T.r;
+    TU=initmat(T.c,T.r);
+    for (i=0;i<T.r;i++) for (j=0;j<T.c;j++) TU.M[j][i]=T.M[i][j];
+    QT(*UZ,TU,1); /* UZ is now simply Z - but needs to be full, not just HH's */
+    for (i=0;i<T.r;i++) for (j=0;j<T.c;j++) TU.M[j][i]=T.M[i][j];
+    Z=initmat((long)M,T.r);
+    QT(Z,TU,0);  /* Still need Z as HH's for later */
+  } else
+  { U=initmat(E.r,(long)k); /* eigen-vector matrix for E */
+    v=initmat((long)k,1L);      /* eigen-value matrix for E */
+    i=lanczos_spd(&E,&U,&v,k,-1);      /* get k largest magnitude  eigen-values/vectors of E */
+    /* Now form the constraint matrix for the truncated problem T'U */
+    TU=initmat((long)M,k);
+    matmult(TU,T,U,1,0);
+    /* Now TU \delta_k =0 is the constraint for this problem. To impose it use  */
+    /* a QT factorization on TU. i.e. TU Q = [0,B] where B is M by M and Q */
+    /* can be written Q=[Z,Y], where Z is the null space of the constraints. */
+    Z=initmat((long)M,TU.c);
+    QT(Z,TU,0);  /* Z now contains null space as series of householder rotations */
+    *UZ=initmat(U.r+M-1+constant,U.c);UZ->r=U.r;
+    mcopy(&U,UZ);
+    HQmult(*UZ,Z,0,0);UZ->c -= M;      /* Now UZ multiplied by truncated delta gives full delta */
+    UZ->c += M-1+constant;  /* adding cols for un-constrained terms to UZ */
+  }
+  UZ->r +=M-1+constant;
+  /* Now add the elements required to get UZ to map from whole real parameter vector to whole t.p.s. vector */
+  for (i=0;i<E.r;i++) for (j=k-M;j<UZ->c;j++) UZ->M[i][j]=0.0;
+  for (i=0;i<M-1+constant;i++) UZ->M[UZ->r-i-1][UZ->c-i-1]=1.0;
+  
+  /* Now construct the design matrix X = [Udiag(v)Z,T] .... */
+  if (n_knots<k) /* then the basis prior to truncation is pure spline basis */
+  { X1=initmat(U.r,(long)k);
+    mcopy(&U,&X1); /* now form Udiag(v) */
+    for (i=0;i<X1.r;i++) for (j=0;j<X1.c;j++) X1.M[i][j]*=v.V[j];
+    HQmult(X1,Z,0,0);  /* form Udiag(v)Z */
+    for (i=0;i<X1.r;i++) for (j=X1.c-M;j<X1.c;j++) X1.M[i][j]=0.0;
+    /*now add in T (minus first column if constant=0) */
+    if (constant)
+    for (i=0;i<X1.r;i++) for (j=0;j<T.c;j++) X1.M[i][X1.c-M+j]=T.M[i][j];
+    else 
+    { for (i=0;i<X1.r;i++) for (j=1;j<T.c;j++) X1.M[i][X1.c-M+j-1]=T.M[i][j];X1.c--;}
+    /* now map the design matrix back onto the design matrix for the original data */
+    /* undoing what had to be done to deal with tied covariates ...... */
+    *X=initmat((long)n,X1.c);
+    for (i=0;i<n;i++)
+    { l=yxindex[i];
+      for (j=0;j<X1.c;j++) X->M[i][j]=X1.M[l][j];
+    }
+    freemat(X1);
+  } else /* the user supplied a set of knots to generate the original un-truncated basis */
+  { p.r=0L; /* don't want a value from tps_g() */
+    xc=(double *)calloc((size_t)d,sizeof(double));
+    X1=initmat((long)UZ->r,1L);*X=initmat((long)n,(long)k);
+    for (i=0;i<n;i++)
+    { for (j=0;j<d;j++) xc[j]=x[j][i];
+      tps_g(Xu,&p,xc,d,m,&X1,constant);
+      /* now X1'[UZ] p_k evaluates to the correct thing */
+      XMi=X->M[i]; UZM=UZ->M;X1V=X1.V;
+      for (j=0;j<k;j++) /* form [UZ]'X1 */
+      { for (l=0;l<X1.r;l++) *XMi += UZM[l][j]*X1V[l];
+        XMi++;      
+      } 
+    }
+    free(xc);freemat(X1);
+  }
   /* Next, create the penalty matrix...... */
-  *S=initmat(v.r,v.r); /* form Z'SZ */
-  for (i=0;i<v.r;i++) S->M[i][i]=v.V[i];
+  *S=initmat((long)k,(long)k); /* form Z'SZ */
+  if (pure_knot) mcopy(&E,S);
+  else for (i=0;i<v.r;i++) S->M[i][i]=v.V[i];
   HQmult(*S,Z,0,0);HQmult(*S,Z,1,1);
   for (i=0;i<S->r;i++) for (j=S->r-M;j<S->r;j++) S->M[i][j]=S->M[j][i]=0.0;
   if (!constant) {S->r--;S->c--;}
@@ -374,8 +446,9 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
     for (j=0;j<UZ->r;j++) UZ->M[j][i]/=w;
     for (j=0;j<S->r;j++) S->M[i][j]/=w;
     for (j=0;j<S->r;j++) S->M[j][i]/=w;
-  }
-  free(yxindex);freemat(TU);freemat(E);freemat(T);freemat(U);freemat(v);freemat(Z);
+  }  
+  free(yxindex);freemat(Z);freemat(TU);freemat(E);freemat(T);
+  if (!pure_knot) {freemat(U);freemat(v);}
 }
 
 
@@ -389,5 +462,16 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
 2/11/2001 - default_null_space_dimension replaced with null_space_dimension, which allows user 
             to select m, but uses default dimension if 2m>d not satisfied.
 
+11/2/2002 - tprs_setup now retains the largest magnitude eigen-vectors irrespective of sign
+            this was not correctly handled previously: -ve's were always kept, due to an
+            error in the original tprs optimality derivation.
+2-3/2002  - tprs_setup modified to allow knot based tprs bases - pure knot based or knot
+            and then eigen are both allowed.
+
 */
+
+
+
+
+
 

@@ -28,7 +28,7 @@ with Multiple
 
 
 
-\seealso{   \code{\link{gam}} \code{\link{mgcv}}}
+\seealso{   \code{\link{gam}}, \code{\link{mgcv}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

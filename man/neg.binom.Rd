@@ -6,8 +6,8 @@
 Family function for Negative Binomial GAMs 
 }
 \description{
-Specifies the information required to fit a Negative Binomial Generalized
-Additive Model, with known or unknown \code{theta} parameter, using
+Specifies the information required to fit a negative binomial generalized
+additive model, with known or unknown \code{theta} parameter, using
 \code{gam()} and \code{gam.nbut()}. The code is a minor modification of
  \code{negative.binomial} from \code{library(MASS)}. } 
 \usage{
@@ -32,4 +32,6 @@ generalised additive mode with Negative Binomial errors.
 \keyword{regression}
 \keyword{models}
 \keyword{smooth}
+
+
 

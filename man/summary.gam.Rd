@@ -62,7 +62,8 @@ parameter constant model, and can be higher for the smaller of two nested models
 \item{edf}{array of estimated degrees of freedom for the model terms.}
 \item{residual.df}{estimated residual degrees of freedom.}
 \item{n}{number of data.}
-\item{gcv}{GCV score for the model.}
+\item{gcv}{minimized GCV score for the model, if GCV used.}
+\item{ubre}{minimized UBRE score for the model, if UBRE used.}
 \item{scale}{estimated (or given) scale parameter.}
 \item{family}{the family used.}
 \item{formula}{the original GAM formula.}
@@ -85,14 +86,14 @@ with Multiple
 
 \section{WARNING }{ The supplied p-values are only approximate: they are
   conditional on the smoothing and scale parameters, which will usually
-  have been estiamted.
+  have been estimated.
 } 
 
-\seealso{  \code{\link{gam}} \code{\link{predict.gam}}}
+\seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{gam.check}} }
 
 \examples{
-
 library(mgcv)
+set.seed(0)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)
@@ -111,7 +112,8 @@ summary(b)
 # now check the p-values by using a pure regression spline.....
 b.d<-round(b$edf)+1 
 b.d<-pmax(b.d,3) # can't have basis dimension less than this!
-bc<-gam(y~s(x0,k=b.d[1],fx=TRUE)+s(x1,k=b.d[2],fx=TRUE)+s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE))
+bc<-gam(y~s(x0,k=b.d[1],fx=TRUE)+s(x1,k=b.d[2],fx=TRUE)+
+        s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE))
 plot(bc,pages=1)
 summary(bc)
 # p-value check - increase k to make this useful!

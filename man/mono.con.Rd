@@ -23,7 +23,7 @@ mono.con(x,up=TRUE,lower=NA,upper=NA)
 }
 \details{ Consider the natural cubic spline passing through the points:
   \eqn{ \{x_i,p_i:i=1 \ldots n \} }{ (x_i,p_i), i=1..n}. Then it is possible
-  to find a realtively small set of linear constraints on \eqn{ \bf p}{p}
+  to find a relatively small set of linear constraints on \eqn{ \bf p}{p}
   sufficient to ensure monotonicity (and bounds if required):
   \eqn{ {\bf Ap}\ge{\bf b} }{Ap>=b}. Details are given in Wood (1994).
   This function returns a list containing \code{A} and \code{b}. 
@@ -66,6 +66,8 @@ p<-c(0,p);f.ug$coefficients<-p;
 lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=2)
 }
 \keyword{models} \keyword{smooth} \keyword{regression} %-- one or more ..
+
+
 
 
 

@@ -5,7 +5,10 @@
 \description{
 Function to efficiently estimate smoothing parameters in Generalized
 Ridge Regression Problem with multiple (quadratic) penalties, by GCV 
-or UBRE. The function uses Newton's method in multi-dimensions, backed up by steepest descent.
+or UBRE. The function uses Newton's method in multi-dimensions, backed up by steepest descent to iteratively 
+adjust a set of relative smoothing parameters for each penalty. To ensure that the overall level of smoothing
+is optimal, and to guard against trapping by local minima, a highly efficient global minimisation with respect to 
+one overall smoothing parameter is also made at each iteration. 
 }
 \usage{
 mgcv(M)
@@ -37,12 +40,9 @@ is to be estimated, or TRUE if it is to be fixed at zero.}
  \item{M$df}{ \code{M$df[i]} gives the number of rows and columns of
                \code{M$S[i]} that are non-zero.}
  \item{M$sig2}{ This serves 2 purposes. If it is strictly positive then UBRE is 
-used
-                with sig2 taken as the known error variance. If it is 
-non-positive 
-                then GCV is used (and an estimate of the error variance 
-returned).
-                Note that it is assumed that the variance of \eqn{y_i}{y_i} is 
+used with sig2 taken as the known error variance. If it is 
+non-positive then GCV is used (and on return it will contain an estimate of the error variance). 
+Note that it is assumed that the variance of \eqn{y_i}{y_i} is 
 given
                 by \eqn{\sigma^2/w_i}{\code{sig2}/w_i}.}   
 \item{M$sp}{ An array of initial smoothing parameter estimates if any of 
@@ -53,6 +53,9 @@ is used.}
 \item{M$max.half}{Each step of the GCV minimisation is repeatedly halved if it fails to
   improve the GCV score. This is the maximum number of halvings to try
   at each step. 15 is usually enough.}
+\item{M$min.edf}{The minimum estimated degrees of freedom for the model: set to less than or equal to 0 to ignore.
+                 Supplying this quantity helps to maintain numerical stability in cases in which the best model is 
+                 actually very smooth. }
 }
 \details{ 
 
@@ -107,7 +110,10 @@ following
   \item{M$sig2}{The estimated (GCV) or supplied (UBRE) error variance.}
   \item{M$edf}{The estimated degrees of freedom associated with each penalized term. If \eqn{ {\bf p}_i}{p_i} is the vector of parameters penalized by the ith penalty then we can write \eqn{ {\bf p}_i = {\bf P}_i {\bf y}}{p_i = P_i y}, and the edf for the ith term is \eqn{ tr({\bf XP}_i)}{tr(XP_i)}... while this is sensible in the non-overlapping penalty case (e.g. GAMs) it makes alot less sense if penalties overlap!}
   \item{M$Vp}{Estimated covariance matrix of model parameters.}
+\item{M$gcv.ubre}{The minimized GCV/UBRE score.}
   \item{M$conv}{A list of convergence diagnostics, with the following elements:
+\item{edf}{Array of whole model estimated degrees of freedom.}
+\item{score}{Array of ubre/gcv scores at the edfs for the final set of relatinve smoothing parameters.}
 \item{g}{the gradient of the GCV/UBRE score w.r.t. the smoothing parameters at termination.}
 \item{h}{the second derivatives corresponding to \code{g} above - i.e. the leading diagonal of the Hessian.}
 \item{e}{the eigen-values of the Hessian. These should all be non-negative!}
@@ -116,6 +122,7 @@ following
 where this is \code{FALSE})}
 \item{step.fail}{\code{TRUE} if the algorithm terminated by failing to improve the GCV/UBRE score rather than by "converging". 
 Not necessarily a problem, but check the above derivative information quite carefully.}
+
 }
 }
 \references{
@@ -140,37 +147,36 @@ especially in contexts where the weights vary wildly. }
 \seealso{  \code{\link{GAMsetup}} \code{\link{gam}}}
 
 \examples{
-
  # This example modified from routine SANtest()
-    
-    n<-100 # number of observations to simulate
-    x <- runif(4 * n, 0, 1) # simulate covariates
-    x <- array(x, dim = c(4, n)) # put into array for passing to GAMsetup
-    pi <- asin(1) * 2  # begin simulating some data
-    y <- 2 * sin(pi * x[1, ])
-    y <- y + exp(2 * x[2, ]) - 3.75887
-    y <- y + 0.2 * x[3, ]^11 * (10 * (1 - x[3, ]))^6 + 10 * (10 *
+set.seed(0)    
+n<-100 # number of observations to simulate
+x <- runif(4 * n, 0, 1) # simulate covariates
+x <- array(x, dim = c(4, n)) # put into array for passing to GAMsetup
+pi <- asin(1) * 2  # begin simulating some data
+y <- 2 * sin(pi * x[1, ])
+y <- y + exp(2 * x[2, ]) - 3.75887
+y <- y + 0.2 * x[3, ]^11 * (10 * (1 - x[3, ]))^6 + 10 * (10 *
         x[3, ])^3 * (1 - x[3, ])^10 - 1.396
-    sig2<- -1    # set magnitude of variance
-    e <- rnorm(n, 0, sqrt(abs(sig2)))
-    y <- y + e          # simulated data
-    w <- matrix(1, n, 1) # weight matrix
-    par(mfrow = c(2, 2)) # scatter plots of simulated data   
-    plot(x[1, ], y)
-    plot(x[2, ], y)
-    plot(x[3, ], y)
-    plot(x[4, ], y)
-    G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15),dim=c(1,1,1,1),s.type=c(0,0,0,0), 
-       p.order=c(0,0,0,0), x = x) # creat list for passing to GAMsetup
-    H <- GAMsetup(G)
-    H$y <- y    # add data to H
-    H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H
-    H$w <- w       # add weights to H
-    H$sp<-array(-1,H$m)
-    H$fix<-array(FALSE,H$m)
-    H$conv.tol<-1e-6;H$max.half<-15
-    H <- mgcv(H)  # select smoothing parameters and fit model
- 
+sig2<- -1    # set magnitude of variance
+e <- rnorm(n, 0, sqrt(abs(sig2)))
+y <- y + e          # simulated data
+w <- matrix(1, n, 1) # weight matrix
+par(mfrow = c(2, 2)) # scatter plots of simulated data   
+plot(x[1, ], y);plot(x[2, ], y)
+plot(x[3, ], y);plot(x[4, ], y)
+# create list for passing to GAMsetup
+G <- list(m = 4, n = n, nsdf = 0, df = c(15, 15, 15, 15),dim=c(1,1,1,1),
+          s.type=c(0,0,0,0),by=0,by.exists=c(FALSE,FALSE,FALSE,FALSE),
+          p.order=c(0,0,0,0), x = x,n.knots=rep(0,4)) 
+H <- GAMsetup(G)
+H$y <- y    # add data to H
+H$sig2 <- sig2  # add variance (signalling GCV use in this case) to H
+H$w <- w       # add weights to H
+H$sp<-array(-1,H$m)
+H$fix<-array(FALSE,H$m)
+H$conv.tol<-1e-6;H$max.half<-15
+H$min.edf<-5
+H <- mgcv(H)  # select smoothing parameters and fit model 
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

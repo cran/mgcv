@@ -7,7 +7,7 @@ and produces predictions given a new set of values for the model covariates
 or the original values used for the model fit.}
 }
 \usage{
-predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE,...)
+predict.gam(object,newdata,type="link",se.fit=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -30,8 +30,6 @@ which yields the values of the linear predictor when applied to the
 parameter vector (in this case \code{se.fit} is ignored). The latter
 option is most useful for getting variance estimates for integrated quantities. }
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
- \item{plot.call}{used to signal a call from plot.gam, to avoid having to construct a data frame containing all
-   the parametric model components.}
  \item{...}{ other arguments.}
 }
 

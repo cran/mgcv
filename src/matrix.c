@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2000 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -28,6 +28,7 @@ USA.*/
 #include <string.h>
 #include <stdarg.h>
 #include "matrix.h"
+#include "general.h"
 #define RANGECHECK
 #define PAD 1L
 
@@ -544,7 +545,11 @@ double triTrInvLL(matrix *l0,matrix *l1)
 
 /* this routine finds the trace of inv(LL') where L is a bi-diagonal lower
    triangular choleski factor, with leading diagonal l0 and leading sub diagonal
-   l1. Returns -1 on failure (i.e. none +ve definite matrix) */
+   l1. Returns -1 on failure (i.e. none +ve definite matrix). Note that routine 
+   is *not* set up as a means of detecting numerical loss of +ve definiteness - 
+   the checks in here are *only* to avoid actual divide by zeroes.
+
+*/
 
 { double trC,x,z,*l1V,*l0V;
   long i,l0r;
@@ -555,8 +560,8 @@ double triTrInvLL(matrix *l0,matrix *l1)
   for (i=l0r-2;i>=0;i--)
   { x=l1V[i];z=(1.0+x*x*z);x=l0V[i];
     x*=x;
-    if (z==0.0) z=0.0;
-    else
+    /* if (z==0.0) z=0.0;  could be removed - condition impossible 
+       else*/
     { if (x==0.0) return(-1.0); 
       z/=x;
     }
@@ -672,7 +677,7 @@ int chol(A,L,invert,invout) matrix A,L;int invert,invout;
   { sigmaL=0.0;
     for (p=LM[i];p<(LM[i]+i);p++) sigmaL+=(*p)*(*p);
     z=AM[i][i]-sigmaL;
-    if (z<=0.0)
+    if (z<=0.0)   /* test should be register safe */
     return(0);
     else LM[i][i]=sqrt(z);
     for (j=i+1;j<A.r;j++)
@@ -687,7 +692,7 @@ int chol(A,L,invert,invout) matrix A,L;int invert,invout;
     j=j;
   }
   z=AM[j][j]-sigmaL;
-  if (z<=0)
+  if (z<=0) /* test ok even with register opt. */
   return(0);
   LM[j][j]=sqrt(z);
   /* Inverting L (it stays lower triangular)*/
@@ -745,7 +750,7 @@ matrix choleskiupdate(L,a) matrix L,a;
     for (p=RM[i];p<(RM[i]+i);p++) rr+=(*p)*(*p1++);
     if (i!=Lr) RM[Lr][i]=(aV[i]-rr)/RM[i][i];
     else
-    { if (aV[i]-rr<0.0) RM[Lr][i]=2e-15; /* ERROR condition! */
+    { if (aV[i]-rr<0.0) RM[Lr][i]=DOUBLE_EPS; /* ERROR condition! */
       else RM[Lr][i]=sqrt(aV[i]-rr);
     }
   }
@@ -824,7 +829,7 @@ void choleskir1ud(L,u,alpha) matrix L,u;double alpha;
   } */
   for (i=0;i<u.r;i++)
   { if (d.V[i]<=0.0)
-    d.V[i]=2e-15;
+    d.V[i]=DOUBLE_EPS;
     else d.V[i]=sqrt(d.V[i]);
     for (j=i;j<u.r;j++)
     { L.M[j][i]*=d.V[i];
@@ -837,7 +842,7 @@ void choleskisolve(L,z,y) matrix L,z,y;
 
 /*                                                                         */
 /* Solves the system LL'z=y for z. L is a lower triangular choleski factor */
-/*						                                          		   */
+/*				                             		   */
 
 { long i,j,n;
   matrix x;
@@ -1395,9 +1400,9 @@ void root(matrix *M,matrix *C,double tol)
     x=u1.V[i-1]*u1.V[i-1]+u0.V[i]*u0.V[i]-T.M[i][i];x=fabs(x);
     if (x>m) { m=x;k=i;}
   }
-  if (m>1e-14*max) ok=0;
+  if (m>10.0*DOUBLE_EPS*max) ok=0;
   if (!ok)
-  { ErrorMessage("Using svd to find root of penalty!",0); 
+  { /*ErrorMessage("Using svd to find root of penalty!",0);*/ 
     (*C)=svdroot(*M,tol);
     freemat(U);freemat(T);freemat(u0);freemat(u1);
     return; 
@@ -1670,16 +1675,18 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
         if (end<=0) finished=1;
         break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      /*if (fabs(wsV[end-1])<=1e-15*wnorm) */ /* condition slacker than below */
-      if  (wsV[end-1]+wnorm==wnorm) /*too restrictive?? wV[end] is a singular value => deflate  */
+      if (fabs(wsV[end-1])<DOUBLE_EPS*wnorm)  /* inelegant condition needed because below can fail in R because of register optimizations */
+      /*if  (wsV[end-1]+wnorm==wnorm)*/ /*too restrictive?? wV[end] is a singular value => deflate  */
       { end--;
         if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
         break; /* deflated so start new QR cycle or finish */
       } else /* no deflation possible, search for start of sub-matrix  */
       { start=end-1;
-        while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--;
+        /* while ((wnorm+wV[start]!=wnorm)&&(wnorm+wsV[start]!=wnorm)&&(start>=0)) start--; R needs less elegant version below*/
+        while ((fabs(wV[start])>DOUBLE_EPS*wnorm)&&(fabs(wsV[start])>DOUBLE_EPS*wnorm)&&(start>=0)) start--;
         start++; /* this is now the row and column starting the sub-matrix */
-        if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) 
+        /*if ((start>0)&&(wnorm+wV[start-1]==wnorm)&&(wnorm+wsV[start-1]!=wnorm)) R needs sloppier version in order to use fp register opts. */
+        if ((start>0)&&(fabs(wV[start-1])<DOUBLE_EPS*wnorm)&&(fabs(wsV[start-1])<DOUBLE_EPS*wnorm)) 
         { /* ws.V[start-1] must be zeroed.... */
           y=wsV[start-1];wsV[start-1]=0.0;
           for (i=start;i<=end;i++) /* get sequence of rotators from left.... */
@@ -2449,7 +2456,7 @@ long rank(a) matrix a;
   max=c.V[0];
   for (i=1;i<c.r;i++)
   { if (fabs(c.V[i])>max) max=fabs(c.V[i]);}
-  max*=1e-14;
+  max*=DOUBLE_EPS;
   for (i=0;i<c.r;i++) if (fabs(c.V[i])>max) r++;
   freemat(b);freemat(c);freemat(d);
   return(r);
@@ -2730,8 +2737,9 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
     /* locate the end.... */
     ok=1;
     while (ok)
-    { big=fabs(d[end])+fabs(d[end-1]);small=g[end-1]+big;
-      if (big==small) end--; else ok=0;
+    { big=fabs(d[end])+fabs(d[end-1]);
+      /*small=g[end-1]+big;if (big==small) R default register optimizations mess this up*/
+      if (fabs(g[end-1])<DOUBLE_EPS*big) end--; else ok=0;
       if (end==0) { finished=1;ok=0;}  /* matrix is diagonal */
     }
     if (!finished)
@@ -2739,8 +2747,9 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
       start=end-1;ok=0;
       if (start>0) ok=1;
       while (ok)
-      { big=fabs(d[start])+fabs(d[start-1]);small=g[start-1]+big;
-        if (big==small) ok=0; else start--;
+      { big=fabs(d[start])+fabs(d[start-1]);
+        /*small=g[start-1]+big;if (big==small) R default use of fp registers messes this up */ 
+        if (fabs(g[start-1])<DOUBLE_EPS*big) ok=0; else start--;
         if (start==0) ok=0;
       } 
       /* check whether iteration limit exceeded.... */
@@ -2894,14 +2903,14 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
       ok=0; /* test for convergence.... */
       dum1=vo;
       for (dum=v[k];dum<v[k]+n;dum++) 
-      { x = *dum1 - *dum;dum1++;x=fabs(x);if (x>1e-15) { ok=1;break;}}
+      { x = *dum1 - *dum;dum1++;x=fabs(x);if (x>DOUBLE_EPS) { ok=1;break;}}
       ok1=0;dum1=vo;
       for (dum=v[k];dum<v[k]+n;dum++) 
-      { x = *dum1 + *dum;dum1++;x=fabs(x);if (x>1e-15) { ok1=1;break;}}
+      { x = *dum1 + *dum;dum1++;x=fabs(x);if (x>DOUBLE_EPS) { ok1=1;break;}}
       if (ok==0||ok1==0) ok=0; else ok=1;
       iter++;
       if (iter>iter_max) 
-	  {sprintf(msg,"eigenvv_tri() Eigen vector %d of %d failure. Error = %g > 1e-14",k,n,x);
+	  {sprintf(msg,"eigenvv_tri() Eigen vector %d of %d failure. Error = %g > %g",k,n,x,DOUBLE_EPS);
            ErrorMessage(msg,1); 
           
           }
@@ -2930,16 +2939,18 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
 int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
 
 /* Routine to find trunctated spectral decomposition of a symmetric matrix, A,  using Lanczos 
-   iteration. This is most useful for finding some of the largest and smallest eigen-values 
+   iteration. This is most useful for finding some of the highest and lowest eigen-values 
    of large matrices. Basic idea is to iteratively construct a (k by k) tri-diagonal matrix 
    T_k, whose eigenvalues/vectors  will well approximate the eigen values/vectors of A.
 
    m is the number of eigenvalues/vectors required at high end. Let A be n by n.
    lm is number of eigenvalues/vectors that must converge at low end.
+   if lm<0 then the m largest magnitude eigenvalue + corresponding eigenvectors
+   are found.
 
-   V must be initialised to be an n by (lm+m) matrix and va an (m+lm) vector. 
+   V must be initialised to be an n by (max(0,lm)+m) matrix and va an (m+max(0,lm)) vector. 
 
-   On exit V diag(va) V' is a somewhat odd truncated approximation to A
+   On exit V diag(va) V' is a truncated approximation to A
 
    Algorithm:
 
@@ -2958,19 +2969,20 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
    
    Note that some further optimization of the eigen-value step should be possible.
    At present implicit QR with Wilkinson shifts is used for the eigen values and
-   then eigen vectors are found by inverse iteration. This is order j^2. However,
-   it might be worth using previous eigen-values as shifts, and only finding the 
+   eigen vectors. This is order j^3. However, inverse iteration would only be O(j^2)
+   and it might be worth using previous eigen-values as shifts, and only finding the 
    eigenvectors corresponding to the eigenvalues just below (above) the eigenvalues
    already converged. The eigenvalues step would still be order j^2 (although should 
    be faster than before), but the eigen vector step would drop to order j. 
-
+   Experiences problems with inverse iteration, however => using current method.
 */
 
 { double **v,*d,*b,*g,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
-         *z,*zd,*err,normTj,*dum,eps_stop=1e-15,max_err;
-  int i,j,k,n,ok,l,kk,vlength=0;
+         *z,*zd,*err,normTj,*dum,eps_stop=DOUBLE_EPS,max_err;
+  int i,j,k,n,ok,l,kk,vlength=0,biggest=0,low_conv,high_conv,use_low,conv;
   unsigned long jran=1,ia=106,ic=1283,im=6075;
   
+  if (lm<0) { biggest=1;lm=0;} /* get m largest magnitude eigen-values */
   AM=A->M;
   v=AM; /* purely to avoid spurious compiler warning */
   n=(int)A->r;
@@ -3062,12 +3074,30 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
       }
       /* and check for termination ..... */
       if (j>m+lm)
-      { ok=1;
-        max_err=normTj*eps_stop;
-        for (i=0;i<m;i++) if (err[i]>max_err) ok=0;
-        for (i=j;i>j-lm;i--) if (err[i]>max_err) ok=0;
-        if (ok) 
-        { j++;break;}
+      { max_err=normTj*eps_stop;
+        if (biggest) 
+	{ low_conv=0;i=j; while (i>=0&&err[i]<max_err&&d[i]<0.0) { low_conv++;i--;}
+	  high_conv=0;i=0; while (i<=j&&err[i]<max_err&&d[i]>=0.0) { i++;high_conv++;}
+          conv=high_conv;use_low=0;
+          for (i=0;i<low_conv;i++) /* test each of the negatives to see if it should be in the set of largest */
+	  { if (-d[j-i]>=d[high_conv-1]) { conv++;use_low++;}
+          } 
+          if (conv>=m) /* then have enough - need to reset lm and m appropriately and break */
+	  { while (conv>m) /* drop smallest magnitude terms */ 
+	    { if (use_low==0) {high_conv--;conv--;} else
+	      if (high_conv==0) {use_low--;conv--;} else
+              if (-d[j-use_low+1]>d[high_conv-1]) {high_conv--;conv--;} else { use_low--;conv--;}
+            } 
+            lm=use_low;m=high_conv;
+            j++;break;
+	  }
+        } else
+        { ok=1;
+          for (i=0;i<m;i++) if (err[i]>max_err) ok=0;
+          for (i=j;i>j-lm;i--) if (err[i]>max_err) ok=0;
+          if (ok) 
+          { j++;break;}
+        }
       }
     }
   }
@@ -3204,8 +3234,20 @@ void fprintmat(matrix A,char *fname,char *fmt)
       early or so often, to ofset the increase in eigenvector cost from 0(j^2) to O(j^3).
       Also svdroot() now signals an error if it gets passed a matrix that has any -ve 
       eigenvalues. 6/1/02 - svdroot() error check had a bug - fixed.
+  19. 1/5/02: R default compile options allow dangerous use of register variables
+      which can result in:
+      double a,b;a=b;if(a==b) 
+      evaluating as false. This means that Watkins suggested convergence check
+      if (big+small==big) can fail. Hence replaced in svd and eigen routines.
+      All routines now default to using DOUBLE_EPS in place of any hard coded 
+      1e-14's! Also Watkins construction changed to: if (small<DOUBLE_EPS*big).
+      header called general.h is good place to define DOUBLE_EPS - will be defined 
+      in R.h, which can be included there.   
 
 */
+
+
+
 
 
 

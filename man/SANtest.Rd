@@ -31,6 +31,7 @@ variance, \eqn{\sigma^2}{sigma^2}, given by  \code{sig2}, otherwise GCV is used.
 \seealso{ \code{\link{mgcv}} \code{\link{gam}} }
 
 \examples{
+set.seed(0)
 SANtest(300,-1) # use GCV with 300 data point example, variance 1
 SANtest(300,0.5) # use UBRE 300 data, variance 0.5
 

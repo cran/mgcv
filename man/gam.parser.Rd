@@ -32,12 +32,10 @@ with Multiple
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\section{WARNING }{The code does not check for rank defficiency of the
-model matrix that may result from including the same covariates in the smooth and parametric parts of the model -
-      it will likely just fail instead!
- } 
 
 \seealso{   \code{\link{gam}} \code{\link{mgcv}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
 
