@@ -28,24 +28,28 @@ glm
      part of fitting by calling \code{mgcv}  within \code{gam.fit}.
 Details are
      given in Wood (2000).
- 
-}
+ }
 
 \arguments{ 
-  
- \item{formula}{A GAM formula. This is exactly like the formula for a
-glm exept that smooth terms can be added to the right hand side of the
-formula, and the l.h.s. must contain only the names of a variable, and
+
+\item{formula}{ A GAM formula. This is exactly like the formula for a
+glm except that smooth terms can be added to the right hand side of the
+formula, and the l.h.s. must contain only the name of a variable, and
 not some transformation function applied to a named variable.
 Smooth terms are specified by expressions of the form:
 \code{s(var,knots)} where \code{var} is the covariate which the smooth
 is a function of and \code{knots} is the number of knots for the spline
-representing this smooth. \code{knots} must be a number, and not a variable 
-(i.e 10, 45, 13 are all ok, \code{n} is not. The formula may also include terms like
+representing this smooth. \code{knots} must be a number, and not a variable
+(i.e 10, 45, 13 are all ok, \code{n} is not). If the number of knots is not
+ specified then 10 are used. 
+
+The formula may also include terms like 
 \code{s(x,12|f)}, which specifies a regression spline which is not to be penalized
-and has 12 knots and a fixed number of degrees of freedom (11 in this example).
-\item{data}{ A data frame containing the model covariates required by the
-formula. If this is missing then the frame from which \code{gam} was called is 
+and has 12 knots. Such regression splines obviously have a fixed number of degrees of freedom 
+(11 in this example).}
+
+\item{data}{ A data frame containing the model response variable and covariates required by the
+formula. If this is missing then the frame from which \code{gam} was called is
 searched for the variables specified in the formula.} 
 \item{weights}{ 
 prior weights on the data.
@@ -58,13 +62,14 @@ details.
 \item{scale}{ If this is zero then GCV is used for all distributions
 except Poisson and binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
-parameter/variance and UBRE is used, otherwise GCV is used.} }
+parameter/variance and UBRE is used, otherwise GCV is used.} 
+}
 
 \value{ 
- The function returns an object of class \code{"gam"}. 
+ The function returns an object of class \code{"gam"} which has the following elements: 
 
 \item{coefficients}{the coefficients of the fitted model. Parametric
-          coefficients are  first followed  by coefficients for each
+          coefficients are  first, followed  by coefficients for each
           spline term in turn.}
 
 \item{residuals}{the deviance residuals for the fitted model.}
@@ -106,7 +111,7 @@ expected value for  each datum.}
 
 \item{Vp}{estimated covariance matrix for parameters.}
 
-\item{xp}{knot locations for each smooth. xp[i,] are the locations for
+\item{xp}{knot locations for each smooth. \code{xp[i,]} are the locations for
           the ith smooth.}
 
 \item{formula}{the model formula.}
@@ -155,5 +160,7 @@ e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b) 
+# now fit GAM with 3df regression spline term and two penalized terms
+b<-gam(y~s(x0,4|f)+s(x1)+s(x2,15))
 }
 \keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...

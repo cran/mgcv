@@ -242,6 +242,11 @@ gam.parser<-function(formula)
 
 
 { ft<-as.character(formula)  # array of model formula components
+  # unfortunately the above will truncate the rhs of the model formula if too long
+  work.around<-as.character(deparse(formula[3]))
+  ft[3]<-""    #  delete original, possibly defective, ft[3]
+  for (i in 1:length(work.around)) ft[3]<-paste(ft[3],work.around[i],sep="")
+  rm(work.around)           # ft[3] now contains rhs of formula + '()'
   sf<-paste(ft[2],"~",sep="") # smooth formula (as text)
   pf<-paste("~",sep="") # parametric formula (as text)
   i<-1       # character counter
@@ -256,7 +261,7 @@ gam.parser<-function(formula)
   ndf<-c(-1)
   fix<-c(FALSE)
   options(warn=-1) # turn warnings off to prevent warning on is character a number test
-  while(i <= nchar(ft[3])) # work through rhs of model as character string
+  while(i <= nchar(ft[3])-2) # work through rhs of model (excluding final '()')
   { if (c!=" ") lc<-c # store last non-space
     c<-substring(ft[3],i,i) # next char from string
     if (c==" ") # then continue

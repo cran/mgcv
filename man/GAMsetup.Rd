@@ -7,7 +7,7 @@ S}_i }{S_i} and constraint matrix null space \eqn{\bf Z}{Z} for a GAM defined in
 penalized regression splines, as well as returning the locations of the knots of these 
 regression splines \code{xp[][]}. The output is such that the model can be fitted and 
 smoothing parameters estimated by the method of Wood (2000) as implemented in routine
-\code{mgcv()}.
+\code{mgcv()}. This routine is largely superceded by \code{gam}.
 
 }
 \usage{
@@ -36,9 +36,8 @@ automatically.}
 following:  
 \item{X}{the full design matrix.}
 \item{S}{an array of matrices containing the coefficients of the penalties. These are 
-stored in a compact form, so that \code{H$S[i]} is the smallest square matrix  
-submatrix  containing all the non-zero elements of \eqn{ {\bf S}_i}{S_i}
-the ith penalty 
+stored in a compact form, so that \code{H$S[i]} is the smallest square submatrix 
+containing all the non-zero elements of \eqn{ {\bf S}_i}{S_i}, the ith penalty 
 matrix. Element 0,0 of \code{H$S[i]} is element \code{off[i],off[i]} of \eqn{ {\bf 
 S}_i }{S_i}, element 0,1 of \code{H$S[i]} is element \code{off[i],off[i]+1} of \eqn{ {\bf 
 S}_i }{S_i}, and so on.}
@@ -55,7 +54,7 @@ values!}
 quadratic penalties" JRSSB 62(2):413-428 }
 \author{Simon N. Wood \email{snw@st-and.ac.uk}}
 
-\seealso{ \code{\link{mgcv}} }
+\seealso{ \code{\link{mgcv}} \code{\link{gam}} }
 
 \examples{
     # This example modified from routine SANtest()

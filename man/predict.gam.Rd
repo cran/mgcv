@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction from fitted GAM model}
 \description{ Takes a fitted \code{gam} object prodced by \code{gam()} 
-produces predictions given a new set of vaules for the model covariates.
+and produces predictions given a new set of values for the model covariates.
 All predictions are on the scale of the linear predictor.}
 }
 \usage{
@@ -23,7 +23,7 @@ predict.gam(object,newdata,type,se.fit)
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
 linear predictor is returned seperately (possibly with standard errors): this includes 
-parametric model component, followed by each smooth component.}
+parametric model components, followed by each smooth component.}
 
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
  
@@ -82,3 +82,5 @@ pred<-predict.gam(b,newd)
  
 }
 \keyword{GAM, GCV, AIC, UBRE, penalized regression spline }%-- one or more ...
+
+
