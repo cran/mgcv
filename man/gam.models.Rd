@@ -46,7 +46,7 @@
   a dimension of 20, while fixing the second term at 25 degrees of
   freedom. The appropriate formula would be:\cr
   \code{y~x1+x2+s(x3,bs="cr",k=20)+s(x4,x5,k=26,fx=T)}.
-  \cr
+
 
   Now consider some more unusual models. Consider a model in which
   \eqn{y}{y} is a smooth function of \eqn{x}{x} except at a point
