@@ -44,6 +44,11 @@ row/column of the block diagonal matrix relates to. The block sizes are defined 
 the coarsest level of grouping in the random effect structure.
 
 \code{\link{gamm}} uses \code{extract.lme.cov2}.
+
+\code{extract.lme.cov} does not currently deal with the situation in which the
+grouping factors for a correlation structure are finer than those for the
+random effects. \code{extract.lme.cov2} does deal with this situation.
+
 }
 
 

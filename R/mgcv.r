@@ -1,7 +1,6 @@
 # These are the R routines for the package mgcv (c) Simon Wood 2000-2004
 
 
-
 mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
 # Takes the knot sequence x for a cubic regression spline and returns a list with 
 # 2 elements matrix A and array b, such that if p is the vector of coeffs of the
@@ -488,7 +487,7 @@ te<-function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE)
   # now check the basis types
   if (length(bs)==1) bs<-rep(bs,n.bases)
   if (length(bs)!=n.bases) {warning("bs wrong length and ignored.");bs<-rep("cr",n.bases)}
-  bs[d>1]<-"tp"
+  bs[d>1&bs!="tp"&bs!="ts"]<-"tp"
   # finally the penalty orders
   if (length(m)==1) m<-rep(m,n.bases)
   if (length(m)!=n.bases) 
@@ -999,8 +998,11 @@ pdTens <- function(value = numeric(0), form = NULL, nam = NULL, data = sys.frame
 pdConstruct.pdTens <-
   function(object, value = numeric(0), form = formula(object),
 	   nam = Names(object), data = sys.frame(sys.parent()), ...)
-# used to initialize pdTens objects. Note that the initialization matrices supplied
-# are (factors of) trial random effects covariance matrices and not their inverses
+## used to initialize pdTens objects. Note that the initialization matrices supplied
+## are (factors of) trial random effects covariance matrices or their inverses.
+## Which one is being passed seems to have to be derived from looking at its
+##  structure.
+## Class tested rather thoroughly with nlme 3.1-52 on R 2.0.0
 {
   val <- NextMethod()
   if (length(val) == 0) {               # uninitiliazed object
@@ -1012,12 +1014,18 @@ pdConstruct.pdTens <-
   if (is.matrix(val)) {			# initialize from a positive definite
     S <- attr(form,"S")
     m <- length(S)
-    y <- as.numeric(solve(crossprod(val)))     # it's a factor that gets passed in
+    y <- as.numeric((crossprod(val)))   # it's a factor that gets returned in val
     lform <- "y ~ as.numeric(S[[1]])"
-    for (i in 2:m) lform <- paste(lform," + as.numeric(S[[",i,"]])",sep="")
+    if (m>1) for (i in 2:m) lform <- paste(lform," + as.numeric(S[[",i,"]])",sep="")
     lform <- formula(paste(lform,"-1"))
-    value <- coef(lm(lform))  
-    value[value <=0] <- mean(abs(value))/1000
+    mod1<-lm(lform)
+    y <- as.numeric(solve(crossprod(val)))
+    mod2<-lm(lform)
+    ## `value' and `val' can relate to the cov matrix or its inverse:
+    ## the following seems to be only way to tell which.
+    if (summary(mod2)$r.sq>summary(mod1)$r.sq) mod1<-mod2
+    value <- coef(mod1)  
+    value[value <=0] <- 1e-15 #mean(abs(value))/1000
     value <- notLog(value)
     attributes(value) <- attributes(val)[names(attributes(val)) != "dim"]
     class(value) <- c("pdTens", "pdMat")
@@ -1034,24 +1042,29 @@ pdConstruct.pdTens <-
 }
 
 
-pdFactor.pdTens <-
-  function(object)
-# The factor of the inverse of the scaled r.e. covariance matrix is returned here
+pdFactor.pdTens <- function(object)
+## The factor of the inverse of the scaled r.e. covariance matrix is returned here
+## it should be returned as a vector. 
 { sp <- as.vector(object)
   m <- length(sp)
   S <- attr(formula(object),"S")
   value <- S[[1]]*notExp(sp[1])
   if (m>1) for (i in 2:m) value <- value + notExp(sp[i])*S[[i]] 
   if (sum(is.na(value))>0) warning("NA's in pdTens factor")
+#### EXPERIMENTAL 
+#  value<-solve(value,tol=0)
+### 
   value <- (value+t(value))/2
-  mroot(value,rank=nrow(value))
+  c(t(mroot(value,rank=nrow(value))))
 }
 
 
 pdMatrix.pdTens <-
   function(object, factor = FALSE) 
 # the inverse of the scaled random effect covariance matrix is returned here, or
-# its factor if factor==TRUE
+# its factor if factor==TRUE. If A is the matrix being factored and B its
+# factor, it is required that A=B'B (not the mroot() default!)
+
 {
   if (!isInitialized(object)) {
     stop("Cannot extract the matrix from an uninitialized object")
@@ -1061,11 +1074,14 @@ pdMatrix.pdTens <-
   S <- attr(formula(object),"S")
   value <- S[[1]]*notExp(sp[1])   
   if (m>1) for (i in 2:m) value <- value + notExp(sp[i])*S[[i]]  
+#### EXPERIMENTAL 
+#  value<-solve(value,tol=0)
+###   
   value <- (value + t(value))/2 # ensure symmetry
   if (sum(is.na(value))>0) warning("NA's in pdTens matrix")
   if (factor) {
-    value <- mroot(value,rank=nrow(value))
-    attr(value, "logDet") <- sum(log(diag(value)))
+    value <- t(mroot(value,rank=nrow(value)))
+#    attr(value, "logDet") <- sum(log(diag(value)))
   } 
   dimnames(value) <- attr(object, "Dimnames")
   value
@@ -1293,6 +1309,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
   random<-list()
   random.i<-0
   k.sp <- 0  # counter for penalties
+  xlab <- rep("",0)
   if (m)
   for (i in 1:m) 
   { # idea here is that terms are set up in accordance with information given in split$smooth.spec
@@ -1300,7 +1317,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
     # constructor returns penalty matrices model matrix and basis specific information
     sm<-smooth.construct(split$smooth.spec[[i]],data,knots)
     # incorporate any constraints, and store null space information in smooth object
-    if (length(sm$S)>1)
+    if (inherits(split$smooth.spec[[i]],"tensor.smooth.spec"))
     { if (sum(sm$fx)==length(sm$fx)) sm$fixed <- TRUE
       else 
       { sm$fixed <- FALSE
@@ -1329,10 +1346,11 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
     G$Xf<-cbind(G$Xf,XZ)   # accumulate model matrix that treats all smooths as fixed
     if (!sm$fixed) 
     { sm$ZSZ <- ZSZ            # store these too - for construction of Vp matrix
-      if (length(ZSZ)>1) # tensor product term - need to find null space from sum of penalties
-      { sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
+      if (inherits(split$smooth.spec[[i]],"tensor.smooth.spec")) { 
+        # tensor product term - need to find null space from sum of penalties
+        sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
         null.rank <- sm$margin[[1]]$bs.dim-sm$margin[[1]]$rank
-        for (l in 2:length(ZSZ)) 
+        if (length(ZSZ)>1) for (l in 2:length(ZSZ)) 
         { sum.ZSZ <- sum.ZSZ + ZSZ[[l]]/mean(abs(ZSZ[[l]]))
           null.rank <- # the rank of the null space of the penalty 
                        null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
@@ -1353,12 +1371,14 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
       if (sum(is.na(U))||sum(is.na(D))) stop(
       "NA returned from eigen: please email simon@stats.gla.ac.uk with as much detail as possible ")
       XZU<-XZ%*%U
-      if (p.rank<k-j) Xf<-XZU[,(p.rank+1):(k-j)]
+      if (p.rank<k-j) Xf<-as.matrix(XZU[,(p.rank+1):(k-j)])
       else Xf<-matrix(0,nrow(sm$X),0) # no fixed terms left
       if (mult.pen) 
       { Xr <- XZU[,1:p.rank] # tensor product case
         for (l in 1:length(ZSZ))   # transform penalty explicitly
-        ZSZ[[l]] <- (t(U)%*%ZSZ[[l]]%*%U)[1:p.rank,1:p.rank]
+        { ZSZ[[l]] <- (t(U)%*%ZSZ[[l]]%*%U)[1:p.rank,1:p.rank]
+          ZSZ[[l]] <- (ZSZ[[l]]+t(ZSZ[[l]]))/2
+        }
       }
       else Xr<-t(t(XZU[,1:p.rank])*D)
       n.para<-k-j-p.rank # indices for fixed parameters
@@ -1389,6 +1409,20 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
       first.f.para <- first.f.para+n.para
       sm$last.f.para <- first.f.para-1
     }
+    ## now add appropriate column names to Xf.
+    ## without these, summary.lme will fail
+    
+    if (ncol(Xf)) {
+      Xfnames<-rep("",ncol(Xf)) 
+      k<-length(xlab)+1
+      for (j in 1:ncol(Xf)) {
+        xlab[k] <- Xfnames[j] <-
+        new.name(paste(sm$label,"Fx",j,sep=""),xlab)
+        k <- k + 1
+      } 
+      colnames(Xf) <- Xfnames
+    }
+
     X<-cbind(X,Xf) # add fixed model matrix to overall X
   
     sm$X <- NULL
@@ -1434,13 +1468,25 @@ extract.lme.cov2<-function(b,data,start.level=1)
   grps<-getGroups(b) # labels of the innermost groupings - in data frame order
   n<-length(grps)    # number of data
   n.levels <- length(b$groups) # number of levels of grouping
-  if (n.levels >= start.level)
-  { Cgrps <- getGroups(b,level=start.level) # labels for outer grouping (df order) 
+  if (n.levels<start.level) ## then examine correlation groups
+  { if (is.null(b$modelStruct$corStruct)) n.corlevels <- 0 else
+    n.corlevels <-
+    length(all.vars(getGroupsFormula(b$modelStruct$corStruct)))
+  } else n.corlevels <- 0 ## used only to signal irrelevance
+  ## so at this stage n.corlevels > 0 iff it determines the coarsest grouping
+  ## level if > start.level. 
+  if (n.levels<n.corlevels) ## then cor groups are finest
+  grps <- getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
+
+  if (n.levels >= start.level||n.corlevels >= start.level)
+  { if (n.levels >= start.level)
+    Cgrps <- getGroups(b,level=start.level) # outer grouping labels (dforder) 
+    else Cgrps <- getGroups(b$modelStruct$corStruct) # ditto
     Cind <- sort(as.numeric(Cgrps),index.return=TRUE)$ix
     # Cind[i] is where row i of sorted Cgrps is in original data frame order 
     rCind <- 1:n; rCind[Cind] <- 1:n
     # rCind[i] is location of ith original datum in the coarse ordering
-    CFgrps <- grps[Cind] # fine group levels in coarse group order
+    CFgrps <- grps[Cind] # fine group levels in coarse group order (unused!!)
     Clevel <- levels(Cgrps) # levels of coarse grouping factor
     n.cg <- length(Clevel)  # number of outer groups
     size.cg <- array(0,n.cg)  
@@ -1709,8 +1755,8 @@ new.name <- function(proposed,old.names)
 
 
 
-gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,
-               knots=NULL,control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
+gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
+      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
@@ -1745,7 +1791,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     mf$formula<-as.formula(paste(paste(deparse(gp$fake.formula,backtick=TRUE),collapse=""),
                            "+",paste(allvars,collapse="+")))
     else mf$formula<-gp$fake.formula
-    mf$correlation<-mf$random<-mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-
+    mf$correlation<-mf$random<-mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$weights<-
     mf$min.sp<-mf$H<-mf$gamma<-mf$fit<-mf$niterPQL<-mf$verbosePQL<-mf$G<-mf$...<-NULL
     mf$drop.unused.levels<-TRUE
     mf[[1]]<-as.name("model.frame")
@@ -1801,16 +1847,38 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       for (i in 1:r.m) rand[[G$m+i]]<-random[[i]]    
       names(rand)<-r.names
     }
- 
+    ## need to modify the correlation structure formula, in order that any
+    ## grouping factors for correlation get nested within at least the 
+    ## constructed dummy grouping factors.
+    if (length(formula(correlation))) # then modify the correlation formula
+    { # first get the existing grouping structure ....
+      corGroup <- paste(names(rand),collapse="/")
+      groupForm<-getGroupsFormula(correlation)
+      if (!is.null(groupForm)) 
+      corGroup <- paste(corGroup,paste(all.vars(getGroupsFormula(correlation)),collapse="/"),sep="/")
+      # now make a new formula for the correlation structure including these groups
+      corForm <- as.formula(paste(deparse(getCovariateFormula(correlation)),"|",corGroup))
+      attr(correlation,"formula") <- corForm
+    }
+
     ### Actually do fitting ....
     if (family$family=="gaussian"&&family$link=="identity"&&
     length(offset.name)==0) reml.used <- TRUE else reml.used <- FALSE
     
     if (reml.used)
-    { ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
+    { ## following construction is a work-around for problem in nlme 3-1.52 
+      eval(parse(text=paste("ret$lme<-lme(",deparse(fixed.formula),
+          ",random=rand,data=mf,correlation=correlation,control=control,weights=weights)"
+            ,sep=""    ))) 
+      ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
-    { ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
-                       control=control,niter=niterPQL,verbose=verbosePQL)
+    { ## Again, construction is a work around for nlme 3-1.52
+      eval(parse(text=paste("ret$lme<-glmmPQL(",deparse(fixed.formula),
+          ",random=rand,data=mf,family=family,correlation=correlation,control=control,",
+            "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
+     
+      ##ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
+      ##                 control=control,niter=niterPQL,verbose=verbosePQL)
     }
 
     ### .... fitting finished
@@ -1833,9 +1901,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       else # not fixed so need to undo transform of random effects etc. 
       { dum <- length(G$smooth[[i]]$S) # number of penalties for this term
         n.pen <- n.pen + dum
-        if (dum > 1) mult.pen <- TRUE else mult.pen <- FALSE
+        if (inherits(G$smooth[[i]],"tensor.smooth")) mult.pen <- TRUE else mult.pen <- FALSE
         b<-br[G$smooth[[i]]$first.r.para:G$smooth[[i]]$last.r.para]     
-        if (mult.pen) b <- c(b,beta) # multiple penalties not reduced to identity
+        if (mult.pen) b <- c(b,beta) # tensor product penalties not reduced to identity
         else b <- c(G$smooth[[i]]$D*b,beta) # single penalty case
         b<-G$smooth[[i]]$U%*%b 
       }
@@ -1852,12 +1920,11 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     k <- 1
     if (G$m>0) for (i in 1:G$m) # var.param in reverse term order, but forward order within terms!!
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
-      if (inherits(object$smooth[[i]],"tensor.smooth")&&n.sp>1) 
-      object$sp[k:(k+n.sp-1)] <- notExp(var.param[(n.v-n.sp+1):n.v])*2
+      if (inherits(object$smooth[[i]],"tensor.smooth"))#&&n.sp>1) 
+      object$sp[k:(k+n.sp-1)] <- notExp(var.param[(n.v-n.sp+1):n.v])
       else object$sp[k:(k+n.sp-1)] <- 1/notExp(var.param[(n.v-n.sp+1):n.v])^2
       k <- k + n.sp
       n.v <- n.v - n.sp
-
     }
    
     object$coefficients<-p
@@ -2976,7 +3043,11 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     yrange<-range(y);yr<-yrange[2]-yrange[1]  
     xrange<-range(x);xr<-xrange[2]-xrange[1]  
     ypos<-yrange[2]+yr/10
-    plot(x,y,type="n",xlab="",ylab="",axes=FALSE)
+    args <- as.list(substitute(list(...)))[-1]
+    args$x <- substitute(x);args$y <- substitute(y)
+    args$type="n";args$xlab<-args$ylab<-"";args$axes<-FALSE
+    do.call("plot",args)
+#    plot(x,y,type="n",xlab="",ylab="",axes=FALSE)
     cs<-(yr/10)/strheight(zlab);if (cs>1) cs<-1 # text scaling based on height  
     cw<-par()$cxy[1]  
     tl<-strwidth(zlab);  
@@ -2991,14 +3062,17 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     if (!"add"%in%n.args) args$add <- TRUE
     do.call("contour",args)
     #contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
-    if (titleOnly) title(zlab) else 
+    if (is.null(args$cex.main)) cm <- 1 else cm <- args$cex.main
+    if (titleOnly)  title(zlab,cex.main=cm) else 
     { xpos<-xrange[1]+3*xr/10  
       xl<-c(xpos,xpos+xr/10); yl<-c(ypos,ypos)   
       lines(xl,yl,xpd=TRUE,lwd=args$lwd)  
-      text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+      text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
     }
-    axis(1,cex.axis=cs);axis(2,cex.axis=cs);box();  
-    mtext(xlab,1,2.5,cex=cs);mtext(ylab,2,2.5,cex=cs)  
+    if  (is.null(args$cex.axis)) cma <- 1 else cma <- args$cex.axis
+    axis(1,cex.axis=cs*cma);axis(2,cex.axis=cs*cma);box();
+    if  (is.null(args$cex.lab)) cma <- 1 else cma <- args$cex.lab  
+    mtext(xlab,1,2.5,cex=cs*cma);mtext(ylab,2,2.5,cex=cs*cma)  
     if (!"lwd"%in%n.args) args$lwd<-1
     if (!"lty"%in%n.args) args$lty<-2
     if (!"col"%in%n.args) args$col<-2
@@ -3012,7 +3086,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
       xpos<-xrange[1]  
       xl<-c(xpos,xpos+xr/10)#;yl<-c(ypos,ypos)  
       lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
-      text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+      text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
     }
 
     if (!"lty"%in%n.args) args$lty<-3
@@ -3025,7 +3099,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
       xpos<-xrange[2]-xr/5  
       xl<-c(xpos,xpos+xr/10);  
       lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
-      text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs,off=0.5*cs)  
+      text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
     }
   }   
 
@@ -3812,6 +3886,44 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 # for a ridge penalty to be applied during fitting. 
 { n.p<-length(S)
   n.b<-dim(X)[2] # number of parameters
+  # get initial estimates of smoothing parameters, using better method than is
+  # built in to C code. This must be done before application of general 
+  # constraints.
+  def.sp<-sp # storage for default smoothing parameters
+  if (n.p) { 
+    ldxx <- colSums(X*X) # yields diag(t(X)%*%X)
+    ldss <- ldxx*0       # storage for combined penalty l.d. 
+    for (i in 1:n.p) { # loop over penalties
+      maS <- max(abs(S[[i]])) 
+      rsS <- rowMeans(abs(S[[i]]))
+      csS <- colMeans(abs(S[[i]]))
+      thresh <- .Machine$double.eps*maS*10
+      ind <- rsS > thresh & csS > thresh # only these columns really penalize
+      ss <- diag(S[[i]])[ind] # non-zero elements of l.d. S[[i]]
+      start <- off[i];finish <- start+ncol(S[[i]])-1
+      xx <- ldxx[start:finish]
+      xx <- xx[ind]
+      sizeXX <- mean(xx)
+      sizeS <- mean(ss)
+      if (sizeS <= 0) stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
+      def.sp[i] <- sizeXX/ sizeS # relative s.p. estimte
+    #  ind <- !(xx==0&&ss==0)
+    #  xx <- xx[ind];ss <- ss[ind]
+    #  while (mean(xx/(xx+sp[i]*ss))>.75) sp[i] <- sp[i]*10
+    #  while (mean(xx/(xx+sp[i]*ss))<.75) sp[i] <- sp[i]/10
+      ## accumulate leading diagonal of \sum sp[i]*S[[i]]
+      ldss[start:finish] <- ldss[start:finish] + def.sp[i]*diag(S[[i]]) 
+    }
+    ind <- ldss>0
+    ldxx<-ldxx[ind];ldss<-ldss[ind]
+    while (mean(ldxx/(ldxx+ldss))>.4) { def.sp <- def.sp*10;ldss <- ldss*10 }
+    while (mean(ldxx/(ldxx+ldss))<.4) { def.sp <- def.sp/10;ldss <- ldss/10 }
+  } 
+
+## NOTES:
+##       will have to send magic default sp's AND sp's, then 
+## if derivs w.r.t sp's too flat it can reset to default. 
+
   # get square roots of penalties using supplied ranks or estimated 
   if (n.p>0)
   { for (i in 1:n.p) 
@@ -3872,7 +3984,7 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
   icontrol[7]<-control$maxit
   b<-array(0,icontrol[3])
   # argument names in call refer to returned values.
-  um<-.C("magic",as.double(y),as.double(X),sp=as.double(sp),as.double(Si),as.double(H),
+  um<-.C("magic",as.double(y),as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),
           score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
           as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q),
           PACKAGE="mgcv")
@@ -3894,12 +4006,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.1-5 \n")
+.onAttach <- function(...) cat("This is mgcv 1.1-7 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.1-5 \n")
+    cat("This is mgcv 1.1-7 \n")
 }
 
 

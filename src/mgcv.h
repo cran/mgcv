@@ -5,8 +5,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,double *pd, dou
 
 void RQT(double *A,int *r,int *c);
 void RuniqueCombs(double *X,int *r, int *c);
-void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,
-	    int *off,int *dim,double *theta, int *m,int *nar);
+void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
 void mgcv_AtA(double *AA,double *A,int *q,int *n);
 void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);

@@ -326,8 +326,8 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
   }
 }
 
-void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,double *scale,int *control,
-           int *cS,double *rank_tol,double *tol,double *b,double *rV) 
+void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,double *gamma,double *scale,
+           int *control,int *cS,double *rank_tol,double *tol,double *b,double *rV) 
 
 /* Maximally stable multiple gcv/ubre optimizer, based on pivoted QR decomposition and SVD, but without 
    a line search. At each point in the smoothing parameter space, the numerical rank of the problem 
@@ -341,6 +341,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
    y - an n dimensional response vector
    X - an n by q model matrix
    sp - an m-array of smoothing parameters (any -ve => autoinitialize)
+   def_sp - an array of default values for sp's (any -ve => set up internally)
    b - a q dimensional parameter vector
    S - an array of dimension q columns of square roots of the m S_i penalty matrices. There are cS[i]
        columns for the ith penalty, and they are packed starting from i=0.
@@ -399,7 +400,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
 
  */
 { int *pi,*pivot,q,n,autoinit,left,ScS,m,i,j,tp,k,use_sd=0,rank,converged,iter=0,ok,
-      gcv,try,fit_call=0,step_fail=0,max_half,*spok,/* *dir_sp,*/maxit;
+      gcv,try,fit_call=0,step_fail=0,max_half,*spok,/* *dir_sp,*/maxit,def_supplied;
   double *p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
          min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign;
@@ -451,8 +452,11 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
   }
    
   /* now get the initial smoothing parameter estimates \propto 1/tr(S_i) */
+
   autoinit=0;for (p=sp;p<sp+m;p++) if (*p <=0.0) { autoinit=1;break;} /* autoinitialize s.p.s? */ 
-  if (m>0)
+  def_supplied=1; for (p=def_sp;p<def_sp+m;p++) if (*p <=0.0) { def_supplied=0;break;} 
+
+  if (m>0&&!def_supplied) /* generate default sp's */
   { rSms=(double *)calloc((size_t)m,sizeof(double));
     /* first get some sort of norm for X */
     Xms=0.0;for (j=0;j<q;j++) for (i=0;i<=j;i++) { xx=X[i+n*j];Xms+=xx*xx;}
@@ -460,11 +464,14 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
     for (i=0;i<m;i++)
     { for (xx=0.0,p=Si[i];p<Si[i]+q*q;p+=q+1) xx += *p;
       rSms[i]=xx/(q*cS[i]);
-      if (autoinit) sp[i]=log(Xms/rSms[i]); 
-      else sp[i]=log(sp[i]); /* transform smoothing parameters into log space! */
-    }
+      def_sp[i]=Xms/rSms[i]; 
+    }  
   } else { Xms=0.0;rSms=NULL;}
-  
+
+  if (autoinit) for (i=0;i<m;i++) sp[i]=log(def_sp[i]);
+  else for (i=0;i<m;i++) sp[i]=log(sp[i]);  
+
+/*  for (i=0;i<m;i++) Rprintf("%g  ",exp(sp[i]));Rprintf("\n");*/
 
   y1=(double *)calloc((size_t)q,sizeof(double)); /* Storage for U_1'Q_1'y */
   U1=(double *)calloc((size_t)(q*q),sizeof(double));
@@ -502,7 +509,10 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
     xx=1e-4*(1+fabs(score));
     ok=1;
     /* reset to default any sp w.r.t. which score is flat */
-    for (i=0;i<m;i++) if (fabs(grad[i])<xx) {sp[i]=log(Xms/(rSms[i]));ok=0;} 
+    for (i=0;i<m;i++) if (fabs(grad[i])<xx) 
+    { sp[i]=log(def_sp[i]);ok=0;
+    /*  Rprintf("Resetting sp[%d]\n",i);*/
+    } 
     if (!ok) 
     { fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
       fit_call++;
@@ -514,7 +524,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
   sd_step=(double *)calloc((size_t)m,sizeof(double));
   n_step=(double *)calloc((size_t)m,sizeof(double));
  
-  if (autoinit)
+  if (autoinit&&!def_supplied)
   { /* second guesses are scale*rank(S_i) / b'S_ib */
     for (p=S,k=0;k<m;k++)
     { for (j=0;j<cS[k];j++)
@@ -525,6 +535,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
       sd_step[k]=log(*scale * cS[k]/xx)-sp[k]; 
     }
     use_sd=1;
+    /*  Rprintf("Using second guess\n");*/
   }
   
   /* Now do smoothing parameter estimation if there are any to estimate */
@@ -533,7 +544,9 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
     while (!converged)
     { iter++;
       if (iter>200) error("magic, the gcv/ubre optimizer, failed to converge after 200 iterations.");
-      if (iter>1||autoinit) ok=1; else ok=0;try=0;
+      if (iter>1||(autoinit&&!def_supplied)) ok=1; /* try out step */
+      else ok=0; /* no step to try yet */
+      try=0; 
       if (use_sd) step=sd_step; else step=n_step;
       while (ok) /* try out step, shrinking it if need be */
       { try++; if (try==4&&!use_sd) {use_sd=1;step=sd_step;}
@@ -545,6 +558,7 @@ void magic(double *y,double *X,double *sp,double *S,double *H,double *gamma,doub
           d_score=min_score-score;
           min_score=score;
           for (i=0;i<m;i++) sp[i]=nsp[i];
+     /*   for (i=0;i<m;i++) Rprintf("%g  ",exp(sp[i]));Rprintf("\n");*/
         } else
         for (i=0;i<m;i++) step[i]/=2;
         if (try==(max_half-1)&&ok) 

@@ -599,12 +599,15 @@ void construct_cr(double *x,int *nx,double *k,int *nk,double *X,double *S,double
   int i;
   xp=initmat((long)*nk,1L);
   for (i=0;i<xp.r;i++) xp.V[i]=k[i];
+  /* following initializes Xm and also Sm and Cm if *control ==0 */
   crspline(x,*nx,*nk,&Xm,&Sm,&Cm,&xp,*control);
   for (i=0;i<xp.r;i++) k[i]=xp.V[i];
   RArrayFromMatrix(X,Xm.r,&Xm);
+  freemat(Xm);freemat(xp);
   if (*control==0)
   { RArrayFromMatrix(S,Sm.r,&Sm);
     RArrayFromMatrix(C,Cm.r,&Cm);
+    freemat(Sm);freemat(Cm);
   }
 } 
 
