@@ -71,8 +71,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 
-\section{WARNING}
-{ This routine operates symbolically, not numerically: your model may
+\section{WARNING}{ This routine operates symbolically, not numerically: your model may
   still be numerically un-identifiable, and the routine can't tell if
   two variables with different names are really the same.
 }  
