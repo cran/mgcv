@@ -6,7 +6,7 @@
    component smooth functions that make it up, on the scale of the linear predictor.}
 }
 \usage{
-plot.gam(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n)
+plot.gam(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n, ...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -25,6 +25,7 @@ Set to 0 to have the routine leave all graphics settings as they are. }
           different y axis for each plot.  }
 \item{n}{ number of points used for each plot - for a nice smooth plot this needs to be several times the estimated 
     degrees of freedom for the smooth. Default value 100.}
+\item{\dots}{further arguments to be passed to or from methods.}
 }
 \details{ Produces default plot showing the smooth components of a fitted GAM. The x axis of each plot is labelled 
    with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
@@ -73,10 +74,109 @@ e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b,pages=1)
-
- 
 }
+
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

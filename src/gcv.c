@@ -1,5 +1,4 @@
-/* library of routines designed for unstructured GCV problems:
-   */
+/* library of routines designed for unstructured GCV problems: */
 #define ANSI   
 #include <stdio.h>
 #include <math.h>
@@ -423,7 +422,6 @@ double SingleSmooth(matrix *y,matrix *X,matrix *Z,matrix *w,matrix *S,matrix *p,
   if (Z->r)
   { R=initmat(n,Z->c);
     mcopy (X,&R);HQmult(R,*Z,0,0);R.c-=Z->r;  /* R=XZ */
-    /*matmult(R,*X,*Z,0,0); FZ *//* R=XZ - up to O(n^3) */
   } else
   { R=initmat(n,X->c);mcopy(X,&R);}          /* case when Z=I */
   for (i=0;i<n;i++) for (j=0;j<R.c;j++) R.M[i][j]*=rw[i];  /* R=W^{0.5} XZ */
@@ -440,7 +438,6 @@ double SingleSmooth(matrix *y,matrix *X,matrix *Z,matrix *w,matrix *S,matrix *p,
   { HQmult(U,*Z,1,1);HQmult(U,*Z,0,0);
     U.r=U.c=Z->c-Z->r;
   }
-  //multi(3,T,R,U,R,1,0,0);
   for (j=U.c-1;j>=0;j--) for (i=0;i<U.r;i++)
   { zz=0.0; for (k=0;k<=j;k++) zz+=U.M[i][k]*R.M[k][j];U.M[i][j]=zz;}
   for (i=U.r-1;i>=0;i--) for (j=0;j<=i;j++)
@@ -519,7 +516,6 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
    differencing  */
 
 { double f,v,v1,v2,tr,rss,tr1,rss1,
-        // v3,v4,r3,r4,t3,t4,
          t1,t2,r1,r2,t,r;
          
   int i,j,k;
@@ -595,9 +591,6 @@ void boringHg(matrix R,matrix Q,matrix *LZSZL,matrix *y,double *rw,
       v2=tediouscv(R,Q,LZSZL,y,rw,trial,rho,m,&t2,&r2,sig2);
       trial[i] +=dt1;
       f=(v1-2*v+v2);f/=dt1*dt1;
-    //  f=(r1-2*r+r2);f/=dt1*dt1;
-     // f=(t1-2*t+t2);f/=dt1*dt1;
-
       printf("%8.4g\n",f);
     }
   }
@@ -733,13 +726,12 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
     MM=LZrS[l].M;M1M=R.M;M2M=ZC.M;
     for (i=0;i<LZrS[l].r;i++) for (j=0;j<LZrS[l].c;j++)
     for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
-    LZSZL[l]=initmat(R.c,R.c); // this memory requirement could be halved
+    LZSZL[l]=initmat(R.c,R.c); /* this memory requirement could be halved */
     matmult(LZSZL[l],LZrS[l],LZrS[l],0,1);
-    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    // need to make sure that matrix is big enough for storage sharing with ULZrS
+    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    /* need to make sure that matrix is big enough for storage sharing with ULZrS */
     else { H[l]=initmat(R.c,ZC.c);H[l].c=R.c;}
-    ULZSZLU[l]=initmat(R.c,R.c); // memory requirement could be halved, but would need own choleskisolve
-    //ULZrS[l]=initmat(R.c,ZC.c);
-    ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; // sharing memory with H[l]
+    ULZSZLU[l]=initmat(R.c,R.c); /* memory requirement could be halved, but would need own choleskisolve */
+    ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; /* sharing memory with H[l] */
   }
   /* Start the main loop */
   freemat(ZC);
@@ -750,7 +742,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
   if (autoinit)
   for (l=0;l<m;l++)
   { tr=0.0;for (i=0;i<LZSZL[l].r;i++) tr+=LZSZL[l].M[i][i];
-    eta[l]=log(1.0/(n*tr));//eta[l]= -40.0;
+    eta[l]=log(1.0/(n*tr));
   } else
   { x=0.0;for (i=0;i<m;i++) { eta[i]=log(theta[i]);x+=eta[i];}
     x/=m;
@@ -786,7 +778,6 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       UTU(&T,&U);    /* Form S=UTU' */
       z.r=n;
       for (i=0;i<n;i++) z.V[i]=rw[i]*y->V[i]; /* z=W^{1/2}y */
-     // matrixintegritycheck();
       OrthoMult(&Q,&z,0,Q.r,0,1,1);           /* z=QW^{1/2}y */
       z.r=R.r;                                /* z=[I,0]QW^{1/2}y */
       OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
@@ -935,19 +926,19 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
       OrthoMult(&Q,&Ay,0,Q.r,1,1,1);
       for (i=0;i<Ay.r;i++) Ay.V[i]*=rho;
       /* form a, da[] & d2a[][]..... */
-      for (l=0;l<m;l++) for (k=0;k<=l;k++)  // starting with d2a[][]...
-      { matmult(A,ULZSZLU[k],dpAy[l],0,0); // forming (A=) U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy
+      for (l=0;l<m;l++) for (k=0;k<=l;k++)  /* starting with d2a[][]... */
+	{ matmult(A,ULZSZLU[k],dpAy[l],0,0); /* forming (A=) U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
         c.r=T.r;
-        bicholeskisolve(&c,&A,&l0,&l1);  // forming (c=) (I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy
-        matmult(A,ULZSZLU[l],dpAy[k],0,0);  // This line and next 3 are a bug
-        d.r=T.r;                            // fix for incorrect original
-        bicholeskisolve(&d,&A,&l0,&l1);     // derivation - 18/8/99
+        bicholeskisolve(&c,&A,&l0,&l1);  /* forming (c=) (I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
+        matmult(A,ULZSZLU[l],dpAy[k],0,0);  /* This line and next 3 are a bug fix for incorrect original derivation - 18/8/99 */
+        d.r=T.r;                            
+        bicholeskisolve(&d,&A,&l0,&l1);     
         for (i=0;i<c.r;i++) c.V[i]+=d.V[i];
-        OrthoMult(&U,&c,1,T.r-2,0,1,0);  // forming (c=) U(I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy
+        OrthoMult(&U,&c,1,T.r-2,0,1,0);  /* forming (c=) U(I*r+T)^{-1}U'L'Z'S_kZLU(I*r+T)^{-1}U'L'Z'S_lZLU(I*r+T)^{-1}U'[I,0]Qy */
         c.r=y->r;
-        for (i=T.r;i<y->r;i++) c.V[i]=0.0; // and premutiplying result by (0',I')'
-        OrthoMult(&Q,&c,0,Q.r,1,1,1);      // premultiplying by Q'
-        for (i=0;i<c.r;i++) c.V[i]*=rho; /* c=d^2A/dt_idt_j y */
+        for (i=T.r;i<y->r;i++) c.V[i]=0.0; /* and premutiplying result by (0',I')' */
+        OrthoMult(&Q,&c,0,Q.r,1,1,1);      /* premultiplying by Q' */
+        for (i=0;i<c.r;i++) c.V[i]*=rho;   /* c=d^2A/dt_idt_j y */
         if (l==k) /* then operator needs additional term dA/dt_i y / e^eta_i*/
         { for (i=0;i<c.r;i++)
           c.V[i]+=dAy[l].V[i]/exp(eta[l]);
@@ -957,7 +948,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
         for (i=0;i<n;i++)
         x+= dAy[l].V[i]*dAy[k].V[i]+(Ay.V[i]-Wy.V[i])*c.V[i];
         x*=2.0/n;d2a[l][k]=d2a[k][l]=exp(eta[l]+eta[k])*x;
-      }  // form da[]
+      }  /* form da[] */
       for (l=0;l<m;l++)
       { x=0.0;
         for (i=0;i<n;i++) x+=(Ay.V[i]-Wy.V[i])*dAy[l].V[i];
@@ -982,19 +973,19 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
                               +2*a*db[i]*db[j]/(b*b*b)-a*d2b[i][j]/(b*b);
         }
       }
-      // DEBUGGING CODE Checking Hessian and other 2nd derivative results
-      //boringHg(R,Q,LZSZL,y,rw,trial,rho,m,ubre*(*sig2),1e-3);
+      /* DEBUGGING CODE Checking Hessian and other 2nd derivative results */
+      /* boringHg(R,Q,LZSZL,y,rw,trial,rho,m,ubre*(*sig2),1e-3); */
       if (op)
       { printf("\n");
         for (i=0;i<m;i++)
         { for (j=0;j<=i;j++)
           printf("%8.4g  ",Hess.M[i][j]);
-      //    printf("%8.4g  ",d2a[i][j]);
+	  /* printf("%8.4g  ",d2a[i][j]); */
           printf("\n");
         }
         for (i=0;i<m;i++)
         printf("\n%g",g.V[i]);
-        //printf("\n%g",da[i]);
+        /* printf("\n%g",da[i]); */
       }
       /* and finally the update ........ */
       A.c=A.r=Hess.r;
@@ -1021,7 +1012,7 @@ double MultiSmooth(matrix *y,matrix *J,matrix *Z,matrix *w,matrix *S,matrix *p,
   for (i=0;i<m;i++)
   { freemat(LZrS[i]);freemat(LZSZL[i]);
     freemat(H[i]);
-    //freemat(ULZrS[i]); not freed - memory shared with H[i]
+    /* freemat(ULZrS[i]); not freed - memory shared with H[i] */
     freemat(ULZSZLU[i]);
     freemat(dAy[i]);freemat(dpAy[i]);
     free(trd2A[i]);free(d2b[i]);free(d2a[i]);
@@ -1100,7 +1091,7 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
   if (*sig2>0.0) ubre=1; /* signals UBRE rather than GCV */
   n=y->r;  /* number of datapoints */
   np=J->c; /* number of parameters */
-  for (i=0;i<mp;i++) if (theta[i]<=0.0) autoinit=1; //** m ->mp
+  for (i=0;i<mp;i++) if (theta[i]<=0.0) autoinit=1; /* m ->mp */
   if (Z->r) /*nz=Z->c FZ */ nz=np-Z->r;else nz=np; /* dimension of null space */
   A=initmat(np,np); /* workspace matrix */
   c=initmat(n,1L); /*     "     vector  */
@@ -1170,25 +1161,25 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
     MM=LZrS[l].M;M1M=R.M;M2M=ZC.M;
     for (i=0;i<LZrS[l].r;i++) for (j=0;j<LZrS[l].c;j++)
     for (k=0;k<=i;k++) MM[i][j]+=M1M[k][i]*M2M[k][j];
-    LZSZL[l]=initmat(R.c,R.c); // this memory requirement could be halved
+    LZSZL[l]=initmat(R.c,R.c); /* this memory requirement could be halved */
     matmult(LZSZL[l],LZrS[l],LZrS[l],0,1);
-    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    // need to make sure that matrix is big enough for storage sharing with ULZrS
+    if (R.c>=ZC.c) H[l]=initmat(R.c,R.c);    /* need to make sure that matrix is big enough for storage sharing with ULZrS */
     else { H[l]=initmat(R.c,ZC.c);H[l].c=R.c;}
-    ULZSZLU[l]=initmat(R.c,R.c); // memory requirement could be halved, but would need own choleskisolve
-    //ULZrS[l]=initmat(R.c,ZC.c);
-    ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; // sharing memory with H[l]
+    ULZSZLU[l]=initmat(R.c,R.c); /* memory requirement could be halved, but would need own choleskisolve */
+    /* ULZrS[l]=initmat(R.c,ZC.c); */
+    ULZrS[l].M=H[l].M;ULZrS[l].r=R.c;ULZrS[l].c=ZC.c; /* sharing memory with H[l] */
   }
   /* Start the main loop */
   freemat(ZC);
   eta=(double *)calloc((size_t)m,sizeof(double));
-  lam=(double *)calloc((size_t)mp,sizeof(double)); //** added
+  lam=(double *)calloc((size_t)mp,sizeof(double));
   del=(double *)calloc((size_t)mp,sizeof(double)); /* change in s.p.s */
   trial=(double *)calloc((size_t)mp,sizeof(double));
   /* get initial estimates for theta_i and eta_i=log(theta_i) */
   if (autoinit)
   for (l=0;l<m;l++)
   { tr=0.0;for (i=0;i<LZSZL[l].r;i++) tr+=LZSZL[l].M[i][i];
-    eta[l]=log(1.0/(n*tr));//eta[l]= -40.0;
+    eta[l]=log(1.0/(n*tr));
   } else
   { for (i=0;i<mp;i++) theta[i]=log(theta[i]);
     if (transform) ft(0,m,mp,eta,theta,0,0,0);else
@@ -1196,9 +1187,9 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
     x=0.0;for (i=0;i<m;i++) { x+=eta[i];}x/=m;
     for (i=0;i<m;i++) { ninf[i]=eta[i]-x-300.0;pinf[i]=ninf[i]+600.0;}
   }
-  if (transform)               //**
-  { ft(-1,m,mp,eta,lam,0,0,0); // get initial lam estimates
-    ft(0,m,mp,eta,lam,0,0,0);  // transform these back to initial eta estimates
+  if (transform)              
+  { ft(-1,m,mp,eta,lam,0,0,0); /* get initial lam estimates */
+    ft(0,m,mp,eta,lam,0,0,0);  /* transform these back to initial eta estimates */
   } else
   for (i=0;i<m;i++) lam[i]=eta[i];
   T=initmat(R.c,R.c);
@@ -1218,7 +1209,7 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
       for (i=0;i<m;i++) eta[i]=trial[i];
       x=0.0;for (i=0;i<m;i++) x+=eta[i];x/=m;
       for (i=0;i<m;i++) eta[i] -= x; /* normalising smooths */
-      if (transform) ft(-2,m,mp,eta,trial,0,0,0); // making trial consistent with eta
+      if (transform) ft(-2,m,mp,eta,trial,0,0,0); /* making trial consistent with eta */
       else for (i=0;i<m;i++) trial[i] -= x;
       if ((iter>1)||(!autoinit))   /* check smoothing parameters won't lead to overflow */
       { for (i=0;i<m;i++)
@@ -1235,7 +1226,6 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
       UTU(&T,&U);    /* Form S=UTU' */
       z.r=n;
       for (i=0;i<n;i++) z.V[i]=rw[i]*y->V[i]; /* z=W^{1/2}y */
-     // matrixintegritycheck();
       OrthoMult(&Q,&z,0,Q.r,0,1,1);           /* z=QW^{1/2}y */
       z.r=R.r;                                /* z=[I,0]QW^{1/2}y */
       OrthoMult(&U,&z,1,T.r-2,1,1,0);         /* z=U'[I,0]QW^{1/2}y */
@@ -1302,7 +1292,6 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
         { p->r=np;for (i=0;i<nz;i++) p->V[i]=c.V[i];
           for (i=nz;i<np;i++) p->V[i]=0.0;
           HQmult(*p,*Z,1,0);  /* Q [c,0]'= [Z,Y][c,0]' = Zc */
-         /* p->r=Z->r;matmult(*p,*Z,c,0,0); FZ */
         } else
         { p->r=np;for (i=0;i<np;i++) p->V[i]=c.V[i];}
         for (l=0;l<m;l++) eta[l]-=log(rho);
@@ -1435,7 +1424,6 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
                               +2*a*db[i]*db[j]/(b*b*b)-a*d2b[i][j]/(b*b);
         }
       }
-    /*  boringHg(R,Q,LZSZL,y,rw,trial,rho,m);*/
       if (op)
       { printf("\n");
         for (i=0;i<m;i++)
@@ -1483,7 +1471,6 @@ void MSmooth(double ft(int,int,int,double*,double*,int,int,int),
   for (i=0;i<m;i++)
   { freemat(LZrS[i]);freemat(LZSZL[i]);
     freemat(H[i]);
-    //freemat(ULZrS[i]); not freed - memory shared with H[i]
     freemat(ULZSZLU[i]);
     freemat(dAy[i]);freemat(dpAy[i]);
     free(trd2A[i]);free(d2b[i]);free(d2a[i]);

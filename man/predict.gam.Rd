@@ -7,7 +7,7 @@ and produces predictions given a new set of values for the model covariates
 or the original values used for the model fit.}
 }
 \usage{
-predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE)
+predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE, ...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -15,9 +15,7 @@ predict.gam(object,newdata,type="link",se.fit=FALSE,plot.call=FALSE)
  \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.
                 }
  \item{newdata}{ A data frame containing the values of the model covariates at which predictions
-  are required. If this is not provided then predictions corresponding to the original data are returned. 
- 
- } 
+  are required. If this is not provided then predictions corresponding to the original data are returned.  } 
  
  
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
@@ -29,6 +27,7 @@ on the scale of the response are returned (possibly with approximate standard er
  \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
  \item{plot.call}{used to signal a call from plot.gam, to avoid having to construct a data frame containing all
  the parametric model components.}
+ \item{\dots}{further arguments to be passed to or from methods.}
 }
 
 \value{ If \code{se.fit} is \code{TRUE} then a 2 item list is returned with items (both arrays) \code{fit}
@@ -82,4 +81,18 @@ pred<-predict.gam(b,newd)
  
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

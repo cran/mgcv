@@ -559,13 +559,13 @@ gam<-function(formula,family=gaussian(),data=list(),weights=NULL,control=gam.con
   object
 }
 
-print.gam<-function (b) 
+print.gam<-function (x, ...) 
 # default print function for gam objects
-{ print(b$family)
+{ print(x$family)
   cat("Formula:\n")
-  print(b$formula)
-  cat("\nEstimated degrees of freedom:\n",b$edf,"  total = ",sum(b$edf)+b$nsdf,"\n")
-  gcv<-b$df.null*b$sig2/(b$df.null-sum(b$edf)-b$nsdf)
+  print(x$formula)
+  cat("\nEstimated degrees of freedom:\n",x$edf,"  total = ",sum(x$edf)+x$nsdf,"\n")
+  gcv<-x$df.null*x$sig2/(x$df.null-sum(x$edf)-x$nsdf)
   cat("\nGCV score: ",gcv,"\n")
 }
 
@@ -751,7 +751,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
 }
 
 
-predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
+predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE, ...) {
 
 # This function is used for predicting from a GAM. object is a gam object, newdata a dataframe to
 # be used in prediction..... it's all done via a call to the compiled C routine RGAMpredict().
@@ -835,7 +835,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=F,plot.call=FALSE) {
   H # ... and return
 }
 
-plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100)
+plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100, ...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -969,7 +969,7 @@ plot.gam<-function(x,rug=TRUE,se=TRUE,pages=0,scale=-1,n=100)
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.5.1\n")
+    cat("This is mgcv 0.5.3\n")
 }
 
 

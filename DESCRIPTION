@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 0.5-1
+Version: 0.5-3
 Author: Simon Wood <snw@st-and.ac.uk>
 Maintainer: Simon Wood <snw@st-and.ac.uk>
 Title: Multiple smoothing parameter estimation and GAMs by GCV
