@@ -1108,7 +1108,7 @@ gam.fit<-function (G, start = NULL, etastart = NULL,
         if (G$m>0&&sum(!G$fix)>0&&!G$fixed.sp) # check that smoothing parameters haven't drifted too far apart
         { temp.sp<-G$sp[!G$fix];temp.S.size<-S.size[!G$fix]*temp.sp
           # check if there is a danger of getting stuck on a flat section of gcv/ubre score...
-          if (min(temp.sp)>0 && min(temp.S.size)<Machine()$double.eps^0.5*max(temp.S.size)) 
+          if (min(temp.sp)>0 && min(temp.S.size)<.Machine$double.eps^0.5*max(temp.S.size)) 
           G$sp[!G$fix]<- -1.0 # .... if so use use auto-initialization in mgcv
           if (control$trace) cat("Re-initializing smoothing parameters\n")
         } 
@@ -2043,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8.4 \n")
+    cat("This is mgcv 0.8-5 \n")
 }
 
 
