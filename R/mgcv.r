@@ -2043,7 +2043,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.8-5 \n")
+    cat("This is mgcv 0.8-6 \n")
 }
 
 

@@ -678,11 +678,11 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
 */
 
 { long n,q,r,*dim,*off,dimmax;
-  int m,i,j,k,gcv;
+  int m,i,j,k,gcv,ok;
   msctrl_type msctrl;
   msrep_type msrep;
   matrix *S,y,X,p,C,rS,Z,w,Vp,L,ya,wa;
-  double sig2,xx,trA;
+  double sig2,xx,trA,trA_check,inv_tol;
   /*char msg[100]; */
   sig2= *sig2d;
   if (sig2<=0) gcv=1; else gcv=0;
@@ -714,7 +714,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     msctrl.max_step_half= *ms_max_half;
     msctrl.min_edf= *min_edf;
     msctrl.target_edf= *target_edf;
-    *gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2,&msctrl,&msrep,*direct_mesh);
+    *gcvubre=MultiSmooth(&y,&X,&Z,&w,S,&p,sp,off,m,&sig2,&msctrl,&msrep,*direct_mesh,&trA);
     for (i=0;i<m;i++) /* copy out diagnostics for return */
     { ddiag[i]=msrep.g[i];
       ddiag[m+i]=msrep.h[i];
@@ -726,8 +726,8 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
     }
     idiag[0]=msrep.iter;idiag[1]=msrep.inok;idiag[2]=msrep.step_fail;
     free_msrep(&msrep);
-    if (gcv) *sig2d=sig2;
-  } else /* no penalties, just solve the least squares problem */
+    if (gcv) *sig2d=sig2;   
+  } else /* no unknown smoothing parameters , just solve the least squares problem */
   { if (m&& *fixed_sp) /* then there are penalties with fixed smoothing parameters to contend with */
     { Vp=initmat(p.r,p.r); /* temporary storage for sum of smooths */     
       for (k=0;k<m;k++) /* add up penalty terms */
@@ -754,21 +754,38 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
       for (i=0;i<y.r;i++) { ya.V[i]=y.V[i];wa.V[i]=sqrt(w.V[i]);}
       for (i=y.r;i<L.r;i++) { wa.V[i]=1.0;ya.V[i]=0.0;}
       /* get tr(A) */
-      Vp=initmat(X.c,X.c);Vp.c=Vp.r=L.c;
-      matmult(Vp,L,L,1,0); /* X'X+S, basically */
-      rS=initmat(Vp.r,Vp.c); /* dummy */
-      if (!chol(Vp,rS,1,1)) /* try cheap inversion by choleski */  
-      { pinv(&Vp,0.0);     /* but use svd if this fails */
+      ok=1;inv_tol=DOUBLE_EPS;
+      while (ok) /* may have to repeat this loop if trA calculation unstable */
+      { Vp=initmat(X.c,X.c);Vp.c=Vp.r=L.c;
+        rS=initmat(L.r,L.c); /* temporary storage for [X'W,rS]' */
+        mcopy(&L,&rS);
+        for (i=0;i<X.r;i++) for (j=0;j<L.c;j++) rS.M[i][j]*=w.V[i];  
+        matmult(Vp,L,rS,1,0); /* X'WX+S, basically */
+        freemat(rS);
+        rS=initmat(Vp.r,Vp.c); /* dummy */  
+        pinv(&Vp,inv_tol);     /* Use svd inversion for maximal stability (since there is no backup check) */
+        Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
+        HQmult(Vp,Z,1,0);HQmult(Vp,Z,0,1);  
+        freemat(rS);
+        rS=initmat(Vp.r,X.r);
+        matmult(rS,Vp,X,0,1); /* basically (X'WX+S)^{-1}X' */
+        freemat(Vp); 
+        for (i=0;i<rS.r;i++) for (j=0;j<rS.c;j++) rS.M[i][j]*=w.V[j]; /* (X'WX+S)^{-1}X'W */
+        trA=0.0;for (j=0;j<X.r;j++) for (k=0;k<X.c;k++) trA+=X.M[j][k]*rS.M[k][j];
+        freemat(rS);
+        /* check that trA is sensible */
+        if (trA>L.c+0.001||trA< *min_edf-0.001) /* then trA is impossibly large or small */
+	{ ok++;inv_tol*=2; /* change svd truncation tolerance and repeat */
+        } else 
+	{ if (ok>1) ErrorMessage("Numerical difficulties obtaining tr(A) - apparently resolved. Apply some caution to results.",0); 
+          ok=0;
+        }
+        if (ok>15)
+	{ if (trA>n||trA<0) ErrorMessage("tr(A) utter garbage and situation un-resolvable.",1);
+	  else ErrorMessage("Numerical difficulties calculating tr(A). Not completely resolved. Use results with care!",0);
+	  ok=0;
+        } 
       }
-      Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
-      HQmult(Vp,Z,1,0);HQmult(Vp,Z,0,1);  
-      freemat(rS);
-      rS=initmat(Vp.r,X.r);
-      matmult(rS,Vp,X,0,1); /* basically (X'X+S)^{-1}X' */
-      freemat(Vp); 
-      for (i=0;i<rS.r;i++) for (j=0;j<rS.c;j++) rS.M[i][j]*=w.V[j]; /* (X'X+S)^{-1}X'W */
-      trA=0.0;for (j=0;j<X.r;j++) for (k=0;k<X.c;k++) trA+=X.M[j][k]*rS.M[k][j];
-      freemat(rS);
     } else /* no penalties to consider */
     { L=initmat(X.r,X.c); 
       mcopy(&X,&L);
@@ -800,50 +817,65 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   if (Vpd[0]>0.0)
   /* calculate an estimate of the cov. matrix for the parameters: */
   /* Z[Z'(X'WX + \sum_i sp_i S[i])Z]^{-1}Z' */
-  { Vp=initmat(p.r,p.r);
-    for (i=0;i<p.r;i++) for (j=0;j<=i;j++) /* form X'WX */
-    { xx=0.0;
-      for (k=0;k<X.r;k++) xx+=X.M[k][i]*w.V[k]*X.M[k][j];
-      Vp.M[i][j]=Vp.M[j][i]=xx;
+  { ok=1;inv_tol=DOUBLE_EPS/2;
+    while (ok) /* loop until edf's good enough or have to give up*/
+    { Vp=initmat(p.r,p.r);
+      for (i=0;i<p.r;i++) for (j=0;j<=i;j++) /* form X'WX */
+      { xx=0.0;
+        for (k=0;k<X.r;k++) xx+=X.M[k][i]*w.V[k]*X.M[k][j];
+        Vp.M[i][j]=Vp.M[j][i]=xx;
+      }
+      for (k=0;k<m;k++) /* add on penalty terms */
+      { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
+        Vp.M[i+off[k]][j+off[k]]+=sp[k]*S[k].M[i][j];
+      }
+      /* now project into null space */
+      HQmult(Vp,Z,1,1);
+      HQmult(Vp,Z,0,0);  
+      for (j=0;j<Z.r;j++)
+      for (i=0;i<p.r;i++) Vp.M[p.r-j-1][i]=Vp.M[i][p.r-j-1]=0.0;
+      Vp.r -=Z.r;Vp.c -= Z.r;
+      L=initmat(Vp.r,Vp.c);
+      if (ok>1||!chol(Vp,L,1,1)) /* try cheap inversion by choleski */  
+      { pinv(&Vp,inv_tol);     /* but use svd if this fails */
+      }
+      Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
+      HQmult(Vp,Z,1,0);
+      HQmult(Vp,Z,0,1);  
+      freemat(L);
+      /* now work out edf per term - meaningful only if penalties are non-overlapping */
+      L=initmat(Vp.r,X.r);
+      matmult(L,Vp,X,0,1);
+      for (i=0;i<L.r;i++) for (j=0;j<L.c;j++) L.M[i][j]*=w.V[j];
+      for (i=0;i<m;i++)
+      { edf[i]=0.0;
+        for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
+        edf[i]+=X.M[j][k]*L.M[k][j];
+      } 
+      /* work out elements on leading diagonal of hat matrix */
+      trA_check=0.0;
+      for (i=0;i<X.r;i++)
+      { hat[i]=0.0;
+        for (j=0;j<X.c;j++) hat[i]+=X.M[i][j]*L.M[j][i];
+        trA_check+=hat[i]; 
+      }
+      /* check at this point whether sum_i hat[i] == TrA - if not, then there is a numerical problem, which 
+         needs to be resolved.
+      */
+      if (fabs(trA_check-trA)>0.01) /* then there is a definite numerical problem with edf's */ 
+      { ok++;inv_tol*= 2; 
+      } else ok=0;
+      
+      if (ok>15) /* failed */
+      { ErrorMessage("Termwise estimate degrees of freedom are unreliable",0);
+        ok=0;
+      } 
+      /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */
+      for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j] *= *sig2d;
+      freemat(L);
+      RArrayFromMatrix(Vpd,Vp.r,&Vp); /* convert to R format */
+      freemat(Vp);
     }
-    for (k=0;k<m;k++) /* add on penalty terms */
-    { for (i=0;i<S[k].r;i++) for (j=0;j<S[k].c;j++)
-      Vp.M[i+off[k]][j+off[k]]+=sp[k]*S[k].M[i][j];
-    }
-    /* now project into null space */
-    HQmult(Vp,Z,1,1);
-    HQmult(Vp,Z,0,0);  
-    for (j=0;j<Z.r;j++)
-    for (i=0;i<p.r;i++) Vp.M[p.r-j-1][i]=Vp.M[i][p.r-j-1]=0.0;
-    Vp.r -=Z.r;Vp.c -= Z.r;
-    L=initmat(Vp.r,Vp.c);
-    if (!chol(Vp,L,1,1)) /* try cheap inversion by choleski */  
-    { Rprintf("rank of Vp = %ld\n",pinv(&Vp,DOUBLE_EPS));     /* but use svd if this fails */
-      Rprintf("using pinv\n");
-    }
-    Vp.r+=Z.r;Vp.c+=Z.r;    /* get image in full space */
-    HQmult(Vp,Z,1,0);
-    HQmult(Vp,Z,0,1);  
-    freemat(L);
-    /* now work out edf per term - meaningful only if penalties are non-overlapping */
-    L=initmat(Vp.r,X.r);
-    matmult(L,Vp,X,0,1);
-    for (i=0;i<L.r;i++) for (j=0;j<L.c;j++) L.M[i][j]*=w.V[j];
-    for (i=0;i<m;i++)
-    { edf[i]=0.0;
-      for (j=0;j<X.r;j++) for (k=off[i];k<off[i]+S[i].r;k++) 
-      edf[i]+=X.M[j][k]*L.M[k][j];
-    } 
-    /* work out elements on leading diagonal of hat matrix */
-    for (i=0;i<X.r;i++)
-    { hat[i]=0.0;
-      for (j=0;j<X.c;j++) hat[i]+=X.M[i][j]*L.M[j][i]; 
-    }
-    /* multiply Vp by estimated scale parameter so that it is proper covariance matrix estimate */
-    for (i=0;i<Vp.r;i++) for (j=0;j<Vp.c;j++) Vp.M[i][j] *= *sig2d;
-    freemat(L);
-    RArrayFromMatrix(Vpd,Vp.r,&Vp); /* convert to R format */
-    freemat(Vp);
   } else { Vpd[0]=0.0;hat[0]=0.0;}
 
   /* tidy up */
@@ -1485,6 +1517,11 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
             whole smooth term. The centering conditions have not been changed.
 15. 6/9/02: Slight modification to gam_map() - terms are not calculated if corresponding by variable 
             is zero. This can save flops in fairly advanced use (e.g. posum package)
+16.23/10/02: mgcv modified in order to check that Tr(A) calculations are sensible, and that termwise 
+             effective degrees of freedom are calculated correctly. The problem arises with ill-conditioned 
+             models when an inversion required for the term-wise effective degrees of freedom can 
+             become unstable.
+17.23/10/02: Bug in TrA calculation when smootthing parameters supplied. X'X used in place of X'WX - fixed.
 
 */
 
