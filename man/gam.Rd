@@ -231,6 +231,7 @@ Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
 
   Wahba (1990) Spline Models of Observational Data. SIAM 
 
+  \url{http://www.ruwpa.st-and.ac.uk/simon.html}
 }
 \author{ Simon N. Wood \email{snw@st-and.ac.uk}}
 
@@ -274,7 +275,8 @@ f <- f + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-plot(b,pages=1) # now fit GAM with 3df regression spline term and two penalized terms
+plot(b,pages=1)
+# now a GAM with 3df regression spline term & 2 penalized terms
 b1<-gam(y~s(x0,k=4,fx=T,bs="tp")+s(x1,k=12)+s(x2,15))
 plot(b1,pages=1)
 # now fit a 2-d term to x0,x1
@@ -283,17 +285,33 @@ par(mfrow=c(2,2))
 plot(b3)
 par(mfrow=c(1,1))
 # now simulate poisson data
-set.seed(3)
 g<-exp(f/5)
 y<-rpois(rep(1,n),g)
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
 plot(b2,pages=1)
 # negative binomial data
-set.seed(7) 
 y<-rnbinom(g,size=2,mu=g)
 b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=neg.bin)
 plot(b3,pages=1)
-
+# and a pretty 2-d smoothing example....
+test1<-function(x,z,sx=0.3,sz=0.4)  
+{ (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+
+  0.8*exp(-(x-0.7)^2/sx^2-(z-0.8)^2/sz^2))
+}
+n<-500
+old.par<-par(mfrow=c(2,2))
+x<-runif(n);z<-runif(n);
+xs<-seq(0,1,length=30);zs<-seq(0,1,length=30)
+pr<-data.frame(x=rep(xs,30),z=rep(zs,rep(30,30)))
+truth<-matrix(test1(pr$x,pr$z),30,30)
+contour(xs,zs,truth)
+y<-test1(x,z)+rnorm(n)*0.1
+b4<-gam(y~s(x,z))
+fit1<-matrix(predict.gam(b4,pr,se=F),30,30)
+contour(xs,zs,fit1)
+persp(xs,zs,truth)
+persp(b4)
+par(old.par)
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

@@ -1490,7 +1490,7 @@ void bidiag(matrix *A,matrix *wl,matrix *ws,matrix *V)
 
 	/* zero elements i+2 to A.c of row i ..... */
     if ((i<A->r) && (i<A->c-1))
-    { m=0.0;/*for (j=i+1;j<A->c;j++) { s=fabs(AM[i][j]); if (s>m) m=s;} // max for scaling */
+    { m=0.0;/*for (j=i+1;j<A->c;j++) { s=fabs(AM[i][j]); if (s>m) m=s;} */ /* max for scaling */
       for (p=AM[i]+i+1;p<AM[i]+A->c;p++) { s=fabs(*p);if (s>m) m=s;} /* max for scaling */
       if (m==0.0) g=0.0;
       else
@@ -1666,7 +1666,7 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
         if (end<=0) finished=1;
         break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      /*if (fabs(wsV[end-1])<=1e-15*wnorm) // condition slacker than below */
+      /*if (fabs(wsV[end-1])<=1e-15*wnorm) */ /* condition slacker than below */
       if  (wsV[end-1]+wnorm==wnorm) /*too restrictive?? wV[end] is a singular value => deflate  */
       { end--;
         if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
@@ -1937,7 +1937,7 @@ void old_svd(matrix *A, matrix *w, matrix *V)
         if (end<=0) finished=1;
         break; /* successfully deflated, so start new QR iteration cycle or finish */
       } else 
-      /*if (fabs(wsV[end-1])<=1e-15*wnorm) // condition slacker than below */
+      /*if (fabs(wsV[end-1])<=1e-15*wnorm) */ /* condition slacker than below */
       if  (wsV[end-1]+wnorm==wnorm) /*too restrictive?? wV[end] is a singular value => deflate  */
       { end--;
         if (end==0) finished=1; /* all elements of ws are zeroed so we're done */
@@ -2377,7 +2377,7 @@ matrix svdroot(matrix A,double reltol)
    used to decide which columns to remove... */
 
 { long k=0l,i,j;
-  double tol=0.0;
+  double tol=0.0,prod;
   matrix a,v,w;
   a=initmat(A.r,A.c);mcopy(&A,&a);
   v=initmat(A.r,A.c);
@@ -2387,7 +2387,10 @@ matrix svdroot(matrix A,double reltol)
   tol*=reltol;
   for (i=0;i<w.r;i++)
   { if (w.V[i]>tol)
-    { for (j=0;j<a.c;j++) v.M[j][k]=a.M[j][i]*w.V[i];k++;}
+    { for (j=0;j<a.c;j++) v.M[j][k]=a.M[j][i]*w.V[i];k++;
+      prod=0.0;for (j=0;j<a.r;j++) prod+=a.M[j][i]*v.M[i][j];
+      if (prod<0.0) ErrorMessage("Matrix passed to svdroot is not positive semi-definite",1); 
+    }
   }
   v.c=k;
   freemat(a);freemat(w);
@@ -2458,7 +2461,7 @@ double condition(a) matrix a;
   b=initmat(a.r,a.c);
   for (i=0;i<a.r;i++) for (j=0;j<a.c;j++) b.M[i][j]=a.M[i][j];
   c=initmat(a.c,1L);d=initmat(a.c,a.c);svd(&b,&c,&d);
-  /*for (i=0;i<c.r;i++) { printf("%g",c.V[i]); getc(stdin);} // comment out usually */
+  /*for (i=0;i<c.r;i++) { printf("%g",c.V[i]); getc(stdin);} */ /* comment out usually */
   min=max=c.V[0];
   for (i=1;i<c.r;i++)
   { if (c.V[i]<min) min=c.V[i]; else if (c.V[i]>max) max=c.V[i];}
@@ -2662,13 +2665,15 @@ void lu_tri(double *d,double *g,double *u,int n)
    No restriction on T beyond full rank and symmetry.
 */
 
-{ double *dg,*dd,*du,*dd1,*du1;
+{ double *dg,*dd,*du,*dd1,*du1,mult,maxm=0.0;
   /* LU decomposition .... */
   dd=d;dd1=d+1;du=u;du1=u+1;
   for (dg=g;dg<g+n-1;dg++)
-  { *dd1 -= *dg * *dg / *dd;
-    *du1 -= *du * *dg / *dd;
+  { mult = *dg/ *dd;
+    *dd1 -= *dg * mult;
+    *du1 -= *du * mult;
     dd++;du++;dd1++;du1++;
+    /*mult=fabs(mult); if (mult>maxm) maxm=mult;*/ /* DEBUG */
    }
   /* Backsubstitution ..... */
   u[n-1]/=d[n-1];
@@ -2677,29 +2682,40 @@ void lu_tri(double *d,double *g,double *u,int n)
   { *du = ( *du - *dg * *du1 )/ *dd;dd--;du1--;dg--;}
 }
 
-void eigen_tri(double *d,double *g,int n)
+void eigen_tri(double *d,double *g,double **v,int n,int getvec)
 
 /* Routine to find the eigenvalues of a symmetric tri-diagonal matrix, A, using the
-   implicit QR algorithm with Wilkinson shifts. Eigen-vectors should be found by
+   implicit QR algorithm with Wilkinson shifts. Eigen-vectors can be found by
    
-   a) Using the QR algortihm in conjunction with the ultimate shift strategy.
-   or
+   a) setting getvec==1 and initializing v to an n by b array (contents ignored)
+
+   or,   
+ 
    b) Using inverse iteration.
 
    The latter is O(n^2), but less stable than the former which is O(n^3). 
  
    d contains the leading diagonal of the matrix. 
    g contains the leading sub(=super) diagonal
+   v is storage for eighen vectors
    n is the length of d.
-   
-   on exit d contains the eigen values of the matrix A, and g is altered. 
+   getvec specifies whether or not to accumulate eigen-vectors
+
+   on exit d contains the eigen values of the matrix A, in descending order, 
+   and g is altered. 
+
+   If getvec==1 then v[i] will contain the eigenvector corresponding to d[i] for i=0..n-1
 
    A assumed full rank at present.
 
+   Note that eigenvaluse are O(n^2), but eigenvectors O(n^3)
+
 */
 
-{ int end,start=0,finished=0,os,oe,counter=0,iter_limit=100,ok,k;
-  double big,small,d1,d2,g1,g2,sig,x,y,z,b,s,c,s2,c2,cs,r,*dg,*dg1,*dg2,*dd1,*dd2;
+{ int end,start=0,finished=0,os,oe,counter=0,iter_limit=100,ok,k,i,j;
+  double big,small,d1,d2,g1,g2,sig,x,y,z,b,s,c,s2,c2,cs,r,*dg,*dg1,*dg2,*dd1,*dd2,v0,v1,*vv1,*vv0;
+  if (getvec) /* set eigenvector matrix to I */ 
+  for (k=0;k<n;k++) { for (dd1=v[k];dd1<v[k]+n;dd1++) *dd1=0.0;v[k][k]=1.0;}  
   end=n-1;
   if (n==1) finished=1;
   while (!finished)
@@ -2739,6 +2755,14 @@ void eigen_tri(double *d,double *g,int n)
       d[start]=c2*d1+2*cs*g1+s2*d2;
       d[start+1]=s2*d1+c2*d2-2*cs*g1;
       g[start]=g1*(c2-s2)+cs*(d2-d1);
+      if (getvec) /* then apply rotator to v */
+      { vv1=v[start+1];
+        for (vv0=v[start];vv0<v[start]+n;vv0++)
+	{ v0= *vv0;
+	  *vv0 = c*v0+s* *vv1; *vv1 = c * *vv1-s*v0;
+          vv1++;
+        }
+      }
       if (start+1<end) /* then a bulge will be created and must be chased... */
       { g2=g[start+1];
         g[start+1]*=c;
@@ -2763,9 +2787,28 @@ void eigen_tri(double *d,double *g,int n)
             *dg2 *= c;           /*g[k+2]*=c;  */
           } 
           dd1++;dd2++;dg1++;dg2++;dg++;
+          if (getvec) /* apply rotator to v */
+	  {  vv1=v[k+2];
+             for (vv0=v[k+1];vv0<v[k+1]+n;vv0++)
+	     { v0= *vv0;
+	       *vv0 = c*v0+s* *vv1; *vv1 = c * *vv1-s*v0;
+               vv1++;
+             }
+	     /* for (i=0;i<n;i++)
+	      { v0=v[k+1][i];v1=v[k+2][i];
+	      v[k+1][i]=c*v0+s*v1;v[k+2][i]=c*v1-s*v0;
+	      }*/
+          }  
         }           
       } 
     }    
+  }
+  for (i=0;i<n-1;i++) /* sorting into descending order */
+  { k=i;big=d[k];for (j=i;j<n;j++) if (d[j]>=big) { big=d[j];k=j;}
+    x=d[i];d[i]=d[k];d[k]=x;
+    if (i!=k&&getvec) 
+    { vv1=v[k]; for (vv0=v[i];vv0<v[i]+n;vv0++) { x= *vv0;*vv0 = *vv1;*vv1=x;vv1++;}
+    }
   }
 }
 
@@ -2803,9 +2846,10 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
 
 */
 
-{ double *vo,*d1,*d2,*g1,vnorm,x,*dum,*dum1,*dum2,*dum4;
+{ double *vo,*d1,*d2,*g1,vnorm,x,*dum,*dum1,*dum2,*dum4,*b,xx,bt,err,errmax;
   int i,k,ok,ok1,iter,iter_max=1000; 
   char msg[200];
+  unsigned long jran=2,ia=106,ic=1283,im=6075;
   if (n==1) { v[0][0]=1;return;}
   d1=(double *)calloc((size_t)n,sizeof(double));
   d2=(double *)calloc((size_t)n,sizeof(double));
@@ -2813,13 +2857,20 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
   g1=(double *)calloc((size_t)n-1,sizeof(double));
   for (i=0;i<n;i++) d1[i]=d[i];  /* keep a copy of A */
   for (i=0;i<n-1;i++) g1[i]=g[i];
-  eigen_tri(d,g1,n);   /* get eigenvalues */
+  eigen_tri(d,g1,&dum,n,0);   /* get eigenvalues (only) */
   
   free(g1);
-  qsort(d,(size_t)n,sizeof(d[0]),elcomp); /* sort into descending order */
   /* work through eigen-vectors */
   for (k=0;k<n;k++)
-  { v[k][0]=1.0;dum1=v[k];for (dum=v[k]+1;dum<v[k]+n;dum++) { *dum = - *dum1;dum1++;}
+  { b=v[k];bt=0.0;
+    for (i=0;i<n;i++)   /* somewhat randomized start vector!  */
+    { jran=(jran*ia+ic) % im;   /* quick and dirty generator to avoid too regular a starting vector */
+      xx=(double) jran / (double) im -0.5; 
+      b[i]=xx;xx=-xx;bt+=b[i]*b[i];
+    } 
+    bt=sqrt(bt); 
+    for (i=0;i<n;i++) b[i]/=bt;
+    /*v[k][0]=1.0;dum1=v[k];for (dum=v[k]+1;dum<v[k]+n;dum++) { *dum = - *dum1;dum1++;}*/
     ok=1;iter=0;
     while (ok)
     { dum1=d2;dum2=d1;dum4=vo;x=d[k];
@@ -2836,19 +2887,32 @@ void eigenvv_tri(double *d,double *g,double **v, int n)
       ok=0; /* test for convergence.... */
       dum1=vo;
       for (dum=v[k];dum<v[k]+n;dum++) 
-      { x = *dum1 - *dum;dum1++;x=fabs(x);if (x>1e-14) { ok=1;break;}}
+      { x = *dum1 - *dum;dum1++;x=fabs(x);if (x>1e-15) { ok=1;break;}}
       ok1=0;dum1=vo;
       for (dum=v[k];dum<v[k]+n;dum++) 
-      { x = *dum1 + *dum;dum1++;x=fabs(x);if (x>1e-14) { ok1=1;break;}}
+      { x = *dum1 + *dum;dum1++;x=fabs(x);if (x>1e-15) { ok1=1;break;}}
       if (ok==0||ok1==0) ok=0; else ok=1;
       iter++;
       if (iter>iter_max) 
 	  {sprintf(msg,"eigenvv_tri() Eigen vector %d of %d failure. Error = %g > 1e-14",k,n,x);
            ErrorMessage(msg,1); 
-           /*ErrorMessage("Eigen vector convergence failure in eigenvv_tri()",1); */
+          
           }
     }
   }
+  
+  /* checking code ..... do the eigen value- vector pairs work? */
+  /*for (i=0;i<n;i++) 
+  { k=0;err=d1[k]*v[i][k]+g[k]*v[i][k+1]-d[i]*v[i][k];  
+    errmax=fabs(err);
+    for (k=1;k<n-1;k++) 
+    { err=g[k-1]*v[i][k-1]+d1[k]*v[i][k]+g[k]*v[i][k+1]-d[i]*v[i][k];  
+      err=fabs(err);if (err>errmax) errmax=err;
+    }
+    k=n-1;err=g[k-1]*v[i][k-1]+d1[k]*v[i][k]-d[i]*v[i][k];  
+    err=fabs(err);if (err>errmax) errmax=err;
+  }
+  Rprintf("The maximum error in eigenvv_tri() is %g\n",errmax);*/
   free(vo);free(d1);free(d2);
   for (i=0;i<n;i++)
   { x=0.0;for (dum=v[i];dum<v[i]+n;dum++) x += *dum;
@@ -2895,10 +2959,11 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
 
 */
 
-{ double **v,*d,*b,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
-         *z,*zd,*err,normTj,eps=1e-7,*dum,eps_stop=1e-14,max_err;
+{ double **v,*d,*b,*g,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
+         *z,*zd,*err,normTj,eps=1e-7,*dum,eps_stop=1e-15,max_err,l1,l2;
   int i,j,k,n,ok,l,kk,vlength=0;
-  unsigned long jran=151,ia=106,ic=1283,im=6075;
+  unsigned long jran=1,ia=106,ic=1283,im=6075;
+  
   AM=A->M;
   n=(int)A->r;
   q=(double **)calloc((size_t)n+1,sizeof(double *));
@@ -2915,10 +2980,10 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
   /* initialise vectors a and b - a is leading diagonal of T, b is sub/super diagonal */
   a=(double *)calloc((size_t)n,sizeof(double));
   b=(double *)calloc((size_t)n,sizeof(double));
+  g=(double *)calloc((size_t)n,sizeof(double));
   d=(double *)calloc((size_t)n,sizeof(double)); 
   z=(double *)calloc((size_t)n,sizeof(double));
   zd=(double *)calloc((size_t)n,sizeof(double));
- 
   err=(double *)calloc((size_t)n,sizeof(double));
   for (i=0;i<n;i++) err[i]=1e300;
   /* The main loop. Will break out on convergence. */
@@ -2942,14 +3007,14 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
       /* Now stabilize by full re-orthogonalization.... */
       
       for (i=0;i<n;i++) zd[i]=z[i];
-      for (i=0;i<j;i++) 
-      { xx=0.0;zz=zd; /* actually z here works jusat as well!! */
+      for (i=0;i<=j;i++) 
+      { xx=0.0;zz=zd; /* actually z here works just as well!! */
         for (dum=q[i];dum<q[i]+n;dum++) { xx+= *dum * *zz;zz++;}
         zz=z;
         for (dum=q[i];dum<q[i]+n;dum++) { *zz -= xx * *dum;zz++;}
       } 
       for (i=0;i<n;i++) zd[i]=z[i];
-      for (i=0;i<j;i++) 
+      for (i=0;i<=j;i++) 
       { xx=0.0;zz=zd; /*zd */
         for (dum=q[i];dum<q[i]+n;dum++) { xx+= *dum * *zz;zz++;}
         zz=z;
@@ -2959,39 +3024,43 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
     } 
     /* calculate b[j].... */
     zz=b+j;*zz = 0.0;for (i=0;i<n;i++) { xx=z[i];*zz+=xx*xx;}*zz=sqrt(*zz);
-    if (b[j]==0.0&&j<n-1) ErrorMessage("Lanczos failed",1);
+    if (b[j]==0.0&&j<n-1) ErrorMessage("Lanczos failed",1); /* Actually this isn't really a failure => rank(A)<l+lm */
     /* get q[j+1]      */
     if (j<n-1)
     { q[j+1]=(double *)calloc((size_t)n,sizeof(double));
       zz=q[j+1];xx=b[j];for (i=0;i<n;i++) zz[i]=z[i]/xx; /* forming q[j+1] */
     }
     /* Now get the spectral decomposition of T_j.  */
-
-    for (i=0;i<j+1;i++) d[i]=a[i]; /* copy leading diagonal of T_j */
-    /* set up storage for eigen vectors */
-    if (vlength) /* free up first */
-    { for (i=0;i<vlength;i++) free(v[i]);free(v); 
-    } 
-    v=(double **)calloc((size_t)j+1,sizeof(double *));
-    vlength=j+1;
-    for (i=0;i<j+1;i++) v[i]=(double *)calloc((size_t)j+1,sizeof(double));
-    /* obtain eigen values/vectors of T_j in O(j^2) flops */
-    eigenvv_tri(d,b,v,j+1);
-    /* v[i] is ith  eigenvector, d[i] corresponding eigenvalue */
-    /* Evaluate ||Tj|| .... */
-    normTj=fabs(d[0]);if (fabs(d[j])>normTj) normTj=fabs(d[j]);
-    for (k=0;k<j+1;k++) /* calculate error in each d[i] */
-    { err[k]=b[j]*v[k][j];
-      err[k]=fabs(err[k]);
-    }
-    /* and check for termination ..... */
-    if (j>m+lm)
-    { ok=1;
-      max_err=normTj*eps_stop;
-      for (i=0;i<m;i++) if (err[i]>max_err) ok=0;
-      for (i=j;i>j-lm;i--) if (err[i]>max_err) ok=0;
-      if (ok) 
-      { j++;break;}
+    if (((j>=m+lm-1)&&(j%5==0))||(j==n-1))   /* no  point doing this too early or too often */
+    { for (i=0;i<j+1;i++) d[i]=a[i]; /* copy leading diagonal of T_j */
+      for (i=0;i<j;i++) g[i]=b[i]; /* copy sub/super diagonal of T_j */   
+      /* set up storage for eigen vectors */
+      if (vlength) /* free up first */
+      { for (i=0;i<vlength;i++) free(v[i]);free(v); 
+      } 
+      v=(double **)calloc((size_t)j+1,sizeof(double *));
+      vlength=j+1;
+      for (i=0;i<j+1;i++) v[i]=(double *)calloc((size_t)j+1,sizeof(double));
+      /* obtain eigen values/vectors of T_j in O(j^3) flops */
+      /*eigenvv_tri(d,b,v,j+1); this was O(j^2), but not stable enough */   
+      eigen_tri(d,g,v,j+1,1);
+      /* debug code to check eigenvv_tri() results */     
+      /* v[i] is ith  eigenvector, d[i] corresponding eigenvalue */
+      /* Evaluate ||Tj|| .... */
+      normTj=fabs(d[0]);if (fabs(d[j])>normTj) normTj=fabs(d[j]);
+      for (k=0;k<j+1;k++) /* calculate error in each d[i] */
+      { err[k]=b[j]*v[k][j];
+        err[k]=fabs(err[k]);
+      }
+      /* and check for termination ..... */
+      if (j>m+lm)
+      { ok=1;
+        max_err=normTj*eps_stop;
+        for (i=0;i<m;i++) if (err[i]>max_err) ok=0;
+        for (i=j;i>j-lm;i--) if (err[i]>max_err) ok=0;
+        if (ok) 
+        { j++;break;}
+      }
     }
   }
   /* At this stage, complete construction of the eigen vectors etc. */
@@ -3012,6 +3081,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
   /* clean up..... */
   free(a);
   free(b);
+  free(g);
   free(d);
   free(z);
   free(err);
@@ -3117,10 +3187,16 @@ void fprintmat(matrix A,char *fname,char *fmt)
   17. 18/12/01: convergence tolerance tightened massively in lanczos_spd() otherwise there are
       serious problems in particular with repeated eigenvalues. iter_max increased
       in eigenvv_tri() otherwise can fail on repeated eigenvalues. 
-  
-issue: should check that eigenvectors for repeated eigenvalues are being estimated correctly
-      - This means checking that both are a linear combination of "true"
- 
+  18. 20/12/01: eigenvv_tri() seems to be insufficiently stable for thin plate regression 
+      splines on regular grids. The inverse iteration steps can fail. It might be possible 
+      to use a hybrid algorithm that uses full accumulation if convergence too slow on 
+      inverse iteration, but for the moment I have upgraded eigen_tri, so that it can 
+      accumulate eigenvectors in a completely stable manner. Lanczos_spd() now uses the 
+      stable version, but doesn't obtain the complete eigen-decomposition of T_k so
+      early or so often, to ofset the increase in eigenvector cost from 0(j^2) to O(j^3).
+      Also svdroot() now signals an error if it gets passed a matrix that has any -ve 
+      eigenvalues. 
+
 */
 
 

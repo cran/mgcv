@@ -322,15 +322,6 @@ void tprs_setup(double **x,int m,int d,int n,int k,int constant,matrix *X,matrix
   U=initmat(E.r,(long)ek+d+1); /* eigen-vector matrix for E */
   v=initmat((long)ek+d+1,1L);      /* eigen-value matrix for E */
   i=lanczos_spd(&E,&U,&v,ek,d+1);      /* get largest and smallest ek eigen-values of E */
-  /* following is checking code */
-  /*  v1=initmat(E.r,1L);
-  Rprintf("calling specd()....\n");
-  specd(E,v1);
-  for (i=0;i<ek;i++) Rprintf("%20.15g  %20.15g\n",v.V[i],v1.V[i]);
-  for (i=0;i<d+1;i++) Rprintf("%20.15g  %20.15g\n",v.V[ek+i],v1.V[v1.r-d-1+i]);
-  for (i=0;i<E.r;i++) Rprintf("%12.7g  %12.7g  %12.7g  %12.7g\n",
-                      U.M[i][7],E.M[i][7],U.M[i][8],E.M[i][8]);
-		      freemat(v1);*/
   /* Now form the constraint matrix for the truncated problem T'U */
   TU=initmat((long)M,k);
   matmult(TU,T,U,1,0);

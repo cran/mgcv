@@ -1,6 +1,6 @@
 Package: mgcv
-Version: 0.6-1
-Author: Simon Wood <snw@mcs.st-and.ac.uk>  
+Version: 0.6-2
+Author: Simon Wood <snw@mcs.st-and.ac.uk> and  
   Mike Lonergan <mel@mcs.st-and.ac.uk>
   [mel: persp.gam() and negative binomial; snw: rest]   
 Maintainer: Simon Wood <snw@mcs.st-and.ac.uk>

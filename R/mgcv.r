@@ -1597,7 +1597,7 @@ theta.maxl<-function (y, mu, n = length(y), limit = 10, eps =
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 0.6.1\n")
+    cat("This is mgcv 0.6.2\n")
 }
 
 
