@@ -68,8 +68,7 @@ with Multiple
 \seealso{  \code{\link{gam}} \code{\link{plot.gam}}}
 
 \examples{
-
- library(mgcv)
+library(mgcv)
 n<-200
 sig2<-4
 x0 <- runif(n, 0, 1)
