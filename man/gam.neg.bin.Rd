@@ -54,16 +54,19 @@ f <- f + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.39
 g<-exp(f/5)
 # negative binomial data  
 y<-rnbinom(g,size=3,mu=g)
-b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negative.binomial(1)) # unknown theta
+# unknown theta ...
+b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negative.binomial(1))
 plot(b,pages=1)
 print(b)
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=neg.bin(1)) # unknown theta
 plot(b,pages=1)
 print(b)
-b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negative.binomial(3),scale=1) # known theta example
+# known theta example ...
+b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negative.binomial(3),scale=1)
 plot(b,pages=1)
 print(b)
 # Now use "sqrt" link available in negative.binomial (but not neg.bin)
+set.seed(1)
 f<-f-min(f);g<-f^2
 y<-rnbinom(g,size=3,mu=g)
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negative.binomial(1,link="sqrt")) 
