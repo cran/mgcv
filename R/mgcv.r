@@ -421,7 +421,7 @@ get.var<-function(txt,data)
 { x <- data[[txt]]
   if (is.null(x)) 
   { x <- try(eval(parse(text=txt),data,enclos=NULL),silent=TRUE)
-    if (class(x)=="try-error") x <- NULL
+    if (inherits(x,"try-error")) x <- NULL
   }
   x
 }
@@ -1204,8 +1204,8 @@ gamm.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NU
 # There is an implicit assumption that any rank deficient penalty does not penalize 
 # the constant term in a basis. 
 { # split the formula if the object being passed is a formula, otherwise it's already split
-  if (class(formula)=="formula") split<-interpret.gam(formula) 
-  else if (class(formula)=="split.gam.formula") split<-formula
+  if (inherits(formula,"formula")) split<-interpret.gam(formula) 
+  else if (inherits(formula,"split.gam.formula")) split<-formula
   else stop("First argument is no sort of formula!") 
   if (length(split$smooth.spec)==0)
   { if (split$pfok==0) stop("You've got no model....")
@@ -1374,7 +1374,7 @@ extract.lme.cov<-function(b,data,start.level=1)
 # start.level is the r.e. grouping level at which to start the construction, 
 # levels outer to this will not be included in the calculation - this is useful
 # for gamm calculations
-{ if (class(b)!="lme") stop("object does not appear to be of class lme")
+{ if (!inherits(b,"lme")) stop("object does not appear to be of class lme")
   grps<-getGroups(b) # labels of the innermost groupings - in data frame order
   n<-length(grps)    # number of data
   if (is.null(b$modelStruct$varStruct)) w<-rep(b$sigma,n) ### 
@@ -1595,7 +1595,7 @@ gamm<-function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(
     k <- 1
     for (i in 1:G$m) # var.param in reverse term order, but forward order within terms!!
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
-      if (class(object$smooth[[i]])=="tensor.smooth"&&n.sp>1) 
+      if (inherits(object$smooth[[i]],"tensor.smooth")&&n.sp>1) 
       object$sp[k:(k+n.sp-1)] <- notExp(var.param[(n.v-n.sp+1):n.v])*2
       else object$sp[k:(k+n.sp-1)] <- 1/notExp(var.param[(n.v-n.sp+1):n.v])^2
       k <- k + n.sp
@@ -1788,8 +1788,8 @@ gam.setup<-function(formula,data=stop("No data supplied to gam.setup"),knots=NUL
 # set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 # needed for a gam fit.
 { # split the formula if the object being passed is a formula, otherwise it's already split
-  if (class(formula)=="formula") split<-interpret.gam(formula) 
-  else if (class(formula)=="split.gam.formula") split<-formula
+  if (inherits(formula,"formula")) split<-interpret.gam(formula) 
+  else if (inherits(formula,"split.gam.formula")) split<-formula
   else stop("First argument is no sort of formula!") 
   if (length(split$smooth.spec)==0)
   { if (split$pfok==0) stop("You've got no model....")
@@ -2482,7 +2482,7 @@ predict.gam<-function(object,newdata,type="link",se.fit=FALSE,...) {
   { warning("Unknown type, reset to terms.")
     type<-"terms"
   }
-  if (class(object)!="gam") stop("predict.gam can only be used to predict from gam objects")
+  if (!inherits(object,"gam")) stop("predict.gam can only be used to predict from gam objects")
 
   # get data from which to predict.....  
   
@@ -3329,12 +3329,12 @@ magic<-function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.0-7 \n")
+.onAttach <- function(...) cat("This is mgcv 1.0-8 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.0-7 \n")
+    cat("This is mgcv 1.0-8 \n")
 }
 
 
