@@ -166,7 +166,9 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
    order m, at location x, g(x), say. Also returns vector b such that g(x)=b'p. 
    In the interests of efficiency the index array coding for the polynomials 
    spanning the null space of the penalty is stored statically and changed only 
-   when d or m change. Set these to zero to clear this memory.
+   when d or m change. Set d to zero to clear this memory. 
+   Calling with this d=0 when the memory is empty is now safe - thanks to
+   Luke Tierney for spotting that it was not always so!   
    
    It is assumed that coefficients of the null space of the penalty are at the end of p.
 
@@ -183,6 +185,7 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
 { static int sd=0,sm=0,**pin,M;
   double r,g,z,**XM,*dum,*XMi;
   int i,j,k,off;
+  if (sd==0&&d==0) return(0.0); /* There is nothing to clear up and nothing to calculate */
   if (2*m<=d&&d>0) { m=0;while (2*m<d+2) m++;} 
   if (sd!=d||sm!=m) /* then re-calculate the penalty null space basis */
   { if (sd>0&&sm>0) 
@@ -430,6 +433,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
         XMi++;      
       } 
     }
+    tps_g(Xu,&p,xc,0,0,&X1,constant); /* tell tps_g to clear up its internally allocated memory - only d=0 mmatters here*/
     free(xc);freemat(X1);
   }
   /* Next, create the penalty matrix...... */
@@ -473,6 +477,10 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
             and then eigen are both allowed.
 6/5/2002  - bug fix: full spline bases failed - part of tprs_setup treated them as knot based
             and part as eigen-based - resulted in seg fault.
+3/10/2002 - tps_g() has a fix so that if told to clear up before having anything to clear up,
+            it doesn't write all sorts of things to un-allocated memory. Many thanks to Luke 
+            Tierney for finding this. 
+3/10/2002 - tprs_setup now tells tps_g() to clear up before returning
 */
 
 

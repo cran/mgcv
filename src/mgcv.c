@@ -856,7 +856,7 @@ void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,
   if (Z.r) freemat(Z);
   if (m) {free(dim);free(off);free(S);}
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed(); 
+  dmalloc_log_unfreed(); dmalloc_verify(NULL);
 #endif
 }
 
@@ -879,7 +879,7 @@ void RuniqueCombs(double *X,int *r, int *c)
   *r = (int)Xd.r; 
   freemat(Xd);free(ind);
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
 }
 
@@ -911,7 +911,7 @@ void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double
  
   freemat(x);freemat(A);freemat(b);  
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
 }
 
@@ -944,7 +944,7 @@ void RQT(double *A,int *r,int*c)
   RArrayFromMatrix(A,(long)(*r),&Q);
   freemat(Q);freemat(B); 
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif
 }
 
@@ -1007,7 +1007,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
 { matrix X,C,*S,*xp,*UZ,*Xu;
   long *off,*df,dumb;
   int m,n,nsdf,i,j,k,nx,k1,*M,nby;
-  double **x,**by;
+  double **x,**by=(double **)NULL; /* avoid compiler warning */
   /* setup x[][], df[], off[], m, n, nsdf, S[], xp[], for calling GAMsetup.
      X, C, S[i]'s and xp[i]'s are initialised in the function */
   m= *md;
@@ -1080,7 +1080,7 @@ void RGAMsetup(double *Xd,double *Cd,double *Sd,double *UZd,double *Xud,int *xu,
   for (i=0;i<nx;i++) free(x[i]);free(x);
   for (i=0;i<nby;i++) free(by[i]); if (nby) free(by);
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
 }
 
@@ -1356,7 +1356,7 @@ void RGAMpredict(int *xu,double *Xud,double *UZd,double *xpd,int *nsdf,int *dim,
 
   for (k=0;k< *m;k++) if (s_type[k]==0) freemat(xp[k]); if (*m>0) free(xp);
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
 }    
 
@@ -1445,7 +1445,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   if (Af.r) freemat(Af);
   if (b.r) freemat(b);
 #ifdef MEM_CHECK
-  dmalloc_log_unfreed();
+  dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif
 }
 

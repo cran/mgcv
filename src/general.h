@@ -12,7 +12,7 @@
    line:
         PKG_LIBS = -ldmalloc
    At shell prompt type:
-   dmalloc -l /where/to/put/logfile
+   dmalloc -l /where/to/put/logfile high
    (where logfile is the file name). Then start R and use the routines that call compiled code.
    Entry point functions all set to call dmalloc_log_unfreed() on exit, to allow leak chasing.
  

@@ -448,7 +448,7 @@ double EasySmooth(matrix *T,matrix *z,double *v,double *df,long n,double *sig2,d
 { matrix l0,l1,x;
   double xx,r,V,V0,rm,tr,maxr,minr,minV,rss,r0,r1,rt,r1t,ft,f1t,tau,nx,*ldt,r4eps,reps,eps=DOUBLE_EPS,tr0,
          min_target_distance,dfo,db;
-  double maxV,maxdV=0.0,firstdV=0.0,bracket_mult=20.0;
+  double maxV=0.0,maxdV=0.0,firstdV=0.0,bracket_mult=20.0;
   int k,i,gcv=1,ok=0,mink,kb,kf,step;
   char msg[200];
   minV=0.0;
