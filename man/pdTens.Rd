@@ -52,7 +52,7 @@ that matrix. \code{pdFactor} returns the factor as a vector (packed
 column-wise) (\code{pdMatrix} always returns a matrix).
 }
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \references{
 Pinheiro J.C. and Bates, D.M. (2000) Mixed effects Models in S and S-PLUS. Springer

@@ -45,7 +45,7 @@ scaled covariance matrix itself.
 \value{ A class \code{pdIdnot} object, or related quantities. See the \code{nlme} documentation for further details.}
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \references{
 Pinheiro J.C. and Bates, D.M. (2000) Mixed effects Models in S and S-PLUS. Springer

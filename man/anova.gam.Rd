@@ -47,7 +47,7 @@ Wood (2004) On confidence intervals for GAMs based on penalized regression
 splines. Technical report of the Statistics department, University of Glasgow, UK.
 
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \section{WARNING }{ Unless the models have no penalized terms then these
 methods are only approximate. 

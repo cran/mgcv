@@ -61,7 +61,7 @@ as extra arguments \code{...}: such supplied values will always over-ride the
 defualt values used by \code{vis.gam}. 
 }
 
-\author{Simon Wood \email{simon@stats.gla.ac.uk}
+\author{Simon Wood \email{simon.wood@r-project.org}
 
  Based on an original idea and design by Mike Lonergan.}
 

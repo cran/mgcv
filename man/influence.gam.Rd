@@ -22,7 +22,7 @@ influence.gam(model,...)
 }
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \seealso{  \code{\link{gam}}}

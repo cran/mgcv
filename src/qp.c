@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2002 Simon N. Wood  snw@st-and.ac.uk
+/* Copyright (C) 1991-2005 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License   
@@ -56,7 +56,7 @@ matrix addconQT(Q,T,a,u) matrix *Q,T,a,*u;
   if (q!=0L)
   { for (i=q+1;i<a.c;i++) { ra+=cV[i]*cV[i];bV[i]=cV[i];}
     if ((la-ra)<0.0)
-    { ErrorMessage("ERROR in addconQT.",1);}
+    { ErrorMessage(_("ERROR in addconQT."),1);}
     else
     bV[q]=sqrt(la-ra);
     if (cV[q]>0.0) bV[q]= -bV[q];
@@ -462,7 +462,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
     vmult(&PX,p,&Pd,0); /* Pd = PXp */
     for (i=0;i<Pd.r;i++) Pd.V[i] = Py.V[i]-Pd.V[i]; /* Pd=P(y-Xp) */
     Rf.c=Rf.r=p->r-tk-Af->r; /* Restrict attention to QR factor of PXZ */
-    for (i=0;i<Rf.c;i++) if (Rf.M[i][i]==0.0) ErrorMessage("QPCLS - Rank deficiency in model",1);
+    for (i=0;i<Rf.c;i++) if (Rf.M[i][i]==0.0) ErrorMessage(_("QPCLS - Rank deficiency in model"),1);
     Rsolv(&Rf,&pz,&Pd,0);  /* solve R pz= Pd for pz - search direction in null space */
     Rf.r=X->r;Rf.c=X->c; /* Restore Rf */
     pz.r=p->r-tk-Af->r;

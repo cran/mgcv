@@ -141,7 +141,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \section{WARNING }{ The method may not behave well with near column rank deficient \eqn{ {\bf
 X}}{X}

@@ -42,32 +42,12 @@ Journal on Scientific Computing 15(5):1126-1133
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk} } 
+\author{ Simon N. Wood \email{simon.wood@r-project.org} } 
 
 \seealso{  \code{\link{mgcv} } \code{\link{pcls}}  }
 
 \examples{
-# Fit a monotonic penalized regression spline .....
-
-# Generate data from a monotonic truth.
-set.seed(10);x<-runif(100)*4-1;x<-sort(x);
-f<-exp(4*x)/(1+exp(4*x));y<-f+rnorm(100)*0.1;plot(x,y)
-dat<-data.frame(x=x,y=y)
-# Show regular spline fit (and save fitted object)
-f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
-# Create Design matrix, constriants etc. for monotonic spline....
-gam(y~s(x,k=10,bs="cr")-1,data=dat,fit=FALSE)->G
-F<-mono.con(G$smooth[[1]]$xp);
-G$Ain<-F$A;G$bin<-F$b;G$C<-matrix(0,0,0);G$sp<-f.ug$sp;
-G$p<-G$smooth[[1]]$xp;G$y<-y;G$w<-y*0+1
-
-p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
-
-# now modify the gam object from unconstrained fit a little, to use it
-# for predicting and plotting constrained fit. 
-p<-c(0,p);f.ug$coefficients<-p; 
-x<-seq(min(x),max(x),length=200)
-lines(x,predict.gam(f.ug,newdata=data.frame(x=x)),col=2)
+## see ?pcls
 }
 \keyword{models} \keyword{smooth} \keyword{regression} %-- one or more ..
 

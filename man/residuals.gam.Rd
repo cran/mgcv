@@ -36,7 +36,7 @@ residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working"
 }
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 

@@ -91,7 +91,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk} 
+\author{ Simon N. Wood \email{simon.wood@r-project.org} 
 
 The design is inspired by the S function of the same name described in
 Chambers and Hastie (1993) (but is not a clone).
@@ -108,21 +108,36 @@ Chambers and Hastie (1993) (but is not a clone).
 \examples{
 library(mgcv)
 n<-200
-sig2<-4
+sig <- 2
 x0 <- runif(n, 0, 1)
 x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
-pi <- asin(1) * 2
 y <- 2 * sin(pi * x0)
 y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
-e <- rnorm(n, 0, sqrt(abs(sig2)))
+y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
+e <- rnorm(n, 0, sig)
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
-newd<-data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
-pred<-predict.gam(b,newd)
- 
+newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
+pred <- predict.gam(b,newd)
+## now get variance of sum of predictions using lpmatrix
+Xp <- predict(b,newd,type="lpmatrix") 
+## Xp %*% coef(b) yields vector of predictions
+a <- rep(1,31)
+Xs <- t(a) %*% Xp ## Xs %*% coef(b) gives sum of predictions
+var.sum <- Xs %*% b$Vp %*% t(Xs)
+## Now get the variance of non-linear function of predictions
+## by simulation from posterior distribution of the params
+library(MASS)
+br<-mvrnorm(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
+res <- rep(0,1000)
+for (i in 1:1000)
+{ pr <- Xp %*% br[i,] ## replicate predictions
+  res[i] <- sum(log(abs(pr))) ## example non-linear function
+}
+mean(res);var(res)
+## note: loop is replace-able by res <- colSums(log(abs(Xp %*% t(br))))
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

@@ -1,5 +1,13 @@
 #include <R.h> /* required for R specific stuff */
 
+#ifdef ENABLE_NLS
+#include <libintl.h>
+#define _(String) dgettext ("mgcv", String)
+#else
+#define _(String) (String)
+#endif
+
+
 /* comment in the following and out R.h for non-R use */
 
 /* 
@@ -22,5 +30,4 @@
 #include <dmalloc.h>
 #endif
 
-/* DOUBLE_EPS is needed because R defaults to using compiler options that use floating point registers 
-   in a silly way that e.g. makes it impossible to write strictly repeatable code! */ 
+

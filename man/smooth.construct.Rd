@@ -13,7 +13,11 @@
 class \code{xx.smooth.spec} during processing of the formula. Each of these objects is
 converted to a smooth object using an appropriate \code{smooth.construct} function. New smooth classes 
 can be added by writing a new \code{smooth.construct} method function and a corresponding 
-\code{\link{Predict.matrix}} method function (see example code below).}
+\code{\link{Predict.matrix}} method function (see example code below).
+
+In practice, \code{smooth.construct} is usually called via the wrapper
+function \code{\link{smoothCon}}.
+}
 
 \usage{
 smooth.construct(object,data,knots)
@@ -73,9 +77,12 @@ Usually the returned object will also include extra information required to defi
 \code{\link{Predict.matrix}} methods to make predictions using the basis. See the \code{Details} section for the infomation included for the built in smooth classes. 
 
 \code{tensor.smooth} returned objects will additionally have each element of the \code{margin} list updated in the same way. 
+
 }
 
-\details{ The returned objects for the built in smooth classes have the following extra elements.
+\details{ 
+
+The returned objects for the built in smooth classes have the following extra elements.
 \code{cr.smooth} objects (generated using \code{bs="cr"}) have an additional array \code{xp} giving the knot locations used to generate the basis.
 
 \code{cyclic.smooth} objects (generated using \code{bs="cc"}) have an array \code{xp} of knot locations and a matrix 
@@ -120,9 +127,16 @@ Statistical Science, 11(2):89-121
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 
-\author{Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{Simon N. Wood \email{simon.wood@r-project.org}}
 
-\seealso{ \code{get.var}, \code{\link{gamm}}, \code{\link{gam}}, \code{\link{Predict.matrix}} }
+\seealso{ \code{get.var}, \code{\link{gamm}}, \code{\link{gam}},
+ \code{\link{Predict.matrix}},
+\code{\link{smoothCon}}, \code{\link{PredictMat}}
+ }
+
+\warnings{User defined smooth objects should avoid having attributes names
+\code{"qrc"} or \code{"nCons"} as these are used internally to provide
+constraint free parameterizations.}
 
 \examples{# adding "p-spline" classes and methods
 

@@ -28,7 +28,7 @@ problems into ordinary regression problems.}
 \eqn{ {\bf A}}{A}, and such that \eqn{ {\bf A} = {\bf BB}^\prime}{A=BB'}.}
  
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

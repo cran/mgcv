@@ -10,6 +10,8 @@
 \title{Prediction methods for smooth terms in a GAM}
 \description{ Takes \code{smooth} objects produced by \code{smooth.construct} methods and obtains the matrix mapping 
 the parameters associated with such a smooth to the predicted values of the smooth at a set of new covariate values.
+
+In practice this method is often called via the wrapper function \code{\link{PredictMat}}.
 }
 
 \usage{
@@ -54,9 +56,10 @@ generalized additive models. J. Amer. Statist. Ass.
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
 
-\author{Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{Simon N. Wood \email{simon.wood@r-project.org}}
 
-\seealso{ \code{\link{gam}},\code{\link{gamm}}, \code{\link{smooth.construct}} }
+\seealso{ \code{\link{gam}},\code{\link{gamm}},
+\code{\link{smooth.construct}}, \code{\link{PredictMat}} }
 
 \examples{# See smooth.construct examples
 }

@@ -39,7 +39,7 @@ with each parameter.}
  
 \seealso{\code{\link{magic}}}
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

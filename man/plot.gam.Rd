@@ -138,7 +138,7 @@ generalized additive models. J. Amer. Statist. Ass. 99:637-686
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}
 
 Henric Nilsson \email{henric.nilsson@statisticon.se} donated the code for the \code{shade} option.
 

@@ -34,7 +34,7 @@ is `too far' from any datum.
 \references{
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 \seealso{ \code{\link{vis.gam}} }

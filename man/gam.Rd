@@ -10,7 +10,10 @@ fixed degrees of freedom (mixtures of the two are
 permitted). Multi-dimensional smooths are available using penalized thin plate
 regression splines (isotropic) or tensor product splines (when an isotropic smooth is inappropriate). 
 For more on specifying models see \code{\link{gam.models}}. For more on model 
-selection see \code{\link{gam.selection}}. For large datasets see warnings.
+selection see \code{\link{gam.selection}}. For faster fits use the \code{"cr"}
+bases for smooth terms, \code{\link{te}} smooths for smooths of several
+variables, and performance iteration for smoothing parameter estimation (see
+\code{\link{gam.method}}).  For large datasets see warnings.
 
  \code{gam()} is not a clone of what S-PLUS provides: the major
   differences are (i) that by default estimation of the
@@ -27,7 +30,7 @@ selection see \code{\link{gam.selection}}. For large datasets see warnings.
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action,offset=NULL,control=gam.control(),scale=0,knots=NULL,
+    na.action,offset=NULL,control=gam.control(),method=gam.method(),scale=0,knots=NULL,
     sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -186,7 +189,7 @@ possible, as is any number of covariates.
 
 Formulae can involve nested or ``overlapping'' terms such as \cr
 \code{y~s(x)+s(z)+s(x,z)} or \code{y~s(x,z)+s(z,v)}: see
-\code{\link{gam.side.conditions}} for further details and examples. Note that 
+\code{\link{gam.side}} for further details and examples. Note that 
 nesting with \code{\link{te}} terms is not supported. } 
  \item{family}{
 This is a family object specifying the distribution and link to use in
@@ -218,7 +221,9 @@ included in \code{formula}: this conforms to the behaviour of
 
 \item{control}{A list of fit control parameters returned by 
 \code{\link{gam.control}}.}
-
+\item{method}{A list controlling the fitting methods used. This can make a big
+difference to computational speed, and, in some cases, reliability of
+convergence: see \code{\link{gam.method}} for details.}
 \item{scale}{ If this is zero then GCV is used for all distributions
 except Poisson and binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
@@ -337,7 +342,7 @@ to environmental modelling. Ecological Modelling 157:157-177
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}
 
 Front end design inspired by the S function of the same name based on the work
 of Hastie and Tibshirani (1990). Underlying methods owe much to the work of
@@ -371,7 +376,7 @@ an infinite range on the linear predictor scale. Some regularization is possible
 } 
 
 \seealso{\code{\link{gamObject}}, \code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},
-  \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side.conditions}},
+  \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side}},
 \code{\link{gam.selection}},\code{\link{mgcv}}, \code{\link{gam.control}}
 \code{\link{gam.check}}, \code{\link{gam.neg.bin}}, \code{\link{magic}},\code{\link{vis.gam}}
  }
@@ -386,8 +391,8 @@ x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
 f <- 2 * sin(pi * x0)
-f <- f + exp(2 * x1) - 3.75887
-f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
+f <- f + exp(2 * x1) - 3.75
+f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.4
 e <- rnorm(n, 0, sig)
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
@@ -397,7 +402,7 @@ plot(b,pages=1,residuals=TRUE)
 G<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE)
 b<-gam(G=G)
 # an extra ridge penalty (useful with convergence problems) ....
-bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),H=diag(0.5,41)) 
+bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),H=diag(0.5,37)) 
 print(b);print(bp);rm(bp)
 # set the smoothing parameter for the first term, estimate rest ...
 bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),sp=c(0.01,-1,-1,-1))
@@ -415,10 +420,15 @@ par(mfrow=c(2,2))
 plot(b1)
 par(mfrow=c(1,1))
 # now simulate poisson data
-g<-exp(f/5)
+g<-exp(f/4)
 y<-rpois(rep(1,n),g)
 b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson)
 plot(b2,pages=1)
+# repeat fit using performance iteration
+gm <- gam.method(gam="perf.magic")
+b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,method=gm)
+plot(b3,pages=1)
+
 # and a pretty 2-d smoothing example....
 test1<-function(x,z,sx=0.3,sz=0.4)  
 { (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+
