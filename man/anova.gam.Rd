@@ -27,6 +27,18 @@ used. If only one model is provided then the significance of each model term
 is assessed using Wald tests: see \code{\link{summary.gam}} for details of the
 actual computations. In the latter case \code{print.anova.gam} is used as the
 printing method.
+
+P-values are usually reliable if the smoothing parameters are known, or
+the model is unpenalized. If smoothing parameters have been estimated then the
+p-values are typically somewhat too low. i.e. terms that appear `not
+significant' really are not, while terms that are significant, may in fact be
+non-significant if the p-value is close to whatever significance level you
+are choosing to operate at. This occurs because the uncertainty associated
+with the smoothing parameters is neglected in the calculations of the
+distributions under the null, which tends to lead to underdispersion in these
+distributions, and in turn to p-value estimates that are too low. (In
+simulations where the null is correct, I have seen p-values that are as low as half of what they should
+be.) 
 }
 
 \value{In the multi-model case \code{anova.gam} produces output identical to
@@ -39,18 +51,11 @@ which is in fact an object returned from \code{\link{summary.gam}}.
 
 }
 
-\references{
-For details of the calculation of the covariance matrix used for the Wald
-tests see:
 
-Wood (2004) On confidence intervals for GAMs based on penalized regression
-splines. Technical report of the Statistics department, University of Glasgow, UK.
-
-}
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
-\section{WARNING }{ Unless the models have no penalized terms then these
-methods are only approximate. 
+\section{WARNING }{ P-values may be under-estimates, as a result of ignoring
+smoothing parameter uncertainty.
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
@@ -66,8 +71,8 @@ x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
 y <- 2 * x0
-y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+y <- y + exp(2 * x1)
+y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
 e <- rnorm(n, 0, sig)
 y <- y + e
 x0<-as.factor(x0)

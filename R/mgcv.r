@@ -1978,7 +1978,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     else { object$fit.method <- "glmmPQL";object$method <- "PQL"}
 
     if (!reml.used) Vb<-Vb*length(G$y)/(length(G$y)-G$nsdf)
-    object$Vp<- Vb
+    object$Vp <- Vb
+    object$Ve <- Vb%*%Z%*%Vb
+
     
     object$prior.weights <- weights
     class(object)<-"gam"
@@ -2402,7 +2404,9 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
     if (args$scoreType=="GCV") object$scale <- object$scale.est else
     object$scale <- G$sig2
     mv<-magic.post.proc(G$X,object,w=sqrt(object$weights))
-    object$Vp<-mv$Vb;object$hat<-mv$hat;
+    object$Vp <- mv$Vb
+    object$hat<-mv$hat
+    object$Ve <- mv$Ve
     object$edf<-mv$edf
     object$aic <- object$aic + 2*sum(mv$edf)
     object$nsdf <- G$nsdf
@@ -3003,21 +3007,24 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     if (G$fit.method=="magic") # then some post processing is needed to extract covariance matrix etc...
     { mv<-magic.post.proc(G$X,mr,w=G$w)
       G$Vp<-mv$Vb;G$hat<-mv$hat;
-      #G$edf<-array(0,0) # Now some edf's for each term....
-      #if (G$m) for (i in 1:G$m) G$edf[i]<-sum(mv$edf[G$off[i]:(G$off[i]+G$df[i]-1)])
+      G$Ve <- mv$Ve # frequentist cov. matrix
       G$edf<-mv$edf
       G$conv<-mr$gcv.info
       G$sp<-msp
       rank<-G$conv$rank
-    } else rank <- ncol(G$X)-ncol(G$C)
-
+    } else { 
+      X <- G$w * G$X 
+      X <- G$Vp %*% t(X)
+      G$Ve <- X%*%t(X)/G$sig2 # frequentist cov. matrix 
+      rank <- ncol(G$X)-ncol(G$C)
+    }
     aic.model <- aic(y, n, mu, weights, dev) + 2 * sum(G$edf)
 
 	list(coefficients = as.vector(coef), residuals = residuals, fitted.values = mu, 
         family = family,linear.predictors = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,  
         df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,hat=G$hat,
-        boundary = boundary,sp = G$sp,nsdf=G$nsdf,Vp=G$Vp,mgcv.conv=G$conv,
+        boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,mgcv.conv=G$conv,
         gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank)
 }
 
@@ -3632,17 +3639,21 @@ residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson"
               response = y - mu)
 }
 
-summary.gam<-function (object,...) 
+summary.gam <- function (object,freq=TRUE,...) 
 # summary method for gam object - provides approximate p values for terms + other diagnostics
-{ pinv<-function(V,M)
+{ pinv<-function(V,M,rank.tol=1e-6)
   { D<-La.svd(V)
-    M1<-length(D$d[D$d>1e-12*D$d[1]]);if (M>M1) M<-M1 # avoid problems with zero eigen-values
+    M1<-length(D$d[D$d>rank.tol*D$d[1]])
+    if (M>M1) M<-M1 # avoid problems with zero eigen-values
     if (M+1<=length(D$d)) D$d[(M+1):length(D$d)]<-1
     D$d<- 1/D$d
     if (M+1<=length(D$d)) D$d[(M+1):length(D$d)]<-0
-    D$u%*%diag(D$d)%*%D$v
-  } 
-  se<-0;for (i in 1:length(object$coefficients)) se[i]<-object$Vp[i,i]^0.5
+    res <- D$u%*%diag(D$d)%*%D$v
+    attr(res,"rank") <- M
+    res
+  }
+  if (freq) Vp <- object$Ve else Vp <- object$Vp
+  se<-0;for (i in 1:length(object$coefficients)) se[i] <- Vp[i,i]^0.5
   residual.df<-length(object$y)-sum(object$edf)
   if (object$nsdf>0) # individual parameters
   { p.coeff<-object$coefficients[1:object$nsdf]
@@ -3656,14 +3667,14 @@ summary.gam<-function (object,...)
   nt<-length(term.labels)
   if (nt>0) # individual parametric terms
   { np<-length(object$assign)
-    Vp<-matrix(object$Vp[1:np,1:np],np,np)
+    Vb<-matrix(Vp[1:np,1:np],np,np)
     bp<-array(object$coefficients[1:np],np)
     pTerms.pv <- array(0,nt)
     attr(pTerms.pv,"names") <- term.labels
     pTerms.df <- pTerms.chi.sq <- pTerms.pv
     for (i in 1:nt)
     { ind <- object$assign==i
-      b <- bp[ind];V <- Vp[ind,ind]
+      b <- bp[ind];V <- Vb[ind,ind]
       pTerms.df[i] <- nb <- length(b)
       pTerms.chi.sq[i] <- b%*%solve(V,b)
       if (object$method=="UBRE")
@@ -3678,9 +3689,8 @@ summary.gam<-function (object,...)
   if (m>0) # form test statistics for each smooth
   { for (i in 1:m)
     { start<-object$smooth[[i]]$first.para;stop<-object$smooth[[i]]$last.para
-      V<-object$Vp[start:stop,start:stop] # cov matrix for smooth
+      V <- Vp[start:stop,start:stop] # cov matrix for smooth
       p<-object$coefficients[start:stop]  # params for smooth
-      # now get null space dimension for this term
       M1<-object$smooth[[i]]$df
       M<-round(sum(object$edf[start:stop]))
       V<-pinv(V,M1) # get rank M pseudoinverse of V
@@ -3691,13 +3701,15 @@ summary.gam<-function (object,...)
       { er<-paste(er,":",object$smooth[[i]]$by,sep="")} 
       names(chi.sq)[i]<-er
       edf[i]<-sum(object$edf[start:stop])
+      if (freq) df <- attr(V,"rank") else df <- edf[i]
       if (object$method=="UBRE")
-      s.pv[i]<-pchisq(chi.sq[i],df=max(1,edf[i]),lower.tail=FALSE)
+      s.pv[i]<-pchisq(chi.sq[i],df=df,lower.tail=FALSE)
       else     
-      s.pv[i]<-pf(chi.sq[i]/edf[i],df1=max(1,edf[i]),df2=residual.df,lower.tail=FALSE) 
-    }
+      s.pv[i]<-pf(chi.sq[i]/df,df1=df,df2=residual.df,lower.tail=FALSE) 
+   }
   }
-  r.sq<- 1 - var(object$y-object$fitted.values)*(object$df.null-1)/(var(object$y)*residual.df) 
+  w <- object$prior.weights
+  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(object$df.null-1)/(var(w*object$y)*residual.df) 
   dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
   ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
        s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=object$df.null,
@@ -3736,7 +3748,7 @@ anova.gam <- function (object, ..., dispersion = NULL, test = NULL)
     if (!is.null(dispersion)) warning("dispersion argument ignored")
     if (!is.null(test)) warning("test argument ignored")
     if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
-    sg <- summary(object) 
+    sg <- summary(object,freq=TRUE) 
     class(sg) <- "anova.gam"
     sg
 }
@@ -4086,7 +4098,8 @@ mroot <- function(A,rank=NULL,method="chol")
 
 magic.post.proc <- function(X,object,w=NULL)
 # routine to take list returned by magic and extract:
-# Vb the estimated parameter covariance matrix. rV%*%t(rV)*scale
+# Vb the estimated bayesian parameter covariance matrix. rV%*%t(rV)*scale
+# Ve the frequentist parameter estimator covariance matrix.
 # edf the array of estimated degrees of freedom per parameter Vb%*%t(X)%*%W%*%X /scale
 # hat the leading diagonal of the hat/influence matrix 
 # NOTE: W=diag(w^2). 
@@ -4098,11 +4111,13 @@ magic.post.proc <- function(X,object,w=NULL)
     X<-w*X # use recycling rule to form diag(w)%*%X cheaply 
     
   }
-  M<-V%*%t(X);B<-X*t(M);rm(M)
-  hat<-apply(B,1,sum) # diag(X%*%V%*%t(X))
-  edf<-apply(B,2,sum) # diag(V%*%t(X)%*%X)
-  Vb<-V*object$scale;rm(V)
-  list(Vb=Vb,hat=hat,edf=edf)
+  M <- V%*%t(X);B <- X*t(M)
+  Ve <- M%*%t(M)*object$scale # frequentist cov. matrix
+  rm(M)
+  hat <- apply(B,1,sum) # diag(X%*%V%*%t(X))
+  edf <- apply(B,2,sum) # diag(V%*%t(X)%*%X)
+  Vb <- V*object$scale;rm(V)
+  list(Ve=Ve,Vb=Vb,hat=hat,edf=edf)
 }
 
 initial.sp <- function(X,S,off)
@@ -4251,12 +4266,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-1 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-2 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-1 \n")
+    cat("This is mgcv 1.2-2 \n")
 }
 
 
