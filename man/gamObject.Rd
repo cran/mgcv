@@ -155,7 +155,12 @@ the \code{\link{smooth.construct}} objects.}
 
 \item{Vp}{estimated covariance matrix for the parameters. This is a Bayesian
 posterior covariance matrix that results from adopting a particular Bayesian
-model of the smoothing process.}
+model of the smoothing process. Paricularly useful for creating
+credible/confidence intervals.}
+
+\item{Ve}{frequentist estimated covariance matrix for the parameter
+estimators. Particularly useful for testing whether terms are zero. Not so
+useful for CI's as smooths are usually biased.}
 
 \item{weights}{final weights used in IRLS iteration.}
 

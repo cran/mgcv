@@ -7,22 +7,36 @@
 summaries from it. 
 }
 \usage{
-summary.gam(object,...)
+summary.gam(object,freq=TRUE,...)
 print.summary.gam(x,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
 \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.}
 \item{x}{a \code{summary.gam} object produced by \code{summary.gam()}.} 
+\item{freq}{By default p-values for individual terms are calculated using the frequentist estimated
+covariance matrix of the parameter estimators. If this is set to FALSE then
+the Bayesian covariance matrix of the parameters is used instead. See details. }
 \item{...}{ other arguments.}
 }
-\details{ Model degrees of freedom are taken as the trace of the influence (or hat) matrix \eqn{ {\bf A}}{A} for the model fit.
-Residual degrees of freedom are taken as number of data minus model degrees of freedom. Let \eqn{ {\bf P}_i}{P_i} be the matrix 
+
+\details{ Model degrees of freedom are taken as the trace of the influence (or
+hat) matrix \eqn{ {\bf A}}{A} for the model fit.
+Residual degrees of freedom are taken as number of data minus model degrees of
+freedom. 
+Let \eqn{ {\bf P}_i}{P_i} be the matrix 
 giving the parameters of the ith smooth when applied to the data (or pseudodata in the generalized case) and let \eqn{ {\bf X}}{X} 
 be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this definition causes 
 the edf's to add up properly! 
 
 \code{print.summary.gam} tries to print various bits of summary information useful for term selection in a pretty way.
+
+If \code{freq=FALSE} then the Bayesian parameter covariance matrix,
+\code{object$Vp}, is used to calculate test statistics for terms, and the
+degrees of freedom for reference distributions is taken as the estimated
+degrees of freedom for the term concerned. This is not easy to justify
+theoretically, and the resulting `Bayesian p-values' are difficult to
+interpret and often have much worse frequentist performance than the default p-values. 
 }
 
 \value{\code{summary.gam} produces a list of summary information for a fitted \code{gam} object. 
@@ -31,29 +45,22 @@ the edf's to add up properly!
 \item{p.pv}{is an array of p-values for the null hypothesis that the corresponding parameter is zero. 
 Calculated with reference to the t distribution with the estimated residual degrees of freedom for the model fit.}
 \item{m}{The number of smooth terms in the model.}
-\item{chi.sq}{An array of test statistics for assessing the significance of model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
-is the parameter vector for the ith smooth term, and this term has estimated covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
-statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k-1 
-pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is the basis dimension.}
-\item{s.pv}{An array of approximate p-values for the null hypotheses that each smooth term is zero. Be warned, these are only 
-approximate. In the case in which UBRE has been used, they are obtained by comparing the chi.sq statistic given above to the 
-chi-squared distribution with degrees of  freedom given by the estimated degrees of freedom for the term. In the GCV case (in 
-which the scale parameter will have been estimated) the statistic is compared to an F distribution with upper d.f. given by
-the estimate degrees of freedom for the term, and lower d.f. given by the residual degrees of freedom for the model . 
-Use at your own risk! Typically the p-values will be somewhat inaccurate
-because they are conditional on the smoothing parameters and the distributional assumption doesn't have a firm theoretical basis. 
-A pragmatic approach to the latter issue is to check p-values by refitting the model using regression splines
-with each basis dimension set to one more than the rounded edf for
-the term (see example, below). In this latter case the distributional
-assumption would be fine if the smoothing parameters were
-known, but of course they are not, and conditioning on the smoothing
-parameters will always be problematic. The difficulty is that GCV has
-used the data to select the most plausible smoothing parameters for each
-term - not surprisingly this tends to mean that the terms appear
-a little more `significant' than they should. Of course this problem
-is no different to the standard difficulty in interpreting p-values for
-model terms when the model has been selected by hypothesis testing
-methods such as backwards elimination.   
+\item{chi.sq}{An array of test statistics for assessing the significance of
+model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
+is the parameter vector for the ith smooth term, and this term has estimated
+covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
+statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
+p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
+pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  \eqn{ {\bf V_i}}{V_i}.}
+\item{s.pv}{An array of approximate p-values for the null hypotheses that each
+smooth term is zero. Be warned, these are only approximate. In the case in
+which UBRE has been used, they are obtained by comparing the chi.sq statistic given above to the 
+chi-squared distribution with k degrees of freedom, where k is the estimated
+rank of  \eqn{ {\bf V_i}}{V_i}. In the GCV case (in 
+which the scale parameter will have been estimated) the statistic is compared
+to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model . 
+Typically the p-values will be somewhat too low, because they are conditional
+on the smoothing parameters, which are usually uncertain. 
 }
 \item{se}{array of standard error estimates for all parameter estimates.}
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
@@ -102,8 +109,9 @@ University of Glasgow.
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
-\section{WARNING }{ The supplied p-values are only approximate and should be
-treated with scepticism, particularly for the smooth terms.
+\section{WARNING }{ The supplied p-values will often be underestimates if
+smoothing parameters have been estimated as part of model fitting.
+
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},

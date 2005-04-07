@@ -224,6 +224,8 @@ y <- f + e
 b <- gamm(y~s(x0)+s(x1)+s(x2)+s(x3))
 plot(b$gam,pages=1)
 summary(b$lme) # details of underlying lme fit
+summary(b$gam) # gam style summary of fitted model
+anova(b$gam) 
 
 b <- gamm(y~te(x0,x1)+s(x2)+s(x3)) 
 op <- par(mfrow=c(2,2))
