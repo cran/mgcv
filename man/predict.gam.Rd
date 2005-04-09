@@ -114,11 +114,13 @@ x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
 y <- 2 * sin(pi * x0)
-y <- y + exp(2 * x1) - 3.75887
+y <- y + exp(2 * x1) 
 y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
+y <- y + x3
 e <- rnorm(n, 0, sig)
 y <- y + e
-b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
+b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3))
+rm(y,x0,x1,x2,x3)
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
 ## now get variance of sum of predictions using lpmatrix

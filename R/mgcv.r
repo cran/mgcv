@@ -316,6 +316,7 @@ te <- function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE)
   for (i in 2:dim)
   { term[i]<-deparse(vars[[i]],backtick=TRUE)
   }
+  for (i in 1:dim) term[i] <- attr(terms(reformulate(term[i])),"term.labels")
   # term now contains the names of the covariates for this model term
   
   # check d - the number of covariates per basis
@@ -392,7 +393,7 @@ te <- function(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE)
 
 
 
-s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
+s <- function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
 # function for use in gam formulae to specify smooth term, e.g. s(x0,x1,x2,k=40,m=3,by=x3) specifies 
 # a rank 40 thin plate regression spline of x0,x1 and x2 with a third order penalty, to be multiplied by
 # covariate x3, when it enters the model.
@@ -414,6 +415,7 @@ s<-function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
   for (i in 2:d)
   { term[i]<-deparse(vars[[i]],backtick=TRUE)
   }
+  for (i in 1:d) term[i] <- attr(terms(reformulate(term[i])),"term.labels")
   # term now contains the names of the covariates for this model term
   # now evaluate all the other 
   k.new<-round(k) # in case user has supplied non-integer basis dimension
@@ -3076,11 +3078,12 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       { if (sum(!(names(object$model)%in%names(newdata)))) stop(
         "newdata is a model.frame: it should contain all required variables\n")
       } else
-      { #ff <- interpret.gam(object$full.formula)$fake.formula[-2]
-        #ff <- reformulate(all.vars(ff)) # completely plain formula e.g. no offset()
-        ## get names of all required variables .... (allNames replaces all.vars(ff))
-        allNames <- names(strip.offset(model.frame(delete.response(object$terms),object$model)))
+      { ## get names of required variables, less response, but including offset variable
+        allNames <- all.vars(delete.response(object$terms))
+#        allNames <- names(strip.offset(model.frame(delete.response(object$terms),strip.offset(object$model))))
         ff <- reformulate(allNames)
+        ## note that this formulation is only needed so that warning can be generated.
+        ## otherwise could follow e.g. predict.lm
         if (sum(!(allNames%in%names(newdata)))) { 
         warning("not all required variables have been supplied in newdata!\n")}
         newdata <-
@@ -3088,9 +3091,10 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       }
     }
   }
-  # check that factor levels match for prediction and original fit 
+ 
   if (new.data.ok)
-  { names(newdata)->nn # new data names
+  { ## check factor levels are right (could be moved to mf branch above) ...
+    names(newdata)->nn # new data names
     colnames(object$model)->mn # original names
     for (i in 1:length(newdata)) 
     if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
@@ -4266,12 +4270,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-2 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-3 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-2 \n")
+    cat("This is mgcv 1.2-3 \n")
 }
 
 
