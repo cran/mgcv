@@ -1,10 +1,15 @@
 \name{gam}
 \alias{gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Generalized Additive Models using penalized regression splines and 
-GCV}
-\description{ Fits the specified  generalized additive model (GAM) to
-  data. Smooth terms are represented using penalized regression splines
+\title{Generalized additive models with integrated smoothness estimation}
+\description{ Fits a generalized additive model (GAM) to
+  data. The degree of smoothness of model terms is estimated as part of
+  fitting; isotropic or scale invariant smooths of any number of variables are
+  available as model terms; confidence/credible intervals are readily
+  available for any quantity predicted using a fitted model; \code{gam} is
+  extendable: i.e. users can add smooths. 
+
+ Smooth terms are represented using penalized regression splines (or similar smoothers)
 with smoothing parameters selected by GCV/UBRE or by regression splines with
 fixed degrees of freedom (mixtures of the two are
 permitted). Multi-dimensional smooths are available using penalized thin plate
@@ -30,8 +35,9 @@ variables, and performance iteration for smoothing parameter estimation (see
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action,offset=NULL,control=gam.control(),method=gam.method(),scale=0,knots=NULL,
-    sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
+    na.action,offset=NULL,control=gam.control(),method=gam.method(),
+    scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
+    fit=TRUE,G=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \details{ 
