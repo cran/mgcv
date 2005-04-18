@@ -9,8 +9,8 @@ fix.family.link         Modify families for use in GAM fitting
 formula.gam             Extract the formula from a gam object.
 formXtViX               Form component of GAMM covariance matrix
 full.score              GCV/UBRE score for use within nlm
-gam                     Generalized Additive Models using penalized
-                        regression splines and GCV
+gam                     Generalized additive models with integrated
+                        smoothness estimation
 gam2objective           Objective functions for GAM smoothing
                         parameter estimation.
 gam.check               Some diagnostics for a fitted gam model.

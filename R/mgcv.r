@@ -3078,22 +3078,24 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       { if (sum(!(names(object$model)%in%names(newdata)))) stop(
         "newdata is a model.frame: it should contain all required variables\n")
       } else
-      { ## get names of required variables, less response, but including offset variable
-        allNames <- all.vars(delete.response(object$terms))
-#        allNames <- names(strip.offset(model.frame(delete.response(object$terms),strip.offset(object$model))))
+      { ## Following is non-standard to allow convenient splitting into blocks
+        ## below, and to allow checking that all variables are in newdata ...
+
+        ## get names of required variables, less response, but including offset variable
+        Terms <- delete.response(terms(object))
+        allNames <- all.vars(Terms)
         ff <- reformulate(allNames)
-        ## note that this formulation is only needed so that warning can be generated.
-        ## otherwise could follow e.g. predict.lm
         if (sum(!(allNames%in%names(newdata)))) { 
-        warning("not all required variables have been supplied in newdata!\n")}
-        newdata <-
-        eval(model.frame(ff,data=newdata,xlev=object$xlevels),parent.frame()) 
+        warning("not all required variables have been supplied in  newdata!\n")}
+        ## note that `xlev' argument not used here, otherwise `as.factor' in 
+        ## formula can cause a problem ... levels reset later.
+        newdata <- eval(model.frame(ff,data=newdata),parent.frame()) 
       }
     }
   }
  
   if (new.data.ok)
-  { ## check factor levels are right (could be moved to mf branch above) ...
+  { ## check factor levels are right ...
     names(newdata)->nn # new data names
     colnames(object$model)->mn # original names
     for (i in 1:length(newdata)) 
@@ -4270,12 +4272,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-3 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-4 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-3 \n")
+    cat("This is mgcv 1.2-4 \n")
 }
 
 
