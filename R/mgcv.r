@@ -3475,9 +3475,9 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 	  if (max(ul)>ylim[2]) ylim[2]<-max(ul)
         }
         if (partial.resids)
-        { ul <- max(pd[[i]]$p.resid)
+        { ul <- max(pd[[i]]$p.resid,na.rm=TRUE)
           if (ul > ylim[2]) ylim[2] <- ul
-          ll <-  min(pd[[i]]$p.resid)
+          ll <-  min(pd[[i]]$p.resid,na.rm=TRUE)
           if (ll < ylim[1]) ylim[1] <- ll
         }
       }
@@ -3493,9 +3493,9 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
           if (scale==0&&is.null(ylim)) 
           { ylimit<-c(min(ll),max(ul))
             if (partial.resids)
-            { max.r <- max(pd[[i]]$p.resid)
+            { max.r <- max(pd[[i]]$p.resid,na.rm=TRUE)
               if ( max.r> ylimit[2]) ylimit[2] <- max.r
-              min.r <-  min(pd[[i]]$p.resid)
+              min.r <-  min(pd[[i]]$p.resid,na.rm=TRUE)
               if (min.r < ylimit[1]) ylimit[1] <- min.r
             }
           }
@@ -3553,12 +3553,13 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     if (scale==-1&&is.null(ylim))
     if (m>0) for (i in 1:m)
     { if (pd[[i]]$dim==1)
-      { if (k==0) 
-        { if (partial.resids) ylim <- range(pd[[i]]$p.resid) else ylim<-range(pd[[i]]$fit);k<-1 }
-	else
+      { if (k==0) { 
+          if (partial.resids) ylim <- range(pd[[i]]$p.resid,na.rm=TRUE) else 
+          ylim<-range(pd[[i]]$fit);k<-1 
+        } else
         { if (partial.resids)
-          { if (min(pd[[i]]$p.resid)<ylim[1]) ylim[1]<-min(pd[[i]]$p.resid)
-	    if (max(pd[[i]]$p.resid)>ylim[2]) ylim[2]<-max(pd[[i]]$p.resid)
+          { if (min(pd[[i]]$p.resid)<ylim[1]) ylim[1]<-min(pd[[i]]$p.resid,na.rm=TRUE)
+	    if (max(pd[[i]]$p.resid)>ylim[2]) ylim[2]<-max(pd[[i]]$p.resid,na.rm=TRUE)
           } else
           { if (min(pd[[i]]$fit)<ylim[1]) ylim[1]<-min(pd[[i]]$fit)
 	    if (max(pd[[i]]$fit)>ylim[2]) ylim[2]<-max(pd[[i]]$fit)
@@ -3572,7 +3573,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
       { if (interactive() && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
         if (pd[[i]]$dim==1)
         { if (scale==0&&is.null(ylim)) 
-          { if (partial.resids) ylimit <- range(pd[[i]]$p.resid) else ylimit <-range(pd[[i]]$fit)}
+          { if (partial.resids) ylimit <- range(pd[[i]]$p.resid,na.rm=TRUE) else ylimit <-range(pd[[i]]$fit)}
           if (!is.null(ylim)) ylimit <- ylim
           plot(pd[[i]]$x,pd[[i]]$fit,type="l",,xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,ylim=ylimit,xlim=xlim,main=main,...)
           if (rug) 
@@ -3733,6 +3734,19 @@ cooks.distance.gam <- function(model,...)
   p <- sum(model$edf)
   (res/(1 - hat))^2 * hat/(dispersion * p)
 }
+
+vcov.gam <- function(object, freq = TRUE, dispersion = NULL, ...)
+## supplied by Henric Nilsson <henric.nilsson@statisticon.se> 
+{ if (freq)
+    vc <- object$Ve
+  else vc <- object$Vp
+  if (!is.null(dispersion))
+    vc <- dispersion * vc / object$sig2
+  name <- names(object$edf)
+  dimnames(vc) <- list(name, name)
+  vc
+}
+
 
 
 anova.gam <- function (object, ..., dispersion = NULL, test = NULL)
@@ -4272,12 +4286,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-4 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-5 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-4 \n")
+    cat("This is mgcv 1.2-5 \n")
 }
 
 

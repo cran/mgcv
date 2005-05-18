@@ -264,7 +264,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
         upe$trA1 <- oo$trA1
 
         V <- variance(mug)
-        alpha1 <- alpha <- sum(weights*(yg-mug)^2/V)
+        alpha1 <- alpha <- sum(weights[good]*(yg-mug)^2/V)
         trA1 <- trA <- upe$trA
             
         GCV <- nobs*alpha/(nobs-gamma*trA)^2        
