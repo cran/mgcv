@@ -32,7 +32,7 @@ hat/influence  matrix is given by
 .
 
 The frequentist parameter estimator covariance matrix is 
-\eqn{ {\bf VV}^\prime {\bf X}^\prime {\bf WWXVV}^\prime}{ VV'X'WWXVV'}: 
+\eqn{ {\bf VV}^\prime {\bf X}^\prime {\bf W}^\prime {\bf WXVV}^\prime \phi}{ VV'X'W'WXVV's}: 
 it is useful for testing terms for equality to zero.
 }
 \value{ A list with three items:
