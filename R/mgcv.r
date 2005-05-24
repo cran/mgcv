@@ -460,13 +460,12 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   if (object$np) # reparameterize 
   for (i in 1:m)
   { if (object$margin[[i]]$dim==1) {
-      cls <- class(object$margin[[i]])
-      if (!inherits(cls,c("cs.smooth","cr.smooth"))) { # these classes already optimal
+      if (!inherits(object$margin[[i]],c("cs.smooth","cr.smooth"))) { # these classes already optimal
         x <- get.var(object$margin[[i]]$term,data)
         np <- ncol(object$margin[[i]]$X) ## number of params
         ## note: to avoid extrapolating wiggliness measure
         ## must include extremes as eval points
-        knt <- quantile(x,(0:(np-1))/(np-1)) ## evaluation points
+        knt <- quantile(unique(x),(0:(np-1))/(np-1)) ## evaluation points
 #        knt <- seq(min(x),max(x),length=np) 
         pd <- data.frame(knt)
         names(pd) <- object$margin[[i]]$term
@@ -4286,12 +4285,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-5 \n")
+.onAttach <- function(...) cat("This is mgcv 1.2-6 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-5 \n")
+    cat("This is mgcv 1.2-6 \n")
 }
 
 

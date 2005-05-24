@@ -79,4 +79,6 @@ tensor.prod.model.matrix
                         Utility functions for constructing tensor
                         product smooths
 uniquecombs             find the unique rows in a matrix
+vcov.gam                Extract parameter (estimator) covariance
+                        matrix from GAM fit
 vis.gam                 Visualization of GAM objects
