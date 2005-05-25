@@ -67,12 +67,20 @@ functions of any number of covariates and the user has some control over how smo
 the functions is measured. 
 
 \code{gam} in \code{mgcv} solves the smoothing parameter estimation problem by using the 
-Generalized Cross Validation (GCV) criterion or an Un-Biased Risk Estimator criterion 
-(UBRE) which is in practice an approximation to AIC. Smoothing parameters are chosen to 
+Generalized Cross Validation (GCV) criterion
+\deqn{n D / (n - DoF)^2}{n D/(n - DoF)^2}
+ or an Un-Biased Risk Estimator (UBRE )criterion
+\deqn{D/n + 2 s DoF / n - s }{D/n + 2 s DoF / n -s} 
+where \eqn{D}{D} is the deviance, \eqn{n}{n} the number of data, \eqn{s}{s}
+the scale parameter and 
+\eqn{DoF}{DoF} the effective degrees of freedom of the model. Notice that UBRE is effectively
+just AIC rescaled, but is only used when \eqn{s}{s} is known. It is also
+possible to replace D by the Pearson statistic (see \code{\link{gam.method}}),
+but this can lead to over smoothing. Smoothing parameters are chosen to 
 minimize the GCV or UBRE score for the model, and the main computational challenge solved 
-by the \code{mgcv} package is to do this efficiently and reliably. Two alternative 
-numerical methods are provided, see \code{\link{mgcv}}, \code{\link{magic}} and 
-\code{\link{gam.control}}. 
+by the \code{mgcv} package is to do this efficiently and reliably. Various
+alternative numerical methods are provided: see \code{\link{gam.method}}.
+
 
 Broadly \code{gam} works by first constructing basis functions and one or more quadratic penalty 
 coefficient matrices for each smooth term in the model formula, obtaining a model matrix for 
@@ -84,19 +92,11 @@ penalized likelihood maximization problem is solved by penalized Iteratively
 Reweighted  Least Squares (IRLS) (see e.g. Wood 2000). At each iteration a penalized 
 weighted least squares problem is solved, and the smoothing parameters of that problem are 
 estimated by GCV or UBRE. Eventually both model parameter estimates and smoothing 
-parameter estimates converge. 
-
-The fitting approach just described, in which the smoothing parameters are estimated for 
-each approximating linear model of the IRLS process was suggested by Chong Gu (see, e.g. 
-Gu 2002), and is very computationally efficient. However, because the approach neglects 
-the dependence of the iterative weights on the smoothing parameters, it is usually 
-possible to find smoothing parameters which actually yield slightly lower GCV/UBRE score 
-estimates than those resulting from this `performance iteration'. \code{gam} therefore also 
-allows the user to `improve' the smoothing parameter estimates, by using O'Sullivan's 
-(1986) suggested method, in which for each trial set of smoothing parameters the IRLS is 
-iterated to convergence before the UBRE/GCV score is evaluated. This requires much less 
-efficient minimisation of the power iteration based on \code{\link{nlm}}, and is 
-therefore quite slow. 
+parameter estimates converge. Alternatively the P-IRLS scheme is iterated to
+convergence for each trial set of smoothing parameters, and GCV or UBRE scores
+are only evaluated on convergence - optimization is then `outer' to the P-IRLS
+loop: in this case extra derivatives have to be carried along with the P-IRLS
+iteration, to facilitate optimization, and \code{\link{gam.fit2}} is used.
 
 
 Five alternative basis-penalty types  are built in for representing model

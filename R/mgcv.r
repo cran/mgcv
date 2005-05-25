@@ -2336,40 +2336,49 @@ gam.method.description <- function(method,am=TRUE)
   if (method$gam=="perf.magic") return("performance iteration - magic")
   if (method$gam=="perf.mgcv") return("performance iteration - mgcv")
   if (method$gam=="perf.outer") return(paste("perf. iter. magic + outer",method$outer))
-  if (method$outer=="nlm") return("outer iter. - nlm exact derivs.")
-  if (method$outer=="optim")  return("outer iter. - Quasi-Newton exact derivs.")
-  if (method$outer=="nlm.fd") return("outer iter. - nlm with finite differences.")
+  if (method$pearson==FALSE) {
+    if (method$outer=="nlm") return("deviance based outer iter. - nlm exact derivs.")
+    if (method$outer=="optim")  return("deviance based outer iter. - Quasi-Newton exact derivs.")
+    if (method$outer=="nlm.fd") return("deviance based outer iter. - nlm with finite differences.")
+  } else {
+    if (method$outer=="nlm") return("Pearson based outer iter. - nlm exact derivs.")
+    if (method$outer=="optim")  return("Pearson based outer iter. - Quasi-Newton exact derivs.")
+    if (method$outer=="nlm.fd") return("Pearson based outer iter. - nlm with finite differences.")
+  }
 }
 
-gam.method <- function(am="magic",gam="outer",outer="nlm",family=NULL)
+gam.method <- function(am="magic",gam="outer",outer="nlm",pearson=FALSE,family=NULL)
 # Function for returning fit method control list for gam.
 # am controls the fitting method to use for pure additive models.
 # gam controls the type of iteration to use for Gams.
 # outer controls the optimization method to use when using outer
 # looping with gams.
+# pearson determined whether to base scores on Pearson statistic or deviance.
 { if (sum(am==c("mgcv","magic"))==0) stop("Unknown additive model fit method.") 
-  if (sum(gam==c("perf.magic","perf.mgcv","perf.outer","outer"))==0) 
+  if (sum(gam==c("perf.magic","perf.mgcv","perf.outer","outer","outer"))==0) 
   stop("Unknown *generalized* additive model fit method.") 
   if (sum(outer==c("optim","nlm","nlm.fd"))==0) 
   stop("Unknown GAM outer optimizing method.") 
+  if (!is.logical(pearson)) {pearson <- FALSE;
+    warning("pearson should be TRUE or FALSE - set to FALSE.")
+  } 
   if (!is.null(family)&&substr(family$family,1,17)=="Negative Binomial" 
        &&gam!="perf.magic"&&gam!="perf.mgcv") gam <- "perf.magic"  
-  list(am=am,gam=gam,outer=outer)
+  list(am=am,gam=gam,outer=outer,pearson=pearson)
 }
 
 gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
 # function for smoothing parameter estimation by outer optimization. i.e.
 # P-IRLS scheme iterated to convergence for each trial set of smoothing
 # parameters.
-{
- if (method$outer=="nlm.fd") {
+{ if (method$outer=="nlm.fd") {
     um<-nlm(full.score,lsp,typsize=lsp,fscale=fscale, stepmax = 
             control$nlm$stepmax, ndigit = control$nlm$ndigit,
 	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
             iterlim = control$nlm$iterlim, G=G,family=family,control=control,
-            gamma=gamma)
+            gamma=gamma,pearson=method$pearson)
     lsp<-um$estimate
-    object<-attr(full.score(lsp,G,family,control,gamma=gamma),"full.gam.object")
+    object<-attr(full.score(lsp,G,family,control,gamma=gamma,pearson=method$pearson),"full.gam.object")
     object$gcv.ubre <- um$minimum
     object$outer.info <- um
   } else { ## methods calling gam.fit2
@@ -2383,7 +2392,7 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
     G$rS <- mini.roots(G$S,G$off,ncol(G$X))
     if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { criterion <- "GCV";scale<-1}
     args <- list(X=G$X,y=G$y,S=G$S,rS=G$rS,off=G$off,H=G$H,offset=G$offset,family=family,
-             weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale)
+             weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale,pearson=method$pearson)
     if (method$outer=="nlm") {
       b <- nlm(gam3objective, lsp, typsize = lsp, fscale = fscale, 
             stepmax = control$nlm$stepmax, ndigit = control$nlm$ndigit,
@@ -2466,7 +2475,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
     if (is.null(G$offset)) G$offset<-rep(0,G$n)
      
-    method <- gam.method(method$am,method$gam,method$outer,family) # checking it's ok
+    method <- gam.method(method$am,method$gam,method$outer,method$pearson,family) # checking it's ok
 
     if (scale==0) 
     { if (family$family=="binomial"||family$family=="poisson") scale<-1 #ubre
@@ -2733,7 +2742,7 @@ mgcv.find.theta<-function(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,tol)
 }
 
 
-full.score <- function(sp,G,family,control,gamma)
+full.score <- function(sp,G,family,control,gamma,pearson)
 # function suitable for calling from nlm in order to polish gam fit
 # so that actual minimum of score is found in generalized cases
 { G$sp<-exp(sp);
@@ -2747,7 +2756,7 @@ full.score <- function(sp,G,family,control,gamma)
   }
   G$S<-list() # have to reset since length of this is used as number of penalties
   xx<-gam.fit(G,family=family,control=control,gamma=gamma)
-  res<-xx$gcv.ubre
+  if (pearson) res <- xx$gcv.ubre else res <- xx$gcv.ubre.dev
   attr(res,"full.gam.object")<-xx
   res
 }
@@ -3020,13 +3029,18 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
       rank <- ncol(G$X)-ncol(G$C)
     }
     aic.model <- aic(y, n, mu, weights, dev) + 2 * sum(G$edf)
-
+    if (scale < 0) { ## deviance based GCV
+      gcv.ubre.dev <- length(y)*dev/(length(y)-gamma*sum(G$edf))^2
+    } else { # deviance based UBRE, which is just AIC
+      gcv.ubre.dev <- dev/length(y) + 2 * gamma * sum(G$edf)/length(y) - G$sig2
+    }
+  
 	list(coefficients = as.vector(coef), residuals = residuals, fitted.values = mu, 
         family = family,linear.predictors = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,  
         df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,hat=G$hat,
         boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,mgcv.conv=G$conv,
-        gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank)
+        gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev)
 }
 
 
@@ -4285,12 +4299,12 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 
 
 
-.onAttach <- function(...) cat("This is mgcv 1.2-6 \n")
+.onAttach <- function(...) cat("This is mgcv 1.3-0 \n")
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.2-6 \n")
+    cat("This is mgcv 1.3-0 \n")
 }
 
 

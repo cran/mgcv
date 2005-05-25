@@ -4,7 +4,7 @@
 gam.fit2 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL, weights =
 rep(1, nobs), start = NULL, etastart = NULL, 
     mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
-    control = gam.control(), intercept = TRUE,deriv=TRUE,gamma=1,scale=1) 
+    control = gam.control(), intercept = TRUE,deriv=TRUE,gamma=1,scale=1,pearson=FALSE) 
 ## deriv, sp, S, H added to arg list. 
 ## need to modify family before call.
 {   x <- as.matrix(x)
@@ -67,7 +67,11 @@ rep(1, nobs), start = NULL, etastart = NULL,
         coef <- numeric(0)
         iter <- 0
         V <- variance(mu)
-        alpha1 <- alpha <- sum((y-mu)^2/V)
+        if (pearson) {
+          alpha1 <- alpha <- sum((y-mu)^2/V)
+        } else {
+          alpha1 <- dev
+        }
         trA1 <- trA <- 0
         if (deriv) GCV1<-UBRE1<-trA1 <- alpha1 <- rep(0,nSp)
         else GCV1<-UBRE1<-trA1 <- alpha1 <- NULL
@@ -157,17 +161,11 @@ rep(1, nobs), start = NULL, etastart = NULL,
            mu <- linkinv(eta <- eta + offset)
            dev <- sum(dev.resids(y, mu, weights))
           
-           
-        
-
            if (control$trace) 
                 cat("Deviance =", dev, "Iterations -", iter, 
                   "\n")
             boundary <- FALSE
             
-           
-      
-
             if (!is.finite(dev)) {
                 if (is.null(coefold)) 
                   stop("no valid set of coefficients has been found:please supply starting values", 
@@ -264,27 +262,41 @@ rep(1, nobs), start = NULL, etastart = NULL,
         upe$trA1 <- oo$trA1
 
         V <- variance(mug)
-        alpha1 <- alpha <- sum(weights[good]*(yg-mug)^2/V)
+
+        ### make pearson/deviance dependent
+        
+        if (pearson) alpha1 <- alpha <- sum(weights[good]*(yg-mug)^2/V)
+        else { # devaince based GCV/UBRE
+          dev <- sum(dev.resids(y, mu, weights))
+          alpha1 <- alpha <- dev 
+        } 
+        ####
+
         trA1 <- trA <- upe$trA
             
         GCV <- nobs*alpha/(nobs-gamma*trA)^2        
         UBRE <- alpha/nobs + 2*gamma*trA*scale/nobs - scale
         scale.est <- alpha/(length(mug)-trA)
         if (deriv) { # need to evaluate score component derivatives
-          d2g <- family$d2link(mug)
-          dV <- family$dvar(mug)
           mu.eta.val <- mu.eta(eta[good])
-          eta1 <- (x%*%upe$beta1)[good,]
-          temp <- (-dV/V^2*mu.eta.val*(yg-mug)^2-2/V*(yg-mug)*mu.eta.val)*eta1
-          temp <- as.matrix(temp*weights[good])
-          alpha1 <- colSums(temp) # deriv of alpha w.r.t. s.p.s
+          if (pearson) {
+            d2g <- family$d2link(mug)
+            dV <- family$dvar(mug)
+            eta1 <- (x%*%upe$beta1)[good,]
+            temp <- (-dV/V^2*mu.eta.val*(yg-mug)^2-2/V*(yg-mug)*mu.eta.val)*eta1
+            temp <- as.matrix(temp*weights[good])
+            alpha1 <- colSums(temp) # deriv of alpha w.r.t. s.p.s
+          } else { ## deviance based GCV/UBRE scores
+            temp <- weights[good]*(yg-mug)*mu.eta.val/V
+            temp <- t(temp)%*%x[good,] ## dl / d beta_j (unscaled)
+            alpha1 <- -2 * as.numeric(temp%*% upe$beta1)
+          }
           trA1 <- upe$trA1
           GCV1 <- nobs*alpha1/(nobs-gamma*trA)^2 + 
                   2*nobs*alpha*gamma*trA1/(nobs-gamma*trA)^3
           UBRE1 <- alpha1/nobs + 2*gamma*scale/nobs*trA1 
         } else UBRE1<-GCV1<-NULL
   
-
         # end of inserted code
         if (!conv) 
             warning("Algorithm did not converge")
@@ -341,7 +353,7 @@ gam2derivative <- function(lsp,args)
 ## For use as optim() objective gradient
 { b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
-     control=args$control,gamma=args$gamma,scale=args$scale)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
   if (args$scoreType == "GCV") ret <- b$GCV1 else ret <- b$UBRE1
   ret
 }
@@ -355,7 +367,7 @@ gam2objective <- function(lsp,args)
 { 
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=FALSE,
-     control=args$control,gamma=args$gamma,scale=args$scale)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   ret
@@ -369,7 +381,7 @@ gam3objective <- function(lsp,args)
 { 
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
-     control=args$control,gamma=args$gamma,scale=args$scale)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   if (args$scoreType == "GCV") at <- b$GCV1 else at <- b$UBRE1

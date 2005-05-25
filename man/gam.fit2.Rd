@@ -20,7 +20,7 @@ gam.fit2(x, y, sp, S=list(),rS=list(),off, H=NULL,
          weights = rep(1, nobs), start = NULL, etastart = NULL, 
          mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
          control = gam.control(), intercept = TRUE,deriv=TRUE,
-         gamma=1,scale=1)
+         gamma=1,scale=1,pearson=FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -66,6 +66,10 @@ as possible, but as many rows as there are parameters.}
 scores can be varied (usually increased) using this parameter.}
 
 \item{scale}{The scale parameter - needed for the UBRE score.}
+
+\item{pearson}{The GCV/UBRE score can be based either on the Pearson statistic
+or the deviance. The latter is generally to be preferred, as it is less prone
+to severe undersmoothing.}
 }
 \details{ This routine is basically \code{\link{glm.fit}} with some
 modifications to allow (i) for quadratic penalties on the log likelihood;
