@@ -9,7 +9,7 @@ estimation criterion for a gam.
 It is used to set argument \code{method} of \code{\link{gam}}.
 }
 \usage{
-gam.method(am="magic",gam="outer",outer="nlm",family=NULL)
+gam.method(am="magic",gam="outer",outer="nlm",pearson=FALSE,family=NULL)
 }
 \arguments{ 
 \item{am}{ Which method to use for a pure additive model (i.e. identity link,
@@ -32,6 +32,11 @@ to optimize the smoothness selection criterion. \code{"nlm.fd"} to use
 \code{nlm} with finite differenced first dericatives (slower and less
 reliable). \code{"optim"} to use the \code{"L-BFGS-B"} quasi-Newton method
 option of routine \code{optim}, with exact first derivatives.}
+
+\item{pearson}{When using any sort of outer iteration, there is a choise
+between using GCV/UBRE scores based on the Pearson statistic, or based on the
+deviance. The Pearson versions result in smoother models, but this is often
+oversmoothing, particularly for `low count' data and binary regression.}
 
 \item{family}{The routine is called by \code{\link{gam}} to check the supplied
 method argument. In this circumstance the family argument is passed, to check
@@ -61,7 +66,10 @@ Secondly it is often possible to find a set of smoothing parameters that
 result in a lower GCV or UBRE score, for the final working model, than the
 final score that results from the performance iterations. This is because the
 performance iteration is only approximately optimizing this score (since
-optimization is only performed on the working model). 
+optimization is only performed on the working model). The disadvantage here is
+not that the model with lower score would perform better (it usually doesn't),
+but rather that it makes model comparison on the basis of GCV/UBRE score
+rather difficult. 
 
 Both disadvantages of performance iteration are surmountable by using what is
 basically O'Sullivan's (1986) suggestion. Here the P-IRLS scheme is iterated
@@ -69,7 +77,15 @@ to convergence for a fixed set of smoothing parameters, with an appropriate
 GCV/UBRE score evaluated at convergence. This score at convergence is
 optimized in some way. This is termed \code{"outer"} optimization, since the
 optimization is outer to the P-IRLS loop. Outer iteration is slower than
-performance iteration. 
+performance iteration.
+
+The `appropriate GCV/UBRE' score in the previous paragraph can be defined in
+one of two ways either (i) the deviance, or (ii) the Pearson statistic can be
+used in place of the residual sum of squares in the GCV/UBRE score. (ii) makes
+the GCV/UBRE score correspond to the score for the working linear model at
+convergence of the P-IRLS, but in practice tends to result in oversmoothing, 
+particularly with low n binomial data, or low mean counts. Hence the default
+is to use (i).
 
 Several alternative optimisation methods can be used for outer
 optimization. \code{nlm} can be used with finite differenced first

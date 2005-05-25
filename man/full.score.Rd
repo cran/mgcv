@@ -12,7 +12,7 @@ outer iteration (see \code{\link{gam.outer}}) when the the outer method is
 \code{"nlm.fd"} (see \code{\link{gam.method}}).
 }
 \usage{
-full.score(sp,G,family,control,gamma)
+full.score(sp,G,family,control,gamma,pearson)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -25,6 +25,9 @@ full.score(sp,G,family,control,gamma)
 \item{control}{a list returned be \code{\link{gam.control}}}
 
 \item{gamma}{the degrees of freedom inflation factor (usually 1).}
+
+\item{pearson}{whether the GCV/UBRE score should be based on the Pearson
+statistic or the deviance. The deviance is usually preferable.}
 }
 \value{ The value of the GCV/UBRE score, with attribute \code{"full.gam.object"}
 which is the full object returned by \code{\link{gam.fit}}.

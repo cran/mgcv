@@ -139,7 +139,8 @@ for (i in 1:1000)
   res[i] <- sum(log(abs(pr))) ## example non-linear function
 }
 mean(res);var(res)
-## note: loop is replace-able by res <- colSums(log(abs(Xp %*% t(br))))
+## loop is replace-able by following .... 
+res <- colSums(log(abs(Xp \%*\% t(br))))
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

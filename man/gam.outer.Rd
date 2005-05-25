@@ -15,6 +15,9 @@ derivatives of the score can be used by fitting with \code{\link{gam.fit2}},
 which improves efficiency and reliability relative to relying solely on finite
 difference derivatives.  
 
+Note that there is a choise between basing GCV/UBRE scores on the deviance or
+the Pearson statistic: see \code{\link{gam.method}}.
+
 Not normally called directly, but rather a service routine for \code{\link{gam}}.
 }
 \usage{
