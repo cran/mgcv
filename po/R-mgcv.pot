@@ -472,3 +472,16 @@ msgstr ""
 msgid "H has wrong dimension"
 msgstr ""
 
+msgid "number of supplied knots != k for a cr smooth"
+msgstr
+
+msgid "number of supplied knots != k for a cc smooth"
+msgstr
+
+msgid "s(.) not yet supported"
+msgstr
+
+msgid "by=. not allowed"
+msgstr
+
+
