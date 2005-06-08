@@ -33,11 +33,11 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        smooth.construct.ts.smooth.spec,
        summary.gam,solve.pdIdnot,summary.pdIdnot,summary.pdTens,te,
        tensor.prod.model.matrix,tensor.prod.penalties,
-       uniquecombs, vis.gam)
+       uniquecombs, vcov.gam, vis.gam)
 
 importFrom(graphics, plot)
 importFrom(stats, predict, residuals, influence, formula, logLik, anova, 
-cooks.distance)
+cooks.distance,vcov)
 
 S3method(anova, gam)
 S3method(influence, gam)
@@ -53,7 +53,7 @@ S3method(residuals, gam)
 S3method(summary, gam)
 S3method(summary, pdTens)
 S3method(summary, pdIdnot)
-
+S3method(vcov,gam)
 
 S3method(smooth.construct, cc.smooth.spec)
 S3method(smooth.construct, cr.smooth.spec)

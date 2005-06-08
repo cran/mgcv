@@ -410,10 +410,13 @@ s <- function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
   d<-length(vars) # dimension of smoother
   term<-deparse(vars[[d]],backtick=TRUE) # last term in the ... arguments
   by.var<-deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
+  if (by.var==".") stop("by=. not allowed")
   term<-deparse(vars[[1]],backtick=TRUE) # first covariate
+  if (term[1]==".") stop("s(.) not yet supported.")
   if (d>1) # then deal with further covariates
   for (i in 2:d)
   { term[i]<-deparse(vars[[i]],backtick=TRUE)
+    if (term[i]==".") stop("s(.) not yet supported.")
   }
   for (i in 1:d) term[i] <- attr(terms(reformulate(term[i])),"term.labels")
   # term now contains the names of the covariates for this model term
@@ -613,6 +616,9 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
   }
   nk <- object$bs.dim
   if (!ok) { k <- rep(0,nk);k[2]<- -1}
+  
+  if (length(k)!=nk) stop("number of supplied knots != k for a cr smooth")
+
   X <- rep(0,nx*nk);S<-rep(0,nk*nk);C<-rep(0,nk);control<-0
   
   if (length(unique(x))<nk) 
@@ -710,6 +716,9 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
   if (!is.null(knots))  k <- get.var(object$term,knots)
   else k<-NULL
   if (is.null(k)) k<-place.knots(x,nk)   
+
+  if (length(k)!=nk) stop("number of supplied knots != k for a cc smooth")
+
   um<-getBD(k)
   BD<-solve(um$B,um$D) # s"(k)=BD%*%s(k) where k are knots minus last knot
   if (!object$fixed)
@@ -3013,7 +3022,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     wtdmu <- if (intercept) sum(weights * y)/sum(weights) else linkinv(offset)
     nulldev <- sum(dev.resids(y, wtdmu, weights))
     n.ok <- nobs - sum(weights == 0)
-    nulldf <- n.ok 
+    nulldf <- n.ok - as.integer(intercept)
     if (G$fit.method=="magic") # then some post processing is needed to extract covariance matrix etc...
     { mv<-magic.post.proc(G$X,mr,w=G$w)
       G$Vp<-mv$Vb;G$hat<-mv$hat;
@@ -3729,10 +3738,11 @@ summary.gam <- function (object,freq=TRUE,...)
    }
   }
   w <- object$prior.weights
-  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(object$df.null-1)/(var(w*object$y)*residual.df) 
+  nobs <- nrow(object$model)
+  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(nobs-1)/(var(w*object$y)*residual.df) 
   dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
   ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
-       s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=object$df.null,
+       s.pv=s.pv,scale=object$sig2,r.sq=r.sq,family=object$family,formula=object$formula,n=nobs,
        dev.expl=dev.expl,edf=edf,dispersion=object$sig2,pTerms.pv=pTerms.pv,pTerms.chi.sq=pTerms.chi.sq,
        pTerms.df=pTerms.df)
   if (object$method=="GCV") ret$gcv<-object$gcv.ubre else if (object$method=="UBRE") ret$ubre<-object$gcv.ubre
@@ -4298,13 +4308,18 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 }
 
 
+print.mgcv.version <- function()
+{ library(help=mgcv)$info[[1]][2] -> version
+  version <- substr(version,start=16,stop=nchar(version))
+  cat(paste("This is mgcv",version,"\n"))
+}
 
-.onAttach <- function(...) cat("This is mgcv 1.3-0 \n")
+.onAttach <- function(...) print.mgcv.version() 
 
 
 .First.lib <- function(lib, pkg) {
     library.dynam("mgcv", pkg, lib)
-    cat("This is mgcv 1.3-0 \n")
+  print.mgcv.version()
 }
 
 

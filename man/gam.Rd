@@ -396,9 +396,11 @@ x0 <- runif(n, 0, 1)
 x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1)
 x3 <- runif(n, 0, 1)
-f <- 2 * sin(pi * x0)
-f <- f + exp(2 * x1) - 3.75
-f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.4
+f0 <- function(x) 2 * sin(pi * x)
+f1 <- function(x) exp(2 * x)
+f2 <- function(x) 0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10
+f3 <- function(x) 0*x
+f <- f0(x0) + f1(x1) + f2(x2)
 e <- rnorm(n, 0, sig)
 y <- f + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
@@ -425,6 +427,7 @@ b1<-gam(y~s(x0,x1)+s(x2)+s(x3))
 par(mfrow=c(2,2))
 plot(b1)
 par(mfrow=c(1,1))
+
 # now simulate poisson data
 g<-exp(f/4)
 y<-rpois(rep(1,n),g)
@@ -434,6 +437,25 @@ plot(b2,pages=1)
 gm <- gam.method(gam="perf.magic")
 b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,method=gm)
 plot(b3,pages=1)
+
+# a binary example 
+g <- (f-5)/3
+g <- binomial()$linkinv(g)
+y <- rbinom(g,1,g)
+lr.fit <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=binomial)
+## plot model components with truth overlaid in red
+op <- par(mfrow=c(2,2))
+for (k in 1:4) {
+  plot(lr.fit,residuals=TRUE,select=k)
+  xx <- sort(eval(parse(text=paste("x",k-1,sep=""))))
+  ff <- eval(parse(text=paste("f",k-1,"(xx)",sep="")))
+  lines(xx,(ff-mean(ff))/3,col=2)
+}
+par(op)
+anova(lr.fit)
+lr.fit1 <- gam(y~s(x0)+s(x1)+s(x2),family=binomial)
+lr.fit2 <- gam(y~s(x1)+s(x2),family=binomial)
+AIC(lr.fit,lr.fit1,lr.fit2)
 
 # and a pretty 2-d smoothing example....
 test1<-function(x,z,sx=0.3,sz=0.4)  

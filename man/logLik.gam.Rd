@@ -21,19 +21,21 @@ The function is provided so that \code{\link{AIC}} functions correctly with
 \code{gam} objects, and uses the appropriate degrees of freedom (accounting
 for penalization). Note,  when using \code{AIC} for penalized models, that the
 degrees of freedom are the effective degrees of freedom and not the number of
-parameters, and the model maximizes the penalized likelihood, not the actual likelihood!
-
+parameters, and the model maximizes the penalized likelihood, not the actual
+likelihood! This seems to be reasonably well founded for the known scale
+parameter case (see Hastie and Tibshirani, 1990, section 6.8.3), and in fact
+in this case the default smoothing parameter estimation criterion is
+effectively this modified AIC.  
 }
 
 \value{ Standard \code{logLik} object: see \code{\link{logLik}}.
 }
 
 
+\references{Hastie and Tibshirani, 1990, Generalized Additive Models.}
+
 \author{ Simon N. Wood \email{simon.wood@r-project.org} based directly on \code{logLik.glm}}
 
-\section{WARNING }{ Note that the likelihood is evaluated at the maximum of
-the penalized likelihood for most GAMs, rather than at the MLE.
-} 
 
 \seealso{  \code{\link{AIC}}}
 
