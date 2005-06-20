@@ -484,4 +484,5 @@ msgstr
 msgid "by=. not allowed"
 msgstr
 
-
+msgid "no data to predict at"
+msgstr

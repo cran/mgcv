@@ -143,7 +143,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
                    q=as.integer(ncol(x)),get.trA=as.integer(0),as.integer(deriv),
                    rank.tol= as.double(.Machine$double.eps),
                    beta=as.double(upe$beta),trA=as.double(upe$trA),beta1=as.double(upe$beta1),
-                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),package="mgcv")
+                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),PACKAGE="mgcv")
         
             upe$beta <- oo$beta;
             upe$beta1 <- matrix(oo$beta1,oo$q,oo$m)
@@ -253,7 +253,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
                    q=as.integer(ncol(x)),get.trA=as.integer(1),as.integer(deriv),
                    rank.tol= as.double(.Machine$double.eps),
                    beta=as.double(upe$beta),trA=as.double(upe$trA),beta1=as.double(upe$beta1),
-                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),package="mgcv")
+                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),PACKAGE="mgcv")
 
         rV <- matrix(oo$rV,ncol(x),ncol(x))
         upe$beta <- oo$beta;

@@ -782,6 +782,7 @@ Predict.matrix.cyclic.smooth<-function(object,data)
     X
   }
   x <- get.var(object$term,data)
+  if (length(x)<1) stop("no data to predict at")
   X <- pred.mat(x,object$xp,object$BD)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
@@ -795,6 +796,7 @@ Predict.matrix.cyclic.smooth<-function(object,data)
 Predict.matrix.cr.smooth<-function(object,data)
 # this is the prediction method for a cubic regression spline
 { x <- get.var(object$term,data)
+  if (length(x)<1) stop("no data to predict at")
   nx<-length(x)
   nk<-object$bs.dim
   X <- rep(0,nx*nk);S<-rep(0,nk*nk);C<-rep(0,nk);control<-0
@@ -823,6 +825,7 @@ Predict.matrix.tprs.smooth<-function(object,data)
   for (i in 1:object$dim) 
   { xx <- get.var(object$term[[i]],data)
     xx <- xx - object$shift[i]
+    if (length(xx)<1) stop("no data to predict at")
     x<-c(x,xx)
   }
   n<-nrow(data)
