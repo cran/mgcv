@@ -38,7 +38,12 @@ covariance matrix for these random effects.}
 
 \item{data}{data frame in which to evaluate formula.}
 }
-\details{ This appears to be the minimum set of functions required to implement a new \code{pdMat} class. 
+\details{ If using this class directly note that it is worthwhile scaling the
+\code{S} matrices to be of `moderate size', for example by dividing each
+matrix by its largest singular value: this avoids problems with \code{lme}
+defaults (\code{\ref{smooth.construct.tensor.smooth.spec}} does this automatically).  
+
+This appears to be the minimum set of functions required to implement a new \code{pdMat} class. 
 
 Note that while the \code{pdFactor} and \code{pdMatrix} functions return the inverse of the scaled random 
 effect covariance matrix or its factor, the \code{pdConstruct} function is

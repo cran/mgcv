@@ -1,0 +1,30 @@
+30/6/2005 1.3-3
+
+* te() smooths were not always estimated correctly by gamm(): invariance 
+  lost and different results to equivalent s() smooths. The problem seems
+  to lie in a sensitivity of lme() estimation to the absolute size of the 
+  `S' attribute matrices of a pdTens class pdMat object: the problem did 
+  not occur at the last revision of the pdTens class, and there are no 
+  changes logged for nlme that could have caused it, so I guess it's down
+  to a change in something that lme calls in the base distribution. 
+  To avoid the problem, smooth.construct.tensor.smooth.spec has been 
+  modified to scale all marginal penalty matrices so that they have 
+  largest singular value 1.
+
+* Changes to GLMs in R 2.1.1 mean that if the response is an array, gam 
+  could fail, due to failure of terms like w * X when w is and array 
+  rather than a vector. Code modified accordingly.
+
+* Outer iteration now suppresses some warnings, until the final fitted
+  model is obtained, in order to avoid printing warnings that actually
+  don't apply to the final fit.
+
+* Version number reporting made (hopefully) more robust.
+
+* pdconstruct.pdTens removed absolute lower limit on coef - replaced with
+  relative lower limit.
+
+* moved tensor product constraint construction to BEFORE by variable
+  stuff in smooth.construct.tensor.smooth.spec.
+
+
