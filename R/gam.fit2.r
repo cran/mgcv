@@ -4,7 +4,9 @@
 gam.fit2 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL, weights =
 rep(1, nobs), start = NULL, etastart = NULL, 
     mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
-    control = gam.control(), intercept = TRUE,deriv=TRUE,gamma=1,scale=1,pearson=FALSE) 
+    control = gam.control(), intercept =
+    TRUE,deriv=TRUE,gamma=1,scale=1,pearson=FALSE,
+    printWarn=TRUE) 
 ## deriv, sp, S, H added to arg list. 
 ## need to modify family before call.
 {   x <- as.matrix(x)
@@ -127,8 +129,8 @@ rep(1, nobs), start = NULL, etastart = NULL,
             { d2g <- family$d2link(mug)
               dV <- family$dvar(mug)
               eta1 <- (x%*%upe$beta1)[good,]
-              z1 <- ((yg-mug)*d2g*mevg)*eta1
-              w1 <- (-0.5*w^3/weg*(dV/mevg + 2*var.mug*d2g))*eta1
+              z1 <- as.vector((yg-mug)*d2g*mevg)*eta1
+              w1 <- as.vector(-0.5*w^3/weg*(dV/mevg + 2*var.mug*d2g))*eta1
             }
             ngoodobs <- as.integer(nobs - sum(!good))
             ## Here a Fortran call has been replaced by update.beta call
@@ -283,8 +285,8 @@ rep(1, nobs), start = NULL, etastart = NULL,
             d2g <- family$d2link(mug)
             dV <- family$dvar(mug)
             eta1 <- (x%*%upe$beta1)[good,]
-            temp <- (-dV/V^2*mu.eta.val*(yg-mug)^2-2/V*(yg-mug)*mu.eta.val)*eta1
-            temp <- as.matrix(temp*weights[good])
+            temp <- as.vector(-dV/V^2*mu.eta.val*(yg-mug)^2-2/V*(yg-mug)*mu.eta.val)*eta1
+            temp <- as.matrix(temp*as.vector(weights[good]))
             alpha1 <- colSums(temp) # deriv of alpha w.r.t. s.p.s
           } else { ## deviance based GCV/UBRE scores
             temp <- weights[good]*(yg-mug)*mu.eta.val/V
@@ -298,16 +300,16 @@ rep(1, nobs), start = NULL, etastart = NULL,
         } else UBRE1<-GCV1<-NULL
   
         # end of inserted code
-        if (!conv) 
+        if (!conv&&printWarn) 
             warning("Algorithm did not converge")
-        if (boundary) 
+        if (printWarn&&boundary) 
             warning("Algorithm stopped at boundary value")
         eps <- 10 * .Machine$double.eps
-        if (family$family == "binomial") {
+        if (printWarn&&family$family == "binomial") {
             if (any(mu > 1 - eps) || any(mu < eps)) 
                 warning("fitted probabilities numerically 0 or 1 occurred")
         }
-        if (family$family == "poisson") {
+        if (printWarn&&family$family == "poisson") {
             if (any(mu < eps)) 
                 warning("fitted rates numerically 0 occurred")
         }
@@ -353,13 +355,14 @@ gam2derivative <- function(lsp,args)
 ## For use as optim() objective gradient
 { b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
-     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
+     printWarn=FALSE)
   if (args$scoreType == "GCV") ret <- b$GCV1 else ret <- b$UBRE1
   ret
 }
 
 
-gam2objective <- function(lsp,args)
+gam2objective <- function(lsp,args,printWarn=FALSE)
 ## Performs IRLS GAM fitting for smoothing parameters given in lsp 
 ## and returns the GCV or UBRE score for the model.
 ## args is a list containing the arguments for gam.fit2
@@ -367,7 +370,8 @@ gam2objective <- function(lsp,args)
 { 
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=FALSE,
-     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
+     printWarn=printWarn)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   ret
@@ -381,7 +385,8 @@ gam3objective <- function(lsp,args)
 { 
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
-     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson)
+     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
+     printWarn=FALSE)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   if (args$scoreType == "GCV") at <- b$GCV1 else at <- b$UBRE1

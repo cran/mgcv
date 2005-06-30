@@ -37,7 +37,7 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
 
 importFrom(graphics, plot)
 importFrom(stats, predict, residuals, influence, formula, logLik, anova, 
-cooks.distance,vcov)
+cooks.distance,vcov,coef)
 
 S3method(anova, gam)
 S3method(influence, gam)
@@ -54,6 +54,7 @@ S3method(summary, gam)
 S3method(summary, pdTens)
 S3method(summary, pdIdnot)
 S3method(vcov,gam)
+
 
 S3method(smooth.construct, cc.smooth.spec)
 S3method(smooth.construct, cr.smooth.spec)
