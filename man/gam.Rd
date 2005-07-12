@@ -195,9 +195,9 @@ possible, as is any number of covariates.
 
 Formulae can involve nested or ``overlapping'' terms such as \cr
 \code{y~s(x)+s(z)+s(x,z)} or \code{y~s(x,z)+s(z,v)}: see
-\code{\link{gam.side}} for further details and examples. Note that 
-nesting with \code{\link{te}} terms is not supported. } 
- \item{family}{
+\code{\link{gam.side}} for further details and examples.} 
+
+\item{family}{
 This is a family object specifying the distribution and link to use in
 fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
 details. The negative binomial families provided by the MASS library 
@@ -309,7 +309,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass. 99:637-686
+generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
 Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
 regression splines. Technical Report 04-12 Department of Statistics,
