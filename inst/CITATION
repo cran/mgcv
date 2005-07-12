@@ -1,0 +1,49 @@
+citHeader("2000 for basics of set up and s.p. estimation;
+2003 for thin plate regression splines etc; 2004 for current default 
+algorithms and basics of gamm.")
+
+citEntry(
+ entry="Article",
+ title="Modelling and smoothing parameter estimation with 
+        multiple quadratic penalties",
+ journal="Journal of the Royal Statistical Society (B)",
+ volume= "62",
+ number="2",
+ pages="413-428",
+ year="2000",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2000) Modelling and smoothing parameter 
+estimation with multiple quadratic penalties. Journal of the Royal 
+Statistical Society (B) 62(2):413-428. " )
+
+
+citEntry(
+ entry="Article",
+ title="Thin-plate regression splines",
+ journal="Journal of the Royal Statistical Society (B)",
+ volume= "65",
+ number="1",
+ pages="95-114",
+ year="2003",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2003) Thin-plate regression splines.
+Journal of the Royal Statistical Society (B) 65(1):95-114." )
+
+
+citEntry(
+ entry="Article",
+ title= "Stable and efficient multiple smoothing parameter estimation for 
+         generalized additive models",
+ journal="Journal of the American Statistical Association",
+ volume= "99",
+ number="467",
+ pages="673-686",
+ year="2004",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2004) Stable and efficient multiple smoothing 
+ parameter estimation for generalized additive models.Journal of the 
+ American Statistical Association. 99:673-686."
+)
+
+
+
