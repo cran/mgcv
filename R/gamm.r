@@ -29,7 +29,29 @@ notLog <- function(x)
  f
 }
 
+## notLog/notExp replacements. 
+## around 27/7/05 nlme was modified to use a new optimizer, which fails with 
+## indefinite Hessians. This is a problem if smoothing parameters are zero 
+## or infinite. The following attempts to make the notLog parameterization 
+## non-monotonic, to artificially reduce the likelihood at very large and very
+## small parameter values.
 
+## note gamm, pdTens, pdIdnot, notExp and notExp2 .Rd files all modified by
+## this change.
+
+
+notExp2 <- function (x,d=.Options$mgcv.vc.logrange,b=1/d)
+## to avoid needing to modify solve.pdIdnot, this transformation must
+## maintain the property that 1/notExp2(x) = notExp2(-x)
+{ f <- exp(d*sin(x*b))
+}
+
+notLog2 <- function(x,d=.Options$mgcv.vc.logrange,b=1/d)
+{ x <- log(x)/d
+  x <- pmin(1,x)
+  x <- pmax(-1,x)
+  asin(x)/b
+}
 
 
 #### pdMat class definitions, to enable tensor product smooths to be employed with gamm()
@@ -85,7 +107,7 @@ pdConstruct.pdTens <-
     value <- coef(mod1)  
 #    if (sum(value<=0)) warning("sp hits lower limit")
     value[value <=0] <- .Machine$double.eps * mean(as.numeric(lapply(S,function(x) max(abs(x)))))
-    value <- notLog(value)
+    value <- notLog2(value)
     attributes(value) <- attributes(val)[names(attributes(val)) != "dim"]
     class(value) <- c("pdTens", "pdMat")
     return(value)
@@ -108,8 +130,8 @@ pdFactor.pdTens <- function(object)
 { sp <- as.vector(object)
   m <- length(sp)
   S <- attr(formula(object),"S")
-  value <- S[[1]]*notExp(sp[1])
-  if (m>1) for (i in 2:m) value <- value + notExp(sp[i])*S[[i]] 
+  value <- S[[1]]*notExp2(sp[1])
+  if (m>1) for (i in 2:m) value <- value + notExp2(sp[i])*S[[i]] 
   if (sum(is.na(value))>0) warning("NA's in pdTens factor")
 #### EXPERIMENTAL 
 #  value<-solve(value,tol=0)
@@ -132,8 +154,8 @@ pdMatrix.pdTens <-
   sp <- as.vector(object)
   m <- length(sp)
   S <- attr(formula(object),"S")
-  value <- S[[1]]*notExp(sp[1])   
-  if (m>1) for (i in 2:m) value <- value + notExp(sp[i])*S[[i]]  
+  value <- S[[1]]*notExp2(sp[1])   
+  if (m>1) for (i in 2:m) value <- value + notExp2(sp[i])*S[[i]]  
 #### EXPERIMENTAL 
 #  value<-solve(value,tol=0)
 ###   
@@ -154,7 +176,7 @@ coef.pdTens <-
 {
   if (unconstrained) NextMethod()
   else {
-    val <- notExp(as.vector(object))
+    val <- notExp2(as.vector(object))
     names(val) <- paste("sp.",1:length(val), sep ="")
     val
   }
@@ -175,7 +197,7 @@ summary.pdTens <-
 
 
 ### pdIdnot: multiple of the identity matrix - the parameter is
-### the notLog of the multiple. This is directly modified form 
+### the notLog2 of the multiple. This is directly modified form 
 ### Pinheiro and Bates pdIdent class.
 
 ####* Constructor
@@ -201,7 +223,7 @@ corMatrix.pdIdnot <-
     stop(paste("Cannot extract the matrix with uninitialized dimensions"))
   }
   val <- diag(Ncol)
-  attr(val, "stdDev") <- rep(notExp(as.vector(object)), Ncol)
+  attr(val, "stdDev") <- rep(notExp2(as.vector(object)), Ncol)
   if (length(nm <- Names(object)) == 0) {
     nm <- paste("V", 1:len, sep = "")
     dimnames(val) <- list(nm, nm)
@@ -222,7 +244,7 @@ pdConstruct.pdIdnot <-
     return(val)
   }
   if (is.matrix(val)) {
-    value <- notLog(sqrt(mean(diag(crossprod(val)))))
+    value <- notLog2(sqrt(mean(diag(crossprod(val)))))
     attributes(value) <- attributes(val)[names(attributes(val)) != "dim"]
     attr(value, "ncol") <- dim(val)[2]
     class(value) <- c("pdIdnot", "pdMat")
@@ -244,7 +266,7 @@ pdConstruct.pdIdnot <-
 pdFactor.pdIdnot <-
   function(object)
 {
-  notExp(as.vector(object)) * diag(attr(object, "ncol"))
+  notExp2(as.vector(object)) * diag(attr(object, "ncol"))
 }
 
 pdMatrix.pdIdnot <-
@@ -260,11 +282,11 @@ pdMatrix.pdIdnot <-
   
   if (factor) {
    
-    value <- notExp(as.vector(object)) * value
-     attr(value, "logDet") <- Ncol * log(notExp(as.vector(object)))
+    value <- notExp2(as.vector(object)) * value
+     attr(value, "logDet") <- Ncol * log(notExp2(as.vector(object)))
    
   } else {
-    value <- notExp(as.vector(object))^2 * value
+    value <- notExp2(as.vector(object))^2 * value
   }
   dimnames(value) <- attr(object, "Dimnames")
   value
@@ -276,7 +298,7 @@ coef.pdIdnot <-
   function(object, unconstrained = TRUE, ...)
 {
   if (unconstrained) NextMethod()
-  else structure(notExp(as.vector(object)),
+  else structure(notExp2(as.vector(object)),
            names = c(paste("sd(", deparse(formula(object)[[2]],backtick=TRUE),")",sep = "")))
 }
 
@@ -293,7 +315,7 @@ Dim.pdIdnot <-
 logDet.pdIdnot <-
   function(object, ...)
 {
-  attr(object, "ncol") * log(notExp(as.vector(object)))
+  attr(object, "ncol") * log(notExp2(as.vector(object)))
 }
 
 solve.pdIdnot <-
@@ -850,12 +872,13 @@ new.name <- function(proposed,old.names)
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
+      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=20),niterPQL=20,verbosePQL=TRUE,...)
+## NOTE: niterEM modified after changed notLog parameterization - old version
+##       needed niterEM=3. 10/8/05.
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
 # between the bases constructors provided in mgcv and the glmmPQL routine used to estimate the model.
-
 # NOTE: need to fill out the gam object properly
 
 {   if (!require(nlme)) stop("gamm() requires package nlme to be installed")
@@ -967,6 +990,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
     { ## Again, construction is a work around for nlme 3-1.52
+      if (verbosePQL) cat("\n Maximum number of PQL iterations: ",niterPQL,"\n")
       eval(parse(text=paste("ret$lme<-glmmPQL(",deparse(fixed.formula),
           ",random=rand,data=strip.offset(mf),family=family,correlation=correlation,control=control,",
             "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
@@ -1015,8 +1039,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (G$m>0) for (i in 1:G$m) # var.param in reverse term order, but forward order within terms!!
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
       if (inherits(object$smooth[[i]],"tensor.smooth"))#&&n.sp>1) 
-      object$sp[k:(k+n.sp-1)] <- notExp(var.param[(n.v-n.sp+1):n.v])
-      else object$sp[k:(k+n.sp-1)] <- 1/notExp(var.param[(n.v-n.sp+1):n.v])^2
+      object$sp[k:(k+n.sp-1)] <- notExp2(var.param[(n.v-n.sp+1):n.v])
+      else object$sp[k:(k+n.sp-1)] <- 1/notExp2(var.param[(n.v-n.sp+1):n.v])^2
       k <- k + n.sp
       n.v <- n.v - n.sp
     }

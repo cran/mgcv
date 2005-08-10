@@ -473,16 +473,19 @@ msgid "H has wrong dimension"
 msgstr ""
 
 msgid "number of supplied knots != k for a cr smooth"
-msgstr
+msgstr ""
 
 msgid "number of supplied knots != k for a cc smooth"
-msgstr
+msgstr ""
 
 msgid "s(.) not yet supported"
-msgstr
+msgstr ""
 
 msgid "by=. not allowed"
-msgstr
+msgstr ""
 
 msgid "no data to predict at"
-msgstr
+msgstr ""
+
+msgid "Model has more coefficients than data"
+msgstr ""

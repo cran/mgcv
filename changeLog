@@ -1,3 +1,29 @@
+1.3-5
+
+* Improvements to anova and summary functions by Henric Nilsson 
+  incorporated. Functions are now closer to glm equivalents, and 
+  printing is more informative. See ?anova.gam and ?summary.gam.
+
+* nlme 3.1-62 changed the optimizer underlying lme, so that indefintie 
+  likelihoods cause problems. See ?logExp2 for the workaround.
+  - niterEM now reset to 25, since parameterization prevents parameters 
+  wandering to +/- infinity (this is important as starting values for 
+  Newton steps are now more critical, since reparameterization 
+  introduces new local minima).
+
+* smoothCon modified to rescale penalty coefficient matrices to have 
+  similar `size' to X'X for each term. This is to try and ensure that 
+  gamm is reasonably scale invariant in its behaviour, given the 
+  logExp2 re-parameterization.
+
+* magic dropped dimensions of an array inapproporiately - fixed.
+
+* gam now checks that model does not have more coefficients than data.
+
+1.3-4
+
+* inst/CITATION file added. Some .Rd fixes
+
 30/6/2005 1.3-3
 
 * te() smooths were not always estimated correctly by gamm(): invariance 

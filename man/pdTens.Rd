@@ -14,7 +14,7 @@ parameters. In the mixed model formulation the penalty matrix is the inverse of 
 the random effects of a term, and the smoothing parameters (times a half) are variance parameters to be estimated. 
 It's not 
 possible to transform the problem to make the required random effects covariance matrix look like one of the standard 
-\code{pdMat} classes: hence the need for the \code{pdTens} class. A \code{\link{notLog}} parameterization ensures that 
+\code{pdMat} classes: hence the need for the \code{pdTens} class. A \code{\link{notLog2}} parameterization ensures that 
 the parameters are positive. 
 
 These functions (\code{pdTens}, \code{pdConstruct.pdTens},
