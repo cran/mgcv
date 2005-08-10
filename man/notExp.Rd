@@ -17,8 +17,10 @@ looks like.
 
 \code{notLog} is the inverse function of \code{notExp}.
 
-The major use of these functions is to provide more robust \code{pdMat} classes for \code{lme} for use by
-\code{\link{gamm}}.
+The major use of these functions was originally to provide more robust
+\code{pdMat} classes for \code{lme} for use by \code{\link{gamm}}. Currently
+the \code{\link{notExp2}} and \code{\link{notLog2}} functions are used in
+their place, as a result of changes to the nlme optimization routines.
 }
 
 \usage{

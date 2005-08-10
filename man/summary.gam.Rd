@@ -7,16 +7,28 @@
 summaries from it. 
 }
 \usage{
-summary.gam(object,freq=TRUE,...)
-print.summary.gam(x,...)
+summary.gam(object, dispersion=NULL, freq=TRUE, ...)
+
+print.summary.gam(x,digits = max(3, getOption("digits") - 3), 
+                  signif.stars = getOption("show.signif.stars"),...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
 \item{object}{ a fitted \code{gam} object as produced by \code{gam()}.}
+
 \item{x}{a \code{summary.gam} object produced by \code{summary.gam()}.} 
+
+\item{dispersion}{A known dispersion parameter. \code{NULL} to use estimate or
+                  default (e.g. 1 for Poisson).}
+
 \item{freq}{By default p-values for individual terms are calculated using the frequentist estimated
 covariance matrix of the parameter estimators. If this is set to FALSE then
 the Bayesian covariance matrix of the parameters is used instead. See details. }
+
+\item{digits}{controls number of digits printed in output.}
+
+\item{signif.stars}{Should significance stars be printed alongside output.}
+
 \item{...}{ other arguments.}
 }
 
@@ -40,11 +52,18 @@ interpret and often have much worse frequentist performance than the default p-v
 }
 
 \value{\code{summary.gam} produces a list of summary information for a fitted \code{gam} object. 
+
 \item{p.coeff}{is an array of estimates of the strictly parametric model coefficients.}
+
 \item{p.t}{is an array of the \code{p.coeff}'s divided by their standard errors.}
+
 \item{p.pv}{is an array of p-values for the null hypothesis that the corresponding parameter is zero. 
-Calculated with reference to the t distribution with the estimated residual degrees of freedom for the model fit.}
+Calculated with reference to the t distribution with the estimated residual
+degrees of freedom for the model fit if the dispersion parameter has been
+estimated, and the standard normal if not.}
+
 \item{m}{The number of smooth terms in the model.}
+
 \item{chi.sq}{An array of test statistics for assessing the significance of
 model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
 is the parameter vector for the ith smooth term, and this term has estimated
@@ -52,39 +71,68 @@ covariance matrix \eqn{ {\bf V}_i}{V_i} then the
 statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
 p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
 pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  \eqn{ {\bf V_i}}{V_i}.}
+
 \item{s.pv}{An array of approximate p-values for the null hypotheses that each
-smooth term is zero. Be warned, these are only approximate. In the case in
-which UBRE has been used, they are obtained by comparing the chi.sq statistic given above to the 
+smooth term is zero. Be warned, these are only approximate. In the case of
+known dispersion parameter, they are obtained by comparing the chi.sq statistic given above to the 
 chi-squared distribution with k degrees of freedom, where k is the estimated
-rank of  \eqn{ {\bf V_i}}{V_i}. In the GCV case (in 
-which the scale parameter will have been estimated) the statistic is compared
+rank of  \eqn{ {\bf V_i}}{V_i}. If the dispersion parameter is unknown (in 
+which case it will have been estimated) the statistic is compared
 to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model . 
 Typically the p-values will be somewhat too low, because they are conditional
 on the smoothing parameters, which are usually uncertain. 
 }
+
 \item{se}{array of standard error estimates for all parameter estimates.}
+
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
 residual variance are both estimated using unbiased estimators. This quantity can be negative if your model is worse than a one 
 parameter constant model, and can be higher for the smaller of two nested models! Note that proportion null deviance 
 explained is probably more appropriate for non-normal errors.}
+
 \item{dev.expl}{The proportion of the null deviance explained by the model.}
+
 \item{edf}{array of estimated degrees of freedom for the model terms.}
+
 \item{residual.df}{estimated residual degrees of freedom.}
+
 \item{n}{number of data.}
+
 \item{gcv}{minimized GCV score for the model, if GCV used.}
+
 \item{ubre}{minimized UBRE score for the model, if UBRE used.}
+
 \item{scale}{estimated (or given) scale parameter.}
+
 \item{family}{the family used.}
+
 \item{formula}{the original GAM formula.}
+
 \item{dispersion}{the scale parameter.}
+
 \item{pTerms.df}{the degrees of freedom associated with each parameteric term
 (excluding the constant).}
+
 \item{pTerms.chi.sq}{a Wald statistic for testing the null hypothesis that the
 each parametric term is zero.}
+
 \item{pTerms.pv}{p-values associated with the tests that each term is
 zero. For penalized fits these are approximate, being conditional on the smoothing
 parameters. The reference distribution is an appropriate chi-squared when the
 scale parameter is known, and is based on an F when it is not.}
+
+\item{cov.unscaled}{The estimated covariance matrix of the parameters (or
+estimators if \code{freq=TRUE}), divided
+by scale parameter.}
+
+\item{cov.scaled}{The estimated covariance matrix of the parameters
+(estimators if \code{freq=TRUE}).}
+
+\item{p.table}{significance table for parameters}
+
+\item{s.table}{significance table for smooths}
+
+\item{p.Terms}{significance table for parametric model terms}
 }
 
 \references{
@@ -98,7 +146,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass.
+generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
 Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
 regression splines. Technical Report 04-12 Department of Statistics,
@@ -107,7 +155,8 @@ University of Glasgow.
 
 \url{http://www.stats.gla.ac.uk/~simon/}
 }
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
+improvements by Henric Nilsson.}
 
 \section{WARNING }{ The supplied p-values will often be underestimates if
 smoothing parameters have been estimated as part of model fitting.

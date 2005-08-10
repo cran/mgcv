@@ -1,5 +1,5 @@
-#  R routines for the package mgcv (c) Simon Wood 2000-2005
-
+##  R routines for the package mgcv (c) Simon Wood 2000-2005
+##  With contributions from Henric Nilsson
 
 mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
 # Takes the knot sequence x for a cubic regression spline and returns a list with 
@@ -857,12 +857,22 @@ smooth.construct <- function(object,data,knots) UseMethod("smooth.construct")
 Predict.matrix <- function(object,data) UseMethod("Predict.matrix")
 
 
-smoothCon <- function(object,data,knots,absorb.cons=FALSE)
+smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE)
 ## wrapper function which calls smooth.construct methods, but can then modify
 ## the parameterizaion used. If absorb.cons==TRUE then a constraint free
 ## parameterization is used. 
 { sm <- smooth.construct(object,data,knots)
   if (!is.null(attr(sm,"qrc"))) warning("smooth objects should not have a qrc attribute.")
+ 
+  ## following is intended to make scaling `nice' for better gamm performance
+  if (scale.penalty && length(sm$S)>0) # then the penalty coefficient matrix is rescaled
+  { maXX <- mean(abs(t(sm$X)%*%sm$X)) # `size' of X'X
+    for (i in 1:length(sm$S)) {
+      maS <- mean(abs(sm$S[[i]]))
+      sm$S[[i]] <- sm$S[[i]] * maXX / maS
+    }
+  } 
+
   if (absorb.cons)
   { k<-ncol(sm$X)
     j<-nrow(sm$C)
@@ -879,10 +889,10 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE)
       attr(sm,"nCons") <- j;
       sm$C <- NULL
       sm$rank <- pmin(sm$rank,k-j)
-     # if (sm$rank>k-j) sm$rank <- k-j
-      ## so qr.qy(sm$qrc,c(rep(0,nrow(sm$C)),b)) gives original para.'s
+      ## ... so qr.qy(sm$qrc,c(rep(0,nrow(sm$C)),b)) gives original para.'s
     }  
   } else attr(sm,"qrc") <-NULL
+
   sm 
 }
 
@@ -1362,6 +1372,9 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     G<-gam.setup(gp,pterms=pterms,data=mf,knots=knots,sp=sp,min.sp=min.sp,
                  H=H,fit.method=fit.method,parametric.only=FALSE,absorb.cons=control$absorb.cons,
                  max.tprs.knots=control$max.tprs.knots)
+    
+    if (ncol(G$X)>nrow(G$X)+nrow(G$C)) stop("Model has more coefficients than data")
+
     G$terms<-terms;G$pterms<-pterms
     G$mf<-mf;G$cl<-cl;
     G$am <- am
@@ -2552,7 +2565,11 @@ residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson"
               response = y - mu)
 }
 
-summary.gam <- function (object,freq=TRUE,...) 
+## old summary and anova code starts here .....
+## functions and classes renamed summary2 and anova2.
+
+
+summary2.gam <- function (object,freq=TRUE,...) 
 # summary method for gam object - provides approximate p values for terms + other diagnostics
 { pinv<-function(V,M,rank.tol=1e-6)
   { D<-La.svd(V)
@@ -2630,102 +2647,11 @@ summary.gam <- function (object,freq=TRUE,...)
        dev.expl=dev.expl,edf=edf,dispersion=object$sig2,pTerms.pv=pTerms.pv,pTerms.chi.sq=pTerms.chi.sq,
        pTerms.df=pTerms.df)
   if (object$method=="GCV") ret$gcv<-object$gcv.ubre else if (object$method=="UBRE") ret$ubre<-object$gcv.ubre
-  class(ret)<-"summary.gam"
+  class(ret)<-"summary.gam2"
   ret
 }
 
-cooks.distance.gam <- function(model,...)
-{ res <- residuals(model,type="pearson")
-  dispersion <- model$sig2
-  hat <- model$hat
-  p <- sum(model$edf)
-  (res/(1 - hat))^2 * hat/(dispersion * p)
-}
-
-vcov.gam <- function(object, freq = TRUE, dispersion = NULL, ...)
-## supplied by Henric Nilsson <henric.nilsson@statisticon.se> 
-{ if (freq)
-    vc <- object$Ve
-  else vc <- object$Vp
-  if (!is.null(dispersion))
-    vc <- dispersion * vc / object$sig2
-  name <- names(object$edf)
-  dimnames(vc) <- list(name, name)
-  vc
-}
-
-
-
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL)
-{   # adapted from anova.glm: R stats package
-    dotargs <- list(...)
-    named <- if (is.null(names(dotargs)))
-        rep(FALSE, length(dotargs))
-    else (names(dotargs) != "")
-    if (any(named))
-        warning("The following arguments to anova.glm(..) are invalid and dropped: ",
-            paste(deparse(dotargs[named]), collapse = ", "))
-    dotargs <- dotargs[!named]
-    is.glm <- unlist(lapply(dotargs, function(x) inherits(x,
-        "glm")))
-    dotargs <- dotargs[is.glm]
-    if (length(dotargs) > 0)
-        return(anova.glmlist(c(list(object), dotargs), dispersion = dispersion,
-            test = test))
-    if (!is.null(dispersion)) warning("dispersion argument ignored")
-    if (!is.null(test)) warning("test argument ignored")
-    if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
-    sg <- summary(object,freq=TRUE) 
-    class(sg) <- "anova.gam"
-    sg
-}
-
-influence.gam <- function(model,...) { model$hat }
-
-print.anova.gam <- function(x,...)
-{ # print method for class anova.gam resulting from single
-  # gam model calls to anova.
-  print(x$family)
-  cat("Formula:\n")
-  print(x$formula)
-  if (length(x$pTerms.pv)>0)
-  { cat("\nParametric Terms:\n")
-    term.names <- names(x$pTerms.pv)
-    width<-max(nchar(term.names))
-    cat(rep(" ",width),"         df       chi.sq     p-value\n",sep="")
-    for (i in 1:length(term.names))
-    cat(formatC(term.names[i],width=width)," ",formatC(x$pTerms.df[i],width=10,digits=4),"   ",
-    formatC(x$pTerms.chi.sq[i],width=10,digits=5),"     ",format.pval(x$pTerms.pv[i]),"\n",sep="")
-  }
-  cat("\n")
-  if(x$m>0)
-  { cat("Approximate significance of smooth terms:\n")
-    width<-max(nchar(names(x$chi.sq)))
-    cat(rep(" ",width),"        edf       chi.sq     p-value\n",sep="")
-    for (i in 1:x$m)
-    cat(formatC(names(x$chi.sq)[i],width=width)," ",formatC(x$edf[i],width=10,digits=4),"   ",
-    formatC(x$chi.sq[i],width=10,digits=5),"     ",format.pval(x$s.pv[i]),"\n",sep="")
-  }
-}
-
-
-
-logLik.gam <- function (object, ...)
-{  # based on logLik.glm - is ordering of p correction right???
-    if (length(list(...)))
-        warning("extra arguments discarded")
-    fam <- family(object)$family
-    p <- sum(object$edf)
-    if (fam %in% c("gaussian", "Gamma", "inverse.gaussian"))
-        p <- p + 1
-    val <- p - object$aic/2
-    attr(val, "df") <- p
-    class(val) <- "logLik"
-    val
-}
-
-
-print.summary.gam<-function(x,...)
+print.summary.gam2<-function(x,...)
 # print method for gam summary method.
 { print(x$family)
   cat("Formula:\n")
@@ -2753,6 +2679,301 @@ print.summary.gam<-function(x,...)
   if (!is.null(x$gcv)) cat("GCV score = ",formatC(x$gcv,digits=5)," ",sep="")
   cat("  Scale est. = ",formatC(x$scale,digits=5,width=8,flag="-"),"  n = ",x$n,"\n",sep="")
 }
+
+
+anova.gam2 <- function (object, ..., dispersion = NULL, test = NULL)
+{   # adapted from anova.glm: R stats package
+    dotargs <- list(...)
+    named <- if (is.null(names(dotargs)))
+        rep(FALSE, length(dotargs))
+    else (names(dotargs) != "")
+    if (any(named))
+        warning("The following arguments to anova.glm(..) are invalid and dropped: ",
+            paste(deparse(dotargs[named]), collapse = ", "))
+    dotargs <- dotargs[!named]
+    is.glm <- unlist(lapply(dotargs, function(x) inherits(x,
+        "glm")))
+    dotargs <- dotargs[is.glm]
+    if (length(dotargs) > 0)
+        return(anova.glmlist(c(list(object), dotargs), dispersion = dispersion,
+            test = test))
+    if (!is.null(dispersion)) warning("dispersion argument ignored")
+    if (!is.null(test)) warning("test argument ignored")
+    if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
+    sg <- summary(object,freq=TRUE) 
+    class(sg) <- "anova.gam2"
+    sg
+}
+
+
+print.anova.gam2 <- function(x,...)
+{ # print method for class anova.gam resulting from single
+  # gam model calls to anova.
+  print(x$family)
+  cat("Formula:\n")
+  print(x$formula)
+  if (length(x$pTerms.pv)>0)
+  { cat("\nParametric Terms:\n")
+    term.names <- names(x$pTerms.pv)
+    width<-max(nchar(term.names))
+    cat(rep(" ",width),"         df       chi.sq     p-value\n",sep="")
+    for (i in 1:length(term.names))
+    cat(formatC(term.names[i],width=width)," ",formatC(x$pTerms.df[i],width=10,digits=4),"   ",
+    formatC(x$pTerms.chi.sq[i],width=10,digits=5),"     ",format.pval(x$pTerms.pv[i]),"\n",sep="")
+  }
+  cat("\n")
+  if(x$m>0)
+  { cat("Approximate significance of smooth terms:\n")
+    width<-max(nchar(names(x$chi.sq)))
+    cat(rep(" ",width),"        edf       chi.sq     p-value\n",sep="")
+    for (i in 1:x$m)
+    cat(formatC(names(x$chi.sq)[i],width=width)," ",formatC(x$edf[i],width=10,digits=4),"   ",
+    formatC(x$chi.sq[i],width=10,digits=5),"     ",format.pval(x$s.pv[i]),"\n",sep="")
+  }
+}
+
+## end of old summary and anova code
+
+## Start of anova and summary code as improved by Henric Nilsson ....
+## Added 10/8/05...
+
+summary.gam <- function (object, dispersion = NULL, freq = TRUE, ...) 
+# summary method for gam object - provides approximate p values for terms + other diagnostics
+# Improved by Henric Nilsson
+{ pinv<-function(V,M,rank.tol=1e-6)
+  { D<-La.svd(V)
+    M1<-length(D$d[D$d>rank.tol*D$d[1]])
+    if (M>M1) M<-M1 # avoid problems with zero eigen-values
+    if (M+1<=length(D$d)) D$d[(M+1):length(D$d)]<-1
+    D$d<- 1/D$d
+    if (M+1<=length(D$d)) D$d[(M+1):length(D$d)]<-0
+    res <- D$u%*%diag(D$d)%*%D$v
+    attr(res,"rank") <- M
+    res
+  }
+  p.table <- pTerms.table <- s.table <- NULL
+  if (freq) covmat <- object$Ve else covmat <- object$Vp
+  name <- names(object$edf)
+  dimnames(covmat) <- list(name, name)
+  covmat.unscaled <- covmat/object$sig2
+  est.disp <- TRUE
+  if(object$method == "UBRE") est.disp <- FALSE
+  if (!is.null(dispersion)) { 
+    covmat <- dispersion * covmat.unscaled
+    est.disp <- FALSE
+  } else dispersion <- object$sig2
+  se<-0;for (i in 1:length(object$coefficients)) se[i] <- covmat[i,i]^0.5
+  residual.df<-length(object$y)-sum(object$edf)
+  if (object$nsdf>0) # individual parameters
+  { p.coeff<-object$coefficients[1:object$nsdf]
+    p.se <- se[1:object$nsdf]
+    p.t<-p.coeff/p.se
+    if (!est.disp) {
+      p.pv<-2*pnorm(abs(p.t),lower.tail=FALSE)
+      p.table<-cbind(p.coeff, p.se, p.t, p.pv)   
+      dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "z value", "Pr(>|z|)"))
+    } else {
+      p.pv<-2*pt(abs(p.t),df=residual.df,lower.tail=FALSE)
+      p.table<-cbind(p.coeff, p.se, p.t, p.pv)
+      dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "t value", "Pr(>|t|)"))
+    }    
+  } else {p.coeff<-p.t<-p.pv<-array(0,0)}
+  
+  term.labels<-attr(object$pterms,"term.labels")
+  nt<-length(term.labels)
+  if (nt>0) # individual parametric terms
+  { np<-length(object$assign)
+    Vb<-matrix(covmat[1:np,1:np],np,np)
+    bp<-array(object$coefficients[1:np],np)
+    pTerms.pv <- array(0,nt)
+    attr(pTerms.pv,"names") <- term.labels
+    pTerms.df <- pTerms.chi.sq <- pTerms.pv
+    for (i in 1:nt)
+    { ind <- object$assign==i
+      b <- bp[ind];V <- Vb[ind,ind]
+      pTerms.df[i] <- nb <- length(b)      
+      pTerms.chi.sq[i] <- b%*%solve(V,b)
+      if (!est.disp)
+      pTerms.pv[i]<-pchisq(pTerms.chi.sq[i],df=nb,lower.tail=FALSE)
+      else
+      pTerms.pv[i]<-pf(pTerms.chi.sq[i]/nb,df1=nb,df2=residual.df,lower.tail=FALSE)      
+    }
+    if (!est.disp) {      
+      pTerms.table <- cbind(pTerms.df, pTerms.chi.sq, pTerms.pv)   
+      dimnames(pTerms.table) <- list(term.labels, c("df", "Chi.sq", "p-value"))
+    } else {
+      pTerms.table <- cbind(pTerms.df, pTerms.chi.sq/pTerms.df, pTerms.pv)   
+      dimnames(pTerms.table) <- list(term.labels, c("df", "F", "p-value"))
+    }
+  } else { pTerms.df<-pTerms.chi.sq<-pTerms.pv<-array(0,0)}
+
+  m<-length(object$smooth) # number of smooth terms
+  df <- edf <- s.pv <- chi.sq <- array(0, m)
+  if (m>0) # form test statistics for each smooth
+  { for (i in 1:m)
+    { start<-object$smooth[[i]]$first.para;stop<-object$smooth[[i]]$last.para
+      V <- covmat[start:stop,start:stop] # cov matrix for smooth
+      p<-object$coefficients[start:stop]  # params for smooth
+      M1<-object$smooth[[i]]$df
+      M<-round(sum(object$edf[start:stop]))
+      V<-pinv(V,M1) # get rank M pseudoinverse of V
+      chi.sq[i]<-t(p)%*%V%*%p
+      er<-names(object$coefficients)[start]
+      er<-substring(er,1,nchar(er)-2)
+      if (object$smooth[[i]]$by!="NA") 
+      { er<-paste(er,":",object$smooth[[i]]$by,sep="")} 
+      names(chi.sq)[i]<-er
+      edf[i]<-sum(object$edf[start:stop])
+      if (freq) df[i] <- attr(V, "rank") else df[i] <- edf[i]
+      if (!est.disp)
+      s.pv[i]<-pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
+      else
+      s.pv[i] <- pf(chi.sq[i]/df[i], df1 = df[i], df2 = residual.df, lower.tail = FALSE)
+    }
+    if (!est.disp) {
+      if (freq) {
+        s.table <- cbind(edf, df, chi.sq, s.pv)      
+        dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "Chi.sq", "p-value"))
+      } else {
+        s.table <- cbind(edf, chi.sq, s.pv)      
+        dimnames(s.table) <- list(names(chi.sq), c("edf", "Chi.sq", "p-value"))
+      }
+    } else {
+      if (freq) {
+        s.table <- cbind(edf, df, chi.sq/df, s.pv)      
+        dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "F", "p-value"))
+      } else {
+        s.table <- cbind(edf, chi.sq/df, s.pv)      
+        dimnames(s.table) <- list(names(chi.sq), c("edf", "F", "p-value"))
+      }
+    }
+  }
+  w <- object$prior.weights
+  nobs <- nrow(object$model)
+  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(nobs-1)/(var(w*object$y)*residual.df) 
+  dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
+  ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
+       s.pv=s.pv,scale=dispersion,r.sq=r.sq,family=object$family,formula=object$formula,n=nobs,
+       dev.expl=dev.expl,edf=edf,dispersion=dispersion,pTerms.pv=pTerms.pv,pTerms.chi.sq=pTerms.chi.sq,
+       pTerms.df = pTerms.df, cov.unscaled = covmat.unscaled, cov.scaled = covmat, p.table = p.table,
+       pTerms.table = pTerms.table, s.table = s.table)
+  if (object$method=="GCV") ret$gcv<-object$gcv.ubre else if (object$method=="UBRE") ret$ubre<-object$gcv.ubre
+  class(ret)<-"summary.gam"
+  ret
+}
+
+print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3), 
+                              signif.stars = getOption("show.signif.stars"), ...)
+# print method for gam summary method. Improved by Henric Nilsson
+{ print(x$family)
+  cat("Formula:\n")
+  print(x$formula)
+  if (length(x$p.coeff)>0)
+  { cat("\nParametric coefficients:\n")
+    printCoefmat(x$p.table, digits = digits, signif.stars = signif.stars, na.print = "NA", ...)
+  }
+  cat("\n")
+  if(x$m>0)
+  { cat("Approximate significance of smooth terms:\n")
+    printCoefmat(x$s.table, digits = digits, signif.stars = signif.stars, has.Pvalue = TRUE, na.print = "NA", ...)
+  }
+  cat("\nR-sq.(adj) = ",formatC(x$r.sq,digits=3,width=5))
+  if (length(x$dev.expl)>0) cat("   Deviance explained = ",formatC(x$dev.expl*100,digits=3,width=4),"%\n",sep="")
+  if (!is.null(x$ubre)) cat("UBRE score = ",formatC(x$ubre,digits=5),sep="")
+  if (!is.null(x$gcv)) cat("GCV score = ",formatC(x$gcv,digits=5)," ",sep="")
+  cat("  Scale est. = ",formatC(x$scale,digits=5,width=8,flag="-"),"  n = ",x$n,"\n",sep="")
+}
+
+
+anova.gam <- function (object, ..., dispersion = NULL, test = NULL)
+# improved by Henric Nilsson
+{   # adapted from anova.glm: R stats package
+    dotargs <- list(...)
+    named <- if (is.null(names(dotargs)))
+        rep(FALSE, length(dotargs))
+    else (names(dotargs) != "")
+    if (any(named))
+        warning("The following arguments to anova.glm(..) are invalid and dropped: ",
+            paste(deparse(dotargs[named]), collapse = ", "))
+    dotargs <- dotargs[!named]
+    is.glm <- unlist(lapply(dotargs, function(x) inherits(x,
+        "glm")))
+    dotargs <- dotargs[is.glm]
+    if (length(dotargs) > 0)
+        return(anova.glmlist(c(list(object), dotargs), dispersion = dispersion,
+            test = test))
+    if (!is.null(test)) warning("test argument ignored")
+    if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
+    sg <- summary(object, dispersion = dispersion, freq = TRUE)
+    class(sg) <- "anova.gam"
+    sg
+}
+
+
+print.anova.gam <- function(x, digits = max(3, getOption("digits") - 3), ...)
+{ # print method for class anova.gam resulting from single
+  # gam model calls to anova. Improved by Henric Nilsson.
+  print(x$family)
+  cat("Formula:\n")
+  print(x$formula)
+  if (length(x$pTerms.pv)>0)
+  { cat("\nParametric Terms:\n")
+    printCoefmat(x$pTerms.table, digits = digits, signif.stars = FALSE, has.Pvalue = TRUE, na.print = "NA", ...)
+  }
+  cat("\n")
+  if(x$m>0)
+  { cat("Approximate significance of smooth terms:\n")
+    printCoefmat(x$s.table, digits = digits, signif.stars = FALSE, has.Pvalue = TRUE, na.print = "NA", ...)
+  }
+}
+
+## End of improved anova and summary code. 
+
+
+
+cooks.distance.gam <- function(model,...)
+{ res <- residuals(model,type="pearson")
+  dispersion <- model$sig2
+  hat <- model$hat
+  p <- sum(model$edf)
+  (res/(1 - hat))^2 * hat/(dispersion * p)
+}
+
+vcov.gam <- function(object, freq = TRUE, dispersion = NULL, ...)
+## supplied by Henric Nilsson <henric.nilsson@statisticon.se> 
+{ if (freq)
+    vc <- object$Ve
+  else vc <- object$Vp
+  if (!is.null(dispersion))
+    vc <- dispersion * vc / object$sig2
+  name <- names(object$edf)
+  dimnames(vc) <- list(name, name)
+  vc
+}
+
+
+
+
+influence.gam <- function(model,...) { model$hat }
+
+
+
+
+logLik.gam <- function (object, ...)
+{  # based on logLik.glm - is ordering of p correction right???
+    if (length(list(...)))
+        warning("extra arguments discarded")
+    fam <- family(object)$family
+    p <- sum(object$edf)
+    if (fam %in% c("gaussian", "Gamma", "inverse.gaussian"))
+        p <- p + 1
+    val <- p - object$aic/2
+    attr(val, "df") <- p
+    class(val) <- "logLik"
+    val
+}
+
+
 
 
 exclude.too.far<-function(g1,g2,d1,d2,dist)
@@ -3133,7 +3354,7 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
     ns.qr<-qr(t(C)) # last n.b-n.con columns of Q are the null space of C
     X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b] # last n.b-n.con cols of XQ (=(Q'X')')
     # need to work through penalties forming Z'S_i^0.5 's
-    if (n.p>0) for (i in 1:n.p) S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,]
+    if (n.p>0) for (i in 1:n.p) S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,,drop=FALSE]
     # and Z'HZ too
     if (!is.null(H))
     { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,] # Z'H
@@ -3200,12 +3421,22 @@ print.mgcv.version <- function()
   cat(paste("This is mgcv",version,"\n"))
 }
 
-.onAttach <- function(...) print.mgcv.version() 
+set.mgcv.options <- function()
+## function used to set optional value used in notLog
+## and notExp...
+{ options(mgcv.vc.logrange=25)
+}
+
+.onAttach <- function(...) { 
+  print.mgcv.version()
+  set.mgcv.options()
+}
 
 
 .First.lib <- function(lib, pkg) {
-    library.dynam("mgcv", pkg, lib)
+  library.dynam("mgcv", pkg, lib)
   print.mgcv.version()
+  set.mgcv.options()
 }
 
 

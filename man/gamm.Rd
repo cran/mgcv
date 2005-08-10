@@ -29,7 +29,7 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=3),niterPQL=20,verbosePQL=TRUE,...)
+control=lmeControl(niterEM=20),niterPQL=20,verbosePQL=TRUE,...)
 }
 
 \arguments{ 
@@ -103,6 +103,7 @@ for smooth terms can legitimately be non-finite.}
 \item{...}{further arguments for passing on e.g. to \code{lme}} 
 }
 %- maybe also `usage' for other objects documented here.
+
 \details{ The Bayesian model of spline smoothing introduced by Wahba (1983) and Silverman (1985) opens 
 up the possibility of estimating the degree of smoothness of terms in a generalized additive model
 as variances of the wiggly components of the smooth terms treated as random effects. Several authors 
@@ -118,7 +119,13 @@ Some brief details of how GAMs are represented as mixed models and estimated usi
 
 The bases used to represent smooth terms are the same as those used in \code{\link{gam}}.
 
- }
+In the event of \code{lme} convergence failures, first try modifying
+\code{niterEM} in the \code{control} argument. If that does not help, then consider
+modifying \code{option(mgcv.vc.logrange)}: reducing it helps to remove
+indefiniteness in the likelihood, if that is the problem, but too large a
+reduction can force over or undersmoothing. See \code{\link{notExp2}} for more
+information on this option. 
+}
 
 
 \value{ Returns a list with two items:
@@ -155,7 +162,7 @@ Wahba, G. (1983) Bayesian confidence intervals for the cross validated smoothing
 JRSSB 45:133-150
 
 Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. Journal of the American Statistical Association. 99:637-686
+generalized additive models. Journal of the American Statistical Association. 99:673-686
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
@@ -185,8 +192,8 @@ smoothing parameter, or a random effect specified in argument \code{random}.
 
 Models like \code{s(z)+s(x)+s(x,z)} are not currently supported.
 
-\code{gamm} is not as numerically stable as \code{gam}: an \code{lme} call will occasionally fail. Experimenting with 
-\code{niterEM} in the \code{control} argument can sometimes help.
+\code{gamm} is not as numerically stable as \code{gam}: an \code{lme} call
+will occasionally fail. See details section for suggestions.
 
 \code{gamm} is usually much slower than \code{gam}, and on some platforms you may need to
 increase the memory available to R in order to use it with large data sets
@@ -198,6 +205,10 @@ those used by the PQL iteration: this makes partial residual plots look odd.
 Note that the \code{gam} object part of the returned object is not complete in
 the sense of having all the elements defined in \code{\link{gamObject}} and
 does not inherit from \code{glm}: hence e.g. multi-model \code{anova} calls will not work.
+
+The parameterization used for the smoothing parameters in \code{gamm}, bounds
+them above and below by an effective infinity and effective zero. See
+\code{\link{notExp2}} for details of how to change this. 
 
 } 
 

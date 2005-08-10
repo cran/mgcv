@@ -52,6 +52,8 @@ new.name                Obtain a name for a new variable that is not
                         already in use
 notExp                  Functions for better-than-log positive
                         parameterization
+notExp2                 Alternative to log parameterization for
+                        variance components
 null.space.dimension    The basis of the space of un-penalized
                         functions for a t.p.r.s.
 pcls                    Penalized Constrained Least Squares Fitting

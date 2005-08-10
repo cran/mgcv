@@ -12,7 +12,7 @@ are usually approximate, unless the models are un-penalized.
 }
 \usage{
 anova.gam(object, ..., dispersion = NULL, test = NULL)
-print.anova.gam(x,...)
+print.anova.gam(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -21,6 +21,7 @@ print.anova.gam(x,...)
 \item{dispersion}{ a value for the dispersion parameter: not normally used.}
 \item{test}{what sort of test to perform for a multi-model call. One of
 \code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
+\item{digits}{number of digits to use when printing output.}
 }
 \details{ If more than one fitted model is provided than \code{anova.glm} is
 used. If only one model is provided then the significance of each model term
@@ -52,7 +53,8 @@ which is in fact an object returned from \code{\link{summary.gam}}.
 }
 
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
+improvements by Henric Nilsson.}
 
 \section{WARNING }{ P-values may be under-estimates, as a result of ignoring
 smoothing parameter uncertainty.

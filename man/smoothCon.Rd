@@ -12,7 +12,7 @@ constraints to be absorbed into the parameterization of each term, if required.
 }
 
 \usage{
-smoothCon(object,data,knots,absorb.cons=FALSE)
+smoothCon(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE)
 PredictMat(object,data)
 }
 %- maybe also `usage' for other objects documented here.
@@ -24,6 +24,9 @@ evaluated.}
 supplied for basis construction.}
 \item{absorb.cons}{Set to \code{TRUE} in order to have identifiability
 constraints absorbed into the basis.}
+\item{scale.penalty}{should the penalty coefficient matrix be scaled to have
+approximately the same `size' as the inner product of the terms model matrix
+with itself? This can improve the performance of \code{\link{gamm}} fitting.}
 }
 
 \value{ From \code{smoothCon} a \code{smooth} object returned by the

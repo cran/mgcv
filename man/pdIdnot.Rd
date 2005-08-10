@@ -13,8 +13,8 @@
 \title{Overflow proof pdMat class for multiples of the identity matrix}
 \description{ This set of functions is a modification of the  \code{pdMat} class \code{pdIdent}
 from library \code{nlme}. The modification is to replace the log parameterization used in \code{pdMat}
-with a \code{\link{notLog}} parameterization, since the latter is much less susceptible to overflow 
-and underflow of the parameters on the original scale. The functions are particularly useful for
+with a \code{\link{notLog2}} parameterization, since the latter avoids
+indefiniteness in the likelihood and associated convergence problems. The functions are particularly useful for
 working with Generalized Additive Mixed Models where variance parameters/smoothing parameters can
 be very large or very small, so that overflow or underflow can be a problem.
 
@@ -56,7 +56,7 @@ The \code{nlme} source code.
 
 }
 
-\seealso{ \code{\link{te}}, \code{\link{pdTens}}, \code{\link{notLog}}, \code{\link{gamm}}}
+\seealso{ \code{\link{te}}, \code{\link{pdTens}}, \code{\link{notLog2}}, \code{\link{gamm}}}
 
 \examples{
 # see gamm
