@@ -85,9 +85,6 @@ pdConstruct.pdTens <-
 {
   val <- NextMethod()
   if (length(val) == 0) {               # uninitiliazed object
-#     if ((ncol <- length(Names(val))) > 0) {
- #     attr(val, "ncol") <- ncol
-  #  }
     class(val) <- c("pdTens","pdMat")
     return(val)
   }
@@ -105,7 +102,6 @@ pdConstruct.pdTens <-
     ## the following seems to be only way to tell which.
     if (summary(mod2)$r.sq>summary(mod1)$r.sq) mod1<-mod2
     value <- coef(mod1)  
-#    if (sum(value<=0)) warning("sp hits lower limit")
     value[value <=0] <- .Machine$double.eps * mean(as.numeric(lapply(S,function(x) max(abs(x)))))
     value <- notLog2(value)
     attributes(value) <- attributes(val)[names(attributes(val)) != "dim"]
@@ -133,9 +129,6 @@ pdFactor.pdTens <- function(object)
   value <- S[[1]]*notExp2(sp[1])
   if (m>1) for (i in 2:m) value <- value + notExp2(sp[i])*S[[i]] 
   if (sum(is.na(value))>0) warning("NA's in pdTens factor")
-#### EXPERIMENTAL 
-#  value<-solve(value,tol=0)
-### 
   value <- (value+t(value))/2
   c(t(mroot(value,rank=nrow(value))))
 }
@@ -156,14 +149,11 @@ pdMatrix.pdTens <-
   S <- attr(formula(object),"S")
   value <- S[[1]]*notExp2(sp[1])   
   if (m>1) for (i in 2:m) value <- value + notExp2(sp[i])*S[[i]]  
-#### EXPERIMENTAL 
-#  value<-solve(value,tol=0)
-###   
+ 
   value <- (value + t(value))/2 # ensure symmetry
   if (sum(is.na(value))>0) warning("NA's in pdTens matrix")
   if (factor) {
     value <- t(mroot(value,rank=nrow(value)))
-#    attr(value, "logDet") <- sum(log(diag(value)))
   } 
   dimnames(value) <- attr(object, "Dimnames")
   value
@@ -185,10 +175,6 @@ coef.pdTens <-
 summary.pdTens <-
   function(object, structName = "Tensor product smooth term", ...)
 {
-  # summary.pdMat(object, structName, noCorrelation = TRUE)
-
-  ## ... summary.pdMat is not exported in the nlme NAMESPACE file, so....
-
   NextMethod(object, structName, noCorrelation=TRUE)
 }
 
@@ -205,7 +191,7 @@ summary.pdTens <-
 pdIdnot <-
   ## Constructor for the pdIdnot class
   function(value = numeric(0), form = NULL, nam = NULL, data = sys.frame(sys.parent()))
-{
+{ #cat(" pdIdnot  ")
   object <- numeric(0)
   class(object) <- c("pdIdnot", "pdMat")
   pdConstruct(object, value, form, nam, data)
@@ -223,7 +209,8 @@ corMatrix.pdIdnot <-
     stop(paste("Cannot extract the matrix with uninitialized dimensions"))
   }
   val <- diag(Ncol)
-  attr(val, "stdDev") <- rep(notExp2(as.vector(object)), Ncol)
+## REMOVE sqrt() to revert ...
+  attr(val, "stdDev") <- rep(sqrt(notExp2(as.vector(object))), Ncol)
   if (length(nm <- Names(object)) == 0) {
     nm <- paste("V", 1:len, sep = "")
     dimnames(val) <- list(nm, nm)
@@ -235,7 +222,7 @@ corMatrix.pdIdnot <-
 pdConstruct.pdIdnot <-
   function(object, value = numeric(0), form = formula(object),
 	   nam = Names(object), data = sys.frame(sys.parent()), ...)
-{
+{ #cat(" pdConstruct.pdIdnot  ")
   val <- NextMethod()
   if (length(val) == 0) {			# uninitialized object
     if ((ncol <- length(Names(val))) > 0) {
@@ -244,7 +231,8 @@ pdConstruct.pdIdnot <-
     return(val)
   }
   if (is.matrix(val)) {
-    value <- notLog2(sqrt(mean(diag(crossprod(val)))))
+#    value <- notLog2(sqrt(mean(diag(crossprod(val)))))
+    value <- notLog2(mean(diag(crossprod(val)))) ## REPLACE by above to revert
     attributes(value) <- attributes(val)[names(attributes(val)) != "dim"]
     attr(value, "ncol") <- dim(val)[2]
     class(value) <- c("pdIdnot", "pdMat")
@@ -265,13 +253,15 @@ pdConstruct.pdIdnot <-
 
 pdFactor.pdIdnot <-
   function(object)
-{
-  notExp2(as.vector(object)) * diag(attr(object, "ncol"))
+{ ## UNCOMMENT first line, comment 2nd to revert
+  # notExp2(as.vector(object)) * diag(attr(object, "ncol"))
+  #cat(" pdFactor.pdIdnot  ")
+  sqrt(notExp2(as.vector(object))) * diag(attr(object, "ncol"))
 }
 
 pdMatrix.pdIdnot <-
   function(object, factor = FALSE)
-{
+{ #cat("  pdMatrix.pdIdnot  ")
   if (!isInitialized(object)) {
     stop("Cannot extract the matrix from an uninitialized pdMat object")
   }
@@ -279,14 +269,16 @@ pdMatrix.pdIdnot <-
     stop(paste("Cannot extract the matrix with uninitialized dimensions"))
   }
   value <- diag(Ncol)
-  
+    
+  ## REPLACE by #1,#2,#3 to revert
   if (factor) {
-   
-    value <- notExp2(as.vector(object)) * value
-     attr(value, "logDet") <- Ncol * log(notExp2(as.vector(object)))
-   
+   #1  value <- notExp2(as.vector(object)) * value
+   #2  attr(value, "logDet") <- Ncol * log(notExp2(as.vector(object)))
+   value <- sqrt(notExp2(as.vector(object))) * value
+   attr(value, "logDet") <- Ncol * log(notExp2(as.vector(object)))/2
   } else {
-    value <- notExp2(as.vector(object))^2 * value
+   #3 value <- notExp2(as.vector(object))^2 * value
+    value <- notExp2(as.vector(object)) * value
   }
   dimnames(value) <- attr(object, "Dimnames")
   value
@@ -296,7 +288,7 @@ pdMatrix.pdIdnot <-
 
 coef.pdIdnot <-
   function(object, unconstrained = TRUE, ...)
-{
+{ #cat(" coef.pdIdnot    ")
   if (unconstrained) NextMethod()
   else structure(notExp2(as.vector(object)),
            names = c(paste("sd(", deparse(formula(object)[[2]],backtick=TRUE),")",sep = "")))
@@ -314,8 +306,9 @@ Dim.pdIdnot <-
 
 logDet.pdIdnot <-
   function(object, ...)
-{
-  attr(object, "ncol") * log(notExp2(as.vector(object)))
+{ ## REMOVE /2 to revert ....
+  attr(object, "ncol") * log(notExp2(as.vector(object)))/2
+  
 }
 
 solve.pdIdnot <-
@@ -330,7 +323,7 @@ solve.pdIdnot <-
 
 summary.pdIdnot <-
   function(object, structName = "Multiple of an Identity", ...)
-{
+{ #cat("  summary.pdIdnot  ")
   # summary.pdMat(object, structName, noCorrelation = TRUE)
 
   ## ... summary.pdMat is not exported in the nlme NAMESPACE file, so....
@@ -872,7 +865,7 @@ new.name <- function(proposed,old.names)
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=20),niterPQL=20,verbosePQL=TRUE,...)
+      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=0),niterPQL=20,verbosePQL=TRUE,...)
 ## NOTE: niterEM modified after changed notLog parameterization - old version
 ##       needed niterEM=3. 10/8/05.
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
@@ -1040,7 +1033,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
       if (inherits(object$smooth[[i]],"tensor.smooth"))#&&n.sp>1) 
       object$sp[k:(k+n.sp-1)] <- notExp2(var.param[(n.v-n.sp+1):n.v])
-      else object$sp[k:(k+n.sp-1)] <- 1/notExp2(var.param[(n.v-n.sp+1):n.v])^2
+      else object$sp[k:(k+n.sp-1)] <- 1/notExp2(var.param[(n.v-n.sp+1):n.v])   ## ^2 <- reinstate to revert
       k <- k + n.sp
       n.v <- n.v - n.sp
     }

@@ -14,7 +14,9 @@
 \description{ This set of functions is a modification of the  \code{pdMat} class \code{pdIdent}
 from library \code{nlme}. The modification is to replace the log parameterization used in \code{pdMat}
 with a \code{\link{notLog2}} parameterization, since the latter avoids
-indefiniteness in the likelihood and associated convergence problems. The functions are particularly useful for
+indefiniteness in the likelihood and associated convergence problems: the
+parameters also relate to variances rather than standard deviations, for
+consistency with the \code{\link{pdTens}} class. The functions are particularly useful for
 working with Generalized Additive Mixed Models where variance parameters/smoothing parameters can
 be very large or very small, so that overflow or underflow can be a problem.
 

@@ -1,6 +1,8 @@
 useDynLib(mgcv)
 
-export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
+export( 
+anova.gam,coef.pdIdnot,coef.pdTens,
+      corMatrix.pdIdnot,Dim.pdIdnot,
        exclude.too.far,extract.lme.cov, extract.lme.cov2,
        formXtViX, full.score, formula.gam,fixDependence,fix.family.link,
        fix.family.var,   gam, gam2derivative, gam2objective,
@@ -8,7 +10,9 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        gam.fit, gam.outer, gamm.setup , influence.gam, interpret.gam, 
        gam.setup, 
        gam.side,gam.method,
-       get.var,logDet.pdIdnot,initial.sp,logLik.gam,
+       get.var,
+     logDet.pdIdnot,
+       initial.sp,logLik.gam,
        magic, magic.post.proc, mgcv, mgcv.control, mgcv.find.theta, 
        mgcv.get.scale, mono.con, mroot, new.name, 
        notExp,notExp2,notLog,notLog2,pcls,null.space.dimension, 
@@ -31,7 +35,9 @@ export(anova.gam,coef.pdIdnot,coef.pdTens,corMatrix.pdIdnot,Dim.pdIdnot,
        smooth.construct.tensor.smooth.spec,
        smooth.construct.tp.smooth.spec,
        smooth.construct.ts.smooth.spec,
-       summary.gam,solve.pdIdnot,summary.pdIdnot,summary.pdTens,te,
+       summary.gam,
+      solve.pdIdnot,
+       summary.pdIdnot,summary.pdTens,te,
        tensor.prod.model.matrix,tensor.prod.penalties,
        uniquecombs, vcov.gam, vis.gam)
 
