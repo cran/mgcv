@@ -1,3 +1,13 @@
+1.3-6
+
+* pdIdnot class changed so that parameters are variances not standard 
+deviations - this makes for greater consistency with pdTens class, and 
+means that limits on notLog2 parameterization should mean the same thing 
+for both classes. 
+
+* niterEM set to 0 in lme calls. This is because EM steps in lme are not
+ set up to deal properly with user defined pdMat classes.
+
 1.3-5
 
 * Improvements to anova and summary functions by Henric Nilsson 

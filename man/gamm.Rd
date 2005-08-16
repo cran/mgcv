@@ -29,7 +29,7 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=20),niterPQL=20,verbosePQL=TRUE,...)
+control=lmeControl(niterEM=0),niterPQL=20,verbosePQL=TRUE,...)
 }
 
 \arguments{ 
@@ -93,8 +93,10 @@ numbers of knots, unless they share a covariate.
 }
 \item{control}{A list of fit control parameters for \code{\link[nlme]{lme}} returned by 
 \code{\link[nlme]{lmeControl}}. Note the default setting for the number of EM iterations 
-used by \code{lme}: high settings tend to lead to numerical problems because variance components
-for smooth terms can legitimately be non-finite.}
+used by \code{lme}: smooths are set up using custom \code{pdMat} classes,
+which are currently not supported by the EM iteration code. Only increase this
+number if you want to perturb the starting values used in model fitting
+(usually to worse values!).}
 
 \item{niterPQL}{Maximum number of PQL iterations (if any).}
 
@@ -119,12 +121,15 @@ Some brief details of how GAMs are represented as mixed models and estimated usi
 
 The bases used to represent smooth terms are the same as those used in \code{\link{gam}}.
 
-In the event of \code{lme} convergence failures, first try modifying
-\code{niterEM} in the \code{control} argument. If that does not help, then consider
+In the event of \code{lme} convergence failures, consider
 modifying \code{option(mgcv.vc.logrange)}: reducing it helps to remove
 indefiniteness in the likelihood, if that is the problem, but too large a
 reduction can force over or undersmoothing. See \code{\link{notExp2}} for more
-information on this option. 
+information on this option. Failing that, you can try increasing the
+\code{niterEM} option in \code{control}: this will perturb the starting values
+used in fitting, but usually to values with lower likelihood! Note that this
+version of \code{gamm} works best with R 2.2.0 or above and \code{nlme}, 3.1-62 and above,
+since these use an improved optimizer.  
 }
 
 
@@ -179,6 +184,10 @@ Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statis
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \section{WARNINGS }{
+
+This version of \code{gamm} works best with \code{nlme} 3.1-62 and above and R
+2.2.0 and above. This is because it is designed to work with the optimizers
+used from these versions onwards, rather than the earlier default optimizers.
 
 The routine will be very slow and memory intensive if correlation structures
 are used for the very large groups of data. e.g. attempting to run the
