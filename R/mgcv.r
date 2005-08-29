@@ -3278,6 +3278,7 @@ initial.sp <- function(X,S,off)
   if (n.p) { 
     ldxx <- colSums(X*X) # yields diag(t(X)%*%X)
     ldss <- ldxx*0       # storage for combined penalty l.d. 
+    pen <- rep(FALSE,length(ldxx)) # index of what actually gets penalized
     for (i in 1:n.p) { # loop over penalties
       maS <- max(abs(S[[i]])) 
       rsS <- rowMeans(abs(S[[i]]))
@@ -3288,6 +3289,7 @@ initial.sp <- function(X,S,off)
       start <- off[i];finish <- start+ncol(S[[i]])-1
       xx <- ldxx[start:finish]
       xx <- xx[ind]
+      pen[start:finish] <- pen[start:finish]|ind
       sizeXX <- mean(xx)
       sizeS <- mean(ss)
       if (sizeS <= 0) stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
@@ -3295,7 +3297,7 @@ initial.sp <- function(X,S,off)
       ## accumulate leading diagonal of \sum sp[i]*S[[i]]
       ldss[start:finish] <- ldss[start:finish] + def.sp[i]*diag(S[[i]]) 
     }
-    ind <- ldss>0
+    ind <- ldss>0&pen # base following only on penalized terms
     ldxx<-ldxx[ind];ldss<-ldss[ind]
     while (mean(ldxx/(ldxx+ldss))>.4) { def.sp <- def.sp*10;ldss <- ldss*10 }
     while (mean(ldxx/(ldxx+ldss))<.4) { def.sp <- def.sp/10;ldss <- ldss/10 }

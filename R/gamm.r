@@ -865,7 +865,8 @@ new.name <- function(proposed,old.names)
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=0),niterPQL=20,verbosePQL=TRUE,...)
+      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
+      niterPQL=20,verbosePQL=TRUE,...)
 ## NOTE: niterEM modified after changed notLog parameterization - old version
 ##       needed niterEM=3. 10/8/05.
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 

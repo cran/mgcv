@@ -1,3 +1,16 @@
+1.3-7
+
+* change to `pcls' example to account for model matrix rescaling changing 
+smoothing parameter sizes.
+
+* `gamm' `control' argument set to use "L-BFGS-B" method if `lme' is using 
+`optim' (only does this if `nlminb' not present). Consequently `mgcv' now 
+depends on nlme_3.1-64 or above.
+
+* improvement of the algorithm in `initial.sp'. Previously it was possible 
+for very low rank smoothers (e.g. k=3) to cause the initialization to 
+fail, because of poor handling of unpenalized parameters. 
+
 1.3-6
 
 * pdIdnot class changed so that parameters are variances not standard 
@@ -6,7 +19,8 @@ means that limits on notLog2 parameterization should mean the same thing
 for both classes. 
 
 * niterEM set to 0 in lme calls. This is because EM steps in lme are not
- set up to deal properly with user defined pdMat classes.
+ set up to deal properly with user defined pdMat classes (latter 
+ confirmed by DB).
 
 1.3-5
 

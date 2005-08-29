@@ -29,7 +29,7 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=0),niterPQL=20,verbosePQL=TRUE,...)
+control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),niterPQL=20,verbosePQL=TRUE,...)
 }
 
 \arguments{ 
@@ -91,12 +91,14 @@ faster, but gives poorer results (and the user must be quite careful in choosing
 Different terms can use different 
 numbers of knots, unless they share a covariate.
 }
+
 \item{control}{A list of fit control parameters for \code{\link[nlme]{lme}} returned by 
 \code{\link[nlme]{lmeControl}}. Note the default setting for the number of EM iterations 
 used by \code{lme}: smooths are set up using custom \code{pdMat} classes,
 which are currently not supported by the EM iteration code. Only increase this
 number if you want to perturb the starting values used in model fitting
-(usually to worse values!).}
+(usually to worse values!). The \code{optimMethod} option is only used if your
+version of R does not have the \code{nlminb} optimizer function.}
 
 \item{niterPQL}{Maximum number of PQL iterations (if any).}
 
