@@ -1,7 +1,7 @@
 \name{mono.con}
 \alias{mono.con}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Monotonicity constraints for a cubic regression spline.}
+\title{Monotonicity constraints for a cubic regression spline}
 \description{ Finds linear constraints sufficient for monotonicity (and
   optionally upper and/or lower boundedness) of a cubic regression
   spline. The basis representation assumed is that given by the

@@ -1,7 +1,7 @@
 \name{gam.side}
 \alias{gam.side}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Identifiability side conditions for a GAM.}
+\title{Identifiability side conditions for a GAM}
 \description{ GAM formulae with repeated variables only correspond to
   identifiable models given some side conditions. This routine works 
   out appropriate side conditions, based on zeroing redundant parameters.

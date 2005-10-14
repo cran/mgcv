@@ -2,7 +2,7 @@
 \alias{gam.convergence}
 \alias{gam.performance}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{GAM convergence and performance issues.}
+\title{GAM convergence and performance issues}
 \description{ When fitting GAMs there is a tradeoff between speed of fitting and probability of
 fit convergence. The default fitting options specified by
 \code{\link{gam.method}} (as the default for argument \code{method} of
@@ -12,6 +12,12 @@ fit. In the additive modelling contexts this means using fitting routine
 \code{\link{mgcv}}. In the Generalized Additive Model case it means using
 `outer' iteration in preference to `performance iteration': see
 \code{\link{gam.outer}} for details. 
+
+It is possible for the default `outer' iteration to fail when finding intial
+smoothing parameters using a few steps of outer iteration (if you get a
+convergence failure message from \code{magic} when outer iterating, then this
+is what has happened): lower \code{outerPIsteps} in \code{\link{gam.control}}
+to fix this. 
 
 There are two things that you can do to speed up GAM fitting. (i) Change the
 \code{method} argument to \code{\link{gam}} so that `performance iteration' is

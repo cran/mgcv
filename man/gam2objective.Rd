@@ -3,7 +3,7 @@
 \alias{gam2derivative}
 \alias{gam3objective}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Objective functions for GAM smoothing parameter estimation. }
+\title{Objective functions for GAM smoothing parameter estimation}
 \description{Estimation of GAM smoothing parameters is most stable if
 optimization of the UBRE or GCV score is outer to the penalized iteratively
 re-weighted least squares scheme used to estimate the model given smoothing 

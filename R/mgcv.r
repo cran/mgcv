@@ -283,12 +283,14 @@ tensor.prod.penalties <- function(S)
 get.var<-function(txt,data)
 # txt contains text that may be a variable name and may be an expression 
 # for creating a variable. get.var first tries data[[txt]] and if that 
-# fails tries evaluating txt within data (only)
+# fails tries evaluating txt within data (only). Routine returns NULL
+# on failure, or if result is not numeric or a factor.
 { x <- data[[txt]]
   if (is.null(x)) 
   { x <- try(eval(parse(text=txt),data,enclos=NULL),silent=TRUE)
     if (inherits(x,"try-error")) x <- NULL
   }
+  if (!is.numeric(x)&&!is.factor(x)) x <- NULL  
   x
 }
 
@@ -1406,12 +1408,13 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   outer.looping <- !G$am && (method$gam=="perf.outer"||method$gam=="outer") &&
                     length(G$S)>0 && sum(G$sp<0)!=0
 
-  # take only one IRLS step to get scale estimates for "pure" outer
+  # take only a few IRLS step to get scale estimates for "pure" outer
   # looping...
     
-  if (outer.looping && method$gam=="outer") oneStep <- TRUE else oneStep <- FALSE
+  if (outer.looping && method$gam=="outer") fixedSteps <- control$outerPIsteps else 
+      fixedSteps <- control$globit+control$maxit+2
   
-  object<-gam.fit(G,family=family,control=control,gamma=gamma,oneStep=oneStep,...)
+  object<-gam.fit(G,family=family,control=control,gamma=gamma,fixedSteps=fixedSteps,...)
   
   if (!is.null(sp)) # fill returned s.p. array with estimated and supplied terms
   { temp.sp<-object$sp
@@ -1430,6 +1433,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
       lsp2 <- log(initial.sp(G$X,G$S,G$off)) 
       ind <- lsp > lsp2+5;lsp[ind] <- lsp2[ind]+5
       ind <- lsp < lsp2-5;lsp[ind] <- lsp2[ind]-5 
+      if (fixedSteps<1) lsp <- lsp2 ## don't use perf iter sp's at all
     }
    # temp.sp <-object$sp # keep copy off all sp's
     mgcv.conv <- object$mgcv.conv  
@@ -1553,7 +1557,7 @@ print.gam<-function (x,...)
 gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
                          mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000,trace =FALSE,
                          rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-                         max.tprs.knots=5000,nlm=list(),optim=list()) 
+                         max.tprs.knots=5000,nlm=list(),optim=list(),outerPIsteps=4) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -1564,6 +1568,8 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
 # nb.theta.mult controls the upper and lower limits on theta estimates - for use with negative binomial  
 # for single s.p. case and "magic" otherwise. 
 # rank.tol is the tolerance to use for rank determination
+# outerPIsteps is the number of performance iteration steps used to intialize
+#                         outer iteration
 {
     if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
@@ -1604,7 +1610,7 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
     list(irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,globit = globit,
          trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,nb.theta.mult=nb.theta.mult,
          rank.tol=rank.tol,absorb.cons=absorb.cons,max.tprs.knots=max.tprs.knots,nlm=nlm,
-         optim=optim)
+         optim=optim,outerPIsteps=outerPIsteps)
     
 }
 
@@ -1669,12 +1675,15 @@ full.score <- function(sp,G,family,control,gamma,pearson)
 
 gam.fit <- function (G, start = NULL, etastart = NULL, 
     mustart = NULL, family = gaussian(), 
-    control = gam.control(),gamma=1,oneStep=FALSE) 
+    control = gam.control(),gamma=1,
+    fixedSteps=(control$maxit+control$globit+1)) 
 # fitting function for a gam, modified from glm.fit.
 # note that smoothing parameter estimates from one irls iterate are carried over to the next irls iterate
 # unless the range of s.p.s is large enough that numerical problems might be encountered (want to avoid 
 # completely flat parts of gcv/ubre score). In the latter case autoinitialization is requested.
-# oneStep == TRUE causes only a single IRLS step to be taken
+# fixedSteps < its default causes at most fixedSteps iterations to be taken,
+# without warning if convergence has not been achieved. This is useful for
+# obtaining starting values for outer iteration.
 {
     intercept<-G$intercept
     conv <- FALSE
@@ -1883,7 +1892,8 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
 
         ## Test for convergence here ...
 
-        if (abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon || olm || oneStep) {
+        if (abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon || olm ||
+            iter > fixedSteps) {
             conv <- TRUE
             coef <- start #1.5.0
             break
@@ -3268,7 +3278,31 @@ magic.post.proc <- function(X,object,w=NULL)
   list(Ve=Ve,Vb=Vb,hat=hat,edf=edf)
 }
 
-initial.sp <- function(X,S,off)
+single.sp <- function(X,S,target=.5,tol=.Machine$double.eps*100)
+## function to find smoothing parameter corresponding to particular 
+## target e.d.f. for a single smoothing parameter problem. 
+## X is model matrix; S is penalty matrix; target is target 
+## average e.d.f. per penalized term.
+{ R <- qr.R(qr(X))
+  te <- try(RS <- backsolve(R,S,transpose=TRUE),silent=TRUE)
+  if (inherits(te,"try-error")) return(-1)
+  te <- try(RSR <- backsolve(R,t(RS),transpose=TRUE),silent=TRUE)
+  if (inherits(te,"try-error")) return(-1)
+  RSR <- (RSR+t(RSR))/2
+  d <- eigen(RSR,symmetric=TRUE)$values
+  d <- d[d>max(d)*tol]
+  ff <- function(lambda,d,target) { 
+    mean(1/(1+exp(lambda)*d))-target
+  }
+  lower <- 0
+  while (ff(lower,d,target) <= 0) lower <- lower - 1
+  upper <- lower
+  while (ff(upper,d,target) > 0) upper <- upper + 1
+  exp(uniroot(ff,c(lower,upper),d=d,target=target)$root)
+}
+
+
+initial.sp <- function(X,S,off,expensive=FALSE)
 # Find initial smoothing parameter guesstimates based on model matrix X 
 # and penalty list S. off[i] is the index of the first parameter to
 # which S[[i]] applies, since S[[i]]'s only store non-zero submatrix of 
@@ -3278,6 +3312,7 @@ initial.sp <- function(X,S,off)
   if (n.p) { 
     ldxx <- colSums(X*X) # yields diag(t(X)%*%X)
     ldss <- ldxx*0       # storage for combined penalty l.d. 
+    if (expensive) St <- matrix(0,ncol(X),ncol(X)) 
     pen <- rep(FALSE,length(ldxx)) # index of what actually gets penalized
     for (i in 1:n.p) { # loop over penalties
       maS <- max(abs(S[[i]])) 
@@ -3296,11 +3331,19 @@ initial.sp <- function(X,S,off)
       def.sp[i] <- sizeXX/ sizeS # relative s.p. estimate
       ## accumulate leading diagonal of \sum sp[i]*S[[i]]
       ldss[start:finish] <- ldss[start:finish] + def.sp[i]*diag(S[[i]]) 
+      
+      if (expensive) St[start:finish,start:finish] <- 
+                     St[start:finish,start:finish] + def.sp[i]*S[[i]]
     }
-    ind <- ldss>0&pen # base following only on penalized terms
-    ldxx<-ldxx[ind];ldss<-ldss[ind]
-    while (mean(ldxx/(ldxx+ldss))>.4) { def.sp <- def.sp*10;ldss <- ldss*10 }
-    while (mean(ldxx/(ldxx+ldss))<.4) { def.sp <- def.sp/10;ldss <- ldss/10 }
+    if (expensive) { ## does full search for overall s.p.
+      msp <- single.sp(X,St)           
+      if (msp>0) def.sp <- def.sp*msp  
+    } else {
+      ind <- ldss>0&pen # base following only on penalized terms
+      ldxx<-ldxx[ind];ldss<-ldss[ind]
+      while (mean(ldxx/(ldxx+ldss))>.4) { def.sp <- def.sp*10;ldss <- ldss*10 }
+      while (mean(ldxx/(ldxx+ldss))<.4) { def.sp <- def.sp/10;ldss <- ldss/10 }
+    }
   } 
   def.sp
 }

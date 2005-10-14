@@ -1,7 +1,7 @@
 \name{formula.gam}
 \alias{formula.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Extract the formula from a gam object.}
+\title{Extract the formula from a gam object}
 \description{ Extracts the formula from a fitted \code{gam} object. 
 }
 \usage{

@@ -93,6 +93,10 @@ IRLS iteration.
 Estimation of smoothing parameters by optimizing GCV scores obtained at
 convergence of the P-IRLS iteration was proposed by O'Sullivan et al. (1986),
 and is here termed `outer' iteration. 
+
+Note that use of non-standard families with this routine requires modification
+of the families as described in \code{\link{fix.family.link}}.
+
 }
 
 \references{

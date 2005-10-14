@@ -1,7 +1,7 @@
 \name{gam.fit}
 \alias{gam.fit}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{GAM P-IRLS estimation with GCV/UBRE smoothness estimation.}
+\title{GAM P-IRLS estimation with GCV/UBRE smoothness estimation}
 \description{ This is an internal function of package \code{mgcv}. It is a modification
   of the function \code{glm.fit}, designed to be called from \code{gam}. The major
   modification is that rather than solving a weighted least squares problem at each IRLS step, 
@@ -30,8 +30,8 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:637-686
 
-\url{http://www.stats.gla.ac.uk/~simon/}
 }
+
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
