@@ -1,7 +1,7 @@
 \name{null.space.dimension}
 \alias{null.space.dimension}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{The basis of the space of un-penalized functions for a t.p.r.s.}
+\title{The basis of the space of un-penalized functions for a TPRS}
 \description{ The thin plate spline penalties give zero penalty to some
   functions. The space of these functions is spanned by a set of
   polynomial terms. \code{null.space.dimension} finds the dimension of this space, \eqn{M}{M}, given

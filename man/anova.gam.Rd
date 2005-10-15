@@ -40,6 +40,14 @@ distributions under the null, which tends to lead to underdispersion in these
 distributions, and in turn to p-value estimates that are too low. (In
 simulations where the null is correct, I have seen p-values that are as low as half of what they should
 be.) 
+
+If it is important to have  p-values that are as accurate as possible, then,
+at least in the single model case, it is probably advisable to perform tests using unpenalized smooths
+(i.e. \code{s(...,fx=TRUE)}) with the basis dimension, \code{k}, left at what would
+have been used with penalization. Such tests are not as powerful, of
+course, but the p-values are more accurate. Whether or not extra accuracy is
+required will usually depend on whether or not hypothesis testing is a key
+objective of the analysis.
 }
 
 \value{In the multi-model case \code{anova.gam} produces output identical to

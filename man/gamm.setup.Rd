@@ -1,7 +1,7 @@
 \name{gamm.setup}
 \alias{gamm.setup}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Generalized Additive Mixed Model set up.}
+\title{Generalized additive mixed model set up}
 \description{ This is an internal function of package \code{mgcv}. It is called 
 by \code{gamm} to set up a generalized additive mixed model in a form suitable for fitting by calls to 
 \code{glmmPQL} from the \code{MASS} library or \code{lme} from the \code{nlme} library. The main task is the representation of the smooth terms as random effects. 
@@ -9,12 +9,11 @@ by \code{gamm} to set up a generalized additive mixed model in a form suitable f
 
 \references{
 
-Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. Journal of the American Statistical Association.
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. Journal of the American Statistical Association. 99:673-686
 
-Wood, S.N. (2004b) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Technical Report of the Department of
-Statistics, University of Glasgow, UK.
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Biometrics
 
 
 \url{http://www.stats.gla.ac.uk/~simon/}

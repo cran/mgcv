@@ -20,7 +20,23 @@ score, which are obtained by differentiating the P-IRLS GAM fitting iteration
 w.r.t. the model smoothing parameters. The expressions for the derivatives
 require the second derivative of the link w.r.t. the mean, and the first
 derivative of the variance function w.r.t. the mean. These functions add
-functions evaluating these quantities to a family.
+functions evaluating these quantities to a family. 
+
+If the family already has functions \code{dvar} and \code{d2link} then these
+functions simply return the family unmodified: this allows non-standard links
+to be used with \code{\link{gam}} when using outer iteration (performance
+iteration operates with unmodified families).
+
+The \code{dvar} function is a function of a mean vector, \code{mu}, and returns
+a vector of corresponding first derivatives of the family variance
+function. The \code{d2link} function is also a function of a vector of mean
+values, \code{mu}: it returns a vector of second derivatives of the link,
+evaluated at \code{mu}.
+
+If modifying your own family, note that you can often get away with supplying
+only a \code{dvar} function if your family only requires links that occur in
+one of the standard families.
+
 }
 \value{ A family object with extra component functions \code{dvar} and \code{d2link}.
 }

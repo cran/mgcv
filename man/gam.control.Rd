@@ -13,7 +13,8 @@ choise of fitting method, see \code{\link{gam.method}}.
 gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
             mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-            max.tprs.knots=5000,nlm=list(),optim=list()) 
+            max.tprs.knots=5000,nlm=list(),optim=list(),
+            outerPIsteps=4) 
 }
 \arguments{ 
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
@@ -77,6 +78,11 @@ used for outer estimation of smoothing parameters. See details.}
 
 \item{optim}{list of control parameters to pass to \code{\link{optim}} if this
 is used for outer estimation of smoothin parameters. See details.}
+
+\item{outerPIsteps}{The number of performance interation steps used to
+initialize outer iteration. Less than 1 means
+that only one performance iteration step is taken to get the function scale,
+but the corresponding smoothing parameter estimates are discarded. }
 }
 
 \details{ When outer iteration is used for fitting then the control list

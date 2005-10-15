@@ -1,7 +1,7 @@
 \name{gam.check}
 \alias{gam.check}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Some diagnostics for a fitted gam model.}
+\title{Some diagnostics for a fitted gam model}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} and produces some diagnostic information
 about the fitting procedure and results. 
 }

@@ -1,7 +1,7 @@
 \name{gam.models}
 \alias{gam.models}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Specifying Generalized Additive Models.}
+\title{Specifying generalized additive models}
 \description{ This page is intended to provide some more information on
   how to specify GAMs. Assume that in general we are interested in
   modelling some response variable \eqn{y_i}{y} with an exponential

@@ -1,7 +1,7 @@
 \name{influence.gam}
 \alias{influence.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Extract the diagonal of the Influence/Hat matrix for a GAM. }
+\title{Extract the diagonal of the influence/hat matrix for a GAM }
 \description{ Extracts the leading diagonal of the influence matrix (hat
 matrix) of a fitted \code{gam} object.
 }

@@ -1,7 +1,7 @@
 \name{gam.setup}
 \alias{gam.setup}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Generalized Additive Model set up.}
+\title{Generalized additive model set up}
 \description{ This is an internal function of package \code{mgcv}. It is called 
 by \code{gam} to obtain the design matrix and penalty matrices for a GAM
 set up using penalized regression splines. This is done by calling a mixture of
