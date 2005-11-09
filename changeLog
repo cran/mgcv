@@ -1,3 +1,11 @@
+1.3-9
+
+* constants multiplying TPRS basis functions were `unconventional' for d 
+  odd in function eta() in tprs.c. The constants are immaterial if you are 
+  using gam, gamm etc, but matter if you are trying to get out the 
+  explicit representation of a TPRS term yourself (e.g. to differentiate 
+  a smooth exactly).
+
 1.3-8
 
 * get.var() now checks that result is numeric or factor (avoids 
