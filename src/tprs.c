@@ -33,12 +33,13 @@ double eta(int m,int d,double r)
    wiggliness penalty. */
 
 { static int first=1;
-  static double pi,Ghalf;
+  static double pi,rpi,Ghalf;
   double f;
   int i,k;
   if (first)
   { first=0;
     pi=asin(1.0)*2.0; 
+    rpi=sqrt(pi);
     Ghalf=sqrt(pi);   /* Gamma function of 0.5 */
   }
   if (2*m<=d) ErrorMessage(_("You must have 2m>d for a thin plate spline."),1);
@@ -54,9 +55,9 @@ double eta(int m,int d,double r)
   } else /* d odd */
   { f=Ghalf;
     k=m-(d-1)/2; /* 1/2 - d = d/2 -m */
-    for (i=0;i<k;i++) f/= -0.5-k; /* f = gamma function of d/2-m */
+    for (i=0;i<k;i++) f/= -0.5-i; /* f = gamma function of d/2-m */
     for (i=0;i<m;i++) f/= 4; /* divide by 2^{2m} */
-    for (i=0;i<d/2;i++) f/=pi;
+    for (i=0;i<d-1;i++) f/=pi;
     f /= Ghalf;                /* dividing by (pi^{d/2}) */
     for (i=2;i<m;i++) f/=i;  /* divide by (m-1)! */
     for (i=0;i<2*m-d;i++) f*=r; 
@@ -484,6 +485,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
             it doesn't write all sorts of things to un-allocated memory. Many thanks to Luke 
             Tierney for finding this. 
 3/10/2002 - tprs_setup now tells tps_g() to clear up before returning
+1/11/2005 - eta() constants `wrong' for odd d: fixed.
 */
 
 
