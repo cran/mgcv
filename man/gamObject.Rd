@@ -124,6 +124,8 @@ convergence.}
 
 \item{model}{model frame containing all variables needed in original model fit.}
 
+\item{na.action}{The \code{\link{na.action}} used in fitting.}
+
 \item{nsdf}{number of parametric, non-smooth, model terms including the
           intercept.}
 

@@ -1,3 +1,24 @@
+1.3-10
+
+* a `constant' attribute has been added to the object returned by
+  predict.gam(...,type="terms"), although what is returned is still not an 
+  exact match to what `predict.lm' would do. 
+
+* na.action handling made closer to glm/lm functions. In particular,
+  default for predict.gam is now to pad predictions with NA's as opposed
+  to dropping rows of newdata containing NA's. 
+
+* interpret.gam had a bug caused by a glitch in the terms.object 
+  documentation (R <=2.2.0). Formulae such as y ~ a + b:a + s(x) could 
+  cause failure. This was because attr(tf,"specials") is documented as 
+  returning indices of specials in `terms'. It doesn't, it indexes 
+  specials in the variables dimension of the attr(tf,"factors") table: 
+  latter now used to translate.
+
+* `by' variable use could fail unreasonably if a `by' variable was not of 
+  mode `numeric': now coerced to numeric at appropriate times in smooth
+  constructors. 
+
 1.3-9
 
 * constants multiplying TPRS basis functions were `unconventional' for d 

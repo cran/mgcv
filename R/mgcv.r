@@ -504,7 +504,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    X<-by*X
+    X<-as.numeric(by)*X
   }
   object$X<-X;object$S<-S;object$C<-C
   object$df<-ncol(X)-1
@@ -569,7 +569,7 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    object$X<-by*object$X
+    object$X<-as.numeric(by)*object$X
   }
   object$S<-list()
   if (!object$fixed) 
@@ -639,7 +639,7 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    object$X<-by*object$X
+    object$X <- as.numeric(by)*object$X
   }
   object$S<-list()     # only return penalty if term not fixed
   if (!object$fixed) 
@@ -737,7 +737,7 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    object$X<-by*object$X
+    object$X<-as.numeric(by)*object$X
   }
   object$C<-C
   object$rank<-ncol(X)-1  # rank of smoother matrix
@@ -758,7 +758,7 @@ Predict.matrix.tensor.smooth<-function(object,data)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    T <- by*T
+    T <- as.numeric(by)*T
   }
   T
 }
@@ -791,7 +791,7 @@ Predict.matrix.cyclic.smooth<-function(object,data)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    X<-by*X
+    X<-as.numeric(by)*X
   }
   X
 }
@@ -812,7 +812,7 @@ Predict.matrix.cr.smooth<-function(object,data)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
     if (is.null(by)) stop("Can't find by variable")
-    X<-by*X
+    X<-as.numeric(by)*X
   }
   X
 }
@@ -927,21 +927,36 @@ interpret.gam<-function (gf)
 # 3. a full version of the formulae with all terms expanded in full
 { p.env<-environment(gf) # environment of formula
   tf<-terms.formula(gf,specials=c("s","te")) # specials attribute indicates which terms are smooth
-  terms<-attr(tf,"term.labels") # labels of the model terms
+  
+ 
+
+  terms<-attr(tf,"term.labels") # labels of the model terms 
   nt<-length(terms) # how many terms?
+  
 
   if (attr(tf,"response")>0)  # start the replacement formulae
   { response<-as.character(attr(tf,"variables")[2])
     pf<-rf<-paste(response,"~",sep="")
   }
   else pf<-rf<-"~"
-  sp<-attr(tf,"specials")$s     # array of indeces of smooth terms 
-  tp<-attr(tf,"specials")$te    # indeces of tensor product terms
+  sp<-attr(tf,"specials")$s     # array of indices of smooth terms 
+  tp<-attr(tf,"specials")$te    # indices of tensor product terms
   off<-attr(tf,"offset") # location of offset in formula
-  if (!is.null(off)) 
-  { sp[sp>off]<-sp[sp>off]-1 # have to remove the offset from this index list 
-    tp[tp>off]<-tp[tp>off]-1
+  ## have to translate sp,tp so that they relate to terms,
+  ## rather than elements of the formula (26/11/05)
+  vtab <- attr(tf,"factors") # cross tabulation of vars to terms
+  if (length(sp)>0) for (i in 1:length(sp)) {
+    ind <- (1:nt)[as.logical(vtab[sp[i],])]
+    sp[i] <- ind # the term that smooth relates to
   }
+  if (length(tp)>0) for (i in 1:length(tp)) {
+    ind <- (1:nt)[as.logical(vtab[tp[i],])]
+    tp[i] <- ind # the term that smooth relates to
+  } ## re-referencing is complete
+#  if (!is.null(off)) 
+#  { sp[sp>off]<-sp[sp>off]-1 # have to remove the offset from this index list 
+#    tp[tp>off]<-tp[tp>off]-1
+#  } # commented out 26/11/05 after reworking of term handling above
   ns<-length(sp)+length(tp) # number of smooths
   k<-kt<-ks<-kp<-1 # counters for terms in the 2 formulae
   len.sp <- length(sp)
@@ -950,12 +965,12 @@ interpret.gam<-function (gf)
   smooth.spec<-list()
   if (nt)
   for (i in 1:nt) # work through all terms
-  { if (k<=ns&&((ks<=len.sp&&sp[ks]==i+1)||(kt<=len.tp&&tp[kt]==i+1))) # it's a smooth
+  { if (k<=ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i))) # it's a smooth
     { st<-eval(parse(text=terms[i]),envir=p.env)
       if (k>1||kp>1) rf<-paste(rf,"+",st$full.call,sep="") # add to full formula
       else rf<-paste(rf,st$full.call,sep="")
       smooth.spec[[k]]<-st
-      if (ks<=len.sp&&sp[ks]==i+1) ks<-ks+1  # counts s() terms
+      if (ks<=len.sp&&sp[ks]==i) ks<-ks+1  # counts s() terms
       else kt<-kt+1              # counts te() terms
       k<-k+1     # counts smooth terms 
     } else          # parametric
@@ -1471,6 +1486,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   environment(object$full.formula)<-environment(G$formula) 
   object$formula<-G$formula
   object$model<-G$mf # store the model frame
+  object$na.action <- attr(G$mf,"na.action") # how to deal with NA's
   object$control <- control
   object$terms <- G$terms
   object$pterms <- G$pterms
@@ -1961,7 +1977,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
 
 
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-                       block.size=1000,newdata.guaranteed=FALSE,...) 
+                       block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...) 
 {
 # This function is used for predicting from a GAM. object is a gam object, newdata a dataframe to
 # be used in prediction......
@@ -1988,13 +2004,31 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
 # when type=="terms". 
 # if `object' has an attribute `para.only' then only parametric terms of order
 # 1 are returned for type=="terms" : i.e. only what termplot can handle.
+#
+# if no new data is supplied then na.action does nothing, otherwise 
+# if na.action == "na.pass" then NA predictors result in NA predictions (as lm
+#                   or glm)
+#              == "na.omit" or "na.exclude" then NA predictors result in
+#                       dropping
 
   if (type!="link"&&type!="terms"&&type!="response"&&type!="lpmatrix")  
   { warning("Unknown type, reset to terms.")
     type<-"terms"
   }
   if (!inherits(object,"gam")) stop("predict.gam can only be used to predict from gam objects")
-
+  ## to mimic behaviour of predict.lm, some resetting is required ...
+  if (missing(newdata)) na.act <- object$na.action else
+  { if (is.null(na.action)) na.act <- NULL 
+    else {
+      na.txt <- "na.pass"
+      if (is.character(na.action))
+      na.txt <- substitute(na.action) else
+      if (is.function(na.action)) na.txt <- deparse(substitute(na.action))
+      if (na.txt=="na.pass") na.act <- "na.exclude" else
+      if (na.txt=="na.exclude") na.act <- "na.omit" else
+      na.act <- na.action
+    }
+  } ## ... done
   # get data from which to predict.....  
   if (newdata.guaranteed==FALSE)
   { if (missing(newdata)) # then "fake" an object suitable for prediction 
@@ -2018,10 +2052,11 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         warning("not all required variables have been supplied in  newdata!\n")}
         ## note that `xlev' argument not used here, otherwise `as.factor' in 
         ## formula can cause a problem ... levels reset later.
-        newdata <- eval(model.frame(ff,data=newdata),parent.frame()) 
+        newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame()) 
+        na.act <- attr(newdata,"na.action")
       }
     }
-  }
+  } else {na.act <- NULL}
  
   if (new.data.ok)
   { ## check factor levels are right ...
@@ -2151,24 +2186,33 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         fit[start:stop]<-linkinv(fit[start:stop])
       }
     }
-  }
+  } ## end of prediction block loop
   rn <- rownames(newdata)
-  if (type=="lpmatrix") { colnames(H) <- names(object$coefficients);rownames(H)<-rn} else { 
+  if (type=="lpmatrix") { 
+    colnames(H) <- names(object$coefficients);rownames(H)<-rn
+    H <- napredict(na.act,H)
+  } else { 
     if (se.fit) { 
       if (is.null(nrow(fit))) {
         names(fit) <- rn
         names(se) <- rn
+        fit <- napredict(na.act,fit)
+        se <- napredict(na.act,se) 
       } else { 
         rownames(fit)<-rn
         rownames(se)<-rn
+        fit <- napredict(na.act,fit)
+        se <- napredict(na.act,se)
       }
       H<-list(fit=fit,se.fit=se) 
     } else { 
       H<-fit
       if (is.null(nrow(H))) names(H) <- rn else
       rownames(H)<-rn
+      H <- napredict(na.act,H)
     }
   }
+  if (type=="terms") attr(H,"constant") <- object$coefficients[1]
   H # ... and return
 }
 
@@ -2560,19 +2604,21 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 
 
 residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
-# calculates residuals for gam object - defualt for glm (from which this is adapted) seems to be buggy
+# calculates residuals for gam object - default for glm (from which this is adapted) seems to be buggy
 { type <- match.arg(type)
   y <- object$y
   mu <- object$fitted.values
   family <- object$family
   wts <- object$prior.weights
-  switch(type,working = object$residuals,
-       scaled.pearson = (y-mu)*sqrt(wts)/sqrt(object$sig2*object$family$variance(mu)),
+  res<- switch(type,working = object$residuals,
+         scaled.pearson = (y-mu)*sqrt(wts)/sqrt(object$sig2*object$family$variance(mu)),
               pearson = (y-mu)*sqrt(wts)/sqrt(object$family$variance(mu)),
               deviance = { d.res<-sqrt(pmax(object$family$dev.resids(y,mu,wts),0))
                            ifelse(y>mu , d.res, -d.res)             
                          },
               response = y - mu)
+  res <- naresid(object$na.action,res)
+  res
 }
 
 ## old summary and anova code starts here .....

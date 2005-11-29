@@ -7,7 +7,7 @@ and produces predictions given a new set of values for the model covariates
 or the original values used for the model fit.}
 \usage{
 predict.gam(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-            block.size=1000,newdata.guaranteed=FALSE,...)
+            block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -42,9 +42,18 @@ of predictions as this.}
 
 \item{newdata.guaranteed}{Set to \code{TRUE} to turn off all checking of
 \code{newdata} except for sanity of factor levels: this can speed things up
-for large prediction tasks, but \code{newdata} must be complete. }
+for large prediction tasks, but \code{newdata} must be complete, with no
+\code{NA} values for predictors required in the model. }
 
- \item{...}{ other arguments.}
+\item{na.action}{what to do about \code{NA} values in \code{newdata}. With the
+default \code{na.pass}, any row of \code{newdata} containing \code{NA} values
+for required predictors, gives rise to \code{NA} predictions (even if the term concerned has no
+\code{NA} predictors). \code{na.exclude} or \code{na.omit} result in the
+dropping of \code{newdata} rows, if they contain any \code{NA} values for
+required predictors. If \code{newdata} is missing then \code{NA} handling is 
+determined from \code{object$na.action}.}
+
+\item{...}{ other arguments.}
 
 }
 
@@ -101,6 +110,8 @@ Chambers and Hastie (1993) (but is not a clone).
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
 \code{predict.gam()} in Splus.
 
+\code{type=="terms"} does not exactly match what \code{predict.lm} does for
+parametric model components.
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{gamm}}, \code{\link{plot.gam}}}
