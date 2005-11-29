@@ -170,7 +170,7 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data) # find by variable  
     if (is.null(by)) stop("Can't find by variable")
-    object$X<-by*object$X # form diag(by)\%*\%X
+    object$X<-as.numeric(by)*object$X # form diag(by)\%*\%X
   }
   class(object)<-"pspline.smooth"  # Give object a class
   object
