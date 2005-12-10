@@ -45,6 +45,8 @@ magic.post.proc         Auxilliary information from magic fit
 mgcv                    Multiple Smoothing Parameter Estimation by GCV
                         or UBRE
 mgcv.control            Setting mgcv defaults
+mgcv-package            GAMs with GCV smoothness estimation and GAMMs
+                        by REML/PQL
 mono.con                Monotonicity constraints for a cubic
                         regression spline
 mroot                   Smallest square root of matrix

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: R 2.1.0\n"
-"Report-Msgid-Bugs-To: simon.wood@r-project.org\n"
-"POT-Creation-Date: 2005-02-05 19:27\n"
+"Project-Id-Version: R 2.3.0\n"
+"Report-Msgid-Bugs-To: bugs@r-project.org\n"
+"POT-Creation-Date: 2005-12-09 07:31\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10,6 +10,189 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+
+msgid "illegal `family' argument"
+msgstr ""
+
+msgid "Invalid linear predictor values in empty model"
+msgstr ""
+
+msgid "Invalid fitted means in empty model"
+msgstr ""
+
+msgid "Length of start should equal"
+msgstr ""
+
+msgid "and correspond to initial coefs for"
+msgstr ""
+
+msgid "Can't find valid starting values: please specify some"
+msgstr ""
+
+msgid "NAs in V(mu)"
+msgstr ""
+
+msgid "0s in V(mu)"
+msgstr ""
+
+msgid "NAs in d(mu)/d(eta)"
+msgstr ""
+
+msgid "No observations informative at iteration"
+msgstr ""
+
+msgid "Not enough informative observations."
+msgstr ""
+
+msgid "Non-finite coefficients at iteration"
+msgstr ""
+
+msgid "no valid set of coefficients has been found:please supply starting values"
+msgstr ""
+
+msgid "Step size truncated due to divergence"
+msgstr ""
+
+msgid "inner loop 1; can't correct step size"
+msgstr ""
+
+msgid "Step size truncated: out of bounds"
+msgstr ""
+
+msgid "inner loop 2; can't correct step size"
+msgstr ""
+
+msgid "inner loop 3; can't correct step size"
+msgstr ""
+
+msgid "Algorithm did not converge"
+msgstr ""
+
+msgid "Algorithm stopped at boundary value"
+msgstr ""
+
+msgid "fitted probabilities numerically 0 or 1 occurred"
+msgstr ""
+
+msgid "fitted rates numerically 0 occurred"
+msgstr ""
+
+msgid "fam not a family object"
+msgstr ""
+
+msgid "unrecognized (vector?) link"
+msgstr ""
+
+msgid "link not recognised"
+msgstr ""
+
+msgid "variance function not recognized for quasi"
+msgstr ""
+
+msgid "family not recognised"
+msgstr ""
+
+msgid "H has wrong dimension"
+msgstr ""
+
+msgid "An object of length"
+msgstr ""
+
+msgid "does not match the required parameter size"
+msgstr ""
+
+msgid "NA's in pdTens factor"
+msgstr ""
+
+msgid "Cannot extract the matrix from an uninitialized object"
+msgstr ""
+
+msgid "NA's in pdTens matrix"
+msgstr ""
+
+msgid "Cannot extract the matrix from an uninitialized pdMat object"
+msgstr ""
+
+msgid "Cannot extract the matrix with uninitialized dimensions"
+msgstr ""
+
+msgid "Must give names when initializing pdIdnot from parameter."
+msgstr ""
+
+msgid "without a formula"
+msgstr ""
+
+msgid "Cannot extract the dimensions"
+msgstr ""
+
+msgid "Cannot extract the inverse from an uninitialized object"
+msgstr ""
+
+msgid "No data supplied to gam.setup"
+msgstr ""
+
+msgid "NA's passed to eig: please email Simon.Wood@R-project.org with details"
+msgstr ""
+
+msgid "NA eigenvalues returned by eigen: please email Simon.Wood@R-project.org with details"
+msgstr ""
+
+msgid "NA's in eigenvectors from eigen: please email Simon.Wood@R-project.org with details"
+msgstr ""
+
+msgid "NA singular values returned by svd: please email Simon.Wood@R-project.org with details"
+msgstr ""
+
+msgid "NA's in singular vectors from svd: please email Simon.Wood@R-project.org with details"
+msgstr ""
+
+msgid "NA problem resolved using svd, but please email Simon.Wood@R-project.org anyway"
+msgstr ""
+
+msgid "Problem with linear algebra routines."
+msgstr ""
+
+msgid "First argument is no sort of formula!"
+msgstr ""
+
+msgid "You've got no model...."
+msgstr ""
+
+msgid "gamm can not fix only some margins of tensor product."
+msgstr ""
+
+msgid "Tensor product penalty rank appears to be too low: please email Simon.Wood@R-project.org with details."
+msgstr ""
+
+msgid "object does not appear to be of class lme"
+msgstr ""
+
+msgid "inner groupings not nested in outer!!"
+msgstr ""
+
+msgid "gamm() requires package nlme to be installed"
+msgstr ""
+
+msgid "gamm() requires package MASS to be installed"
+msgstr ""
+
+msgid "random argument must be a *named* list."
+msgstr ""
+
+msgid "all elements of random list must be named"
+msgstr ""
+
+msgid "gamm() can only handle random effects defined as named lists"
+msgstr ""
+
+msgid "Not enough (non-NA) data to do anything meaningful"
+msgstr ""
+
+msgid "family not recognized"
+msgstr ""
+
+msgid "gamm models must have at least 1 smooth with unknown smoothing paraemter or at least one other random effect"
+msgstr ""
 
 msgid "At least three knots required in call to mono.con."
 msgstr ""
@@ -86,6 +269,12 @@ msgstr ""
 msgid "Repeated variables as arguments of a smooth are not permitted"
 msgstr ""
 
+msgid "by=. not allowed"
+msgstr ""
+
+msgid "s(.) not yet supported."
+msgstr ""
+
 msgid "argument k of s() should be integer and has been rounded"
 msgstr ""
 
@@ -107,112 +296,25 @@ msgstr ""
 msgid "basis dimension, k, increased to minimum possible"
 msgstr ""
 
+msgid "number of supplied knots != k for a cr smooth"
+msgstr ""
+
 msgid "more knots than unique data values is not allowed"
 msgstr ""
 
 msgid "too few knots"
 msgstr ""
 
+msgid "number of supplied knots != k for a cc smooth"
+msgstr ""
+
 msgid "can't predict outside range of knots with periodic smoother"
 msgstr ""
 
+msgid "no data to predict at"
+msgstr ""
+
 msgid "smooth objects should not have a qrc attribute."
-msgstr ""
-
-msgid "An object of length"
-msgstr ""
-
-msgid "does not match the required parameter size"
-msgstr ""
-
-msgid "NA's in pdTens factor"
-msgstr ""
-
-msgid "Cannot extract the matrix from an uninitialized object"
-msgstr ""
-
-msgid "NA's in pdTens matrix"
-msgstr ""
-
-msgid "Cannot extract the matrix from an uninitialized pdMat object"
-msgstr ""
-
-msgid "Cannot extract the matrix with uninitialized dimensions"
-msgstr ""
-
-msgid "Must give names when initializing pdIdnot from parameter."
-msgstr ""
-
-msgid "without a formula"
-msgstr ""
-
-msgid "Cannot extract the dimensions"
-msgstr ""
-
-msgid "Cannot extract the inverse from an uninitialized object"
-msgstr ""
-
-msgid "No data supplied to gam.setup"
-msgstr ""
-
-msgid  "NA's passed to eig: please email Simon.Wood@R-project.org with details"
-msgstr ""
-
-msgid "NA eigenvalues returned by eigen: please email Simon.Wood@R-project.org with details"
-msgstr ""
-
-msgid "NA's in eigenvectors from eigen: please email Simon.Wood@R-project.org with details"
-msgstr ""
-
-msgid "NA singular values returned by svd: please email Simon.Wood@R-project.org with details"
-msgstr ""
-
-msgid "NA's in singular vectors from svd: please email Simon.Wood@R-project.org with details"
-msgstr ""
-
-msgid "NA problem resolved using svd, but please email Simon.Wood@R-project.org anyway"
-msgstr ""
-
-msgid "Problem with linear algebra routines."
-msgstr ""
-
-msgid "First argument is no sort of formula!"
-msgstr ""
-
-msgid "You've got no model...."
-msgstr ""
-
-msgid "gamm can not fix only some margins of tensor product."
-msgstr ""
-
-msgid "object does not appear to be of class lme"
-msgstr ""
-
-msgid "inner groupings not nested in outer!!"
-msgstr ""
-
-msgid "gamm() requires package nlme to be installed"
-msgstr ""
-
-msgid "gamm() requires package MASS to be installed"
-msgstr ""
-
-msgid "random argument must be a *named* list."
-msgstr ""
-
-msgid "all elements of random list must be named"
-msgstr ""
-
-msgid "gamm() can only handle random effects defined as named lists"
-msgstr ""
-
-msgid "Not enough (non-NA) data to do anything meaningful"
-msgstr ""
-
-msgid "family not recognized"
-msgstr ""
-
-msgid "gamm models must have at least 1 smooth with unknown smoothing paraemter or at least one other random effect"
 msgstr ""
 
 msgid "model has repeated 1-d smooths of same variable."
@@ -224,13 +326,10 @@ msgstr ""
 msgid "supplied min.sp has wrong length"
 msgstr ""
 
-msgid "Fixed smoothing parameter vector is too short - ignored."
-msgstr ""
-
 msgid "Supplied smoothing parameter vector is too short - ignored."
 msgstr ""
 
-msgid "NA's in fixed smoothing parameter vector - ignoring."
+msgid "NA's in supplied smoothing parameter vector - ignoring."
 msgstr ""
 
 msgid "length of min.sp is wrong."
@@ -251,10 +350,16 @@ msgstr ""
 msgid "Unknown GAM outer optimizing method."
 msgstr ""
 
+msgid "pearson should be TRUE or FALSE - set to FALSE."
+msgstr ""
+
 msgid "Negative binomial family not (yet) usable with type 2 iteration methods."
 msgstr ""
 
-msgid "Must use gam.control(absorb.cons=TRUE), for type 2 iteration methods."
+msgid "Must use gam.control(absorb.cons=TRUE), for type 2 iteration\n    methods."
+msgstr ""
+
+msgid "Model has more coefficients than data"
 msgstr ""
 
 msgid "IRLS regularizing parameter must be a non-negative number."
@@ -269,71 +374,22 @@ msgstr ""
 msgid "nb.theta.mult must be >= 2"
 msgstr ""
 
-msgid "silly value supplied for rank.tol: reset to square root of 
-machine precision."
+msgid "silly value supplied for rank.tol: reset to square root of machine precision."
 msgstr ""
 
 msgid "Model seems to contain no terms"
 msgstr ""
 
-msgid "illegal `family' argument"
-msgstr ""
-
 msgid "y must be univariate unless binomial"
-msgstr ""
-
-msgid "Length of start should equal"
 msgstr ""
 
 msgid "and correspond to initial coefs."
 msgstr ""
 
-msgid "Can't find valid starting values: please specify some"
-msgstr ""
-
-msgid "NAs in V(mu)"
-msgstr ""
-
-msgid "0s in V(mu)"
-msgstr ""
-
-msgid "NAs in d(mu)/d(eta)"
-msgstr ""
-
-msgid "No observations informative at iteration"
-msgstr ""
-
 msgid "iterative weights or data non-finite in gam.fit - regularization may help. See ?gam.control."
 msgstr ""
 
-msgid "Non-finite coefficients at iteration"
-msgstr ""
-
-msgid "no valid set of coefficients has been found:please supply starting values"
-msgstr ""
-
-msgid "Step size truncated due to divergence"
-msgstr ""
-
-msgid "inner loop 1; can't correct step size"
-msgstr ""
-
 msgid "Step size truncated: out of bounds."
-msgstr ""
-
-msgid "inner loop 2; can't correct step size"
-msgstr ""
-
-msgid "Algorithm did not converge"
-msgstr ""
-
-msgid "Algorithm stopped at boundary value"
-msgstr ""
-
-msgid "fitted probabilities numerically 0 or 1 occurred"
-msgstr ""
-
-msgid "fitted rates numerically 0 occurred"
 msgstr ""
 
 msgid "Unknown type, reset to terms."
@@ -345,7 +401,7 @@ msgstr ""
 msgid "newdata is a model.frame: it should contain all required variables"
 msgstr ""
 
-msgid "not all required variables have been supplied in newdata!"
+msgid "not all required variables have been supplied in  newdata!"
 msgstr ""
 
 msgid "non-existent terms requested - ignoring"
@@ -358,6 +414,9 @@ msgid "No terms to plot - nothing for plot.gam() to do."
 msgstr ""
 
 msgid "No variance estimates available"
+msgstr ""
+
+msgid "no automatic plotting for smooths of more than two variables"
 msgstr ""
 
 msgid "no automatic plotting for smooths of more than one variable"
@@ -439,53 +498,4 @@ msgid "w different length from y!"
 msgstr ""
 
 msgid "X lost dimensions in magic!!"
-msgstr ""
-
-
-msgid "Invalid linear predictor values in empty model"
-msgstr ""
-
-msgid "Invalid fitted means in empty model"
-msgstr ""
-
-msgid "Length of start should equal "
-msgstr ""
-
-msgid  " and correspond to initial coefs for "
-msgstr ""
-
-msgid  "inner loop 3; can't correct step size"
-msgstr ""
-
-msgid "unrecognized (vector?) link"
-msgstr ""
-
-msgid "link not recognised"
-msgstr ""
-
-msgid "fam not a family object"
-msgstr ""
-
-msgid "variance function not recognized for quasi"
-msgstr ""
-
-msgid "H has wrong dimension"
-msgstr ""
-
-msgid "number of supplied knots != k for a cr smooth"
-msgstr ""
-
-msgid "number of supplied knots != k for a cc smooth"
-msgstr ""
-
-msgid "s(.) not yet supported"
-msgstr ""
-
-msgid "by=. not allowed"
-msgstr ""
-
-msgid "no data to predict at"
-msgstr ""
-
-msgid "Model has more coefficients than data"
 msgstr ""
