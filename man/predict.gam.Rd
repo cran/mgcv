@@ -4,7 +4,13 @@
 \title{Prediction from fitted GAM model}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} 
 and produces predictions given a new set of values for the model covariates 
-or the original values used for the model fit.}
+or the original values used for the model fit. Predictions can be accompanied
+by standard errors, based on the posterior distribution of the model
+coefficients. The routine can optionally return the matrix by which the model
+coefficients must be pre-multiplied in order to yield the values of the linear predictor at
+the supplied covariate values: this is useful for obtaining credible regions
+for quantities derived from the model.}
+
 \usage{
 predict.gam(object,newdata,type="link",se.fit=FALSE,terms=NULL,
             block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...)
@@ -27,9 +33,11 @@ parametric model components, followed by each smooth component, but excludes
 any offset and any intercept. When \code{type="response"} predictions 
 on the scale of the response are returned (possibly with approximate
 standard errors). When \code{type="lpmatrix"} then a matrix is returned
-which yields the values of the linear predictor (minus any offset) when applied to the
+which yields the values of the linear predictor (minus any offset) when
+postmultiplied by the
 parameter vector (in this case \code{se.fit} is ignored). The latter
-option is most useful for getting variance estimates for integrated quantities. }
+option is most useful for getting variance estimates for quantities derived from
+the model: for example integrated quantities, or derivatives of smooths. }
 
 \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
 
@@ -83,7 +91,10 @@ terms of order 1 are returned (i.e. those that \code{termplot} can handle).
 
 Note that, in common with other prediction functions, any offset supplied to
 \code{\link{gam}} as an argument is always ignored when predicting, unlike
-offsets specified in the gam model formula. 
+offsets specified in the gam model formula.
+
+See the examples for how to use the \code{lpmatrix} for obtaining credible
+regions for quantities derived from the model. 
 }
 
 \references{
@@ -96,9 +107,10 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
 with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
+
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} 
 
@@ -134,14 +146,20 @@ b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3))
 rm(y,x0,x1,x2,x3)
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
+
 ## now get variance of sum of predictions using lpmatrix
+
 Xp <- predict(b,newd,type="lpmatrix") 
+
 ## Xp %*% coef(b) yields vector of predictions
+
 a <- rep(1,31)
 Xs <- t(a) %*% Xp ## Xs %*% coef(b) gives sum of predictions
 var.sum <- Xs %*% b$Vp %*% t(Xs)
+
 ## Now get the variance of non-linear function of predictions
 ## by simulation from posterior distribution of the params
+
 library(MASS)
 br<-mvrnorm(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
 res <- rep(0,1000)
@@ -150,7 +168,9 @@ for (i in 1:1000)
   res[i] <- sum(log(abs(pr))) ## example non-linear function
 }
 mean(res);var(res)
+
 ## loop is replace-able by following .... 
+
 res <- colSums(log(abs(Xp \%*\% t(br))))
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
