@@ -866,7 +866,7 @@ new.name <- function(proposed,old.names)
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
       subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
-      niterPQL=20,verbosePQL=TRUE,...)
+      niterPQL=20,verbosePQL=TRUE,method="ML",...)
 ## NOTE: niterEM modified after changed notLog parameterization - old version
 ##       needed niterEM=3. 10/8/05.
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
@@ -903,7 +903,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
                            "+",paste(allvars,collapse="+")))
     else mf$formula<-gp$fake.formula
     mf$correlation<-mf$random<-mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$weights<-
-    mf$min.sp<-mf$H<-mf$gamma<-mf$fit<-mf$niterPQL<-mf$verbosePQL<-mf$G<-mf$...<-NULL
+    mf$min.sp<-mf$H<-mf$gamma<-mf$fit<-mf$niterPQL<-mf$verbosePQL<-mf$G<-mf$method<-mf$...<-NULL
     mf$drop.unused.levels<-TRUE
     mf[[1]]<-as.name("model.frame")
     pmf <- mf
@@ -924,8 +924,10 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     G<-gamm.setup(gp,pterms=pTerms,data=mf,knots=knots,parametric.only=FALSE,absorb.cons=FALSE)
 
-    if (is.null(random)&&G$m==0) 
-    stop("gamm models must have at least 1 smooth with unknown smoothing paraemter or at least one other random effect")
+    n.sr <- length(G$random) # number of random smooths (i.e. s(...,fx=FALSE,...) terms)
+
+    if (is.null(random)&&n.sr==0) 
+    stop("gamm models must have at least 1 smooth with unknown smoothing parameter or at least one other random effect")
 
     g<-as.factor(G$y*0+1)
 
@@ -942,7 +944,6 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     }
     fixed.formula <- as.formula(fixed.formula)
     
-    n.sr <- length(G$random) # number of random smooths (i.e. s(...,fx=FALSE,...) terms)
     group.name<-rep("",n.sr)
     r.name <- names(G$random) 
     if (n.sr) for (i in 1:n.sr) # adding the constructed variables to the model frame avoiding name duplication
@@ -955,7 +956,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (!is.null(random)) # add explicit random effects
     { r.m<-length(random)
       r.names<-c(names(rand),names(random))
-      for (i in 1:r.m) rand[[G$m+i]]<-random[[i]]    
+      for (i in 1:r.m) rand[[n.sr+i]]<-random[[i]] # this line had G$m not n.sr <1.3-12    
       names(rand)<-r.names
     }
     ## need to modify the correlation structure formula, in order that any
@@ -974,12 +975,12 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     ### Actually do fitting ....
     if (family$family=="gaussian"&&family$link=="identity"&&
-    length(offset.name)==0) reml.used <- TRUE else reml.used <- FALSE
+    length(offset.name)==0) lme.used <- TRUE else lme.used <- FALSE
     
-    if (reml.used)
+    if (lme.used)
     { ## following construction is a work-around for problem in nlme 3-1.52 
       eval(parse(text=paste("ret$lme<-lme(",deparse(fixed.formula),
-          ",random=rand,data=strip.offset(mf),correlation=correlation,control=control,weights=weights,method=\"ML\")"
+          ",random=rand,data=strip.offset(mf),correlation=correlation,control=control,weights=weights,method=method)"
             ,sep=""    ))) 
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
@@ -1032,9 +1033,11 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     k <- 1
     if (G$m>0) for (i in 1:G$m) # var.param in reverse term order, but forward order within terms!!
     { n.sp <- length(object$smooth[[i]]$S) # number of s.p.s for this term 
-      if (inherits(object$smooth[[i]],"tensor.smooth"))#&&n.sp>1) 
-      object$sp[k:(k+n.sp-1)] <- notExp2(var.param[(n.v-n.sp+1):n.v])
-      else object$sp[k:(k+n.sp-1)] <- 1/notExp2(var.param[(n.v-n.sp+1):n.v])   ## ^2 <- reinstate to revert
+      if (n.sp>0) {
+        if (inherits(object$smooth[[i]],"tensor.smooth"))
+        object$sp[k:(k+n.sp-1)] <- notExp2(var.param[(n.v-n.sp+1):n.v])
+        else object$sp[k:(k+n.sp-1)] <- 1/notExp2(var.param[(n.v-n.sp+1):n.v])   ## ^2 <- reinstate to revert
+      }
       k <- k + n.sp
       n.v <- n.v - n.sp
     }
@@ -1105,10 +1108,10 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     
     object$sig2 <- ret$lme$sigma^2
-    if (reml.used) { object$fit.method <- "lme";object$method <- "REML"} 
+    if (lme.used) { object$fit.method <- "lme";object$method <- method} 
     else { object$fit.method <- "glmmPQL";object$method <- "PQL"}
 
-    if (!reml.used) Vb<-Vb*length(G$y)/(length(G$y)-G$nsdf)
+    if (!lme.used||method=="ML") Vb<-Vb*length(G$y)/(length(G$y)-G$nsdf)
     object$Vp <- Vb
     object$Ve <- Vb%*%Z%*%Vb
 

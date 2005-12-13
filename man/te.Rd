@@ -81,7 +81,8 @@ smooths of a tensor product smooth so that the parameters are function values
 at a set of points spread evenly through the range of values of the covariate
 of the smooth. This means that the penalty of the tensor product associated
 with any particular covariate direction can be interpreted as the penalty of
-the appropriate marginal smooth applied in that direction and averaged over the smooth.
+the appropriate marginal smooth applied in that direction and averaged over
+the smooth. Currently this is only done for marginals of a single variable.
 
 The function does not evaluate the variable arguments.
 
@@ -93,26 +94,35 @@ The returned object contains the following items:
 
 \item{margin}{A list of \code{smooth.spec} objects of the type returned by \code{\link{s}}, 
 defining the basis from which the tensor product smooth is constructed.}
-  \item{term}{An array of text strings giving the names of the covariates that 
+
+\item{term}{An array of text strings giving the names of the covariates that 
 the term is a function of.}
+
 \item{by}{is the name of any \code{by} variable as text (\code{"NA"} for none).}
-  \item{fx}{ logical array with element for each penalty of the term
+
+\item{fx}{ logical array with element for each penalty of the term
 (tensor product smooths have multiple penalties). \code{TRUE} if the penalty is to 
 be ignored, \code{FALSE}, otherwise. }
   
-  \item{p.order}{The order of the t.p.r.s. penalty, or 0 for
-    auto-selection of the penalty order.}
+
   
-  \item{full.call}{Text for pasting into a string to be converted to a
+\item{full.call}{Text for pasting into a string to be converted to a
     gam formula, which has the values of function options given explicitly -
   this is useful for constructing a fully expanded gam formula which can
 be used without needing access to any variables that may have been used
 to define k, fx, bs or m in the original call. i.e. this is text which
 when parsed and evaluated generates a call to \code{s()} with all the
 options spelled out explicitly.}
+
 \item{label}{A suitable text label for this smooth term.}
+
 \item{dim}{The dimension of the smoother - i.e. the number of
     covariates that it is a function of.}
+
+\item{mp}{\code{TRUE} is multiple penalties are to be used (default).}
+
+\item{np}{\code{TRUE} to re-parameterize 1-D marginal smooths in terms of function
+values (defualt).}
 }
 
 
