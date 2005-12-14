@@ -1,3 +1,24 @@
+1.3-12
+
+* vis.gam could fail if the original model formula contained functions of 
+  covariates, since vis.gam calls predict.gam with a newdata argument 
+  based on the *model frame* of the model object. predict.gam now 
+  recognises that this has happened and doesn't fail if newdata is a model 
+  frame which contains, e.g. log(x) rather than x itself. offset handling 
+  simplified as a result.
+
+* prediction from te smooths could fail becuase of a bug in handling the 
+  list of re-parameterization matrices for 1-D terms in 
+  Predict.matrix.tensor.smooth. Fixed. (tensor product docs also updated)
+
+* gamm did not handle s(...,fx=TRUE) terms properly, due to several 
+  failures to count s(...,fx=FALSE) terms properly if there were fixed 
+  terms present. Now fixed.
+
+* In the gaussian additive mixed model case `gamm' now allows "ML" or 
+  "REML" to be selected (and is slightly more self consistent in 
+  handling the results of the two alternatives).
+
 1.3-11
 
 * added package doc file

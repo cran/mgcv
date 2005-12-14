@@ -29,7 +29,8 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),niterPQL=20,verbosePQL=TRUE,...)
+control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),niterPQL=20,
+verbosePQL=TRUE,method="ML",...)
 }
 
 \arguments{ 
@@ -104,6 +105,11 @@ version of R does not have the \code{nlminb} optimizer function.}
 
 \item{verbosePQL}{Should PQL report its progress as it goes along?}
 
+\item{method}{Which of \code{"ML"} or \code{"REML"} to use in the Gaussian
+additive mixed model case when \code{lme} is called directly. Ignored in the
+generalized case (or if the model
+has an offset), in which case \code{glmmPQL} is used.}
+
 \item{...}{further arguments for passing on e.g. to \code{lme}} 
 }
 %- maybe also `usage' for other objects documented here.
@@ -139,7 +145,7 @@ since these use an improved optimizer.
 \item{gam}{an object of class \code{gam}, less information relating to
 GCV/UBRE model selection. At present this contains enough information to use
 \code{predict}, \code{summary} and \code{print} methods and \code{vis.gam},
-but not to use e.g. the \code{anova} method function to comapre models.}
+but not to use e.g. the \code{anova} method function to compare models.}
 \item{lme}{the fitted model object returned by \code{lme} or \code{glmmPQL}. Note that the model formulae and grouping 
 structures may appear to be rather bizarre, because of the manner in which the GAMM is split up and the calls to 
 \code{lme} and \code{glmmPQL} are constructed.}

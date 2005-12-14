@@ -1,4 +1,4 @@
-\name{smooth.construct}
+ \name{smooth.construct}
 \alias{smooth.construct}
 \alias{smooth.construct.tp.smooth.spec}
 \alias{smooth.construct.cr.smooth.spec}
@@ -55,7 +55,9 @@ tensor product should be unpenalized.}
 \item{full.call}{The full version of the \code{s} term, with all defaults expanded explicitly.}
 \item{label}{A suitable label for use with this term.}
 \item{dim}{is the number of covariates of which this smooth is a function.}
-\item{null.space.dim}{The dimension of the null space of the wiggliness penalty.}
+\item{mp}{\code{TRUE} if multiple penalties are to be used.}
+\item{np}{\code{TRUE} if 1-D marginal smooths are to be re-parameterized in terms of
+function values.}
 }}
 \item{data}{a data frame in which the covariates and any \code{by} variable can be found.}
 \item{knots}{an optional data frame specifying knot locations for each covariate. If it is null then the knot 
@@ -74,9 +76,14 @@ if the term is to be left un-penalized.}
 \item{df}{the degrees of freedom associated with this term (at least when unpenalized).}
 
 Usually the returned object will also include extra information required to define the basis, and used by 
-\code{\link{Predict.matrix}} methods to make predictions using the basis. See the \code{Details} section for the infomation included for the built in smooth classes. 
+\code{\link{Predict.matrix}} methods to make predictions using the basis. See the \code{Details} section for the information included for the built in smooth classes. 
 
-\code{tensor.smooth} returned objects will additionally have each element of the \code{margin} list updated in the same way. 
+\code{tensor.smooth} returned objects will additionally have each element of
+the \code{margin} list updated in the same way. \code{tensor.smooths} also
+have a list, \code{XP}, containing re-parameterization matrices for any 1-D marginal terms
+re-parameterized in terms of function values. This list will have \code{NULL}
+entries for marginal smooths that are not re-parameterized, and is only long
+enough to reach the last re-parameterized marginal in the list.  
 
 }
 

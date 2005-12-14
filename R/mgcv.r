@@ -752,8 +752,9 @@ Predict.matrix.tensor.smooth<-function(object,data)
 { m<-length(object$margin)
   X<-list()
   for (i in 1:m) X[[i]]<-Predict.matrix(object$margin[[i]],data)
-  if (length(object$XP)>0) 
-  for (i in 1:m) if (!is.null(object$XP[[i]])) X[[i]] <- X[[i]]%*%object$XP[[i]]
+  mxp <- length(object$XP)
+  if (mxp>0) 
+  for (i in 1:mxp) if (!is.null(object$XP[[i]])) X[[i]] <- X[[i]]%*%object$XP[[i]]
   T <- tensor.prod.model.matrix(X)
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
@@ -2030,16 +2031,19 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     }
   } ## ... done
   # get data from which to predict.....  
+  nd.is.mf <- FALSE # need to flag if supplied newdata is already a model frame
   if (newdata.guaranteed==FALSE)
   { if (missing(newdata)) # then "fake" an object suitable for prediction 
     { newdata<-object$model
       new.data.ok <- FALSE
+      nd.is.mf <- TRUE
     }
     else  # do an R ``standard'' evaluation to pick up data
     { new.data.ok <- TRUE
       if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) # it's a model frame
       { if (sum(!(names(object$model)%in%names(newdata)))) stop(
         "newdata is a model.frame: it should contain all required variables\n")
+         nd.is.mf <- TRUE
       } else
       { ## Following is non-standard to allow convenient splitting into blocks
         ## below, and to allow checking that all variables are in newdata ...
@@ -2057,7 +2061,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       }
     }
   } else {na.act <- NULL}
- 
+  
+
   if (new.data.ok)
   { ## check factor levels are right ...
     names(newdata)->nn # new data names
@@ -2116,8 +2121,10 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     ## implements safe prediction for parametric part as described in
     ## http://developer.r-project.org/model-fitting-functions.txt
     if (new.data.ok)
-    { mf <- model.frame(Terms,data,xlev=object$xlevels)
-      if (!is.null(cl <- attr(object$pterms,"dataClasses"))) .checkMFClasses(cl,mf)
+    { if (nd.is.mf) mf <- model.frame(data,xlev=object$xlevels) else
+      { mf <- model.frame(Terms,data,xlev=object$xlevels)
+        if (!is.null(cl <- attr(object$pterms,"dataClasses"))) .checkMFClasses(cl,mf)
+      } 
       Xp <- model.matrix(Terms,mf,contrasts=object$contrasts) 
     } else 
     { Xp <- model.matrix(Terms,object$model)
@@ -3092,16 +3099,19 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
 
   dnm <- names(list(...))
 
-  x$model <- strip.offset(x$model) 
+  #x$model <- strip.offset(x$model) 
   ## ... remove "offset(" and ")" from offset column name
 
+  v.names <- row.names(attr(delete.response(x$terms),"factors"))
+
   if (is.null(view)) # get default view if none supplied
-  { v.names<-attr(attr(x$model,"terms"),"term.labels")
+  { # v.names<-attr(attr(x$model,"terms"),"term.labels") # BUG... too many of these!!
+   
     if (length(v.names)<2) stop("Model doesn't seem to have enough terms to do anything useful")
     view<-v.names[1:2]
   }
   if (!sum(view%in%names(x$model))) stop(
-  paste("view variables must be one of",names(x$model)))
+  paste(c("view variables must be one of",v.names),collapse=", "))
   if (length(unique(x$model[,view[1]]))<=1||length(unique(x$model[,view[2]]))<=1) 
   stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
 

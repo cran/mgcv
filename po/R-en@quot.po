@@ -240,10 +240,10 @@ msgid "family not recognized"
 msgstr "family not recognized"
 
 msgid ""
-"gamm models must have at least 1 smooth with unknown smoothing paraemter or "
+"gamm models must have at least 1 smooth with unknown smoothing parameter or "
 "at least one other random effect"
 msgstr ""
-"gamm models must have at least 1 smooth with unknown smoothing paraemter or "
+"gamm models must have at least 1 smooth with unknown smoothing parameter or "
 "at least one other random effect"
 
 msgid "At least three knots required in call to mono.con."

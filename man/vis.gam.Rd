@@ -10,12 +10,14 @@ vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
 \arguments{
   \item{x}{a \code{gam} object, produced by \code{gam()}}
 
-  \item{view}{an array containing the names of the two predictor variables to be displayed on the 
-   x and y dimensions of the plot. If omitted the first two suitable variables
-   will be used. Names must be names from \code{names(x$model)}.
+  \item{view}{an array containing the names of the two main effect terms to be displayed on the 
+   x and y dimensions of the plot. If omitted the first two suitable terms
+   will be used. Names must be names from
+   \code{names(x$model)}. i.e. \code{terms} are used, rather than \code{variables}.
 }
 
-  \item{cond}{a named list of the values to use for the other predictor variables (not in \code{view}). Variables omitted from 
+  \item{cond}{a named list of the values to use for the other predictor terms
+  (not in \code{view}). Terms omitted from 
 this list will have their values set to their mean for continuous variables,
 or first level for factors. Names must correspond to \code{names(x$model)}.
 }
@@ -48,10 +50,10 @@ labelling to the plots. }
 }
 \value{Simply produces a plot.}
 
-\description{ Produces perspective or contour plot views of \code{gam} model predictions, fixing all but the values in \code{view} to the 
-values supplied in \code{cond}. 
+\description{ Produces perspective or contour plot views of \code{gam} model
+predictions, fixing all but the values in \code{view} to the  values supplied in \code{cond}. 
 }
-\details{ The x and y limits are determined by the ranges of the variables supplied in \code{view}. If \code{se}<=0 then 
+\details{ The x and y limits are determined by the ranges of the terms named in \code{view}. If \code{se}<=0 then 
 a single (height colour coded, by default) surface is produced, otherwise three (by default see-through) meshes are produced at 
 mean and +/- \code{se} standard errors. Parts of the x-y plane too far from
 data can be excluded by setting \code{too.far}
