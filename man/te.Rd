@@ -129,12 +129,11 @@ values (defualt).}
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 \references{
 
-Wood, S.N. (2004) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Technical Report of the Department of
-Statistics, University of Glasgow, UK.
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Biometrics
 
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 
 }
 

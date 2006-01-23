@@ -86,7 +86,7 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 
 }
 

@@ -70,7 +70,8 @@ is the parameter vector for the ith smooth term, and this term has estimated
 covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
 statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
 p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
-pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  \eqn{ {\bf V_i}}{V_i}.}
+pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  \eqn{
+{\bf V_i}}{V_i}.}
 
 \item{s.pv}{An array of approximate p-values for the null hypotheses that each
 smooth term is zero. Be warned, these are only approximate. In the case of
@@ -80,7 +81,9 @@ rank of  \eqn{ {\bf V_i}}{V_i}. If the dispersion parameter is unknown (in
 which case it will have been estimated) the statistic is compared
 to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model . 
 Typically the p-values will be somewhat too low, because they are conditional
-on the smoothing parameters, which are usually uncertain. 
+on the smoothing parameters, which are usually uncertain, but note that the
+statistic can also have low power if the rank, k, is too high relative to the
+EDF of the term!
 }
 
 \item{se}{array of standard error estimates for all parameter estimates.}
@@ -153,7 +156,7 @@ regression splines. Technical Report 04-12 Department of Statistics,
 University of Glasgow.
 
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}
@@ -178,7 +181,7 @@ x3 <- runif(n, 0, 1)
 pi <- asin(1) * 2
 y <- 2 * sin(pi * x0)
 y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10 - 1.396
+y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
 e <- rnorm(n, 0, sqrt(abs(sig2)))
 y <- y + e
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))

@@ -315,9 +315,10 @@ Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
 regression splines. Technical Report 04-12 Department of Statistics,
 University of Glasgow.
 
-Wood, S.N. (2004c) Low rank scale invariant tensor product smooths for
-generalized additive mixed models. Technical Report 04-13 Department of Statistics,
-University of Glasgow.
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+generalized additive mixed models. Biometrics
+
+Wood S.N. (2006) Generalized Additive Models: An Introduction with R. CRC Press.
 
 Key Reference on GAMs and related models:
 
@@ -346,7 +347,7 @@ Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
 Wood and Augustin (2002) GAMs with integrated model selection using penalized regression splines and applications 
 to environmental modelling. Ecological Modelling 157:157-177
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 

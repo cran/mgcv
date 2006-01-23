@@ -168,7 +168,7 @@ Note that some further useful quantities can be obtained using \code{\link{magic
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
@@ -185,7 +185,7 @@ x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
 x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
 f <- 2 * sin(pi * x0)
 f <- f + exp(2 * x1) - 3.75887
-f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
+f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10
 e <- rnorm(n, 0, sqrt(sig2))
 y <- f + e
 # set up additive model
