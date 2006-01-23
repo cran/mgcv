@@ -1,3 +1,14 @@
+1.3-13
+
+* some doc changes
+
+* The p-values for smooth terms had too low power sometimes. Modified 
+  testing  procedure so that testing rank is at most 
+  ceiling(2*edf.for.term). This gives quite close to uniform p-value 
+  distributions when the null is true, in simulations, without excessive 
+  inflation of the p-values, relative to parametetric equivalents when 
+  it is not. Still not really satisfactory.
+
 1.3-12
 
 * vis.gam could fail if the original model formula contained functions of 

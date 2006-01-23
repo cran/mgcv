@@ -21,7 +21,7 @@ so that there is no clash.}
 \value{A name that is not in \code{old.names}.}
 
 \references{
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} } 
 

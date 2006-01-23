@@ -41,7 +41,7 @@ constructing tensor product smooths.
 product smooth.   
 }
 \references{
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}} 
 

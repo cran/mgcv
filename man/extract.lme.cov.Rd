@@ -69,11 +69,10 @@ Pinheiro J.C. and Bates, D.M. (2000) Mixed effects Models in S and S-PLUS. Sprin
 
 For details of how GAMMs are set up here for estimation using \code{lme} see:
  
-Wood, S.N. (2004) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Technical report of the statistics
-department, University of Glasgow.
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Biometrics
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 

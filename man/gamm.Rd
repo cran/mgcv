@@ -180,14 +180,13 @@ generalized additive models. Journal of the American Statistical Association. 99
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 
-Wood, S.N. (2004b) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Technical Report of the Department of
-Statistics, University of Glasgow, UK.
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Biometrics.
 
 
 Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statist. Soc. B 60, 159-174
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 

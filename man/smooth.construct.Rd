@@ -123,15 +123,16 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass.
+
+Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
 The p-spline code given in the example is based on:
 
 Eilers, P.H.C. and B.D. Marx (1996) Flexible Smoothing with B-splines and Penalties. 
 Statistical Science, 11(2):89-121
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 
 \author{Simon N. Wood \email{simon.wood@r-project.org}}
@@ -141,7 +142,7 @@ Statistical Science, 11(2):89-121
 \code{\link{smoothCon}}, \code{\link{PredictMat}}
  }
 
-\warnings{User defined smooth objects should avoid having attributes names
+\section{WARNING}{User defined smooth objects should avoid having attributes names
 \code{"qrc"} or \code{"nCons"} as these are used internally to provide
 constraint free parameterizations.}
 

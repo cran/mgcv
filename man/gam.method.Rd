@@ -129,7 +129,7 @@ Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation f
 generalized additive models. J. Amer. Statist. Ass.
 
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 
 
 }

@@ -104,7 +104,7 @@ of the families as described in \code{\link{fix.family.link}}.
 O 'Sullivan, Yandall & Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models. J. Amer. Statist. Assoc. 81:96-103.
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}

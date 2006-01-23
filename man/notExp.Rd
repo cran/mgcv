@@ -39,7 +39,7 @@ notLog(x)
 
 \references{
 
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 
 }
 

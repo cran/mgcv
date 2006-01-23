@@ -2878,8 +2878,8 @@ summary.gam <- function (object, dispersion = NULL, freq = TRUE, ...)
       V <- covmat[start:stop,start:stop] # cov matrix for smooth
       p<-object$coefficients[start:stop]  # params for smooth
       M1<-object$smooth[[i]]$df
-      M<-round(sum(object$edf[start:stop]))
-      V<-pinv(V,M1) # get rank M pseudoinverse of V
+      M<-min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
+      V<-pinv(V,M) # get rank M pseudoinverse of V
       chi.sq[i]<-t(p)%*%V%*%p
       er<-names(object$coefficients)[start]
       er<-substring(er,1,nchar(er)-2)

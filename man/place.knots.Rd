@@ -22,7 +22,7 @@ even coverage, where even means having approximately the same number of data bet
 \value{ An array of knot locations.
 }
 \references{
-\url{http://www.stats.gla.ac.uk/~simon/}
+\url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}} 
 
