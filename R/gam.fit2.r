@@ -137,7 +137,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
 
-            oo<-.C("update_beta",as.double(x[good,]),as.double(Sr),as.double(unlist(rS)),as.double(sp),
+            oo<-.C(C_update_beta,as.double(x[good,]),as.double(Sr),as.double(unlist(rS)),as.double(sp),
                    as.double(w),
                    as.double(w1),as.double(z),as.double(z1),as.integer(ncol(Sr)),
                    rSncol=as.integer(unlist(lapply(rS,ncol))),m=as.integer(length(rS)),
@@ -145,7 +145,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
                    q=as.integer(ncol(x)),get.trA=as.integer(0),as.integer(deriv),
                    rank.tol= as.double(.Machine$double.eps),
                    beta=as.double(upe$beta),trA=as.double(upe$trA),beta1=as.double(upe$beta1),
-                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),PACKAGE="mgcv")
+                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1))
         
             upe$beta <- oo$beta;
             upe$beta1 <- matrix(oo$beta1,oo$q,oo$m)
@@ -247,7 +247,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
         ## Now do a final update.eta call to get trA and rV (rV%*%t(rV) is the
         ## posterior covariance matrix)....
        
-        oo<-.C("update_beta",as.double(x[good,]),as.double(Sr),as.double(unlist(rS)),as.double(sp),
+        oo<-.C(C_update_beta,as.double(x[good,]),as.double(Sr),as.double(unlist(rS)),as.double(sp),
                    as.double(w),
                    as.double(w1),as.double(z),as.double(z1),as.integer(ncol(Sr)),
                    rSncol=as.integer(unlist(lapply(rS,ncol))),m=as.integer(length(rS)),
@@ -255,7 +255,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
                    q=as.integer(ncol(x)),get.trA=as.integer(1),as.integer(deriv),
                    rank.tol= as.double(.Machine$double.eps),
                    beta=as.double(upe$beta),trA=as.double(upe$trA),beta1=as.double(upe$beta1),
-                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1),PACKAGE="mgcv")
+                   trA1=as.double(upe$trA1),rV=as.double(rV),rank=as.integer(1))
 
         rV <- matrix(oo$rV,ncol(x),ncol(x))
         upe$beta <- oo$beta;

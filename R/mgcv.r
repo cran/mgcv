@@ -1,4 +1,4 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2005
+##  R routines for the package mgcv (c) Simon Wood 2000-2006
 ##  With contributions from Henric Nilsson
 
 mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
@@ -17,8 +17,8 @@ mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
   A<-matrix(0,4*(n-1)+lo+hi,n)
   b<-array(0,4*(n-1)+lo+hi)
   if (lo*hi==1&&lower>=upper) stop("lower bound >= upper bound in call to mono.con()")
-  oo<-.C("RMonoCon",as.double(A),as.double(b),as.double(x),as.integer(control),as.double(lower),
-         as.double(upper),as.integer(n),PACKAGE="mgcv")
+  oo<-.C(C_RMonoCon,as.double(A),as.double(b),as.double(x),as.integer(control),as.double(lower),
+         as.double(upper),as.integer(n))
   A<-matrix(oo[[1]],dim(A)[1],dim(A)[2])
   b<-array(oo[[2]],dim(A)[1])
   list(A=A,b=b)
@@ -30,7 +30,7 @@ uniquecombs<-function(x) {
 if (is.null(x)) stop("x is null")
 if (is.null(nrow(x))) stop("x has no row attribute")
 if (is.null(ncol(x))) stop("x has no col attribute")
-res<-.C("RuniqueCombs",as.double(x),as.integer(nrow(x)),as.integer(ncol(x)),PACKAGE="mgcv")
+res<-.C(C_RuniqueCombs,as.double(x),as.integer(nrow(x)),as.integer(ncol(x)))
 n<-res[[2]]*res[[3]]
 x<-matrix(res[[1]][1:n],res[[2]],res[[3]])
 x
@@ -115,9 +115,9 @@ pcls <- function(M)
     if (M$off[i]+df[i]-1>nar[2]) stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
   }
 
-  o<-.C("RPCLS",as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
+  o<-.C(C_RPCLS,as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
         ,as.double(M$C),as.double(H),as.double(Sa),as.integer(M$off),as.integer(df),as.double(M$sp),
-        as.integer(length(M$off)),as.integer(nar),PACKAGE="mgcv")
+        as.integer(length(M$off)),as.integer(nar))
   array(o[[2]],length(M$p))
 }  
 
@@ -212,13 +212,13 @@ mgcv<-function(y,X,sp,S,off,C=NULL,w=rep(1,length(y)),H=NULL,scale=1,gcv=TRUE,co
   sdiag<-array(0.0,2*direct.mesh) # array for gcv/ubre vs edf diagnostics
   if (is.null(control$target.edf)) control$target.edf<- -1 # set to signal no target edf
 
-  oo<-.C("mgcv",as.double(y),as.double(X),as.double(C),as.double(w^2),as.double(Sa),
+  oo<-.C(C_mgcv,as.double(y),as.double(X),as.double(C),as.double(w^2),as.double(Sa),
          as.double(p),as.double(sp),as.integer(off-1),as.integer(df),as.integer(m),
          as.integer(n),as.integer(q),as.integer(C.r),as.double(scale),as.double(Vp),
 		 as.double(edf),as.double(control$conv.tol),as.integer(control$max.half),as.double(ddiag),
                  as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(control$min.edf),
                  as.double(gcv.ubre),as.double(control$target.edf),as.integer(fixed.sp),
-                 as.double(hat),PACKAGE="mgcv")
+                 as.double(hat))
    
   p<-matrix(oo[[6]],q,1);
   scale<-oo[[14]]
@@ -561,10 +561,10 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
   Xu<-x
   C<-array(0,k)
   nXu<-0  
-  oo<-.C("construct_tprs",as.double(x),as.integer(object$dim),as.integer(n),as.double(knt),as.integer(nk),
+  oo<-.C(C_construct_tprs,as.double(x),as.integer(object$dim),as.integer(n),as.double(knt),as.integer(nk),
                as.integer(object$p.order),as.integer(object$bs.dim),X=as.double(X),S=as.double(S),
                UZ=as.double(UZ),Xu=as.double(Xu),n.Xu=as.integer(nXu),C=as.double(C),
-               max.knots=as.integer(mtk),PACKAGE="mgcv")
+               max.knots=as.integer(mtk))
   object$X<-matrix(oo$X,n,k)                   # model matrix
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
@@ -631,9 +631,9 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
     stop(msg)
   }
 
-  oo <- .C("construct_cr",as.double(x),as.integer(nx),as.double(k),
+  oo <- .C(C_construct_cr,as.double(x),as.integer(nx),as.double(k),
            as.integer(nk),as.double(X),as.double(S),
-           as.double(C),as.integer(control),PACKAGE="mgcv")
+           as.double(C),as.integer(control))
 
   object$X <- matrix(oo[[5]],nx,nk)
   if (object$by!="NA")  # deal with "by" variable 
@@ -806,9 +806,9 @@ Predict.matrix.cr.smooth<-function(object,data)
   nk<-object$bs.dim
   X <- rep(0,nx*nk);S<-rep(0,nk*nk);C<-rep(0,nk);control<-0
 
-  oo <- .C("construct_cr",as.double(x),as.integer(nx),as.double(object$xp),
+  oo <- .C(C_construct_cr,as.double(x),as.integer(nx),as.double(object$xp),
             as.integer(object$bs.dim),as.double(X),as.double(S),
-                   as.double(C),as.integer(control),PACKAGE="mgcv")
+                   as.double(C),as.integer(control))
   X<-matrix(oo[[5]],nx,nk) # the prediction matrix
   if (object$by!="NA")  # deal with "by" variable 
   { by <- get.var(object$by,data)
@@ -841,10 +841,9 @@ Predict.matrix.tprs.smooth<-function(object,data)
   } else
   { by<-0;by.exists<-FALSE}
   X<-matrix(0,n,object$bs.dim)
-  oo<-.C("predict_tprs",as.double(x),as.integer(object$dim),as.integer(n),as.integer(object$p.order),
+  oo<-.C(C_predict_tprs,as.double(x),as.integer(object$dim),as.integer(n),as.integer(object$p.order),
       as.integer(object$bs.dim),as.integer(object$null.space.dim),as.double(object$Xu),
-      as.integer(nrow(object$Xu)),as.double(object$UZ),as.double(by),as.integer(by.exists),X=as.double(X)
-      ,PACKAGE="mgcv")
+      as.integer(nrow(object$Xu)),as.double(object$UZ),as.double(by),as.integer(by.exists),X=as.double(X))
   X<-matrix(oo$X,n,object$bs.dim)
 }
 
@@ -3059,8 +3058,8 @@ exclude.too.far<-function(g1,g2,d1,d2,dist)
   if (m!=length(d2)) stop("data vectors are of different lengths")
   if (dist<0) stop("supplied dist negative")
   distance<-array(0,n)
-  o<-.C("MinimumSeparation",as.double(g1),as.double(g2),as.integer(n),as.double(d1),as.double(d2),as.integer(m),
-         distance=as.double(distance),PACKAGE="mgcv")  
+  o<-.C(C_MinimumSeparation,as.double(g1),as.double(g2),as.integer(n),as.double(d1),as.double(d2),
+         as.integer(m),distance=as.double(distance))  
   res<-rep(FALSE,n)
   res[o$distance > dist] <-TRUE
   res
@@ -3276,7 +3275,6 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
 
 # From here on is the code for magic.....
 
-
 mroot <- function(A,rank=NULL,method="chol")
 # finds the smallest square root of A, or the best approximate square root of 
 # given rank. B is returned where BB'=A. A assumed non-negative definite. 
@@ -3298,7 +3296,9 @@ mroot <- function(A,rank=NULL,method="chol")
     return(t(t(um$u[,1:rank])*as.vector(d))) # note recycling rule used for efficiency
   } else
   if (method=="chol")
-  { L<-chol(A,pivot=TRUE)
+  { op<-options(warn=-1) ## don't want to be warned it's not +ve def
+    L<-chol(A,pivot=TRUE)
+    options(op) ## reset default warnings
     piv<-order(attr(L,"pivot"))
     if (is.null(rank)) rank<-attr(L,"rank")
     L<-L[,piv];L<-t(L[1:rank,])
@@ -3493,10 +3493,9 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
   icontrol[7]<-control$maxit
   b<-array(0,icontrol[3])
   # argument names in call refer to returned values.
-  um<-.C("magic",as.double(y),as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),
+  um<-.C(C_magic,as.double(y),as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),
           score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
-          as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q),
-          PACKAGE="mgcv")
+          as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q))
   res<-list(b=um$b,scale=um$scale,score=um$score,sp=um$sp)
   res$rV<-matrix(um$rV[1:(um$info[1]*q)],q,um$info[1])
   gcv.info<-list(full.rank=full.rank,rank=um$info[1],fully.converged=as.logical(um$info[2]),

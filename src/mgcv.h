@@ -1,8 +1,19 @@
+/* main method routines */
 void mgcv(double *yd,double *Xd,double *Cd,double *wd,double *Sd,double *pd, double *sp,
           int *offd,int *dimd,int *md,int *nd,int *qd,int *rd,double *sig2d, double *Vpd, 
           double *edf, double *conv_tol, int *ms_max_half,double *ddiag,int *idiag,double *sdiag, 
           int *direct_mesh,double *min_edf,double *gcvubre,double *target_edf,int *fixed_sp,double *hat);
 
+void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,
+		 double *w1, double *z,double *z1,int *Srncol,int *rSncol,
+		 int *m, int *n,int *q, int *get_trA,int *deriv,
+		 double *rank_tol,double *beta, double *trA, double *beta1,
+		 double *trA1,double *rV,int *rank_est);
+void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,
+	   double *gamma,double *scale, int *control,int *cS,double *rank_tol,
+	   double *tol,double *b,double *rV);
+
+/* various service routines */
 void RQT(double *A,int *r,int *c);
 void RuniqueCombs(double *X,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
@@ -17,8 +28,10 @@ void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau);
 void update_qr(double *Q,double *R,int *n, int *q,double *lam, int *k);
 void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
 void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c);
-void mgcv_symeig(double *A,double *ev,int *n);
+void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd);
 void mroot(double *A,int *rank,int *n);
+
+
 
 /* basis constructor/prediction routines*/
 
