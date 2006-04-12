@@ -663,7 +663,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
 
  */
 { int *pi,*pivot,q,n,autoinit,left,ScS,m,i,j,tp,k,use_sd=0,rank,converged,iter=0,ok,
-      gcv,try,fit_call=0,step_fail=0,max_half,*spok,/* *dir_sp,*/maxit,def_supplied;
+      gcv,try,fit_call=0,step_fail=0,max_half,*spok,/* *dir_sp,*/maxit,def_supplied,use_dsyevd=1;
   double *p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
          min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign;
@@ -843,7 +843,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
                  U1,V,d,y1,rank,q,m,cS,gcv,gamma,scale,norm,delta,n);
         /* Now get the search directions */
         for (i=0;i<m;i++) for (j=0;j<m;j++) u[i+m*j]=hess[i][j];        
-        mgcv_symeig(u,ev,&m); /* columns of hess are now eigen-vectors */
+        mgcv_symeig(u,ev,&m,&use_dsyevd); /* columns of hess are now eigen-vectors */
         use_sd=0;for (p=ev;p<ev+m;p++) if (*p<0.0) {use_sd=1;break;} /* check hessian +ve def */
         if (!use_sd) /* get the Newton direction Hess^{-1}grad */
         { for (i=0;i<m;i++) { for (xx=0.0,j=0;j<m;j++) xx+=u[j+m*i]*grad[j];sd_step[i]=xx/ev[i];}

@@ -1,4 +1,4 @@
-useDynLib(mgcv)
+useDynLib(mgcv, .registration = TRUE, .fixes = "C_")
 
 export( 
 anova.gam,coef.pdIdnot,coef.pdTens,

@@ -265,26 +265,49 @@ qr.R(qr(Xa,tol=0))
   free(x);free(work);
 }
 
-void mgcv_symeig(double *A,double *ev,int *n)
+void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd)
 /* gets eigenvalues and vectors of symmetric matrix A. 
+   Two alternative underlying LAPACK routines can be used, 
+   either dsyevd (slower, robust) or dsyevr (faster, seems less robust). 
    Vectors returned in columns of A, values in ev.
    Testing R code....
    library(mgcv)
    n<-4;A<-matrix(rnorm(n*n),n,n);A<-A%*%t(A);d<-array(0,n)
    er<-eigen(A)
-   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(n),PACKAGE="mgcv")
+   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(n),as.integer(1),PACKAGE="mgcv")
    er$vectors;matrix(um[[1]],n,n)
    er$values;um[[2]]
 */  
 
-{ char jobz='V',uplo='U'; 
-  double work1,*work;
-  int lwork = -1,liwork = -1,iwork1,info,*iwork;
-  F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,&work1,&lwork,&iwork1,&liwork,&info);
-  lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
-  work=(double *)calloc((size_t)lwork,sizeof(double));
-  liwork = iwork1;iwork= (int *)calloc((size_t)liwork,sizeof(int));
-  F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,work,&lwork,iwork,&liwork,&info);
-  free(work);free(iwork);
+{ char jobz='V',uplo='U',range='A'; 
+  double work1,*work,dum1=0,abstol=0.0,*Z,*dum2;
+  int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ;
+  if (*use_dsyevd)
+  { F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,&work1,&lwork,&iwork1,&liwork,&info);
+    lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
+    work=(double *)calloc((size_t)lwork,sizeof(double));
+    liwork = iwork1;iwork= (int *)calloc((size_t)liwork,sizeof(int));
+    F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,work,&lwork,iwork,&liwork,&info);
+    free(work);free(iwork);
+  } else
+  { Z=(double *)calloc((size_t)(*n * *n),sizeof(double)); /* eigen-vector storage */
+    isupZ=(int *)calloc((size_t)(2 * *n),sizeof(int)); /* eigen-vector support */
+    F77_NAME(dsyevr)(&jobz,&range,&uplo,
+		   n,A,n,&dum1,&dum1,&dumi,&dumi,
+		   &abstol,&n_eval,ev, 
+    		     Z,n,isupZ, &work1,&lwork,&iwork1,&liwork,&info);
+    lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
+    work=(double *)calloc((size_t)lwork,sizeof(double));
+    liwork = iwork1;iwork= (int *)calloc((size_t)liwork,sizeof(int));
+    F77_NAME(dsyevr)(&jobz,&range,&uplo,
+		   n,A,n,&dum1,&dum1,&dumi,&dumi,
+		   &abstol,&n_eval,ev, 
+    		     Z,n,isupZ, work,&lwork,iwork,&liwork,&info);
+    free(work);free(iwork);
+    dum2 = Z + *n * *n; /* copy vectors back into A */
+    for (work=Z;work<dum2;work++,A++) *A = *work;
+    free(Z);free(isupZ);
+  }
+
  }
 

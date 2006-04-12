@@ -18,8 +18,9 @@ ridge regression and penalized linearly constrained least squares are also provi
 in use to the S functions of the same name designed by Trevor Hastie. 
 However the underlying representation and estimation of the models is based on a
 penalized regression spline approach, with automatic smoothness selection. A
-number of other functions  such as \code{\link{summary.gam}} and \code{\link{anova.gam}} are also provided, for
-extracting information from a fitted \code{\link{gamObject}}.
+number of other functions  such as \code{\link{summary.gam}} and
+\code{\link{anova.gam}} are also provided, 
+for extracting information from a fitted \code{\link{gamObject}}.
 
 Use of \code{\link{gam}} is much like use of \code{\link{glm}}, except that
 within a \code{gam} model formula, isotropic smooths of any number of predictors can be specified using
@@ -45,7 +46,10 @@ always good in this case.
 
 The package also provides a generalized additive mixed modelling function,
 \code{\link{gamm}}, based on \code{glmmPQL} from the \code{MASS} library and
-\code{lme} from the \code{nlme} library. 
+\code{lme} from the \code{nlme} library. \code{gamm} is particularly useful
+for modelling correlated data (i.e. where a simple independence model for the
+residual variation is inappropriate). In addition, low level routine \code{\link{magic}}
+can fit models to data with a known correlation structure.
 
 Some of the underlying GAM fitting methods are available as low level fitting
 functions: see \code{\link{magic}} and \code{\link{mgcv}}. Penalized weighted
@@ -56,6 +60,9 @@ For a complete list of functions type \code{library(help=mgcv)}.
 }
 \author{
 Simon Wood <simon.wood@r-project.org>
+
+with contributions and/or help from Kurt Hornik, Mike Lonergan, Henric Nilsson
+and Brian Ripley. 
 
 Maintainer: Simon Wood <simon.wood@r-project.org>
 

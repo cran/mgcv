@@ -228,7 +228,9 @@ them above and below by an effective infinity and effective zero. See
 
 } 
 
-\seealso{\code{\link{te}}, \code{\link{s}}, \code{\link{predict.gam}},
+\seealso{\code{\link{magic}} for an alternative for correlated data,
+\code{\link{te}}, \code{\link{s}}, 
+\code{\link{predict.gam}},
   \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.neg.bin}}, 
 \code{\link{vis.gam}},\code{\link{pdTens}},\code{\link{gamm.setup}}
  }

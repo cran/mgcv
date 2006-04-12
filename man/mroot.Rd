@@ -30,6 +30,19 @@ problems into ordinary regression problems.}
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
+\examples{
+  set.seed(0)
+  a <- matrix(runif(24),6,4)
+  A <- a\%*\%t(a) ## A is +ve semi-definite, rank 4
+  B <- mroot(A) ## default pivoted choleski method
+  tol <- 100*.Machine$double.eps
+  chol.err <- max(abs(A-B\%*\%t(B)));chol.err
+  if (chol.err>tol) warning("mroot (chol) suspect")
+  B <- mroot(A,method="svd") ## svd method
+  svd.err <- max(abs(A-B\%*\%t(B)));svd.err
+  if (svd.err>tol) warning("mroot (svd) suspect")  
+}
+
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
 
