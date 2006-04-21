@@ -9,7 +9,8 @@ by standard errors, based on the posterior distribution of the model
 coefficients. The routine can optionally return the matrix by which the model
 coefficients must be pre-multiplied in order to yield the values of the linear predictor at
 the supplied covariate values: this is useful for obtaining credible regions
-for quantities derived from the model.}
+for quantities derived from the model, and for lookup table prediction outside
+\code{R} (see example code below).}
 
 \usage{
 predict.gam(object,newdata,type="link",se.fit=FALSE,terms=NULL,
@@ -37,7 +38,9 @@ which yields the values of the linear predictor (minus any offset) when
 postmultiplied by the
 parameter vector (in this case \code{se.fit} is ignored). The latter
 option is most useful for getting variance estimates for quantities derived from
-the model: for example integrated quantities, or derivatives of smooths. }
+the model: for example integrated quantities, or derivatives of smooths. A
+linear predictor matrix can also be used to implement approximate prediction
+outside \code{R} (see example code, below). }
 
 \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
 
@@ -154,11 +157,11 @@ pred <- predict.gam(b,newd)
 
 Xp <- predict(b,newd,type="lpmatrix") 
 
-## Xp %*% coef(b) yields vector of predictions
+## Xp \%*\% coef(b) yields vector of predictions
 
 a <- rep(1,31)
-Xs <- t(a) %*% Xp ## Xs %*% coef(b) gives sum of predictions
-var.sum <- Xs %*% b$Vp %*% t(Xs)
+Xs <- t(a) \%*\% Xp ## Xs \%*\% coef(b) gives sum of predictions
+var.sum <- Xs \%*\% b$Vp \%*\% t(Xs)
 
 ## Now get the variance of non-linear function of predictions
 ## by simulation from posterior distribution of the params
@@ -167,7 +170,7 @@ library(MASS)
 br<-mvrnorm(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
 res <- rep(0,1000)
 for (i in 1:1000)
-{ pr <- Xp %*% br[i,] ## replicate predictions
+{ pr <- Xp \%*\% br[i,] ## replicate predictions
   res[i] <- sum(log(abs(pr))) ## example non-linear function
 }
 mean(res);var(res)
@@ -175,6 +178,36 @@ mean(res);var(res)
 ## loop is replace-able by following .... 
 
 res <- colSums(log(abs(Xp \%*\% t(br))))
+
+## The following shows how to use use an "lpmatrix" as a lookup 
+## table for approximate prediction. The idea is to create 
+## approximate prediction matrix rows by appropriate linear 
+## interpolation of an existing prediction matrix. The additivity 
+## of a GAM makes this possible. 
+## There is no reason to ever do this in R, but the following 
+## code provides a useful template for predicting from a fitted 
+## gam *outside* R: all that is needed is the coefficient vector 
+## and the prediction matrix. Use larger `Xp'/ smaller `dx' and/or 
+## higher order interpolation for higher accuracy.  
+
+xn <- c(.341,.122,.476,.981) ## want prediction at these values
+x0 <- 1         ## intercept column
+dx <- 1/30      ## covariate spacing in `newd'
+for (j in 0:2) { ## loop through smooth terms
+  cols <- 1+j*9 +1:9      ## relevant cols of Xp
+  i <- floor(xn[j+1]*30)  ## find relevant rows of Xp
+  w1 <- (xn[j+1]-i*dx)/dx ## interpolation weights
+  ## find approx. predict matrix row portion, by interpolation
+  x0 <- c(x0,Xp[i+2,cols]*w1 + Xp[i+1,cols]*(1-w1))
+}
+dim(x0)<-c(1,28) 
+fv <- x0\%*\%coef(b) + xn[4];fv    ## evaluate and add offset
+se <- sqrt(x0\%*\%b$Vp\%*\%t(x0));se ## get standard error
+## compare to normal prediction
+predict(b,newdata=data.frame(x0=xn[1],x1=xn[2],
+        x2=xn[3],x3=xn[4]),se=TRUE)
+
+
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
