@@ -41,7 +41,8 @@
   basis sets an upper limit on the maximum possible degrees of
   freedom for the basis - the limit is typically one less than basis
   dimension). Full details of how to control smooths are given in
-  \code{\link{s}} and \code{\link{te}}. For the moment suppose that we would like to change
+  \code{\link{s}} and \code{\link{te}}, and further discussion of basis
+  dimension choice can be found in \code{\link{choose.k}}. For the moment suppose that we would like to change
   the basis of the first smooth to a cubic regression spline basis with
   a dimension of 20, while fixing the second term at 25 degrees of
   freedom. The appropriate formula would be:\cr

@@ -31,7 +31,7 @@ with itself? This can improve the performance of \code{\link{gamm}} fitting.}
 
 \value{ From \code{smoothCon} a \code{smooth} object returned by the
 appropriate \code{\link{smooth.construct}} method function. If constraints are
-to be absorbed then the object will have an attributes \code{"qrc"} and
+to be absorbed then the object will have  attributes \code{"qrc"} and
 \code{"nCons"}, the qr decomposition of the constraint matrix (returned by
 \code{\link{qr}}) and the number of constraints, respectively: these are  used in
 the re-parameterization. 

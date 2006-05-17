@@ -7,10 +7,10 @@
    predictor. Optionally produces term plots for parametric model components
    as well.}
 \usage{
-plot.gam(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,
-         scale=-1,n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,
-         xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
-         all.terms=FALSE,shade=FALSE,shade.col="gray80",...)
+plot.gam(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,
+         n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
+         ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,
+         shade=FALSE,shade.col="gray80",shift=0,trans=I,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -86,6 +86,13 @@ terms of order 1 can be plotted in this way.}
 for smooths (not avaliable for parametric terms, which are plotted using \code{termplot}).}
 
 \item{shade.col}{define the color used for shading confidence bands.}
+
+\item{shift}{constant to add to each smooth (on the scale of the linear
+predictor) before plotting. Can be useful for some diagnostics, or with \code{trans}.}
+
+\item{trans}{function to apply to each smooth  (after any shift), before
+plotting. \code{shift} and \code{trans} are occasionally useful as a means for
+getting plots on the response scale, when the model consists only of a single smooth.}
 
 \item{...}{ other graphics parameters to pass on to plotting commands.}
 

@@ -8,8 +8,9 @@ GAMs with GCV smoothness estimation and GAMMs by REML/PQL
 \code{mgcv} provides functions for generalized additive modelling and
 generalized additive mixed modelling. Particular features of the package are
 facilities for automatic smoothness selection, and the provision of a variety
-of smooths of more than one variable. A Bayesian approach to confidence/credible
-interval calculation is provided. Lower level routines for generalized
+of smooths of more than one variable. User defined smooths are also
+supported. A Bayesian approach to confidence/credible interval calculation is
+provided. Lower level routines for generalized
 ridge regression and penalized linearly constrained least squares are also provided.
 
 }
@@ -31,7 +32,9 @@ selection by GCV or gAIC/ UBRE. See \code{\link{gam}}, \code{\link{gam.models}} 
 \code{\link{gam.selection}} for some discussion of model specification and
 selection. For detailed control of fitting see \code{\link{gam.convergence}},
 \code{\link{gam.method}} and \code{\link{gam.control}}. For checking and
-visualization see \code{\link{gam.check}} and \code{\link{vis.gam}} and \code{\link{plot.gam}}.
+visualization see \code{\link{gam.check}}, \code{\link{choose.k}}, \code{\link{vis.gam}} and \code{\link{plot.gam}}.
+While a number of types of smoother are built into the package, it is also
+extendable with user defined smooths, see \code{\link{p.spline}}, for example.
 
 A Bayesian approach to smooth modelling is used to derive standard errors on
 predictions, and hence credible intervals. The Bayesian covariance matrix for

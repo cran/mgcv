@@ -2,6 +2,7 @@
 \alias{gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Generalized additive models with integrated smoothness estimation}
+
 \description{ Fits a generalized additive model (GAM) to
   data. The degree of smoothness of model terms is estimated as part of
   fitting; isotropic or scale invariant smooths of any number of variables are
@@ -157,7 +158,8 @@ use tensor products of cheaper bases.
      knots). This parameterization gives the parameters a nice interpretability. 
 
      
-     Details of the underlying fitting methods are given in Wood (2000, 2004a). 
+     Details of the underlying fitting methods are given in Wood (2000, 2004a,
+     2006b). 
 
  }
 
@@ -315,10 +317,10 @@ Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
 regression splines. Technical Report 04-12 Department of Statistics,
 University of Glasgow.
 
-Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics
 
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. CRC Press.
+Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. CRC Press.
 
 Key Reference on GAMs and related models:
 
@@ -382,8 +384,7 @@ an infinite range on the linear predictor scale. Some regularization is possible
 \code{\link{gam.control}} for details.
 } 
 
-\seealso{\code{\link{gamObject}}, \code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},
-  \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side}},
+\seealso{\code{\link{mgcv-package}}, \code{\link{gamObject}}, \code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},\code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side}},
 \code{\link{gam.selection}},\code{\link{mgcv}}, \code{\link{gam.control}}
 \code{\link{gam.check}}, \code{\link{gam.neg.bin}}, \code{\link{magic}},\code{\link{vis.gam}}
  }

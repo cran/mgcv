@@ -18,7 +18,7 @@
     function of. \code{k} should not be less than the dimension of the
     null space of the penalty for the term (see
     \code{\link{null.space.dimension}}), but will be reset if
-  it is.}
+  it is. See \code{\link{choose.k}} for further information.}
   \item{fx}{indicates whether the term is a fixed d.f. regression
   spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
   \item{bs}{this can be \code{"cr"} for a cubic regression spline, \code{"cs"}

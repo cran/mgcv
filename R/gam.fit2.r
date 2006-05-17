@@ -1,5 +1,5 @@
 ## R routines for gam fitting with calculation of derivatives w.r.t. sp.s
-## (c) Simon Wood 2004,2005
+## (c) Simon Wood 2004,2005,2006
 
 gam.fit2 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL, weights =
 rep(1, nobs), start = NULL, etastart = NULL, 
@@ -394,34 +394,44 @@ gam3objective <- function(lsp,args)
   ret
 }
 
+
+
 fix.family.link<-function(fam)
 # adds d2link the second derivative of the link function w.r.t. mu
-# to the family supplied.
-# All d2link functions have been checked numerically. 
+# to the family supplied, as well as a 3rd derivative function 
+# d3link...
+# All d2link and d3link functions have been checked numerically. 
 { if (!inherits(fam,"family")) stop("fam not a family object")
   if (!is.null(fam$d2link)) return(fam) 
   link <- fam$link
   if (length(link)>1) if (fam$family=="quasi") # then it's a power link
-  { lambda <- log(fam$linkfun(exp(1)))
-    if (lambda<=0) fam$d2link <- function(mu) -1/mu^2
-    else fam$d2link <- function(mu) lambda*(lambda-1)*mu^(lambda-2)
+  { lambda <- log(fam$linkfun(exp(1))) ## the power, if > 0
+    if (lambda<=0) { fam$d2link <- function(mu) -1/mu^2
+      fam$d3link <- function(mu) 2/mu^3
+    }
+    else { fam$d2link <- function(mu) lambda*(lambda-1)*mu^(lambda-2)
+      fam$d3link <- function(mu) (lambda-2)*(lambda-1)*lambda*mu^(lambda-3)
+    }
     return(fam)
   } else stop("unrecognized (vector?) link")
 
   if (link=="identity") {
-    fam$d2link <- function(mu) rep.int(0,length(mu))
+    fam$d3link <- fam$d2link <- function(mu) rep.int(0,length(mu))
     return(fam)
   } 
   if (link == "log") {
     fam$d2link <- function(mu) -1/mu^2
+    fam$d3link <- function(mu) 2/mu^3
     return(fam)
   }
   if (link == "inverse") {
     fam$d2link <- function(mu) 2/mu^3
+    fam$d3link <- function(mu) {mu <- mu*mu;-6/(mu*mu)}
     return(fam)
   }
   if (link == "logit") {
     fam$d2link <- function(mu) 1/(1 - mu)^2 - 1/mu^2
+    fam$d3link <- function(mu) 2/(1 - mu)^3 + 2/mu^3
     return(fam)
   }
   if (link == "probit") {
@@ -429,21 +439,43 @@ fix.family.link<-function(fam)
       eta <- fam$linkfun(mu)
       eta/fam$mu.eta(eta)^2
     }
+    fam$d3link <- function(mu) {
+      eta <-  fam$linkfun(mu)
+      (1 + 2*eta^2)/fam$mu.eta(eta)^3
+    }
     return(fam)
   }
   if (link == "cloglog") {
-    fam$d2link <- function(mu) {
-      -(1/(1 - mu)^2/log(1 - mu) + 
-       1/(1 - mu) * (1/(1 - mu))/log(1 - mu)^2)
+    fam$d2link <- function(mu) { l1m <- log(1-mu)
+      -1/((1 - mu)^2*l1m) *(1+ 1/l1m)
+    }
+    fam$d3link <- function(mu) { l1m <- log(1-mu)
+       mu3 <- (1-mu)^3
+      -1/(mu3 * l1m^3) -(1 + 2 * l1m)/
+       (mu3 * l1m^2) * (1 + 1/l1m)
     }
     return(fam)
   }
   if (link == "sqrt") {
     fam$d2link <- function(mu) -.25 * mu^-1.5
+    fam$d3link <- function(mu) .375 * mu^-2.5
+    return(fam)
+  }
+  if (link == "cauchit") {
+    fam$d2link <- function(mu) { 
+     eta <- fam$linkfun(mu)
+     2*pi*pi*eta*(1+eta*eta)
+    }
+    fam$d3link <- function(mu) { 
+     eta <- fam$linkfun(mu)
+     eta2 <- eta*eta
+     2*pi*pi*pi*(1+3*eta2)*(1+eta2)
+    }
     return(fam)
   }
   if (link == "1/mu^2") {
     fam$d2link <- function(mu) 6 * mu^-4
+    fam$d3link <- function(mu) -24* mu^-5
     return(fam)
   }
   stop("link not recognised")
@@ -452,24 +484,28 @@ fix.family.link<-function(fam)
 
 fix.family.var<-function(fam)
 # adds dvar the derivative of the variance function w.r.t. mu
-# to the family supplied.
+# to the family supplied, as well as d2var the 2nd derivative of 
+# the variance function w.r.t. the mean. (All checked numerically). 
 { if (!inherits(fam,"family")) stop("fam not a family object")
   if (!is.null(fam$dvar)) return(fam) 
   family <- fam$family
   if (family=="gaussian") {
-    fam$dvar <- function(mu) rep.int(0,length(mu))
+    fam$d2var <- fam$dvar <- function(mu) rep.int(0,length(mu))
     return(fam)
   } 
   if (family=="poisson"||family=="quasipoisson") {
     fam$dvar <- function(mu) rep.int(1,length(mu))
+    fam$d2var <- function(mu) rep.int(0,length(mu))
     return(fam)
   } 
   if (family=="binomial"||family=="quasibinomial") {
     fam$dvar <- function(mu) 1-2*mu
+    fam$d2var <- function(mu) rep.int(-2,length(mu))
     return(fam)
   }
   if (family=="Gamma") {
     fam$dvar <- function(mu) 2*mu
+    fam$d2var <- function(mu) rep.int(2,length(mu))
     return(fam)
   }
   if (family=="quasi") {
@@ -481,14 +517,24 @@ fix.family.var<-function(fam)
        "mu^3" = function(mu) 3*mu^2           
     )
     if (is.null(fam$dvar)) stop("variance function not recognized for quasi")
+    fam$d2var <- switch(fam$varfun,
+       constant = function(mu) rep.int(0,length(mu)),
+       "mu(1-mu)" = function(mu) rep.int(-2,length(mu)),
+       mu = function(mu) rep.int(0,length(mu)),
+       "mu^2" = function(mu) rep.int(2,length(mu)),
+       "mu^3" = function(mu) 6*mu           
+    )
     return(fam)
   }
   if (family=="inverse.gaussian") {
     fam$dvar <- function(mu) 3*mu^2
+    fam$d2var <- function(mu) 6*mu
     return(fam)
   }
   stop("family not recognised")
 }
+
+
 
 totalPenalty <- function(S,H,off,theta,p)
 { if (is.null(H)) St <- matrix(0,p,p)

@@ -2224,7 +2224,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
 
 plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
                    pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
-                   ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",...)
+                   ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
+                   shift=0,trans=I,...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -2238,13 +2239,14 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 # n2 is the square root of the number of grid points to use for contouring
 # 2-d terms.
 
-{ sp.contour <- function(x,y,z,zse,xlab="",ylab="",zlab="",titleOnly=FALSE,se.plot=TRUE,se.mult=1,...)   
+{ sp.contour <- function(x,y,z,zse,xlab="",ylab="",zlab="",titleOnly=FALSE,
+               se.plot=TRUE,se.mult=1,trans=I,shift=0,...)   
   # internal function for contouring 2-d smooths with 1 s.e. limits
   { gap<-median(zse,na.rm=TRUE)  
-    zr<-max(z+zse,na.rm=TRUE)-min(z-zse,na.rm=TRUE) # plotting range  
+    zr<-max(trans(z+zse+shift),na.rm=TRUE)-min(trans(z-zse+shift),na.rm=TRUE) # plotting range  
     n<-10  
     while (n>1 && zr/n<2.5*gap) n<-n-1    
-    zrange<-c(min(z-zse,na.rm=TRUE),max(z+zse,na.rm=TRUE))  
+    zrange<-c(min(trans(z-zse+shift),na.rm=TRUE),max(trans(z+zse+shift),na.rm=TRUE))  
     zlev<-pretty(zrange,n)  
     yrange<-range(y);yr<-yrange[2]-yrange[1]  
     xrange<-range(x);xr<-xrange[2]-xrange[1]  
@@ -2260,7 +2262,8 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     if (tl*cs>3*xr/10) cs<-(3*xr/10)/tl  
     args <- as.list(substitute(list(...)))[-1]
     n.args <- names(args)
-    args$x<-substitute(x);args$y<-substitute(y);args$z<-substitute(z)
+    zz <- trans(z+shift)
+    args$x<-substitute(x);args$y<-substitute(y);args$z<-substitute(zz)
     if (!"levels"%in%n.args) args$levels<-substitute(zlev)
     if (!"lwd"%in%n.args) args$lwd<-2
     if (!"labcex"%in%n.args) args$labcex<-cs*.65
@@ -2283,7 +2286,8 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
     if (!"lty"%in%n.args) args$lty<-2
     if (!"col"%in%n.args) args$col<-2
     if (!"labcex"%in%n.args) args$labcex<-cs*.5
-    args$z<-substitute(z+zse)
+    zz <- trans(z+zse+shift)
+    args$z<-substitute(zz)
 
     do.call("contour",args)
 #    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
@@ -2297,7 +2301,8 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
 
     if (!"lty"%in%n.args) args$lty<-3
     if (!"col"%in%n.args) args$col<-3
-    args$z<-substitute(z-zse)
+    zz <- trans(z - zse+shift)
+    args$z<-substitute(zz)
     do.call("contour",args)
 #    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
     
@@ -2307,7 +2312,7 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
       lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
       text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
     }
-  }   
+  }  ## end of sp.contour
 
   # start of main function
   w.resid<-NULL
@@ -2480,26 +2485,26 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
           }
           if (!is.null(ylim)) ylimit <- ylim
           if (shade)
-          { plot(pd[[i]]$x,pd[[i]]$fit,type="n",xlab=pd[[i]]$xlab,ylim=ylimit,
+          { plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="n",xlab=pd[[i]]$xlab,ylim=trans(ylimit+shift),
                  xlim=xlim,ylab=pd[[i]]$ylab,main=main,...)
             polygon(c(pd[[i]]$x,pd[[i]]$x[n:1],pd[[i]]$x[1]),
-                     c(ul,ll[n:1],ul[1]),col = shade.col,border = NA)
-            lines(pd[[i]]$x,pd[[i]]$fit)
+                     trans(c(ul,ll[n:1],ul[1])+shift),col = shade.col,border = NA)
+            lines(pd[[i]]$x,trans(pd[[i]]$fit+shift))
           } else
-          { plot(pd[[i]]$x,pd[[i]]$fit,type="l",xlab=pd[[i]]$xlab,ylim=ylimit,xlim=xlim,
+          { plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="l",xlab=pd[[i]]$xlab,ylim=trans(ylimit+shift),xlim=xlim,
                  ylab=pd[[i]]$ylab,main=main,...)
 	    if (is.null(list(...)[["lty"]]))
-            { lines(pd[[i]]$x,ul,lty=2,...)
-              lines(pd[[i]]$x,ll,lty=2,...)
+            { lines(pd[[i]]$x,trans(ul+shift),lty=2,...)
+              lines(pd[[i]]$x,trans(ll+shift),lty=2,...)
             } else
-            { lines(pd[[i]]$x,ul,...)
-              lines(pd[[i]]$x,ll,...)
+            { lines(pd[[i]]$x,trans(ul+shift),...)
+              lines(pd[[i]]$x,trans(ll+shift),...)
             }
           } 
           if (partial.resids)
           { if (is.null(list(...)[["pch"]]))
-            points(pd[[i]]$raw,pd[[i]]$p.resid,pch=".",...) else
-            points(pd[[i]]$raw,pd[[i]]$p.resid,...)
+            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),pch=".",...) else
+            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),...)
           }
 	  if (rug) 
           { if (jit) rug(jitter(as.numeric(pd[[i]]$raw)),...)
@@ -2509,12 +2514,12 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
         { 
           if (pers) 
           { if (!is.null(main)) pd[[i]]$title <- main
-            persp(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
+            persp(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
                   zlab=pd[[i]]$title,ylim=pd[[i]]$ylim,xlim=pd[[i]]$xlim,theta=theta,phi=phi,...)
           } else
           { sp.contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),matrix(pd[[i]]$se,n2,n2),
                      xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,zlab=pd[[i]]$title,titleOnly=!is.null(main),
-                     se.mult=se2.mult,...)
+                     se.mult=se2.mult,trans=trans,shift=shift,...)
             if (rug) { 
               if (is.null(list(...)[["pch"]]))
               points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
@@ -2554,24 +2559,24 @@ plot.gam<-function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=
         { if (scale==0&&is.null(ylim)) 
           { if (partial.resids) ylimit <- range(pd[[i]]$p.resid,na.rm=TRUE) else ylimit <-range(pd[[i]]$fit)}
           if (!is.null(ylim)) ylimit <- ylim
-          plot(pd[[i]]$x,pd[[i]]$fit,type="l",,xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,ylim=ylimit,xlim=xlim,main=main,...)
+          plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="l",,xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,ylim=trans(ylimit+shift),xlim=xlim,main=main,...)
           if (rug) 
 	  { if (jit) rug(jitter(as.numeric(pd[[i]]$raw)),...)
             else rug(as.numeric(pd[[i]]$raw),...) 
           }
           if (partial.resids)
           { if (is.null(list(...)[["pch"]]))
-            points(pd[[i]]$raw,pd[[i]]$p.resid,pch=".",...) else
-            points(pd[[i]]$raw,pd[[i]]$p.resid,...)
+            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),pch=".",...) else
+            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),...)
           }
         } else if (pd[[i]]$dim==2)
         { if (!is.null(main)) pd[[i]]$title <- main
           if (pers) 
-          { persp(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
+          { persp(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
                           zlab=pd[[i]]$title,theta=theta,phi=phi,xlim=pd[[i]]$xlim,ylim=pd[[i]]$ylim,...)
           }
           else
-          { contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
+          { contour(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
                     main=pd[[i]]$title,xlim=pd[[i]]$xlim,ylim=pd[[i]]$ylim,...)
             if (rug) 
             {  if (is.null(list(...)[["pch"]])) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
@@ -2937,7 +2942,7 @@ print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3),
   cat("\n")
   if(x$m>0)
   { cat("Approximate significance of smooth terms:\n")
-    printCoefmat(x$s.table, digits = digits, signif.stars = signif.stars, has.Pvalue = TRUE, na.print = "NA", ...)
+    printCoefmat(x$s.table, digits = digits, signif.stars = signif.stars, has.Pvalue = TRUE, na.print = "NA",cs.ind=1, ...)
   }
   cat("\nR-sq.(adj) = ",formatC(x$r.sq,digits=3,width=5))
   if (length(x$dev.expl)>0) cat("   Deviance explained = ",formatC(x$dev.expl*100,digits=3,width=4),"%\n",sep="")
@@ -3409,7 +3414,7 @@ initial.sp <- function(X,S,off,expensive=FALSE)
 
 magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=TRUE,
                 ridge.parameter=NULL,control=list(maxit=50,tol=1e-6,step.half=25,
-                rank.tol=.Machine$double.eps^0.5))
+                rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y))
 # Wrapper for C routine magic. Deals with constraints weights and square roots of 
 # penalties. Currently only a diagonal weight matrix is allowed, but this 
 # is easy to change.
@@ -3424,8 +3429,11 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
 # of rV%*%t(rV)%*%t(X)%*%X gives the edf for each parameter.
 # NOTE: W is assumed to be square root of inverse of covariance matrix. i.e. if
 # W=diag(w) RSS is ||W(y-Xb||^2  
-# If ridge.parameter is a positive number then then it is assumed to be the multiplier
+# If `ridge.parameter' is a positive number then then it is assumed to be the multiplier
 # for a ridge penalty to be applied during fitting. 
+# `extra.rss' is an additive constant by which the RSS is modified in the
+#  GCV/UBRE or scale calculations, n.score is the `n' to use in the GCV/UBRE
+#  score calcualtions (Useful for dealing with huge datasets).
 { n.p<-length(S)
   n.b<-dim(X)[2] # number of parameters
   # get initial estimates of smoothing parameters, using better method than is
@@ -3495,7 +3503,8 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
   # argument names in call refer to returned values.
   um<-.C(C_magic,as.double(y),as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),
           score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
-          as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q))
+          as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q),
+          as.double(extra.rss),as.integer(n.score))
   res<-list(b=um$b,scale=um$scale,score=um$score,sp=um$sp)
   res$rV<-matrix(um$rV[1:(um$info[1]*q)],q,um$info[1])
   gcv.info<-list(full.rank=full.rank,rank=um$info[1],fully.converged=as.logical(um$info[2]),

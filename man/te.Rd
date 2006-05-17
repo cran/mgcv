@@ -18,7 +18,8 @@
 \item{k}{ the dimension(s) of the bases used to represent the smooth term.
     If not supplied then set to \code{5^d}. If supplied as a single number then this 
     basis dimension is used for each basis. If supplied as an array then the elements are
-    the dimensions of the component (marginal) bases of the tensor product.}
+    the dimensions of the component (marginal) bases of the tensor
+    product. See \code{\link{choose.k}} for further information.}
 
 \item{bs}{array (or single character string) specifying the type for each 
 marginal basis. \code{"cr"} for cubic regression spline; \code{"cs"} for cubic
