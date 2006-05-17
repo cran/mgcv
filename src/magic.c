@@ -401,7 +401,8 @@ void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,double 
 
 void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *scale,
                int *control,double rank_tol,double yy,double *y0,double *y1,double *U1,
-               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank)
+               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank,
+               double *norm_const,int *n_score)
 
 /* Routine to actually do the model fitting, rank determination and score calculation, returning 
    information needed for derivative calculation.
@@ -413,6 +414,8 @@ void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *s
    S[i] is assumed to contain the ith full (q by q) penalty matrix.  
    H is the fixed penalty matrix, not referenced unless control[3]!=0.
    gamma is the degrees of freedom inflation term.
+   norm_const is a constant to add to the residual sum of squares term in the 
+              GCV/UBRE score and scale parameter estimation.
    scale is the scale parameter, if gcv is used it contains the estimated scale on exit.
    control[0] is 1 for GCV/0 for UBRE; control[1] is n, number of data; control[2] is q, number 
      of parameters; control[3] is 1 if H is to be used, 0 otherwise; control[4] is m, number of
@@ -426,7 +429,7 @@ void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *s
    d contains the rank singular values on exit.
    b contains the estimated parameters on exit.
    score contains the GCV or UBRE score on exit.
-   norm contains ||y-Ay||^2 on exit
+   norm contains ||y-Ay||^2 on exit (excluding norm_const)
    delta contains n-gamma*tr(A) on exit   
    rank contains the estimated rank of the problem on exit.
 
@@ -482,24 +485,26 @@ void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *s
   for (i=0;i<*rank;i++) a[i]=y1[i]/d[i];
   for (i=0;i<q;i++) { for (xx=0.0,j=0;j< *rank;j++) xx += V[i + q*j]*a[j];b[i]=xx;} 
   /* The score can now be calculated */
+  n = *n_score; /* reset n from an actual dimension, to n in the GCV/UBRE score */
   xx = n - *gamma * trA;*delta=xx;
-  if (control[0]) {*score = n* *norm/(xx*xx);*scale= *norm/(n-trA);} /* use GCV */
-  else {*score = *norm / n - 2* *scale / n * xx + *scale; } /* UBRE/ approximate AIC */  
+  if (control[0]) {*score = n* (*norm+*norm_const)/(xx*xx);*scale= (*norm + *norm_const)/(n-trA);} /* use GCV */
+  else {*score = (*norm + *norm_const) / n - 2* *scale / n * xx + *scale; } /* UBRE/ approximate AIC */  
   free(a);free(Vt);free(R);free(St);
 }
 
 double *crude_grad(double *X,double *sp,double **Si,double *H,double *gamma,double *scale,
                int *control,double rank_tol,double yy,double *y0,double *y1,double *U1,
-               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank)
+               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank,
+               double *norm_const,int *n_score)
 /* finite difference the GCV score to get approximate gradient  */
 { double ftol=1e-6,*grad,sc1,sc0,ds;
   int i;
-  fit_magic(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,&sc0,norm,delta,rank);
+  fit_magic(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,&sc0,norm,delta,rank,norm_const,n_score);
   grad=(double *)calloc((size_t)control[4],sizeof(double));
   for (i=0;i<control[4];i++)
   { ds=fabs(sp[i])*ftol;
     sp[i] += ds;
-    fit_magic(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,&sc1,norm,delta,rank);
+    fit_magic(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,&sc1,norm,delta,rank,norm_const,n_score);
     grad[i]=(sc1-sc0)/ds;sp[i] -= ds;
   }
   return(grad);
@@ -507,17 +512,18 @@ double *crude_grad(double *X,double *sp,double **Si,double *H,double *gamma,doub
 
 double **crude_hess(double *X,double *sp,double **Si,double *H,double *gamma,double *scale,
                int *control,double rank_tol,double yy,double *y0,double *y1,double *U1,
-               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank)
+               double *V,double *d,double *b,double *score,double *norm,double *delta,int *rank,
+               double *norm_const,int *n_score)
 /* FD to check hessian */
 { int m,i,j;
   double *g0,*g1,**hess,ftol=1e-4,ds;
   m=control[4];
   hess=array2d(m,m);
-  g0=crude_grad(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,score,norm,delta,rank);
+  g0=crude_grad(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,score,norm,delta,rank,norm_const,n_score);
   for (i=0;i<m;i++)
   { ds=fabs(sp[i])*ftol;
     sp[i] += ds;
-    g1=crude_grad(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,score,norm,delta,rank);
+    g1=crude_grad(X,sp,Si,H,gamma,scale,control,rank_tol,yy,y0,y1,U1,V,d,b,score,norm,delta,rank,norm_const,n_score);
     for (j=0;j<m;j++) hess[i][j] = (g1[j]-g0[j])/ds; 
     sp[i] -= ds;
   }  
@@ -527,9 +533,13 @@ double **crude_hess(double *X,double *sp,double **Si,double *H,double *gamma,dou
 void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double **Ky,double **yK,double **hess,
               double *grad,double *dnorm,double *ddelta,double *sp,double **d2norm,double **d2delta,double *S,
               double *U1,double *V,double *d,double *y1,int rank,int q,int m,int *cS,int gcv,double *gamma,double *scale,
-              double norm,double delta,int n)
+              double norm,double delta,int n,double *norm_const)
 
-/* service routine for magic that calculates gradient and hessian of score w.r.t. sp. */
+/* service routine for magic that calculates gradient and hessian of score w.r.t. sp. 
+   Note that n is assumed to be ued only in the score calculation, not as an actual physical 
+   dimension!
+
+*/
 
 { double *p,*p1,*p2,*p3,*p4,xx,xx1,x1,x2;
   int i,j,*ip,bt,ct,r,c; 
@@ -570,8 +580,10 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
     }
     d2norm[i][i]+=dnorm[i];
   }
+  
   if (gcv)
-  { xx = n/(delta*delta);xx1= xx*2*norm/delta;
+  { norm += *norm_const; /* inflate the residual sum of squares by the supplied norm constant */
+    xx = n/(delta*delta);xx1= xx*2*norm/delta;
     x1 = -2*xx/delta;x2=3*xx1/delta;
     for (i=0;i<m;i++) 
     { grad[i]=xx*dnorm[i]-xx1*ddelta[i];
@@ -590,7 +602,7 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
 
 
 void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,double *gamma,double *scale,
-           int *control,int *cS,double *rank_tol,double *tol,double *b,double *rV) 
+           int *control,int *cS,double *rank_tol,double *tol,double *b,double *rV,double *norm_const,int *n_score) 
 
 /* Maximally stable multiple gcv/ubre optimizer, based on pivoted QR decomposition and SVD, but without 
    a line search. At each point in the smoothing parameter space, the numerical rank of the problem 
@@ -610,6 +622,8 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
        columns for the ith penalty, and they are packed starting from i=0.
    H - a q by q fixed penalty matrix
    gamma - a factor by which to inflate the model degrees of freedom in GCV/UBRE scores.
+   norm_const - a constant to be added to the residual sum of squares (squared norm) term in 
+                the GCV/UBRE and scale estimation calculations.
    scale - the scale parameter (fixed for UBRE, will be estimated for GCV).
 
    Elements of control are as follows:
@@ -635,7 +649,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
 
    b contains parameter estimates
    sp contains the smoothing parameter estimates   
-   gamma contains the estimated GCXV/UBRE score 
+   gamma contains the estimated GCV/UBRE score 
    scale - the estimated scale parameter if GCV used 
    tol - the root mean square gradient of the GCV/UBRE score at convergence
    rV - square root of the param. cov. matrix cov(b) = rV%*%rV'*scale, rV is q by rank.    
@@ -761,14 +775,14 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
       spok=NULL;/*dir_sp=NULL;*/
     }
 
-  fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
+  fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
   fit_call++;  
   /* .... U1 and V are q by rank matrices, d is a dimension rank vector */
   /* Now check that all derivatives are large enough that SD or Newton can be expected to work... */
 
   if (m>0&&!autoinit)
   { magic_gH(U1U1,M,K,VS,My,Ky,yK,hess,grad,dnorm,ddelta,sp,d2norm,d2delta,S,
-                 U1,V,d,y1,rank,q,m,cS,gcv,gamma,scale,norm,delta,n);
+                 U1,V,d,y1,rank,q,m,cS,gcv,gamma,scale,norm,delta,*n_score,norm_const);
     xx=1e-4*(1+fabs(score));
     ok=1;
     /* reset to default any sp w.r.t. which score is flat */
@@ -777,7 +791,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
     /*  Rprintf("Resetting sp[%d]\n",i);*/
     } 
     if (!ok) 
-    { fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
+    { fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
       fit_call++;
     }
   }
@@ -814,7 +828,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
       while (ok) /* try out step, shrinking it if need be */
       { try++; if (try==4&&!use_sd) {use_sd=1;step=sd_step;}
         for (i=0;i<m;i++) nsp[i]=sp[i]+step[i];
-        fit_magic(X,nsp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
+        fit_magic(X,nsp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
         fit_call++;
         if (score<min_score) /* accept step */
         { ok=0;
@@ -840,7 +854,7 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
      
       /* now get derivatives */
       { magic_gH(U1U1,M,K,VS,My,Ky,yK,hess,grad,dnorm,ddelta,sp,d2norm,d2delta,S,
-                 U1,V,d,y1,rank,q,m,cS,gcv,gamma,scale,norm,delta,n);
+                 U1,V,d,y1,rank,q,m,cS,gcv,gamma,scale,norm,delta,*n_score,norm_const);
         /* Now get the search directions */
         for (i=0;i<m;i++) for (j=0;j<m;j++) u[i+m*j]=hess[i][j];        
         mgcv_symeig(u,ev,&m,&use_dsyevd); /* columns of hess are now eigen-vectors */
@@ -863,14 +877,14 @@ void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,dou
       while (ok) /* change sp for as long as substantial reduction occurs */
       { sp[i] += sign*xx;
         ok--; /* don't do more than 5 of these steps in any case! */
-        fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
+        fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
         if (score<min_score)
         { min_score=score; 
         } else /* last step was failure - undo it and leave this s.p.*/ 
         {ok=0;sp[i] += -sign*xx;}
       } 
     }
-    fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank);
+    fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
     /*Rprintf("\n Rank at final call = %d",rank);*/
    
     /* free search related memory */

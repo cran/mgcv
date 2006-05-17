@@ -82,7 +82,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
-\seealso{  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
+\seealso{ \code{\link{choose.k}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
 
 \examples{
 library(mgcv)

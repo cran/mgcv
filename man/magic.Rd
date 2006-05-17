@@ -16,10 +16,10 @@ value decomposition approach.
 } %- end description
 
 \usage{
-magic(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,
-      gamma=1,scale=1,gcv=TRUE,ridge.parameter=NULL,
+magic(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,
+      scale=1,gcv=TRUE,ridge.parameter=NULL,
       control=list(maxit=50,tol=1e-6,step.half=25,
-              rank.tol=.Machine$double.eps^0.5))
+      rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y))
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -84,7 +84,19 @@ parameter value.}
 Basically any singular value less than \code{rank_tol} multiplied by the largest singular value of 
 the  problem is set to zero.}
 
+
 } %- end of control
+
+
+\item{extra.rss}{is a constant to be added to the residual sum of squares
+(squared norm) term in the calculation of the GCV, UBRE and scale parameter
+estimate. In conjuction with \code{n.score}, this is useful for certain methods for dealing with very large data
+sets.}
+
+\item{n.score}{number to use as the number of data in GCV/UBRE score
+calculation: usually the actual number of data, but there are methods 
+for dealing with very large datasets that change this.}
+
 }
 
 \details{ 
