@@ -189,7 +189,7 @@ plot(b,pages=1)
 summary(b)
 # now check the p-values by using a pure regression spline.....
 b.d<-round(b$edf)+1 
-b.d<-pmax(b.d,3) # can't have basis dimension less than this!
+b.d<-pmin(b.d,3) # can't have basis dimension less than this!
 bc<-gam(y~s(x0,k=b.d[1],fx=TRUE)+s(x1,k=b.d[2],fx=TRUE)+
         s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE))
 plot(bc,pages=1)
@@ -201,6 +201,7 @@ for (i in 1:k)
   p[i]<-summary(b)$s.p[1]
 }
 plot(((1:k)-0.5)/k,sort(p))
+abline(0,1,col=2)
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
 

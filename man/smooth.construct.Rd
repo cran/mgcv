@@ -188,7 +188,14 @@ Predict.matrix.pspline.smooth<-function(object,data)
 # prediction method function for the p.spline smooth class
 { require(splines)
   x <- get.var(object$term,data)
-  spline.des(object$knots,x,object$m[1]+2,x*0)$design
+  X <- spline.des(object$knots,x,object$m[1]+2,x*0)$design
+  if (object$by != "NA") { ## handle any by variables
+        by <- get.var(object$by, data)
+        if (is.null(by))
+            stop("Can't find by variable")
+        X <- as.numeric(by) * X
+  }
+  X
 }
 
 # an example, using the new class....
