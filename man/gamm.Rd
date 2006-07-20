@@ -66,8 +66,12 @@ The default \code{gaussian} with identity link causes \code{gamm} to fit by a di
 covariates required by the formula.  By default the variables are taken 
 from \code{environment(formula)}, typically the environment from 
 which \code{gamm} is called.} 
-\item{weights}{ prior weights on the data. See documentation for \code{lme}
-for details of how to use this argument.}
+
+\item{weights}{In the generalized case, weights with the same meaning as
+\code{\link{glm}} weights. An \code{lme} type weights argument may only be
+used in the identity link gaussian case, with no offset (see documentation for \code{lme}
+for details of how to use such an argument).}
+
 \item{subset}{ an optional vector specifying a subset of observations to be
           used in the fitting process.}
 \item{na.action}{ a function which indicates what should happen when the data

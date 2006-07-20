@@ -1,3 +1,24 @@
+1.3-18
+
+* gamm modifed so that weights dealt with properly if lme type varFunc 
+  used. This is only possible in the non-generalized case, as gamm.Rd 
+  now clarifies.
+
+* slight modification to s() to add `width.cutoff=500' to `deparse'
+
+* by variables not handled properly in p-spline example in 
+  smooth.construct.Rd - fixed.
+
+* bug fix in summary.gam.Rd example (pmax -> pmin)
+
+* color example added to plot.gam.Rd
+
+* bug fix in `smooth.construct.tensor.smooth.spec' - class "cyclic.smooth"
+  marginals no longer re-parameterized.
+
+* `te' documentation modified to mention that marginal reparameterization 
+  can destabilize tensor products. 
+
 1.3-17
 
 * print.summary.gam prints estimated ranks more prettily (thanks Martin 

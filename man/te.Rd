@@ -51,11 +51,11 @@ set \code{d=c(2,1)}.}
 a single penalty: single penalties are not recommended - they tend to allow only rather 
 wiggly models.}
 
-\item{np}{ \code{TRUE} to use the `natural parameterization' for a tensor
+\item{np}{ \code{TRUE} to use the `normal parameterization' for a tensor
 product smooth. This parameterization represents any 1-d marginal smooths
 using a parameterization where the parameters are function values at `knots'
-spread evenly through the data. The parameterization make the penalties
-easily interpretable.}
+spread evenly through the data. The parameterization makes the penalties
+easily interpretable, however it can reduce numerical stability.}
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases
@@ -77,13 +77,16 @@ nested within GAMs constructed from higher rank tensor product smooths if the
 same marginal bases are used in both cases (the marginal smooths themselves
 are just special cases of tensor product smooths.)
 
-The `natural parameterization' (\code{np=TRUE}) re-parameterizes the marginal
+The `normal parameterization' (\code{np=TRUE}) re-parameterizes the marginal
 smooths of a tensor product smooth so that the parameters are function values
 at a set of points spread evenly through the range of values of the covariate
 of the smooth. This means that the penalty of the tensor product associated
 with any particular covariate direction can be interpreted as the penalty of
 the appropriate marginal smooth applied in that direction and averaged over
-the smooth. Currently this is only done for marginals of a single variable.
+the smooth. Currently this is only done for marginals of a single
+variable. This parameterization can reduce numerical stability for when used
+with marginal smooths other than \code{"cc"}, \code{"cr"} and \code{"cs"}: if
+this causes problems, set \code{np=FALSE}.
 
 The function does not evaluate the variable arguments.
 

@@ -410,14 +410,14 @@ s <- function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
 { vars<-as.list(substitute(list(...)))[-1] # gets terms to be smoothed without evaluation
  # call<-match.call() # get function call
   d<-length(vars) # dimension of smoother
-  term<-deparse(vars[[d]],backtick=TRUE) # last term in the ... arguments
-  by.var<-deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
+  term<-deparse(vars[[d]],backtick=TRUE,width.cutoff=500) # last term in the ... arguments
+  by.var<-deparse(substitute(by),backtick=TRUE,width.cutoff=500) #getting the name of the by variable
   if (by.var==".") stop("by=. not allowed")
-  term<-deparse(vars[[1]],backtick=TRUE) # first covariate
+  term<-deparse(vars[[1]],backtick=TRUE,width.cutoff=500) # first covariate
   if (term[1]==".") stop("s(.) not yet supported.")
   if (d>1) # then deal with further covariates
   for (i in 2:d)
-  { term[i]<-deparse(vars[[i]],backtick=TRUE)
+  { term[i]<-deparse(vars[[i]],backtick=TRUE,width.cutoff=500)
     if (term[i]==".") stop("s(.) not yet supported.")
   }
   for (i in 1:d) term[i] <- attr(terms(reformulate(term[i])),"term.labels")
@@ -441,8 +441,9 @@ s <- function (..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)
   full.call<-paste("s(",term[1],sep="")
   if (d>1) for (i in 2:d) full.call<-paste(full.call,",",term[i],sep="")
   label<-paste(full.call,")",sep="") # used for labelling parameters
-  full.call<-paste(full.call,",k=",deparse(k,backtick=TRUE),",fx=",deparse(fx,backtick=TRUE),",bs=",
-             deparse(bs,backtick=TRUE),",m=",deparse(m,backtick=TRUE),
+  full.call<-paste(full.call,",k=",deparse(k,backtick=TRUE,width.cutoff=500),",fx=",
+                   deparse(fx,backtick=TRUE,width.cutoff=500),",bs=",
+                   deparse(bs,backtick=TRUE,width.cutoff=500),",m=",deparse(m,backtick=TRUE,width.cutoff=500),
                    ",by=",by.var,")",sep="")
   ret<-list(term=term,bs.dim=k,fixed=fx,dim=d,p.order=m,by=by.var,full.call=full.call,label=label)
   class(ret)<-paste(bs,".smooth.spec",sep="")
@@ -465,7 +466,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   if (object$np) # reparameterize 
   for (i in 1:m)
   { if (object$margin[[i]]$dim==1) {
-      if (!inherits(object$margin[[i]],c("cs.smooth","cr.smooth"))) { # these classes already optimal
+      if (!inherits(object$margin[[i]],c("cs.smooth","cr.smooth","cyclic.smooth"))) { # these classes already optimal
         x <- get.var(object$margin[[i]]$term,data)
         np <- ncol(object$margin[[i]]$X) ## number of params
         ## note: to avoid extrapolating wiggliness measure

@@ -499,3 +499,7 @@ msgstr ""
 
 msgid "X lost dimensions in magic!!"
 msgstr ""
+
+
+msgid "weights must be like glm weights for generalized case"
+msgstr ""

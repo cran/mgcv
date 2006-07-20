@@ -557,9 +557,20 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
   G
 }
 
-
-
-
+varWeights.dfo <- function(b,data)
+## get reciprocal *standard deviations* implied by the estimated variance
+## structure of an lme object, b, in *original data frame order*.
+{  w<-varWeights(b$modelStruct$varStruct) 
+   # w is not in data.frame order - it's in inner grouping level order
+   group.name<-names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
+   order.txt <- paste("ind<-order(data[[\"",group.name[1],"\"]]",sep="")
+   if (length(b$groups)>1) for (i in 2:length(b$groups)) 
+   order.txt <- paste(order.txt,",data[[\"",group.name[i],"\"]]",sep="")
+   order.txt <- paste(order.txt,")")
+   eval(parse(text=order.txt))
+   w[ind] <- w # into data frame order
+   w
+}
 
 extract.lme.cov2<-function(b,data,start.level=1)
 # function to extract the response data covariance matrix from an lme fitted
@@ -976,7 +987,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     ### Actually do fitting ....
     if (family$family=="gaussian"&&family$link=="identity"&&
     length(offset.name)==0) lme.used <- TRUE else lme.used <- FALSE
-    
+    if (lme.used&&!is.null(weights)&&!inherits(weights,"varFunc")) lme.used <- FALSE   
+
     if (lme.used)
     { ## following construction is a work-around for problem in nlme 3-1.52 
       eval(parse(text=paste("ret$lme<-lme(",deparse(fixed.formula),
@@ -985,6 +997,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
     { ## Again, construction is a work around for nlme 3-1.52
+      if (inherits(weights,"varFunc")) 
+      stop("weights must be like glm weights for generalized case")
       if (verbosePQL) cat("\n Maximum number of PQL iterations: ",niterPQL,"\n")
       eval(parse(text=paste("ret$lme<-glmmPQL(",deparse(fixed.formula),
           ",random=rand,data=strip.offset(mf),family=family,correlation=correlation,control=control,",
@@ -1136,7 +1150,10 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     names(object$coefficients)<-term.names  # note - won't work on matrices!!
     if (is.null(weights))
     object$prior.weights <- object$y*0+1
+    else if (inherits(weights,"varFunc")) 
+    object$prior.weights <- varWeights.dfo(ret$lme,mf)^2
     else object$prior.weights <- weights 
+    
     object$weights<-object$prior.weights   
 
     ret$gam<-object
