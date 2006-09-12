@@ -6,7 +6,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
     mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
     control = gam.control(), intercept =
     TRUE,deriv=TRUE,gamma=1,scale=1,pearson=FALSE,
-    printWarn=TRUE) 
+    printWarn=TRUE,...) 
 ## deriv, sp, S, H added to arg list. 
 ## need to modify family before call.
 {   x <- as.matrix(x)
@@ -15,7 +15,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
         rownames(y)
     else names(y)
     conv <- FALSE
-    nobs <- NROW(y)
+    n <- nobs <- NROW(y) ## n is just to keep codetools happy
     nvars <- ncol(x)
     EMPTY <- nvars == 0
     if (is.null(weights)) 
@@ -347,7 +347,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
 
 
 
-gam2derivative <- function(lsp,args)
+gam2derivative <- function(lsp,args,...)
 ## Performs IRLS GAM fitting for smoothing parameters given in lsp 
 ## and returns the derivatives of the GCV or UBRE score w.r.t the 
 ## smoothing parameters for the model.
@@ -356,13 +356,13 @@ gam2derivative <- function(lsp,args)
 { b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
      control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
-     printWarn=FALSE)
+     printWarn=FALSE,...)
   if (args$scoreType == "GCV") ret <- b$GCV1 else ret <- b$UBRE1
   ret
 }
 
 
-gam2objective <- function(lsp,args,printWarn=FALSE)
+gam2objective <- function(lsp,args,printWarn=FALSE,...)
 ## Performs IRLS GAM fitting for smoothing parameters given in lsp 
 ## and returns the GCV or UBRE score for the model.
 ## args is a list containing the arguments for gam.fit2
@@ -371,13 +371,13 @@ gam2objective <- function(lsp,args,printWarn=FALSE)
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=FALSE,
      control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
-     printWarn=printWarn)
+     printWarn=printWarn,...)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   ret
 }
 
-gam3objective <- function(lsp,args)
+gam3objective <- function(lsp,args,...)
 ## Performs IRLS GAM fitting for smoothing parameters given in lsp 
 ## and returns the GCV or UBRE score for the model.
 ## args is a list containing the arguments for gam.fit2
@@ -386,7 +386,7 @@ gam3objective <- function(lsp,args)
   b<-gam.fit2(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=TRUE,
      control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
-     printWarn=FALSE)
+     printWarn=FALSE,...)
   if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
   if (args$scoreType == "GCV") at <- b$GCV1 else at <- b$UBRE1

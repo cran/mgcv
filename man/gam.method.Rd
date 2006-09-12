@@ -9,7 +9,8 @@ estimation criterion for a gam.
 It is used to set argument \code{method} of \code{\link{gam}}.
 }
 \usage{
-gam.method(am="magic",gam="outer",outer="nlm",pearson=FALSE,family=NULL)
+gam.method(am="magic",gam="outer",outer="newton",gcv="deviance",
+           family=NULL)
 }
 \arguments{ 
 \item{am}{ Which method to use for a pure additive model (i.e. identity link,
@@ -26,17 +27,28 @@ engine. \code{"perf.outer"} for \code{\link{magic}} based performance
 iteration followed by outer iteration (see details). \code{"outer"} for pure
 outer iteration.}
 
-\item{outer}{ The optimization approach to use for outer
-iteration. \code{"nlm"} to use \code{\link{nlm}} with exact first derivatives
+\item{outer}{ The optimization approach to use to optimize log smoothing
+parameters by outer
+iteration.\code{"newton"} for modified Newton method backed up by steepest
+descent, based on exact first and second derivatives. \code{"nlm"} to use 
+\code{\link{nlm}} with exact first derivatives
 to optimize the smoothness selection criterion. \code{"nlm.fd"} to use
-\code{nlm} with finite differenced first dericatives (slower and less
+\code{nlm} with finite differenced first derivatives (slower and less
 reliable). \code{"optim"} to use the \code{"L-BFGS-B"} quasi-Newton method
 option of routine \code{optim}, with exact first derivatives.}
 
-\item{pearson}{When using any sort of outer iteration, there is a choise
-between using GCV/UBRE scores based on the Pearson statistic, or based on the
-deviance. The Pearson versions result in smoother models, but this is often
-oversmoothing, particularly for `low count' data and binary regression.}
+\item{gcv}{One of \code{"deviance"}, \code{"GACV"} or \code{"pearson"},
+specifying the flavour of GCV to use with outer iteration. \code{"deviance"}
+simply replaces the residual sum of squares term in a GCV score with the
+deviance, following Hastie and Tibshirani (1990, section 6.9). \code{"GACV"}
+(only available with outer method \code{"newton"}) 
+uses a varient of Gu and Xiang's (2001) generalized approximate cross
+validation, modified to deal with arbitrary link-error
+combinations. \code{"pearson"} uses a suggestion from the literature of
+replacing the RSS in a GCV score with the Pearson statistic: this is a very
+poor choise (see Wood, 2006, section 4.5.4). This latter option is not 
+available with outer methods \code{"newton"} and \code{"nlm"}.
+}
 
 \item{family}{The routine is called by \code{\link{gam}} to check the supplied
 method argument. In this circumstance the family argument is passed, to check
@@ -88,28 +100,23 @@ particularly with low n binomial data, or low mean counts. Hence the default
 is to use (i).
 
 Several alternative optimisation methods can be used for outer
-optimization. \code{nlm} can be used with finite differenced first
-derivatives. This is not ideal theoretically, since it is possible for the
-finite difference estimates of derivatives to be very badly in error on rare
+optimization.Usually the fastest and most
+reliable approach is to use a modified Newton optimizer with exact first and
+second derivatives, and this is the default. \code{nlm} can be used with
+finite differenced first derivatives. This is not ideal theoretically, since 
+it is possible for the finite difference estimates of derivatives to be very
+badly in error on rare
 occasions when the P-IRLS convergence tolerance is close to being matched
 exactly, so that two components of a finite differenced derivative require
 different numbers of iterations of P-IRLS in their evaluation. An alternative
 is provided in which \code{nlm} uses numerically exact first derivatives, this
-is faster and less problematic than the other scheme. Finally, a quasi-Newton
-scheme with exact derivtives can be used instead, based on \code{optim}. In practice this usually
-seems to be slower than the \code{nlm} method.  
+is faster and less problematic than the other scheme. An further alternative is to use a quasi-Newton
+scheme with exact derivtives, based on \code{optim}. In practice this usually
+seems to be slower than the \code{nlm} method. 
 
-It is possible to iterate the performance iteration to convergence and then
-improve the smoothing parameter estimates using outer iteration: only a few steps are
-usually required in the outer iteration in this case, so it may be quite
-efficient, but it is not recommended if the performance iteration itself is
-non-convergent. When using `pure' outer iteration, a single step of the
-performance iteration is in fact taken first, to obtain estimates of the scale
-of the GCV/UBRE objective: starting values for the smoothing parameters are
-obtained using \code{\link{initial.sp}}.
 
 In summary: performance iteration is fast, but can fail to converge. Outer
-iteration is slower, but more reliable. At present only performance iteration
+iteration is a little slower, but more reliable. At present only performance iteration
 is available for negative binomial families.
 }
 

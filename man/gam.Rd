@@ -38,7 +38,7 @@ variables, and performance iteration for smoothing parameter estimation (see
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,offset=NULL,control=gam.control(),method=gam.method(),
     scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
-    fit=TRUE,G=NULL,...)
+    fit=TRUE,G=NULL,in.out,...)
 }
 %- maybe also `usage' for other objects documented here.
 \details{ 
@@ -289,10 +289,18 @@ such a multiplier to be supplied if fit method is \code{"magic"}.}
 \item{fit}{If this argument is \code{TRUE} then \code{gam} sets up the model and fits it, but if it is
 \code{FALSE} then the model is set up and an object \code{G} is returned which is the output from 
 \code{\link{gam.setup}} plus some extra items required to complete the GAM fitting process.}
+
 \item{G}{Usually \code{NULL}, but may contain the object returned by a previous call to \code{gam} with 
-\code{fit=FALSE}, in which case all other arguments are ignored except for \code{gamma}, \code{family}, \code{control} and \code{fit}.}
+\code{fit=FALSE}, in which case all other arguments are ignored except for
+\code{gamma}, \code{in.out}, \code{control}, \code{method} and \code{fit}.}
+\item{in.out}{optional list for initializing outer iteration. If supplied
+then this must contain two elements: \code{sp} should be an array of
+initialization values for all smoothing parameters (there must be a value for
+all smoothing parameters, whether fixed or to be estimated, but those for
+fixed s.p.s are not used); \code{scale} is the typical scale of the GCV/UBRE function,
+for passing to the outer optimizer.}
 \item{...}{further arguments for 
-passing on e.g. to \code{gam.fit}} }
+passing on e.g. to \code{gam.fit}} (such as \code{mustart}). }
 
 \value{ 
 If \code{fit == FALSE} the function returns a list \code{G} of items needed to

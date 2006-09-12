@@ -503,3 +503,13 @@ msgstr ""
 
 msgid "weights must be like glm weights for generalized case"
 msgstr ""
+
+msgid "Unkwown flavour of GCV"
+msgstr ""
+
+msgid "GACV only supported with newton optimization, GCV type reset"
+msgstr ""
+
+msgid "Pearson based GCV is unsupported for newton or nlm outer methods, reset"
+msgstr ""
+

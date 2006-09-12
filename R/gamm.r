@@ -68,7 +68,7 @@ pdTens <- function(value = numeric(0), form = NULL, nam = NULL, data = sys.frame
 {
   object <- numeric(0)
   class(object) <- c("pdTens", "pdMat")
-  pdConstruct(object, value, form, nam, data)
+  nlme::pdConstruct(object, value, form, nam, data)
 }
 
 ## Methods for local generics
@@ -76,7 +76,7 @@ pdTens <- function(value = numeric(0), form = NULL, nam = NULL, data = sys.frame
 
 pdConstruct.pdTens <-
   function(object, value = numeric(0), form = formula(object),
-	   nam = Names(object), data = sys.frame(sys.parent()), ...)
+	   nam = nlme::Names(object), data = sys.frame(sys.parent()), ...)
 ## used to initialize pdTens objects. Note that the initialization matrices supplied
 ## are (factors of) trial random effects covariance matrices or their inverses.
 ## Which one is being passed seems to have to be derived from looking at its
@@ -141,7 +141,7 @@ pdMatrix.pdTens <-
 # factor, it is required that A=B'B (not the mroot() default!)
 
 {
-  if (!isInitialized(object)) {
+  if (!nlme::isInitialized(object)) {
     stop("Cannot extract the matrix from an uninitialized object")
   }
   sp <- as.vector(object)
@@ -194,7 +194,7 @@ pdIdnot <-
 { #cat(" pdIdnot  ")
   object <- numeric(0)
   class(object) <- c("pdIdnot", "pdMat")
-  pdConstruct(object, value, form, nam, data)
+  nlme::pdConstruct(object, value, form, nam, data)
 }
 
 ####* Methods for local generics
@@ -202,7 +202,7 @@ pdIdnot <-
 corMatrix.pdIdnot <-
   function(object, ...)
 {
-  if (!isInitialized(object)) {
+  if (!nlme::isInitialized(object)) {
     stop("Cannot extract the matrix from an uninitialized pdMat object")
   }
   if (is.null(Ncol <- attr(object, "ncol"))) {
@@ -211,7 +211,8 @@ corMatrix.pdIdnot <-
   val <- diag(Ncol)
 ## REMOVE sqrt() to revert ...
   attr(val, "stdDev") <- rep(sqrt(notExp2(as.vector(object))), Ncol)
-  if (length(nm <- Names(object)) == 0) {
+  if (length(nm <- nlme::Names(object)) == 0) {
+    len <- length(as.vector(object)) 
     nm <- paste("V", 1:len, sep = "")
     dimnames(val) <- list(nm, nm)
   }
@@ -221,11 +222,11 @@ corMatrix.pdIdnot <-
 
 pdConstruct.pdIdnot <-
   function(object, value = numeric(0), form = formula(object),
-	   nam = Names(object), data = sys.frame(sys.parent()), ...)
+	   nam = nlme::Names(object), data = sys.frame(sys.parent()), ...)
 { #cat(" pdConstruct.pdIdnot  ")
   val <- NextMethod()
   if (length(val) == 0) {			# uninitialized object
-    if ((ncol <- length(Names(val))) > 0) {
+    if ((ncol <- length(nlme::Names(val))) > 0) {
       attr(val, "ncol") <- ncol
     }
     return(val)
@@ -242,7 +243,7 @@ pdConstruct.pdIdnot <-
     stop(paste("An object of length", length(val),
 	       "does not match the required parameter size"))
   }
-  if (((aux <- length(Names(val))) == 0) && is.null(formula(val))) {
+  if (((aux <- length(nlme::Names(val))) == 0) && is.null(formula(val))) {
     stop(paste("Must give names when initializing pdIdnot from parameter.",
 	       "without a formula"))
   } else {
@@ -262,7 +263,7 @@ pdFactor.pdIdnot <-
 pdMatrix.pdIdnot <-
   function(object, factor = FALSE)
 { #cat("  pdMatrix.pdIdnot  ")
-  if (!isInitialized(object)) {
+  if (!nlme::isInitialized(object)) {
     stop("Cannot extract the matrix from an uninitialized pdMat object")
   }
   if (is.null(Ncol <- attr(object, "ncol"))) {
@@ -314,10 +315,12 @@ logDet.pdIdnot <-
 solve.pdIdnot <-
   function(a, b, ...)
 {
-  if (!isInitialized(a)) {
+  if (!nlme::isInitialized(a)) {
     stop("Cannot extract the inverse from an uninitialized object")
   }
-  coef(a) <- -coef(a, TRUE)
+  atr <- attributes(a)
+  a <- -coef(a, TRUE)
+  attributes(a) <- atr
   a
 }
 
@@ -560,9 +563,10 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
 varWeights.dfo <- function(b,data)
 ## get reciprocal *standard deviations* implied by the estimated variance
 ## structure of an lme object, b, in *original data frame order*.
-{  w<-varWeights(b$modelStruct$varStruct) 
+{  w <- nlme::varWeights(b$modelStruct$varStruct) 
    # w is not in data.frame order - it's in inner grouping level order
-   group.name<-names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
+   group.name <- names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
+   ind <- NULL
    order.txt <- paste("ind<-order(data[[\"",group.name[1],"\"]]",sep="")
    if (length(b$groups)>1) for (i in 2:length(b$groups)) 
    order.txt <- paste(order.txt,",data[[\"",group.name[i],"\"]]",sep="")
@@ -587,23 +591,23 @@ extract.lme.cov2<-function(b,data,start.level=1)
 # V is either returned as an array, if it's diagonal, a matrix if it is
 # a full matrix or a list of matrices if it is block diagonal.
 { if (!inherits(b,"lme")) stop("object does not appear to be of class lme")
-  grps<-getGroups(b) # labels of the innermost groupings - in data frame order
+  grps<-nlme::getGroups(b) # labels of the innermost groupings - in data frame order
   n<-length(grps)    # number of data
   n.levels <- length(b$groups) # number of levels of grouping
   if (n.levels<start.level) ## then examine correlation groups
   { if (is.null(b$modelStruct$corStruct)) n.corlevels <- 0 else
     n.corlevels <-
-    length(all.vars(getGroupsFormula(b$modelStruct$corStruct)))
+    length(all.vars(nlme::getGroupsFormula(b$modelStruct$corStruct)))
   } else n.corlevels <- 0 ## used only to signal irrelevance
   ## so at this stage n.corlevels > 0 iff it determines the coarsest grouping
   ## level if > start.level. 
   if (n.levels<n.corlevels) ## then cor groups are finest
-  grps <- getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
+  grps <- nlme::getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
 
   if (n.levels >= start.level||n.corlevels >= start.level)
   { if (n.levels >= start.level)
-    Cgrps <- getGroups(b,level=start.level) # outer grouping labels (dforder) 
-    else Cgrps <- getGroups(b$modelStruct$corStruct) # ditto
+    Cgrps <- nlme::getGroups(b,level=start.level) # outer grouping labels (dforder) 
+    else Cgrps <- nlme::getGroups(b$modelStruct$corStruct) # ditto
     Cind <- sort(as.numeric(Cgrps),index.return=TRUE)$ix
     # Cind[i] is where row i of sorted Cgrps is in original data frame order 
     rCind <- 1:n; rCind[Cind] <- 1:n
@@ -618,7 +622,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
   } else {n.cg <- 1;Cind<-1:n}
   if (is.null(b$modelStruct$varStruct)) w<-rep(b$sigma,n) ### 
   else 
-  { w<-1/varWeights(b$modelStruct$varStruct) 
+  { w<-1/nlme::varWeights(b$modelStruct$varStruct) 
     # w is not in data.frame order - it's in inner grouping level order
     group.name<-names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
     order.txt <- paste("ind<-order(data[[\"",group.name[1],"\"]]",sep="")
@@ -632,7 +636,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
   w <- w[Cind] # re-order in coarse group order
   if (is.null(b$modelStruct$corStruct)) V<-array(1,n) 
   else
-  { c.m<-corMatrix(b$modelStruct$corStruct) # correlation matrices for each innermost group
+  { c.m<-nlme::corMatrix(b$modelStruct$corStruct) # correlation matrices for each innermost group
     if (!is.list(c.m)) { # copy and re-order into coarse group order
       V <- c.m;V[Cind,] -> V;V[,Cind] -> V 
     } else { 
@@ -761,11 +765,11 @@ extract.lme.cov<-function(b,data,start.level=1)
 # levels outer to this will not be included in the calculation - this is useful
 # for gamm calculations
 { if (!inherits(b,"lme")) stop("object does not appear to be of class lme")
-  grps<-getGroups(b) # labels of the innermost groupings - in data frame order
+  grps<-nlme::getGroups(b) # labels of the innermost groupings - in data frame order
   n<-length(grps)    # number of data
   if (is.null(b$modelStruct$varStruct)) w<-rep(b$sigma,n) ### 
   else 
-  { w<-1/varWeights(b$modelStruct$varStruct) 
+  { w<-1/nlme::varWeights(b$modelStruct$varStruct) 
     # w is not in data.frame order - it's in inner grouping level order
     group.name<-names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
     order.txt <- paste("ind<-order(data[[\"",group.name[1],"\"]]",sep="")
@@ -778,7 +782,7 @@ extract.lme.cov<-function(b,data,start.level=1)
   }
   if (is.null(b$modelStruct$corStruct)) V<-diag(n) #*b$sigma^2
   else
-  { c.m<-corMatrix(b$modelStruct$corStruct) # correlation matrices for each group
+  { c.m<-nlme::corMatrix(b$modelStruct$corStruct) # correlation matrices for each group
     if (!is.list(c.m)) V<-c.m
     else
     { V<-matrix(0,n,n)   # data cor matrix
@@ -876,7 +880,7 @@ new.name <- function(proposed,old.names)
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
+      subset=NULL,na.action,knots=NULL,control=nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
       niterPQL=20,verbosePQL=TRUE,method="ML",...)
 ## NOTE: niterEM modified after changed notLog parameterization - old version
 ##       needed niterEM=3. 10/8/05.
@@ -886,8 +890,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # between the bases constructors provided in mgcv and the glmmPQL routine used to estimate the model.
 # NOTE: need to fill out the gam object properly
 
-{   if (!require(nlme)) stop("gamm() requires package nlme to be installed")
-    if (!require(MASS)) stop("gamm() requires package MASS to be installed")
+{   if (!require("nlme")) stop("gamm() requires package nlme to be installed")
+    if (!require("MASS")) stop("gamm() requires package MASS to be installed")
     # check that random is a named list
     if (!is.null(random))
     { if (is.list(random)) 
@@ -976,11 +980,11 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (length(formula(correlation))) # then modify the correlation formula
     { # first get the existing grouping structure ....
       corGroup <- paste(names(rand),collapse="/")
-      groupForm<-getGroupsFormula(correlation)
+      groupForm<-nlme::getGroupsFormula(correlation)
       if (!is.null(groupForm)) 
-      corGroup <- paste(corGroup,paste(all.vars(getGroupsFormula(correlation)),collapse="/"),sep="/")
+      corGroup <- paste(corGroup,paste(all.vars(nlme::getGroupsFormula(correlation)),collapse="/"),sep="/")
       # now make a new formula for the correlation structure including these groups
-      corForm <- as.formula(paste(deparse(getCovariateFormula(correlation)),"|",corGroup))
+      corForm <- as.formula(paste(deparse(nlme::getCovariateFormula(correlation)),"|",corGroup))
       attr(correlation,"formula") <- corForm
     }
 
@@ -1162,7 +1166,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 }
 
 
-test.gamm <- function(control=lmeControl(niterEM=3,tolerance=1e-11,msTol=1e-11))
+test.gamm <- function(control=nlme::lmeControl(niterEM=3,tolerance=1e-11,msTol=1e-11))
 ## this function is a response to repeated problems with nlme/R updates breaking
 ## the pdTens class. It tests fo obvious breakages!
 { test1<-function(x,z,sx=0.3,sz=0.4)

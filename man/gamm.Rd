@@ -29,8 +29,8 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=lmeControl(niterEM=0,optimMethod="L-BFGS-B"),niterPQL=20,
-verbosePQL=TRUE,method="ML",...)
+control=nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
+niterPQL=20,verbosePQL=TRUE,method="ML",...)
 }
 
 \arguments{ 

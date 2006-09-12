@@ -619,6 +619,11 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
     if (is.null(k)) ok <- FALSE
     else ok<-TRUE
   }
+  
+  if (object$bs.dim <3) { object$bs.dim <- 3
+    warning("basis dimension, k, increased to minimum possible\n")
+  }
+
   nk <- object$bs.dim
   if (!ok) { k <- rep(0,nk);k[2]<- -1}
   
@@ -717,6 +722,11 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
   # evaluate covariate, x, and knots, k.
   x <- get.var(object$term,data)
   nx<-length(x)
+
+  if (object$bs.dim <4) { object$bs.dim <- 4
+    warning("basis dimension, k, increased to minimum possible\n")
+  }
+
   nk <- object$bs.dim
   if (!is.null(knots))  k <- get.var(object$term,knots)
   else k<-NULL
@@ -1257,7 +1267,10 @@ gam.method.description <- function(method,am=TRUE)
   if (method$gam=="perf.magic") return("performance iteration - magic")
   if (method$gam=="perf.mgcv") return("performance iteration - mgcv")
   if (method$gam=="perf.outer") return(paste("perf. iter. magic + outer",method$outer))
-  if (method$pearson==FALSE) {
+  if (method$gcv=="GACV") {
+    return("GACV based outer iter. - newton, exact hessian.")
+  } else if (method$gcv=="deviance")
+  { if (method$outer=="newton") return("deviance based outer iter. - newton, exact hessian.")
     if (method$outer=="nlm") return("deviance based outer iter. - nlm exact derivs.")
     if (method$outer=="optim")  return("deviance based outer iter. - Quasi-Newton exact derivs.")
     if (method$outer=="nlm.fd") return("deviance based outer iter. - nlm with finite differences.")
@@ -1268,27 +1281,36 @@ gam.method.description <- function(method,am=TRUE)
   }
 }
 
-gam.method <- function(am="magic",gam="outer",outer="nlm",pearson=FALSE,family=NULL)
+gam.method <- function(am="magic",gam="outer",outer="newton",gcv="deviance",family=NULL)
 # Function for returning fit method control list for gam.
 # am controls the fitting method to use for pure additive models.
 # gam controls the type of iteration to use for Gams.
 # outer controls the optimization method to use when using outer
 # looping with gams.
-# pearson determined whether to base scores on Pearson statistic or deviance.
+# gcv determines the flavour of GCV score for outer iteration
 { if (sum(am==c("mgcv","magic"))==0) stop("Unknown additive model fit method.") 
   if (sum(gam==c("perf.magic","perf.mgcv","perf.outer","outer","outer"))==0) 
   stop("Unknown *generalized* additive model fit method.") 
-  if (sum(outer==c("optim","nlm","nlm.fd"))==0) 
+  if (sum(outer==c("optim","nlm","newton","nlm.fd"))==0) 
   stop("Unknown GAM outer optimizing method.") 
-  if (!is.logical(pearson)) {pearson <- FALSE;
-    warning("pearson should be TRUE or FALSE - set to FALSE.")
-  } 
+  if (sum(gcv==c("deviance","GACV","pearson"))==0)
+  stop("Unkwown flavour of GCV")
+  
+  if (gcv=="GACV"&&outer!="newton") { 
+    warning("GACV only supported with newton optimization, GCV type reset")
+    gcv <- "deviance"
+  }
+  if (gcv=="pearson"&&(outer=="newton"||outer=="nlm")) {
+    warning("Pearson based GCV is unsupported for newton or nlm outer methods, reset")
+    gcv <- "deviance"
+  }
+
   if (!is.null(family)&&substr(family$family,1,17)=="Negative Binomial" 
        &&gam!="perf.magic"&&gam!="perf.mgcv") gam <- "perf.magic"  
-  list(am=am,gam=gam,outer=outer,pearson=pearson)
+  list(am=am,gam=gam,outer=outer,gcv=gcv)
 }
 
-gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
+gam.outer <- function(lsp,fscale,family,control,method,gamma,G,...)
 # function for smoothing parameter estimation by outer optimization. i.e.
 # P-IRLS scheme iterated to convergence for each trial set of smoothing
 # parameters.
@@ -1297,54 +1319,69 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
             control$nlm$stepmax, ndigit = control$nlm$ndigit,
 	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
             iterlim = control$nlm$iterlim, G=G,family=family,control=control,
-            gamma=gamma,pearson=method$pearson)
+            gamma=gamma,pearson=(method$gcv=="pearson"),...)
     lsp<-um$estimate
-    object<-attr(full.score(lsp,G,family,control,gamma=gamma,pearson=method$pearson),"full.gam.object")
+    object<-attr(full.score(lsp,G,family,control,gamma=gamma,pearson=(method$gcv=="pearson"),...),"full.gam.object")
     object$gcv.ubre <- um$minimum
     object$outer.info <- um
+    object$sp <- exp(lsp)
+    return(object)
+  }
+  ## some preparations for the other methods 
+  if (substr(family$family,1,17)=="Negative Binomial") 
+  stop("Negative binomial family not (yet) usable with type 2 iteration methods.")
+  if (is.null(attr(G$smooth[[1]],"qrc"))) 
+  stop("Must use gam.control(absorb.cons=TRUE), for type 2 iteration methods.")
+  family <- fix.family.link(family)
+  family <- fix.family.var(family)
+  G$rS <- mini.roots(G$S,G$off,ncol(G$X))
+  if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { criterion <- method$gcv;scale<-1}
+  if (method$outer=="newton"){ ## the gam.fit3 method 
+    b <- newton(lsp=lsp,X=G$X,y=G$y,S=G$S,rS=G$rS,off=G$off,H=G$H,offset=G$offset,family=family,weights=G$w,
+                control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
+                maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
+                printWarn=FALSE,scoreType=criterion,use.svd=control$newton$use.svd,...)   
+    obj <- b$score
+    object <- b$object
+    lsp <- b$lsp
+    b <- list(conv=b$conv,iter=b$iter,grad=b$grad,hess=b$hess) ## return info
   } else { ## methods calling gam.fit2
-    if (substr(family$family,1,17)=="Negative Binomial") 
-    stop("Negative binomial family not (yet) usable with type 2 iteration methods.")
-    if (is.null(attr(G$smooth[[1]],"qrc"))) 
-    stop("Must use gam.control(absorb.cons=TRUE), for type 2 iteration
-    methods.")
-    family <- fix.family.link(family)
-    family <- fix.family.var(family)
-    G$rS <- mini.roots(G$S,G$off,ncol(G$X))
-    if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { criterion <- "GCV";scale<-1}
     args <- list(X=G$X,y=G$y,S=G$S,rS=G$rS,off=G$off,H=G$H,offset=G$offset,family=family,
-             weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale,pearson=method$pearson)
+             weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale,pearson=(method$gcv=="pearson"))
+   
     if (method$outer=="nlm") {
-      b <- nlm(gam3objective, lsp, typsize = lsp, fscale = fscale, 
+       b <- nlm(gam4objective, lsp, typsize = lsp, fscale = fscale, 
             stepmax = control$nlm$stepmax, ndigit = control$nlm$ndigit,
 	    gradtol = control$nlm$gradtol, steptol = control$nlm$steptol, 
             iterlim = control$nlm$iterlim,
 	    check.analyticals=control$nlm$check.analyticals,
-            args=args)
+            args=args,...)
       lsp <- b$estimate
-
+      
     } else if (method$outer=="optim") {
       b<-optim(par=lsp,fn=gam2objective,gr=gam2derivative,method="L-BFGS-B",control=
-         list(fnscale=fscale,factr=control$optim$factr,lmm=min(5,length(lsp))),args=args)
+         list(fnscale=fscale,factr=control$optim$factr,lmm=min(5,length(lsp))),args=args,...)
       lsp <- b$par
     }
-    obj <- gam2objective(lsp,args,printWarn=TRUE) # final model fit, with warnings 
+    obj <- gam2objective(lsp,args,printWarn=TRUE,...) # final model fit, with warnings 
     object <- attr(obj,"full.fit")
-    object$outer.info <- b
-    object$gcv.ubre <- as.numeric(obj)
-    if (args$scoreType=="GCV") object$scale <- object$scale.est else
-    object$scale <- G$sig2
-    mv<-magic.post.proc(G$X,object,w=sqrt(object$weights))
-    object$Vp <- mv$Vb
-    object$hat<-mv$hat
-    object$Ve <- mv$Ve
-    object$edf<-mv$edf
-    object$aic <- object$aic + 2*sum(mv$edf)
-    object$nsdf <- G$nsdf
-    object$GCV<-object$GCV1<-object$UBRE<-object$UBRE1<-object$trA<-
-    object$trA1<-object$alpha<-object$alpha1<-object$rV<-object$scale.est<-NULL
-    object$sig2 <- object$scale
-  }
+  } # end of methods calling gam.fit2
+  
+  object$outer.info <- b
+  object$gcv.ubre <- as.numeric(obj)
+  if (criterion=="UBRE") object$scale <- G$sig2 else object$scale <- object$scale.est 
+  
+  mv<-magic.post.proc(G$X,object,w=sqrt(object$weights))
+  object$Vp <- mv$Vb
+  object$hat<-mv$hat
+  object$Ve <- mv$Ve
+  object$edf<-mv$edf
+  object$aic <- object$aic + 2*sum(mv$edf)
+  object$nsdf <- G$nsdf
+  object$GCV<-object$GCV1<-object$UBRE<-object$UBRE1<-object$trA<-
+  object$trA1<-object$alpha<-object$alpha1<-object$rV<-object$scale.est<-NULL
+  object$sig2 <- object$scale
+  
   object$sp <- exp(lsp)
   object
 }
@@ -1352,7 +1389,7 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G)
 
 gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
                 control=gam.control(),method=gam.method(),
-                scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,...)
+                scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,G=NULL,in.out=NULL,...)
 
 # Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 # interpreted to figure out which bits relate to smooth terms and which to parametric terms.
@@ -1391,6 +1428,8 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
                  H=H,fit.method=fit.method,parametric.only=FALSE,absorb.cons=control$absorb.cons,
                  max.tprs.knots=control$max.tprs.knots)
     
+    G$family <- family
+   
     if (ncol(G$X)>nrow(G$X)+nrow(G$C)) stop("Model has more coefficients than data")
 
     G$terms<-terms;G$pterms<-pterms
@@ -1399,7 +1438,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
     if (is.null(G$offset)) G$offset<-rep(0,G$n)
      
-    method <- gam.method(method$am,method$gam,method$outer,method$pearson,family) # checking it's ok
+    method <- gam.method(method$am,method$gam,method$outer,method$gcv,family) # checking it's ok
 
     if (scale==0) 
     { if (family$family=="binomial"||family$family=="poisson") scale<-1 #ubre
@@ -1424,38 +1463,45 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   outer.looping <- !G$am && (method$gam=="perf.outer"||method$gam=="outer") &&
                     length(G$S)>0 && sum(G$sp<0)!=0
 
-  # take only a few IRLS step to get scale estimates for "pure" outer
+  # take only a few IRLS steps to get scale estimates for "pure" outer
   # looping...
     
   if (outer.looping && method$gam=="outer") fixedSteps <- control$outerPIsteps else 
       fixedSteps <- control$globit+control$maxit+2
   
-  object<-gam.fit(G,family=family,control=control,gamma=gamma,fixedSteps=fixedSteps,...)
+  if (outer.looping && method$gam=="outer" && !is.null(in.out)) { # initial s.p.s and scale provided
+    ok <- TRUE ## run a few basic checks
+    if (is.null(in.out$sp)||is.null(in.out$scale)) ok <- FALSE
+    if (length(in.out$sp)!=length(G$all.sp)) ok <- FALSE
+    if (!ok) stop("in.out incorrect: see documentation")
+    object<-list() # fake enough of a returned fit object for initialization 
+    object$sp <- in.out$sp[G$all.sp<0] # only use the values for free s.p.s
+    object$gcv.ubre <- in.out$scale
+    object$sig2 <- 0 ## just means that in.out$scale acts as total scale
+  } else ## do performance iteration.... 
+  object<-gam.fit(G,family=G$family,control=control,gamma=gamma,fixedSteps=fixedSteps,...)
   
-  if (!is.null(sp)) # fill returned s.p. array with estimated and supplied terms
-  { temp.sp<-object$sp
-    object$sp<-sp
-    object$sp[sp<0]<-temp.sp
-  }
+  # fill returned s.p. array with estimated and supplied terms
+  temp.sp<-object$sp
+  object$sp<-G$all.sp
+  object$sp[G$all.sp<0]<-temp.sp
    
-  # mgcv.conv<-object$mgcv.conv
    
   if (outer.looping)
-  { # use perf.iter s.p. estimates from gam.fit as starting values...
+  { # use perf.iter s.p. estimates from gam.fit or supplied initial s.p.s as starting values...
     lsp<-log(object$sp[G$all.sp<0]) # make sure only free s.p.s are optimized!
-    # don't allow initial sp's too far from defaults, otherwise optimizers may
+    # don't allow PI initial sp's too far from defaults, otherwise optimizers may
     # get stuck on flat portions of GCV/UBRE score....
-    if (method$gam!="perf.outer") { 
+    if (method$gam!="perf.outer"&&is.null(in.out)) { ## note no checks if supplied 
       lsp2 <- log(initial.sp(G$X,G$S,G$off)) 
       ind <- lsp > lsp2+5;lsp[ind] <- lsp2[ind]+5
       ind <- lsp < lsp2-5;lsp[ind] <- lsp2[ind]-5 
       if (fixedSteps<1) lsp <- lsp2 ## don't use perf iter sp's at all
     }
-   # temp.sp <-object$sp # keep copy off all sp's
     mgcv.conv <- object$mgcv.conv  
   
-    object <- gam.outer(lsp,fscale=abs(object$gcv.ubre)+object$sig2/length(object$y),family=family,
-                        control=control,method=method,gamma=gamma,G=G)
+    object <- gam.outer(lsp,fscale=abs(object$gcv.ubre)+object$sig2/length(G$y),family=G$family,
+                        control=control,method=method,gamma=gamma,G=G,...)
     object$mgcv.conv <- mgcv.conv 
     temp.sp <- G$all.sp
     temp.sp[G$all.sp<0] <- object$sp # copy estimated sp's into whole vector
@@ -1465,7 +1511,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   ## correct null deviance if there's an offset ....
 
   if (G$intercept&&any(G$offset)) object$null.deviance <-
-                                  glm(G$y~offset(G$offset),family=family)$deviance
+                                  glm(G$y~offset(G$offset),family=G$family)$deviance
 
   if (G$sig2<0) object$method <- "GCV" else object$method <- "UBRE"
 
@@ -1574,7 +1620,7 @@ print.gam<-function (x,...)
 gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
                          mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000,trace =FALSE,
                          rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-                         max.tprs.knots=5000,nlm=list(),optim=list(),outerPIsteps=4) 
+                         max.tprs.knots=5000,nlm=list(),optim=list(),newton=list(),outerPIsteps=1) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -1620,6 +1666,13 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
     if (is.null(nlm$check.analyticals)) nlm$check.analyticals <- FALSE
     nlm$check.analyticals <- as.logical(nlm$check.analyticals) 
 
+    # and newton defaults
+    if (is.null(newton$conv.tol)) newton$conv.tol <- 1e-6
+    if (is.null(newton$maxNstep)) newton$maxNstep <- 5
+    if (is.null(newton$maxSstep)) newton$maxSstep <- 2
+    if (is.null(newton$maxHalf)) newton$maxHalf <- 30
+    if (is.null(newton$use.svd)) newton$use.svd <- FALSE
+
     # and optim defaults
     if (is.null(optim$factr)) optim$factr <- 1e7
     optim$factr <- abs(optim$factr)
@@ -1627,7 +1680,7 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
     list(irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,globit = globit,
          trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,nb.theta.mult=nb.theta.mult,
          rank.tol=rank.tol,absorb.cons=absorb.cons,max.tprs.knots=max.tprs.knots,nlm=nlm,
-         optim=optim,outerPIsteps=outerPIsteps)
+         optim=optim,newton=newton,outerPIsteps=outerPIsteps)
     
 }
 
@@ -1636,7 +1689,7 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
 mgcv.get.scale<-function(Theta,weights,good,mu,mu.eta.val,G)
 # Get scale implied by current fit and trial -ve binom Theta, I've used
 # mu and mu.eta.val used in fit rather than implied by it....
-{ variance<-neg.bin(Theta)$variance
+{ variance<- MASS::neg.bin(Theta)$variance
   w<-sqrt(weights[good]*mu.eta.val[good]^2/variance(mu)[good])
   wres<-w*(G$y-G$X%*%G$p)
   scale<-sum(wres^2)/(G$n-sum(G$edf)-G$nsdf)
@@ -1671,7 +1724,7 @@ mgcv.find.theta<-function(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,tol)
 }
 
 
-full.score <- function(sp,G,family,control,gamma,pearson)
+full.score <- function(sp,G,family,control,gamma,pearson,...)
 # function suitable for calling from nlm in order to polish gam fit
 # so that actual minimum of score is found in generalized cases
 { G$sp<-exp(sp);
@@ -1684,7 +1737,7 @@ full.score <- function(sp,G,family,control,gamma,pearson)
     G$H[off1:off2,off1:off2]<-G$H[off1:off2,off1:off2]+G$sp[i]*G$S[[i]]
   }
   G$S<-list() # have to reset since length of this is used as number of penalties
-  xx<-gam.fit(G,family=family,control=control,gamma=gamma)
+  xx<-gam.fit(G,family=family,control=control,gamma=gamma,...)
   if (pearson) res <- xx$gcv.ubre else res <- xx$gcv.ubre.dev
   attr(res,"full.gam.object")<-xx
   res
@@ -1693,7 +1746,7 @@ full.score <- function(sp,G,family,control,gamma,pearson)
 gam.fit <- function (G, start = NULL, etastart = NULL, 
     mustart = NULL, family = gaussian(), 
     control = gam.control(),gamma=1,
-    fixedSteps=(control$maxit+control$globit+1)) 
+    fixedSteps=(control$maxit+control$globit+1),...) 
 # fitting function for a gam, modified from glm.fit.
 # note that smoothing parameter estimates from one irls iterate are carried over to the next irls iterate
 # unless the range of s.p.s is large enough that numerical problems might be encountered (want to avoid 
@@ -1704,7 +1757,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
 {
     intercept<-G$intercept
     conv <- FALSE
-    nobs <- NROW(G$y)
+    n <- nobs <- NROW(G$y) ## n just there to keep codetools happy
     nvars <- NCOL(G$X) # check this needed
     y<-G$y # original data
     X<-G$X # original design matrix
@@ -1843,7 +1896,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
 
         if (find.theta) # then family is negative binomial with unknown theta - estimate it here from G$sig2
         { Theta<-mgcv.find.theta(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,.Machine$double.eps^0.5)
-          if (is.null(nb.link)) family<-neg.bin(Theta)
+          if (is.null(nb.link)) family<-MASS::neg.bin(Theta)
           else family<-do.call("negative.binomial",list(theta=Theta,link=nb.link))
           variance <- family$variance;dev.resids <- family$dev.resids
           aic <- family$aic

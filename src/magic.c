@@ -64,11 +64,11 @@ void mgcv_AtA(double *AA,double *A,int *q,int *n)
    matrix(.C("mgcv_AtA",as.double(rep(0,q*q)),as.double(A),as.integer(q),
               as.integer(n),PACKAGE="mgcv")[[1]],q,q)
 */
-{ double xx,*p,*p1,*p2,*p3;
+{ double xx,*p,*p1,*p2,*p3,*p4;
   int nq,i,j;
   nq= *n * *q;
   for (i=0,p=A;i < *q;p+= *n,i++) for (j=i,p1=p;j< *q;p1+= *n,j++)
-  { for (xx=0.0,p2=p,p3=p1;p2<p + *n;p2++,p3++) xx += *p2 * *p3;
+  { for (xx=0.0,p2=p,p3=p1,p4=p+ *n;p2<p4;p2++,p3++) xx += *p2 * *p3;
     AA[i * *q + j] = AA[ j * *q + i]=xx;
   }
 }
@@ -77,54 +77,77 @@ void mgcv_AtA(double *AA,double *A,int *q,int *n)
 void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n)
 /* Forms r by c product of B and C, transposing each according to bt and ct.
    n is the common dimension of the two matrices, which are stored in R 
-   default column order form:  
-   r<-3;c<-4;n<-5
+   default column order form. Algorithm is inner loop optimized in each case 
+   (i.e. inner loops only update pointers by 1, rather than jumping).
+   
+  
+   r<-1000;c<-1000;n<-1000
    A<-matrix(0,r,c);B<-matrix(rnorm(r*n),n,r);C<-matrix(rnorm(n*c),c,n)
+   system.time(
    A<-matrix(.C("mgcv_mmult",as.double(A),as.double(B),as.double(C),as.integer(1),as.integer(1),
-          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c)
-   t(B)%*%t(C)-A
+          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c))
+   range(as.numeric(t(B)%*%t(C)-A))
    A<-matrix(0,r,c);B<-matrix(rnorm(r*n),n,r);C<-matrix(rnorm(n*c),n,c)
+   system.time(
    A<-matrix(.C("mgcv_mmult",as.double(A),as.double(B),as.double(C),as.integer(1),as.integer(0),
-          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c)
-   t(B)%*%C-A
+          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c))
+   range(as.numeric(t(B)%*%C-A))
    A<-matrix(0,r,c);B<-matrix(rnorm(r*n),r,n);C<-matrix(rnorm(n*c),c,n)
+   system.time(
    A<-matrix(.C("mgcv_mmult",as.double(A),as.double(B),as.double(C),as.integer(0),as.integer(1),
-          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c)
-   B%*%t(C)-A 
+          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c))
+   range(as.numeric(B%*%t(C)-A))
    A<-matrix(0,r,c);B<-matrix(rnorm(r*n),r,n);C<-matrix(rnorm(n*c),n,c)
+   system.time(
    A<-matrix(.C("mgcv_mmult",as.double(A),as.double(B),as.double(C),as.integer(0),as.integer(0),
-          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c)
-   B%*%C-A  
+          as.integer(r),as.integer(c),as.integer(n))[[1]],r,c))
+   range(as.numeric(B%*%C-A))  
 */
 
-{ double xx,*bp,*cp,*bp1,*cp1,*ap;
-  int br,cr,i;
+{ double xx,*bp,*cp,*bp1,*cp1,*cp2,*cp3,*ap,*ap1;
+  int br,cr,i,j;
   if (*bt)
   { if (*ct) /* A=B'C' */
-    { br= *n;cr= *c;
-      for (ap=A,cp1=C;cp1<C+ *c;cp1++) for (bp1=B;bp1<B+ *r*br;bp1+=br,ap++)  
-      { for (xx=0.0,bp=bp1,cp=cp1;bp<bp1 + *n;bp++,cp+=cr) xx += *bp * *cp;/* B[k+br*i]*C[j+cr*k];*/
-        *ap=xx;
-      }
-    } else /* A=B'C */
-    { br= *n;cr= *n;
-      for (ap=A,cp1=C;cp1< C+ *c*cr;cp1+=cr) for (bp=B,i=0;i< *r;i++,ap++)  
-      { for (xx=0.0,cp=cp1;cp< cp1+ *n;cp++,bp++) xx += *cp * *bp; /* B[k+br*i]*C[k+cr*j];*/
+    { /* this one is really awkward: have to use first row of C' as working storage
+         for current A row; move most slowly through B */
+      for (i=0;i<*r;i++) /* update A *row-wise*, one full sweep of C per i */    
+      { cp1 = C + *c;
+        /* back up row 1 of C' (in A), and initialize current row of A (stored in row 1 of C') */
+        xx = *B;
+        for (ap=A,cp=C;cp<cp1;cp++,ap+= *r) { *ap = *cp; *cp *= xx;}  
+        B++;cp2=cp1;
+        for (j=1;j< *n;j++,B++) 
+	    for (xx= *B,cp=C;cp<cp1;cp++,cp2++) *cp += xx * *cp2;      
+        /* row i of A is now in row 1 of C', need to swap back */
+        for (ap=A,cp=C;cp<cp1;cp++,ap+= *r) { xx = *ap; *ap = *cp; *cp = xx;}
+        A++;
+      } 
+    } else /* A=B'C - easiest case: move most slowly through A*/
+    { br= *n;cr= *n;cp2 = C + *c * cr;
+      for (ap=A,cp1=C;cp1< cp2;cp1+=cr) for (bp=B,i=0;i< *r;i++,ap++)  
+      { for (xx=0.0,cp=cp1,cp3=cp1+ *n;cp< cp3;cp++,bp++) xx += *cp * *bp; /* B[k+br*i]*C[k+cr*j];*/
         *ap=xx;
       }
     }
   } else
-  { if (*ct) /* A=BC' */
-    { br= *r;cr= *c;
-      for (ap=A,cp1=C;cp1< C + *c;cp1++) for (bp1=B;bp1<B+ *r;bp1++,ap++) 
-      { for (xx=0.0,bp=bp1,cp=cp1;bp< bp1+ *n*br;bp+=br,cp+=cr) xx += *bp * *cp;/* B[i+br*k]*C[j+cr*k];*/
-        *ap=xx;
+  { if (*ct) /* A=BC' - update A column-wise, move most slowly through C (but in big steps)*/
+    { cp = C;
+      for (j=0;j< *c;j++) /* go through columns of A, one full B sweep per j */
+      { ap1 = A + *r;C=cp;xx = *C;bp=B;
+        for (ap=A;ap<ap1;ap++,bp++) *ap = xx * *bp ;
+        C += *c;
+        for (i=1;i< *n;i++,C+= *c) 
+	for (xx=*C,ap=A;ap<ap1;ap++,bp++) *ap += xx * *bp;
+        A=ap1;cp++;
       }
-    } else /* A=BC */
-    { br= *r;cr= *n;
-      for (ap=A,cp1=C;cp1< C + *c*cr;cp1+=cr) for (bp1=B;bp1<B+ *r;ap++,bp1++)  
-      { for (xx=0.0,cp=cp1,bp=bp1;cp<cp1+ *n;cp++,bp+=br) xx += *bp * *cp; /* B[i+br*k]*C[k+cr*j];*/
-        *ap=xx;
+    } else /* A=BC - update A column-wise, moving most slowly through C */
+    { for (j=0;j< *c;j++) /* go through columns of A, one full B sweep per j */
+      { ap1 = A + *r;xx = *C;bp=B;
+        for (ap=A;ap<ap1;ap++,bp++) *ap = xx * *bp ;
+        C++;
+        for (i=1;i< *n;i++,C++) 
+	for (xx=*C,ap=A;ap<ap1;ap++,bp++) *ap += xx * *bp;
+        A=ap1;
       }
     }
   }

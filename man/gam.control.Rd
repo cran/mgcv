@@ -13,8 +13,8 @@ choise of fitting method, see \code{\link{gam.method}}.
 gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
             mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-            max.tprs.knots=5000,nlm=list(),optim=list(),
-            outerPIsteps=4) 
+            max.tprs.knots=5000,nlm=list(),optim=list(),newton=list(),
+            outerPIsteps=1) 
 }
 \arguments{ 
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
@@ -77,7 +77,10 @@ examples in \code{\link{gam}}, rather than simply increasing this default.}
 used for outer estimation of smoothing parameters. See details.}
 
 \item{optim}{list of control parameters to pass to \code{\link{optim}} if this
-is used for outer estimation of smoothin parameters. See details.}
+is used for outer estimation of smoothing parameters. See details.}
+
+\item{newton}{list of control parameters to pass to default Newton optimizer
+used for outer estimation of log smoothing parameters. See details.}
 
 \item{outerPIsteps}{The number of performance interation steps used to
 initialize outer iteration. Less than 1 means
@@ -99,6 +102,16 @@ number of optimization steps allowed - defaults to 200; (vi)
 calculations should be checked numerically - defaults to \code{FALSE}. Any of
 these which are not supplied and named in the list are set to their default
 values.
+
+Outer iteration using \code{newton} is controlled by the list \code{newton}
+with the following elements : \code{conv.tol} (default
+1e-6) is the relative convergence tolerance; \code{maxNstep} is the maximum
+length allowed for an element of the Newton search direction (default 5);
+\code{maxSstep} is the maximum length allowed for an element of the steepest
+descent direction (only used if Newton fails - default 2); \code{maxHalf} is
+the maximum number of step halvings to permit before giving up (default 30); 
+\code{use.svd} determines whether to use an SVD step or QR step for the part
+of fitting that determines problem rank, etc. (defaults to \code{FALSE}).
 
 Outer iteration using \code{\link{optim}} is controlled using list
 \code{optim}, which currently has one element: \code{factr} which takes
