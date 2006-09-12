@@ -12,9 +12,9 @@ smoothing parameters, in a manner sutable for use by \code{\link{optim}} or \cod
 Not normally called directly, but rather service routines for \code{\link{gam.outer}}.
 }
 \usage{
-gam2objective(lsp,args,printWarn=FALSE)
-gam2derivative(lsp,args)
-gam3objective(lsp,args)
+gam2objective(lsp,args,printWarn=FALSE,...)
+gam2derivative(lsp,args,...)
+gam3objective(lsp,args,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -25,6 +25,8 @@ gam3objective(lsp,args)
 \item{printWarn}{Should \code{\link{gam.fit2}} print some warnings? Used to
 suppress warnings that are only of interest for the final fitted model, until
 that model is reached.}
+
+\item{...}{Other arguments for passing to \code{gam.fit2}.}
 }
 \details{ \code{gam2objective} and \code{gam2derivative} are functions suitable
 for calling by \code{\link{optim}}, to evaluate the GCV/UBRE score and it's

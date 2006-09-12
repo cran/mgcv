@@ -9,9 +9,21 @@ void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,
 		 int *m, int *n,int *q, int *get_trA,int *deriv,
 		 double *rank_tol,double *beta, double *trA, double *beta1,
 		 double *trA1,double *rV,int *rank_est);
+
 void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,
 	   double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score);
+
+void gdi(double *X,double *E,double *rS,
+         double *sp,double *z,double *w,double *mu, double *eta, double *y,
+         double *p_weights,double *g1,double *g2,double *g3,double *V0,
+         double *V1,double *V2,double *beta,double *D1,double *D2,
+         double *P0,double *P1,double *P2,double *trA,
+         double *trA1,double *trA2,double *rV,double *rank_tol,double *conv_tol, int *rank_est,
+	 int *n,int *q, int *M,int *Encol,int *rSncol,int *deriv,int *use_svd);
+
+void pls_fit(double *y,double *X,double *w,double *E,int *n,int *q,int *cE,double *eta,
+             double *penalty,double *rank_tol);
 
 /* various service routines */
 void RQT(double *A,int *r,int *c);
@@ -30,7 +42,7 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
 void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c);
 void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd);
 void mroot(double *A,int *rank,int *n);
-
+void R_cond(double *R,int *r,int *c,double *work,double *Rcondition);
 
 
 /* basis constructor/prediction routines*/

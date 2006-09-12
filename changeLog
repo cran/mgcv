@@ -1,3 +1,33 @@
+1.3-19
+
+* numerous changes to NAMESPACE and gamm related functions to pass
+  codetools checks.
+
+* gam.method()  modified to allow GACV as an option for outer GCV 
+  model selection.
+
+* Improved outer iteration added via gdi.c coupled with gam.fit3. 
+  Exact first and second derivatives of GACV/GCV/UBRE/AIC are now 
+  available via new iteration methods. These improve the 
+  speed and reliability of fitting in the generalized case. 
+
+* magic.c::mgcv_mmult modified so that all inner loop calculations are 
+  optimal (i.e. inner loop pointers increments are all 1).
+
+* `smooth.construct' functions for "cc" and "cr" smooths now increase `k'
+  to the minimum possible value (and warn), if it's too low. 
+
+* `gam' modified to allow passing of `mustart' etc to gam.fit and 
+  gam.fit2, properly
+
+* `gam' modified to fix a bug whereby fitting in two steps using argument 
+  `G' could fail when some sp's are to be estimated and some fixed.
+
+* an argument `in.out' added to `gam' to allow user initialization of 
+  smoothing parameters when using `outer' iteration in the generalized 
+  case. This can speed up analyses that rely on several refits of the same 
+  model. 
+
 1.3-18
 
 * gamm modifed so that weights dealt with properly if lme type varFunc 

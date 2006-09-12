@@ -21,7 +21,7 @@ the Pearson statistic: see \code{\link{gam.method}}.
 Not normally called directly, but rather a service routine for \code{\link{gam}}.
 }
 \usage{
-gam.outer(lsp,fscale,family,control,method,gamma,G)
+gam.outer(lsp,fscale,family,control,method,gamma,G,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -42,6 +42,7 @@ the optimization method to use.}
 \item{G}{List produced by \code{\link{gam.setup}}, containing most of what's
 needed to actually fit GAM.}
 
+\item{...}{other arguments, typically for passing on to \code{gam.fit2} (ultimately).}
 }
 \details{ 
 Estimation of smoothing parameters by optimizing GCV scores obtained at
