@@ -7,9 +7,9 @@
 summaries from it. 
 }
 \usage{
-summary.gam(object, dispersion=NULL, freq=TRUE, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=TRUE, ...)
 
-print.summary.gam(x,digits = max(3, getOption("digits") - 3), 
+\method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
 }
 %- maybe also `usage' for other objects documented here.

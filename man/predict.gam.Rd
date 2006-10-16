@@ -13,8 +13,8 @@ for quantities derived from the model, and for lookup table prediction outside
 \code{R} (see example code below).}
 
 \usage{
-predict.gam(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-            block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...)
+\method{predict}{gam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
+        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

@@ -6,7 +6,8 @@
 parameters or frequentist covariance matrix of the parameter estimators 
 from a fitted \code{gam} object.
 }
-\usage{vcov.gam(object, freq = TRUE, dispersion = NULL, ...)
+\usage{
+\method{vcov}{gam}(object, freq = TRUE, dispersion = NULL, ...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

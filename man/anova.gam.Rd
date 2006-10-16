@@ -11,8 +11,8 @@ are usually approximate, unless the models are un-penalized.
 
 }
 \usage{
-anova.gam(object, ..., dispersion = NULL, test = NULL)
-print.anova.gam(x, digits = max(3, getOption("digits") - 3),...)
+\method{anova}{gam}(object, ..., dispersion = NULL, test = NULL)
+\method{print}{anova.gam}(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
