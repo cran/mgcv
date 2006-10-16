@@ -11,13 +11,8 @@ well as the minimized GCV or UBRE score, depending on which was used.
 
 \references{
 
-Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
-the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
-
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
-
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. CRC/
+Chapmand and Hall, Boca Raton, Florida.
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 }

@@ -6,7 +6,7 @@
 matrix) of a fitted \code{gam} object.
 }
 \usage{
-influence.gam(model,...)
+\method{influence}{gam}(model,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

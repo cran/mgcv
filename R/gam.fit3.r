@@ -418,7 +418,7 @@ newton <- function(lsp,X,y,S,rS,off,H,offset,family,weights,
     
     ## Nstep <- -drop(U%*%(d*(t(U)%*%grad))) # (modified) Newton direction
     ms <- max(abs(Nstep))
-    if (ms>maxNstep) Nstep <- Nstep/ms
+    if (ms>maxNstep) Nstep <- maxNstep * Nstep/ms
 
     ## try the step ...
     lsp1 <- lsp + Nstep
@@ -456,10 +456,10 @@ newton <- function(lsp,X,y,S,rS,off,H,offset,family,weights,
            printWarn=FALSE,mustart=mustart,use.svd=use.svd,...)
        
         if (scoreType=="GACV") {
-          score1 <- b$GACV
+          score1 <- b1$GACV
         } else if (scoreType=="UBRE") {
-          score1 <- b$UBRE
-        } else score1 <- b$GCV
+          score1 <- b1$UBRE
+        } else score1 <- b1$GCV
 
         if (score1 <= score) { ## accept
           b<-gam.fit3(x=X, y=y, sp=lsp1, S=S,rS=rS,off=off, H=H,
