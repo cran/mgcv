@@ -1,3 +1,26 @@
+1.3-21
+
+* minor bug in gam.fit() - edf array not passed to `mgcv.find.theta'
+  if method "perf.magic" used - so wrong EDF used for theta estimation 
+  with neagative binomial. fixed. 
+
+* Theta estimate added to family object of fitted gam if negative binomial 
+  used...
+
+* extract.lme.cov(2) modified to allow use with single level grouping 
+  factors (not really sure when this is useful)
+
+* bug in gam4objective called when using gam.method(outer="nlm") - never 
+  used GCV.
+
+* fixed bug in `newton' whereby immediate convergence actually caused
+  routine to fail.
+
+* modified `smoothCon' and `predictMat' so that `qrc' attribute always
+  created if constraint absorption used, even if there are no constraints.
+  This attribute can then be used to test that there are no unabsorbed 
+  constraints (e.g. in `gam.outer').
+
 1.3-20
 
 * Bad bug in `newton' - step halving set up so that step *never* 

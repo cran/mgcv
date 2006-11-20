@@ -703,8 +703,10 @@ extract.lme.cov2<-function(b,data,start.level=1)
   { for (i in 1:(n.levels-start.level+1)) # work through the r.e. groupings inner to outer
     { # get matrix with columns that are indicator variables for ith set of groups...
       # groups has outer levels first 
-      X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
-                contrasts.arg=c("contr.treatment","contr.treatment"))
+      if(length(levels(b$groups[[n.levels-i+1]]))==1) { ## model.matrix needs >1 level 
+        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else { 
+        X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
+                  contrasts.arg=c("contr.treatment","contr.treatment")) }
       # Get `model matrix' columns relevant to current grouping level...
       X[[2]] <- as.matrix(Zt[,i.col:(i.col+grp.dims[i]-1)])
       i.col <- i.col+grp.dims[i]
@@ -815,8 +817,10 @@ extract.lme.cov<-function(b,data,start.level=1)
   { for (i in 1:(n.levels-start.level+1)) # work through the r.e. groupings inner to outer
     { # get matrix with columns that are indicator variables for ith set of groups...
       # groups has outer levels first 
-      X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
-                contrasts.arg=c("contr.treatment","contr.treatment"))
+      if(length(levels(b$groups[[n.levels-i+1]]))==1) { ## model.matrix needs >1 level 
+        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else { 
+        X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
+                  contrasts.arg=c("contr.treatment","contr.treatment")) }
       # Get `model matrix' columns relevant to current grouping level...
       X[[2]] <- as.matrix(Zt[,i.col:(i.col+grp.dims[i]-1)])
       i.col <- i.col+grp.dims[i]

@@ -903,7 +903,10 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE)
       sm$C <- NULL
       sm$rank <- pmin(sm$rank,k-j)
       ## ... so qr.qy(sm$qrc,c(rep(0,nrow(sm$C)),b)) gives original para.'s
-    }  
+    } else {
+      attr(sm,"qrc") <- "no constraints"
+      attr(sm,"nCons") <- 0;
+    } 
   } else attr(sm,"qrc") <-NULL
 
   sm 
@@ -914,11 +917,15 @@ PredictMat <- function(object,data)
 ## smoothCon on resulting Prediction Matrix
 { X <- Predict.matrix(object,data)
   qrc <- attr(object,"qrc")
-  if (!is.null(qrc)) { ## then a transform has been applied by smoothCon
-    j<-attr(object,"nCons");k<-ncol(X)
-    X<-t(qr.qy(qrc,t(X))[(j+1):k,])
+  if (!is.null(qrc)) { ## then smoothCon absorbed constraints
+    j <- attr(object,"nCons")
+    if (j>0) { ## there were constraints to absorb - need to untransform
+      k<-ncol(X)
+      X <- t(qr.qy(qrc,t(X))[(j+1):k,])
+    }
   }
-  del.index <- attr(object,"del.index")
+  ## drop columns eliminated by side-conditions...
+  del.index <- attr(object,"del.index") 
   if (!is.null(del.index)) X <- X[,-del.index]
   X
 }
@@ -1335,7 +1342,8 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G,...)
   family <- fix.family.link(family)
   family <- fix.family.var(family)
   G$rS <- mini.roots(G$S,G$off,ncol(G$X))
-  if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { criterion <- method$gcv;scale<-1}
+  if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { 
+                 criterion <- method$gcv;scale <- -1}
   if (method$outer=="newton"){ ## the gam.fit3 method 
     b <- newton(lsp=lsp,X=G$X,y=G$y,S=G$S,rS=G$rS,off=G$off,H=G$H,offset=G$offset,family=family,weights=G$w,
                 control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
@@ -1692,7 +1700,7 @@ mgcv.get.scale<-function(Theta,weights,good,mu,mu.eta.val,G)
 { variance<- MASS::neg.bin(Theta)$variance
   w<-sqrt(weights[good]*mu.eta.val[good]^2/variance(mu)[good])
   wres<-w*(G$y-G$X%*%G$p)
-  scale<-sum(wres^2)/(G$n-sum(G$edf)-G$nsdf)
+  scale<-sum(wres^2)/(G$n-sum(G$edf))
 }
 
 
@@ -1895,11 +1903,16 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         }
 
         if (find.theta) # then family is negative binomial with unknown theta - estimate it here from G$sig2
-        { Theta<-mgcv.find.theta(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,.Machine$double.eps^0.5)
+        { if (G$fit.method=="magic") { ## then need to get edf array
+            mv<-magic.post.proc(G$X,mr,w=G$w)
+            G$edf <- mv$edf
+          }
+          Theta<-mgcv.find.theta(Theta,T.max,T.min,weights,good,mu,mu.eta.val,G,.Machine$double.eps^0.5)
           if (is.null(nb.link)) family<-MASS::neg.bin(Theta)
           else family<-do.call("negative.binomial",list(theta=Theta,link=nb.link))
           variance <- family$variance;dev.resids <- family$dev.resids
           aic <- family$aic
+          family$Theta <- Theta ## save Theta estiamte in family
         }
 
         if (control$trace&&G$fit.method=="mgcv")
