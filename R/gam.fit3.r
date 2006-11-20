@@ -16,7 +16,8 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
             gamma=1,scale=1,printWarn=TRUE,...) 
 ## deriv, sp, S, rS, H added to arg list. 
 ## need to modify family before call.
-{   if (!deriv%in%c(0,1,2)) stop("unsupported order of differentiation requested of gam.fit3")
+{   scale <- abs(scale)
+    if (!deriv%in%c(0,1,2)) stop("unsupported order of differentiation requested of gam.fit3")
     x <- as.matrix(x)
     iter <- 0;coef <- rep(0,ncol(x))
     xnames <- dimnames(x)[[2]]
@@ -400,6 +401,8 @@ newton <- function(lsp,X,y,S,rS,off,H,offset,family,weights,
   Slength <- maxSstep 
   score.scale <- b$scale.est + score;    
   uconv.ind <- abs(grad) > score.scale*conv.tol
+  ## check for all converged too soon, and undo !
+  if (!sum(uconv.ind)) uconv.ind <- uconv.ind | TRUE
   for (i in 1:200) {
     ## exclude apparently converged gradients from computation
     hess1 <- hess[uconv.ind,uconv.ind] 
@@ -509,11 +512,11 @@ gam4objective <- function(lsp,args,...)
 { 
   b<-gam.fit3(x=args$X, y=args$y, sp=lsp, S=args$S,rS=args$rS,off=args$off, H=args$H,
      offset = args$offset,family = args$family,weights=args$w,deriv=1,
-     control=args$control,gamma=args$gamma,scale=args$scale,pearson=args$pearson,
+     control=args$control,gamma=args$gamma,scale=args$scale,scoreType=args$scoreType,
      use.svd=FALSE,printWarn=FALSE,...)
-  if (args$scoreType == "GCV") ret <- b$GCV else ret <- b$UBRE
+  if (args$scoreType == "deviance") ret <- b$GCV else ret <- b$UBRE
   attr(ret,"full.fit") <- b
-  if (args$scoreType == "GCV") at <- b$GCV1 else at <- b$UBRE1
+  if (args$scoreType == "deviance") at <- b$GCV1 else at <- b$UBRE1
   attr(ret,"gradient") <- at
   ret
 }
