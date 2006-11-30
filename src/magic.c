@@ -104,7 +104,7 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
    range(as.numeric(B%*%C-A))  
 */
 
-{ double xx,*bp,*cp,*bp1,*cp1,*cp2,*cp3,*ap,*ap1;
+{ double xx,*bp,*cp,*cp1,*cp2,*cp3,*ap,*ap1;
   int br,cr,i,j;
   if (*bt)
   { if (*ct) /* A=B'C' */
