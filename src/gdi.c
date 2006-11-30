@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #define ANSI
+/*#define DEBUG*/
 #include "matrix.h"
 #include "mgcv.h"
 
@@ -119,7 +120,7 @@ void get_trA(double *trA,double *trA1,double *trA2,double *U1,double *KU1t,doubl
       getXtWX(KtTK+ j,K,Tk + k * *n,n,r,work);
       bt=ct=0;mgcv_mmult(U1KtTK+ k * *q * *r ,U1,KtTK + j,&bt,&ct,q,r,r);
     }
-  }
+  } else { KtTK=U1KtTK=(double *)NULL;}
   
   /* evaluate first term in first derivative of tr(A) */
   bt=1;ct=0;mgcv_mmult(trA1,Tk,diagA,&bt,&ct,M,&one,n); /* tr(TkA) */ 
@@ -162,7 +163,7 @@ void get_trA(double *trA,double *trA1,double *trA2,double *U1,double *KU1t,doubl
     U1PtSP = (double *)calloc((size_t)(*M * *q * *r ),sizeof(double));
     KU1tU1PtrSm = (double *)calloc((size_t)(*n * *q),sizeof(double));/* transient storage for K U1'U1 P'rSm */ 
     diagBtSBA = (double *)calloc((size_t)(*n * *M),sizeof(double));
-  }
+  } else {U1PtrSm=U1PtSP=KU1tU1PtrSm=diagBtSBA=(double *)NULL; }
   for (rSoff=0,m=0;m < *M;m++) {
     bt=1;ct=0;mgcv_mmult(PtrSm,P,rS+rSoff * *q,&bt,&ct,r,rSncol+m,q);
     bt=0;ct=0;mgcv_mmult(KPtrSm,K,PtrSm,&bt,&ct,n,rSncol+m,r); 
@@ -767,7 +768,7 @@ void gdi(double *X,double *E,double *rS,
 { double *zz,*WX,*tau,*work,*pd,*p0,*p1,*p2,*p3,*K,*R,*d,*Vt,*V,*U1,*KU1t,xx,*b1,*b2,*P,
          *c0,*c1,*c2,*a0,*a1,*a2,*B2z,*B2zBase,*B1z,*B1zBase,*eta1,*mu1,*eta2,*KKtz,
          *PKtz,*KPtSPKtz,*v1,*v2,*wi,*wis,*z1,*z2,*zz1,*zz2,*pz2,*w1,*w2,*pw2,*Tk,*Tkm,
-         *pb2,*B1z1, *dev_grad,*dev_hess,diff,mag,*D1_old,*D2_old,Rcond,*tau2;
+         *pb2,*B1z1, *dev_grad,*dev_hess=NULL,diff,mag,*D1_old,*D2_old,Rcond,*tau2;
   int i,j,k,*pivot,ScS,*pi,rank,r,left,tp,bt,ct,iter,m,one=1,n_2dCols,n_b1,n_b2,
       n_eta1,n_eta2,n_work,ok,deriv2,*pivot2;
 
@@ -954,6 +955,15 @@ void gdi(double *X,double *E,double *rS,
     /* c2 = (y-mu)*(g3/g1-g2/g1) - g2/g1 */
     for (i=0;i<*n;i++) c2[i]=c0[i]*(g3[i]-g2[i]*g2[i]/g1[i])/g1[i]-c2[i];
 
+#ifdef DEBUG
+    printf("\n c0:\n");
+	for (i=0;i<*n;i++) printf("  %g",c0[i]);
+    printf("\n c1:\n");
+	for (i=0;i<*n;i++) printf("  %g",c1[i]);
+     printf("\n c2:\n");
+	for (i=0;i<*n;i++) printf("  %g",c2[i]);
+#endif    
+
     /* set up constants involved in w updates */
     a0=(double *)calloc((size_t)*n,sizeof(double));
     a1=(double *)calloc((size_t)*n,sizeof(double));  
@@ -962,7 +972,14 @@ void gdi(double *X,double *E,double *rS,
     for (i=0;i< *n;i++) a1[i] = 3/w[i];
     for (i=0;i< *n;i++) 
       a2[i] = -w[i]*w[i]*w[i]*(V2[i]*g1[i]+3*V1[i]*g2[i]+2*g3[i]*V0[i])/(g1[i]*2*p_weights[i]);
-
+#ifdef DEBUG
+    printf("\n\n\n\n a0:\n");
+	for (i=0;i<*n;i++) printf("  %g",a0[i]);
+    printf("\n a1:\n");
+	for (i=0;i<*n;i++) printf("  %g",a1[i]);
+     printf("\n a2:\n");
+	for (i=0;i<*n;i++) printf("  %g",a2[i]);
+#endif    
     /* some useful arrays for Tk and Tkm */
     wi=(double *)calloc((size_t)*n,sizeof(double));
     wis=(double *)calloc((size_t)*n,sizeof(double));
@@ -979,7 +996,7 @@ void gdi(double *X,double *E,double *rS,
             (1/V0[i] + (y[i]-mu[i])/(V0[i]*V0[i]*g1[i])*(V1[i]*g1[i]+V0[i]*g2[i]))/(g1[i]*g1[i]);
       dev_hess=(double *)calloc((size_t)(*q * *q),sizeof(double));
       getXtWX(dev_hess,X,v1,n,q,v2);
-    }
+    } 
   
     /* create storage for gradient and Hessian of deviance wrt sp's from previous iteration,
        for convergence testing */
@@ -1154,6 +1171,11 @@ void gdi(double *X,double *E,double *rS,
       
     } /* end of main derivative iteration */
   } /* end of if (*deriv) */ 
+  else { /* keep compilers happy */
+    b1=B1zBase=B1z=eta1=mu1=eta2=B1z1=KKtz=KPtSPKtz=c0=c1=c2=(double *)NULL;
+    a0=a1=a2=wi=wis=dev_grad=D1_old=D2_old=z1=z2=zz1=zz2=w1=w2=b2=B2zBase=B2z=(double *)NULL;
+    Tk=Tkm=(double *)NULL;
+  }
   /************************************************************************************/
   /* End of the coefficient derivative iteration  */
   /************************************************************************************/

@@ -215,9 +215,9 @@ rep(1, nobs), start = NULL, etastart = NULL,
 
             if (iter>1&&pdev>old.pdev) { ## solution diverging
               ii <- 1
-             # while (pdev - old.pdev> (0.1 + abs(old.pdev))* control$epsilon*.9)
-            while (pdev -old.pdev > (.1+abs(old.pdev))*.2)  
-            {
+           ## while (pdev -old.pdev > (.1+abs(old.pdev))*.2)  
+            while (pdev -old.pdev > (.1+abs(old.pdev))*.Machine$double.eps*10)  
+             { ## step halve until pdev <= old.pdev
                 if (ii > 200) 
                    stop("inner loop 3; can't correct step size")
                 ii <- ii + 1

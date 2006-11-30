@@ -137,13 +137,14 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
            
 
             dum1 <- rep(0,ncol(x));dum2 <- rep(0,nobs);dum3 <- rep(0,nSp)
+            
             oo<-.C(C_pls_fit,y=as.double(z),as.double(x[good,]),as.double(w),as.double(Sr),as.integer(sum(good)),
             as.integer(ncol(x)),as.integer(ncol(Sr)),eta=as.double(z),penalty=as.double(1),
             as.double(.Machine$double.eps*100))
         
             start <- oo$y[1:ncol(x)];
             penalty <- oo$penalty
-            eta <- oo$eta
+            eta <- drop(x%*%start)
 
             if (any(!is.finite(start))) {
                 conv <- FALSE
@@ -202,10 +203,13 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
 
             pdev <- dev + penalty  ## the penalized deviance 
 
+            if (control$trace) 
+                  cat("penalized deviance =", pdev, "\n")
+
             if (iter>1&&pdev>old.pdev) { ## solution diverging
               ii <- 1
-            while (pdev -old.pdev > (.1+abs(old.pdev))*.2)  
-             {
+            while (pdev -old.pdev > (.1+abs(old.pdev))*.Machine$double.eps*10)  
+             { ## step halve until pdev <= old.pdev
                 if (ii > 200) 
                    stop("inner loop 3; can't correct step size")
                 ii <- ii + 1
@@ -214,7 +218,8 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
                 mu <- linkinv(eta <- eta + offset)
                   dev <- sum(dev.resids(y, mu, weights))
                   pdev <- dev + t(start)%*%St%*%start ## the penalized deviance
-            
+                if (control$trace) 
+                  cat("Step halved: new penalized deviance =", pdev, "\n")
               }
             } 
 
@@ -271,17 +276,18 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
          trA1 <- array(0,nSp);trA2 <- matrix(0,nSp,nSp) # for derivs of tr(A)
          rV=matrix(0,ncol(x),ncol(x));
          dum <- 1
+         if (control$trace) cat("calling gdi...")
          oo <-
          .C(C_gdi,X=as.double(x[good,]),E=as.double(Sr),rS = as.double(unlist(rS)),
            sp=as.double(exp(sp)),z=as.double(z),w=as.double(w),mu=as.double(mug),eta=as.double(etag),y=as.double(yg),
-           p.weights=as.double(weights),g1=as.double(g1),g2=as.double(g2),g3=as.double(g3),V0=as.double(V),
+           p.weights=as.double(weg),g1=as.double(g1),g2=as.double(g2),g3=as.double(g3),V0=as.double(V),
            V1=as.double(V1),V2=as.double(V2),beta=as.double(coef),D1=as.double(D1),D2=as.double(D2),
            P=as.double(dum),P1=as.double(P1),P2=as.double(P2),trA=as.double(dum),
            trA1=as.double(trA1),trA2=as.double(trA2),rV=as.double(rV),rank.tol=as.double(.Machine$double.eps*100),
            conv.tol=as.double(control$epsilon),rank.est=as.integer(1),n=as.integer(length(z)),
            p=as.integer(ncol(x)),M=as.integer(nSp),Encol = as.integer(ncol(Sr)),
            rSncol=as.integer(unlist(lapply(rS,ncol))),deriv=as.integer(deriv),use.svd=as.integer(use.svd))      
-
+         if (control$trace) cat("done!\n")
 
          rV <- matrix(oo$rV,ncol(x),ncol(x))
          coef <- oo$beta;
