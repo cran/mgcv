@@ -5,7 +5,7 @@
 \description{ Extracts the formula from a fitted \code{gam} object. 
 }
 \usage{
-formula.gam(x,...)
+\method{formula}{gam}(x,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

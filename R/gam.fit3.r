@@ -206,9 +206,13 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
             if (control$trace) 
                   cat("penalized deviance =", pdev, "\n")
 
-            if (iter>1&&pdev>old.pdev) { ## solution diverging
-              ii <- 1
-            while (pdev -old.pdev > (.1+abs(old.pdev))*.Machine$double.eps*10)  
+            div.thresh <- 10*(.1+abs(old.pdev))*.Machine$double.eps^.5 
+            ## ... threshold for judging divergence --- too tight and near
+            ## perfect convergence can cause a failure here
+
+            if (iter>1&&(pdev-old.pdev>div.thresh)) { ## solution diverging
+             ii <- 1 ## step halving counter
+             while (pdev -old.pdev > div.thresh)  
              { ## step halve until pdev <= old.pdev
                 if (ii > 200) 
                    stop("inner loop 3; can't correct step size")

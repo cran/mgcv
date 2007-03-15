@@ -1321,6 +1321,11 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G,...)
 # function for smoothing parameter estimation by outer optimization. i.e.
 # P-IRLS scheme iterated to convergence for each trial set of smoothing
 # parameters.
+# MAJOR STEPS:
+#  1. Call appropriate smoothing parameter optimizer, and extract fitted model
+#    `object'
+#  2. Call `magic.post.proc' to get parameter covariance matrices, edf etc to
+#     add to `object' 
 { if (method$outer=="nlm.fd") {
     um<-nlm(full.score,lsp,typsize=lsp,fscale=fscale, stepmax = 
             control$nlm$stepmax, ndigit = control$nlm$ndigit,
