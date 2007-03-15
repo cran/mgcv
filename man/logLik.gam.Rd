@@ -6,7 +6,7 @@
 model (note that the models are usually fitted by penalized likelihood maximization). 
 }
 \usage{
-logLik.gam(object,...)
+\method{logLik}{gam}(object,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

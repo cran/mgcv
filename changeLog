@@ -1,3 +1,14 @@
+1.3-23
+
+* step size correction bug fixed in gam.fit3. `Perfect' convergence could
+  cause the divergence control loop to fail: the divergence control loop
+  was asking for near strict decrease in the penalized deviance, which 
+  could be numerically impossible to achieve if the algorithm had actually 
+  converged completely.... fixed.  
+
+* minor doc bug fixes.
+
+
 1.3-22
 
 * Cheap but unneccesary code added to gdi.c and magic.c to stop 
