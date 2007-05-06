@@ -110,7 +110,7 @@ occasions when the P-IRLS convergence tolerance is close to being matched
 exactly, so that two components of a finite differenced derivative require
 different numbers of iterations of P-IRLS in their evaluation. An alternative
 is provided in which \code{nlm} uses numerically exact first derivatives, this
-is faster and less problematic than the other scheme. An further alternative is to use a quasi-Newton
+is faster and less problematic than the other scheme. A further alternative is to use a quasi-Newton
 scheme with exact derivtives, based on \code{optim}. In practice this usually
 seems to be slower than the \code{nlm} method. 
 

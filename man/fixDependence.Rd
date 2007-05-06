@@ -14,10 +14,10 @@ fixDependence(X1,X2,tol=.Machine$double.eps^.5)
   \item{X1}{ A matrix.}
   \item{X2}{ A matrix, the columns of which may be partially linearly
   dependent on the columns of \code{X1}.}
-  \item{tol}{The tolernce to use when assessing linear dependence.}
+  \item{tol}{The tolerance to use when assessing linear dependence.}
 }
 \details{ The algorithm uses a simple approach based on QR decomposition: see
-code for details.
+Wood (2006, section 4.10.2) for details.
 
 }
 \value{ An array of the columns of \code{X2} which are linearly dependent on
@@ -26,6 +26,10 @@ columns of \code{X1}. \code{NULL} if the two matrices are independent.
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
+\references{
+Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
+}
 
 
 \examples{

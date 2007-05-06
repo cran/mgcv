@@ -1,4 +1,4 @@
-\name{gam}
+ \name{gam}
 \alias{gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Generalized additive models with integrated smoothness estimation}
@@ -17,9 +17,8 @@ permitted). Multi-dimensional smooths are available using penalized thin plate
 regression splines (isotropic) or tensor product splines (when an isotropic smooth is inappropriate). 
 For more on specifying models see \code{\link{gam.models}}. For more on model 
 selection see \code{\link{gam.selection}}. For faster fits use the \code{"cr"}
-bases for smooth terms, \code{\link{te}} smooths for smooths of several
-variables, and performance iteration for smoothing parameter estimation (see
-\code{\link{gam.method}}).  For large datasets see warnings.
+bases for smooth terms and \code{\link{te}} smooths for smooths of several
+variables. For large datasets see warnings and tricks given at end of example code.
 
  \code{gam()} is not a clone of what S-PLUS provides: the major
   differences are (i) that by default estimation of the
@@ -77,8 +76,9 @@ the scale parameter and
 \eqn{DoF}{DoF} the effective degrees of freedom of the model. Notice that UBRE is effectively
 just AIC rescaled, but is only used when \eqn{s}{s} is known. It is also
 possible to replace D by the Pearson statistic (see \code{\link{gam.method}}),
-but this can lead to over smoothing. Smoothing parameters are chosen to 
-minimize the GCV or UBRE score for the model, and the main computational challenge solved 
+but this can lead to over smoothing. A better behaved alternative is GACV
+(again see \code{\link{gam.method}}). Smoothing parameters are chosen to 
+minimize the GCV or UBRE/AIC score for the model, and the main computational challenge solved 
 by the \code{mgcv} package is to do this efficiently and reliably. Various
 alternative numerical methods are provided: see \code{\link{gam.method}}.
 
@@ -89,18 +89,21 @@ the strictly parametric part of the model formula, and combining these to obtain
 complete model matrix (/design matrix) and a set of penalty matrices for the smooth terms. 
 Some linear identifiability constraints are also obtained at this point. The model is 
 fit using \code{\link{gam.fit}}, a modification of \code{\link{glm.fit}}. The GAM 
-penalized likelihood maximization problem is solved by penalized Iteratively 
-Reweighted  Least Squares (IRLS) (see e.g. Wood 2000). At each iteration a penalized 
-weighted least squares problem is solved, and the smoothing parameters of that problem are 
-estimated by GCV or UBRE. Eventually both model parameter estimates and smoothing 
-parameter estimates converge. Alternatively the P-IRLS scheme is iterated to
+penalized likelihood maximization problem is solved by Penalized Iteratively 
+Reweighted  Least Squares (P-IRLS) (see e.g. Wood 2000). 
+Smoothing parameter selection is integrated in one of two ways. (i)
+`Performance iteration' uses the fact that at each P-IRLS iteration a penalized 
+weighted least squares problem is solved, and the smoothing parameters of that problem can 
+estimated by GCV or UBRE. Eventually, in most cases, both model parameter estimates and smoothing 
+parameter estimates converge. (ii) Alternatively the P-IRLS scheme is iterated to
 convergence for each trial set of smoothing parameters, and GCV or UBRE scores
 are only evaluated on convergence - optimization is then `outer' to the P-IRLS
-loop: in this case extra derivatives have to be carried along with the P-IRLS
-iteration, to facilitate optimization, and \code{\link{gam.fit2}} is used.
+loop: in this case the P-IRLS iteration has to be differentiated, to
+facilitate optimization, and \code{\link{gam.fit3}} is used in place of
+\code{gam.fit}. The default is the second method, outer iteration.
 
 
-Five alternative basis-penalty types  are built in for representing model
+Several alternative basis-penalty types  are built in for representing model
 smooths, but alternatives can easily be added (see \code{\link{smooth.construct}} which
 uses p-splines to illustrate how to add new smooths). 
 The built in alternatives for univariate smooths terms are: a conventional penalized
@@ -130,7 +133,8 @@ term can have, but usually the term will be fitted by penalized
 maximum likelihood estimation and the actual degrees of freedom will be
 chosen by GCV. However, the user can choose to fix the degrees of
 freedom of a term, in which case the actual degrees of freedom will be
-one less than the basis dimension.
+one less than the basis dimension. See \code{\link{choose.k}} for information
+on checking the basis dimension choise.
 
   Thin plate regression splines are constructed by starting with the
   basis for a full thin plate spline and then truncating this basis in
@@ -155,10 +159,11 @@ use tensor products of cheaper bases.
      continuous up to and including second derivative at the knots. The resulting curve
      is a natural cubic  spline through the values at the knots (given two extra conditions specifying 
      that the second derivative of the curve should be zero at the two end 
-     knots). This parameterization gives the parameters a nice interpretability. 
+     knots). This parameterization gives the parameters a nice
+  interpretability. 
 
      
-     Details of the underlying fitting methods are given in Wood (2000, 2004a,
+     Details of some underlying fitting methods are given in Wood (2000, 2004,
      2006b). 
 
  }
@@ -194,7 +199,6 @@ smooth of the two covariates \code{x} and \code{z} constructed from marginal t.p
 of dimension 5 and 10 with marginal penalties of order 2 and 3. Any combination of basis types is 
 possible, as is any number of covariates.
 
-
 Formulae can involve nested or ``overlapping'' terms such as \cr
 \code{y~s(x)+s(z)+s(x,z)} or \code{y~s(x,z)+s(z,v)}: see
 \code{\link{gam.side}} for further details and examples.} 
@@ -229,9 +233,11 @@ included in \code{formula}: this conforms to the behaviour of
 
 \item{control}{A list of fit control parameters returned by 
 \code{\link{gam.control}}.}
-\item{method}{A list controlling the fitting methods used. This can make a big
+
+\item{method}{A list controlling the fitting methods used. This can make a
 difference to computational speed, and, in some cases, reliability of
 convergence: see \code{\link{gam.method}} for details.}
+
 \item{scale}{ If this is zero then GCV is used for all distributions
 except Poisson and binomial where UBRE is used with scale parameter
 assumed to be 1. If this is greater than 1 it is assumed to be the scale
@@ -261,38 +267,41 @@ numbers of knots, unless they share a covariate.
 \item{sp}{A vector of smoothing parameters for each term can be provided here.
  Smoothing parameters must 
 be supplied in the order that the smooth terms appear in the model 
-formula. With fit method \code{"magic"} (see \code{\link{gam.control}} 
-and \code{\link{magic}}) then negative elements indicate that the 
+formula. Negative elements indicate that the 
 parameter should be estimated, and hence a mixture of fixed and estimated 
-parameters is possible. With fit method \code{"mgcv"}, if \code{sp} is 
-supplied then all its elements must be positive. Note that \code{fx=TRUE} 
+parameters is possible. However, when routine \code{\link{mgcv}}
+is used as the underlying smoothness estimation method (not the default), then
+all elements of \code{sp} must be positive, if it is supplied. Note that \code{fx=TRUE} 
 in a smooth term over-rides what is supplied here effectively setting the 
 smoothing parameter to zero.}
 
-\item{min.sp}{for fit method \code{"magic"} only, lower bounds can be 
-supplied for the smoothing parameters. Note that if this option is used then
-the smoothing parameters \code{sp}, in the returned object, will need to be added to
+\item{min.sp}{Lower bounds can be supplied for the smoothing parameters. Note
+that if this option is used then the smoothing parameters \code{sp}, in the returned object, will need to be added to
 what is supplied here to get the actual smoothing parameters. Lower bounds on the smoothing 
-parameters can sometimes help stabilize otherwise divergent P-IRLS iterations.}
+parameters can sometimes help stabilize otherwise divergent P-IRLS
+iterations. This option cannot be used with \code{\link{mgcv}} as the
+undelying smoothness selection routine (but it is not the default).}
 
-\item{H}{With fit method \code{"magic"} a user supplied fixed quadratic 
-penalty on the parameters of the 
+\item{H}{A user supplied fixed quadratic penalty on the parameters of the 
 GAM can be supplied, with this as its coefficient matrix. A common use of this term is 
 to add a ridge penalty to the parameters of the GAM in circumstances in which the model
 is close to un-identifiable on the scale of the linear predictor, but perfectly well
-defined on the response scale.}
+defined on the response scale. This option cannot be used with \code{\link{mgcv}} as the
+undelying smoothness selection routine (but it is not the default). }
 
 \item{gamma}{It is sometimes useful to inflate the model degrees of 
 freedom in the GCV or UBRE score by a constant multiplier. This allows 
-such a multiplier to be supplied if fit method is \code{"magic"}.} 
+such a multiplier to be supplied (not used if underlying fit routine is
+non-default \code{\link{mgcv}}). } 
 
 \item{fit}{If this argument is \code{TRUE} then \code{gam} sets up the model and fits it, but if it is
-\code{FALSE} then the model is set up and an object \code{G} is returned which is the output from 
-\code{\link{gam.setup}} plus some extra items required to complete the GAM fitting process.}
+\code{FALSE} then the model is set up and an object \code{G} containing what
+would be required to fit is returned is returned. See argument \code{G}.}
 
 \item{G}{Usually \code{NULL}, but may contain the object returned by a previous call to \code{gam} with 
 \code{fit=FALSE}, in which case all other arguments are ignored except for
 \code{gamma}, \code{in.out}, \code{control}, \code{method} and \code{fit}.}
+
 \item{in.out}{optional list for initializing outer iteration. If supplied
 then this must contain two elements: \code{sp} should be an array of
 initialization values for all smoothing parameters (there must be a value for
@@ -300,7 +309,9 @@ all smoothing parameters, whether fixed or to be estimated, but those for
 fixed s.p.s are not used); \code{scale} is the typical scale of the GCV/UBRE function,
 for passing to the outer optimizer.}
 \item{...}{further arguments for 
-passing on e.g. to \code{gam.fit}} (such as \code{mustart}). }
+passing on e.g. to \code{gam.fit} (such as \code{mustart}). }
+
+}
 
 \value{ 
 If \code{fit == FALSE} the function returns a list \code{G} of items needed to
@@ -318,17 +329,18 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
-Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
-Wood, S.N. (2004b) On confidence intervals for GAMs based on penalized
-regression splines. Technical Report 04-12 Department of Statistics,
-University of Glasgow.
-
 Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
-generalized additive mixed models. Biometrics
+generalized additive mixed models. Biometrics 62(4):1025-1036
 
-Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. CRC Press.
+Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
+
+Wood, S.N. (2006c) On confidence intervals for generalized additive models based on penalized regression splines. Australian and New Zealand Journal of Statistics. 48(4): 445-464.
+
+
 
 Key Reference on GAMs and related models:
 
@@ -369,7 +381,7 @@ Wahba (e.g. 1990) and Gu (e.g. 2002).
 
 \section{WARNINGS }{
 
-If fit method \code{"mgcv"} is selected, the code does not check for rank deficiency of the
+If non-default fit method method \code{mgcv} is selected, the code does not check for rank deficiency of the
 model matrix that may result from lack of identifiability between the
 parametric and smooth components of the model. 
 
@@ -388,8 +400,7 @@ for multi-dimensional smooths use \code{te} smooths.
 For data with many  zeroes clustered together in the covariate space it is quite easy to set up 
 GAMs which suffer from identifiability problems, particularly when using Poisson or binomial
 families. The problem is that with e.g. log or logit links, mean value zero corresponds to
-an infinite range on the linear predictor scale. Some regularization is possible in such cases: see 
-\code{\link{gam.control}} for details.
+an infinite range on the linear predictor scale.
 } 
 
 \seealso{\code{\link{mgcv-package}}, \code{\link{gamObject}}, \code{\link{gam.models}}, \code{\link{s}}, \code{\link{predict.gam}},\code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{gam.side}},

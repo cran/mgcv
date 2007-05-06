@@ -10,13 +10,12 @@ parameters.
 This routine optimizes a GCV or UBRE score in this way. Basically the GCV or
 UBRE score is evaluated for each trial set of smoothing parameters by
 estimating the GAM for those smoothing parameters. The score is minimized
-w.r.t. the parameters numerically, using \code{optim} or \code{nlm}. Exact
-derivatives of the score can be used by fitting with \code{\link{gam.fit2}},
-which improves efficiency and reliability relative to relying solely on finite
+w.r.t. the parameters numerically, using \code{newton} (default), \code{optim} or \code{nlm}. Exact
+derivatives of the score can be used by fitting with \code{\link{gam.fit2}} or
+\code{link{gam.fit3}} (for exact first and second derivatives). This
+improves efficiency and reliability relative to relying on finite
 difference derivatives.  
 
-Note that there is a choise between basing GCV/UBRE scores on the deviance or
-the Pearson statistic: see \code{\link{gam.method}}.
 
 Not normally called directly, but rather a service routine for \code{\link{gam}}.
 }
@@ -34,7 +33,7 @@ gam.outer(lsp,fscale,family,control,method,gamma,G,...)
 \item{control}{control argument to pass to \code{\link{gam.fit}} if pure
 finite differencing is being used.}
 
-\item{method}{method list reurned from \code{\link{gam.method}}. This defines
+\item{method}{method list returned from \code{\link{gam.method}}. This defines
 the optimization method to use.}
 
 \item{gamma}{ The degree of freedom inflation factor for the GCV/UBRE score.}

@@ -659,7 +659,8 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
   if (is.null(shrink)) { 
   object$rank<-nk-2 
   } else object$rank <- nk   # penalty rank
-  object$C <- matrix(oo[[7]],1,nk)  # constraint
+  object$C <- matrix(colSums(object$X),1,ncol(object$X))
+##  object$C <- matrix(oo[[7]],1,nk)  # constraint
   object$df<-object$bs.dim-1 # degrees of freedom, given constraint
   object$null.space.dim <- 2
   object$xp <- oo[[3]]  # knot positions 
@@ -1356,6 +1357,8 @@ gam.outer <- function(lsp,fscale,family,control,method,gamma,G,...)
                 printWarn=FALSE,scoreType=criterion,use.svd=control$newton$use.svd,...)   
     obj <- b$score
     object <- b$object
+    object$GACV <- object$D2 <- object$P2 <- object$UBRE2 <- object$trA2 <- 
+    object$GACV1 <- object$GACV2 <- object$GCV2 <- object$D1 <- object$P1 <- NULL
     lsp <- b$lsp
     b <- list(conv=b$conv,iter=b$iter,grad=b$grad,hess=b$hess) ## return info
   } else { ## methods calling gam.fit2
@@ -1582,26 +1585,49 @@ gam.check <- function(b)
          xlab="linear predictor",ylab="residuals");
     hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
     plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
-    if (b$mgcv.conv$iter>0)   
-    cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")
-    else 
-    cat("\nModel required no smoothing parameter selection")
-    if (b$mgcv.conv$iter>1) cat("s")
     
-    if ((fit.method=="mgcv"&&b$mgcv.conv$step.fail)||(b$fit.method=="magic"&&!b$mgcv.conv$fully.converged)) 
-    cat(" by steepest\ndescent step failure.\n") else cat(".\n")
-    if (fit.method=="mgcv")
-    { if (length(b$smooth)>1&&b$mgcv.conv$iter>0)
-      { cat("The mean absolute",sc.name,"score gradient at convergence was ",mean(abs(b$mgcv.conv$g)),".\n")
-        if (sum(b$mgcv.conv$e<0)) cat("The Hessian of the",sc.name ,"score at convergence was not positive definite.\n")
-        else cat("The Hessian of the",sc.name,"score at convergence was positive definite.\n")
+    ## now summarize convergence information 
+    cat("\nfit method:",b$fit.method)
+    if (!is.null(b$outer.info)) { ## summarize convergence information
+      if (b$fit.method=="GACV based outer iter. - newton, exact hessian."||
+          b$fit.method=="deviance based outer iter. - newton, exact hessian.")
+      { boi <- b$outer.info
+        cat("\n",boi$conv," after ",boi$iter," iteration",sep="")
+        if (boi$iter==1) cat(".") else cat("s.")
+        cat("\ngradient range [",min(boi$grad),",",max(boi$grad),"] (score ",b$gcv.ubre,
+            " & scale ",b$sig2,").",sep="")
+        ev <- eigen(boi$hess)$values
+        if (min(ev)>0) cat("\nHessian positive definite, ") else cat("\n")
+        cat("eigenvalue range [",min(ev),",",max(ev),"].\n",sep="")
+      } else { ## just default print of information...
+        cat("\n");print(b$outer.info)
       }
-      if (!b$mgcv.conv$init.ok&&(b$mgcv.conv$iter>0)) cat("Note: the default second smoothing parameter guess failed.\n")
-    } else
-    { cat("The RMS",sc.name,"score gradiant at convergence was",b$mgcv.conv$rms.grad,".\n")
-      if (b$mgcv.conv$hess.pos.def)
-      cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
-      cat("The estimated model rank was ",b$mgcv.conv$rank," (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
+    } else { ## perf iter or AM case
+      if (b$mgcv.conv$iter==0) 
+      cat("\nModel required no smoothing parameter selection")
+      else { 
+        cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")       
+        if (b$mgcv.conv$iter>1) cat("s")
+         
+        if ((fit.method=="mgcv"&&b$mgcv.conv$step.fail)||(b$fit.method=="magic"&&!b$mgcv.conv$fully.converged)) 
+        cat(" by steepest\ndescent step failure.\n") else cat(".\n")
+        if (fit.method=="mgcv")
+        { if (length(b$smooth)>1&&b$mgcv.conv$iter>0)
+          { cat("The mean absolute",sc.name,"score gradient at convergence was ",mean(abs(b$mgcv.conv$g)),".\n")
+            if (sum(b$mgcv.conv$e<0)) 
+               cat("The Hessian of the",sc.name ,"score at convergence was not positive definite.\n")
+            else cat("The Hessian of the",sc.name,"score at convergence was positive definite.\n")
+          }
+          if (!b$mgcv.conv$init.ok&&(b$mgcv.conv$iter>0)) 
+              cat("Note: the default second smoothing parameter guess failed.\n")
+        } else
+        { cat("The RMS",sc.name,"score gradiant at convergence was",b$mgcv.conv$rms.grad,".\n")
+          if (b$mgcv.conv$hess.pos.def)
+          cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
+          cat("The estimated model rank was ",b$mgcv.conv$rank,
+                   " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
+        }
+      }
     }
     cat("\n")
     par(old.par)
@@ -2047,6 +2073,11 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev)
 }
 
+
+model.matrix.gam <- function(object,...)
+{ if (!inherits(object,"gam")) stop("`object' is not of class \"gam\"")
+  predict.gam(object,type="lpmatrix",...)
+}
 
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
                        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...) 
@@ -2930,8 +2961,16 @@ summary.gam <- function (object, dispersion = NULL, freq = TRUE, ...)
     for (i in 1:nt)
     { ind <- object$assign==i
       b <- bp[ind];V <- Vb[ind,ind]
-      pTerms.df[i] <- nb <- length(b)      
-      pTerms.chi.sq[i] <- b%*%solve(V,b)
+      ## psuedo-inverse needed in case of truncation of parametric space 
+      if (length(b)==1) { 
+        V <- 1/V 
+        pTerms.df[i] <- nb <- 1      
+        pTerms.chi.sq[i] <- V*b*b
+      } else {
+        V <- pinv(V,length(b),rank.tol=.Machine$double.eps^.5)
+        pTerms.df[i] <- nb <- attr(V,"rank")      
+        pTerms.chi.sq[i] <- t(b)%*%V%*%b
+      }
       if (!est.disp)
       pTerms.pv[i]<-pchisq(pTerms.chi.sq[i],df=nb,lower.tail=FALSE)
       else

@@ -29,18 +29,18 @@ underlying fitting method is \code{\link{mgcv}} (not the default - see
 }
 
 \item{epsilon}{This is used for judging conversion of the GLM IRLS loop in
-\code{\link{gam.fit}} or \code{\link{gam.fit2}} .}
+\code{\link{gam.fit}}, \code{\link{gam.fit2}} or \code{\link{gam.fit3}}.}
 
-\item{maxit}{Maximum number of IRLS iterations to perform using cautious
-GCV/UBRE optimization, after \code{globit} IRLS iterations with normal GCV 
-optimization have been performed. Note that only fitting based on
-\code{\link{mgcv}} (not default) makes 
-any distinction between cautious and global optimization.}
+\item{maxit}{Maximum number of IRLS iterations to perform. When using
+performance iteration (not default) then these iterations re in addition to
+\code{globit} initial iterations.  If fitting is based on
+\code{\link{mgcv}} (not default, even for performance iteration) then GCV/UBRE 
+will be cautious for these iterations.}
 
-\item{globit}{Maximum number of IRLS iterations to perform with normal 
-GCV/UBRE optimization. If convergence is not achieved after these 
-iterations then a further \code{maxit} iterations will be performed 
-using cautious GCV/UBRE optimization. } 
+\item{globit}{Maximum number of initial IRLS iterations to perform (with normal 
+GCV/UBRE optimization) when using performance iteration (only). If convergence
+is  not achieved after these iterations then a further \code{maxit} iterations
+will be performed. Ignored for default outer iteration.} 
 
 \item{mgcv.tol}{The convergence tolerance parameter to use in GCV/UBRE optimization.}
 
@@ -64,7 +64,8 @@ except those based on \code{\link{mgcv}}).}
 parameterization which requires no further constraint. Usually this means that
 all the smooths are automatically centered (i.e. they sum to zero over the
 covariate values). If \code{FALSE} then the ordinary parameterizations of the
-smooths are used, which require constraints to be imposed during fitting.}
+smooths are used, which require constraints to be imposed during fitting. Not
+all estimation methods can deal with the \code{FALSE} case.}
 
 \item{max.tprs.knots}{This is the default initial maximum number of knots to allow
 when constructing a t.p.r.s bases (\code{bs="tp"}). The set up cost (and
@@ -74,10 +75,10 @@ smoothing basis (or \code{\link{te}} terms), or the approach illustrated in the
 examples in \code{\link{gam}}, rather than simply increasing this default.}
 
 \item{nlm}{list of control parameters to pass to \code{\link{nlm}} if this is
-used for outer estimation of smoothing parameters. See details.}
+used for outer estimation of smoothing parameters (not default). See details.}
 
 \item{optim}{list of control parameters to pass to \code{\link{optim}} if this
-is used for outer estimation of smoothing parameters. See details.}
+is used for outer estimation of smoothing parameters (not default). See details.}
 
 \item{newton}{list of control parameters to pass to default Newton optimizer
 used for outer estimation of log smoothing parameters. See details.}
@@ -118,7 +119,7 @@ Outer iteration using \code{\link{optim}} is controlled using list
 default value 1e7.
 
 
-When fitting is been done by calls to routine \code{\link{mgcv}}, 
+When fitting is been done by calls to routine \code{\link{mgcv}} (not default), 
 \code{maxit} and \code{globit} control the maximum iterations of the IRLS algorithm, as follows: 
 the algorithm will first execute up to
 \code{globit} steps in which the GCV/UBRE algorithm performs a global search for the best overall 

@@ -41,7 +41,10 @@ constructing tensor product smooths.
 product smooth.   
 }
 \references{
-\url{http://www.maths.bath.ac.uk/~sw283/}
+
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+Generalized Additive Mixed Models. Biometrics
+
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}} 
 

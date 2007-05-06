@@ -3,7 +3,8 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Some diagnostics for a fitted gam model}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} and produces some diagnostic information
-about the fitting procedure and results. 
+about the fitting procedure and results. The default is to produce 4 residual
+plots, and some information about the convergence of the smoothness selection optimization.
 }
 \usage{
 gam.check(b)
@@ -13,10 +14,13 @@ gam.check(b)
 \item{b}{ a fitted \code{gam} object as produced by \code{gam()}.}
 }
 \details{ This function plots 4 standard diagnostic plots, and some other
-convergence diagnostics. Output differs depending on whether the underlying
-fitting method was \code{\link{mgcv}} or another method (see \code{\link{gam.method}}).
+convergence diagnostics. Usually the 4 plots are various residual plots. The
+printed information relates to the optimization used to select smoothing
+parameters. For the default optimization methods the information is summarized in a
+readable way, but for other optimization methods, whatever is returned by way of
+convergence diagnostics is simply printed.
 
-For \code{\link{mgcv}} based fits , the first plot shows the GCV or UBRE score against model 
+For \code{\link{mgcv}} based fits (not the default), the first plot shows the GCV or UBRE score against model 
 degrees of freedom, given the final estimates of the relative smoothing
 parameters for the model. This is a slice through the 
 GCV/UBRE score function that passes through the minimum found during fitting. Although not conclusive (except in the single 
@@ -45,36 +49,18 @@ estimation of the effective degrees of freedom: this usually reflects problems w
 In this circumstance reported estimated degrees of freedom can not be trusted, although the fitted model and term estimates are likely to be quite 
 acceptable. 
 
-If the fit method is based on \code{\link{magic}} or \code{\link{gam.fit2}} then there is no global search and the problems with phantom local minima are much reduced. The first plot in this case will simply be a normal QQ plot of the standardized residuals.
-
-The other 3 plots are two residual plots and plot of fitted values against original data.
-
-The function also prints out information about the convergence of the GCV minimization algorithm, indicating how 
-many iterations  were required to minimise the GCV/UBRE score. A message is printed if the minimization terminated by 
-failing to improve the score with a steepest descent step: otherwise minimization terminated by meeting convergence criteria.
-The mean absolute gradient or RMS gradient of the GCV/UBRE function at the minimum is given. An indication of whether or not the Hessian of the GCV/UBRE function is positive definite is given. If some smoothing parameters 
-are not well defined (effectively zero, or infinite) then it may not be, although this is not usually a problem. If the fit method is \code{\link{mgcv}}, a message is printed 
-if the second guess smoothing parameters did not improve on the first guess - this is primarily there for the developer. 
-For other fit methods the estimated rank of the model is printed.
-
-
-The ideal results from this function have a smooth, single minima GCV/UBRE
-plot (where appropriate), 
-good residual plots, and convergence to small 
-gradients with a positive definite Hessian. However, failure to meet some of these criteria 
-is often  acceptable,  and the information provided is primarily of use in diagnosing suspected problems. 
-High gradients at convergence  are a clear indication of problems, however.
-
-Fuller data can be extracted from \code{mgcv.conv} part of the \code{gam} object.  
+If the fit method is based on \code{\link{magic}} or \code{\link{gam.fit2}} or
+\code{\link{gam.fit3}}then there is no global search and the problems with
+phantom local minima are much reduced. These more recent methods are also much
+more robust than the \code{\link{mgcv}} based methods.
 
 }
 
 \references{
 
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
 
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 

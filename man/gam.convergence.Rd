@@ -23,7 +23,8 @@ There are two things that you can do to speed up GAM fitting. (i) Change the
 \code{method} argument to \code{\link{gam}} so that `performance iteration' is
 used in place of the default outer iteration. See the \code{perf.magic} option
 under \code{\link{gam.method}}, for example. Usually performance iteration
-converges well and is quick. (ii) For large datasets it may be worth changing
+converges well and it can be quicker than the default outer iteration. 
+(ii) For large datasets it may be worth changing
 the smoothing basis to use \code{bs="cr"} (see \code{\link{s}} for details)
 for 1-d smooths, and to use \code{\link{te}} smooths in place of
 \code{\link{s}} smooths for smooths of more than one variable. This is because

@@ -94,17 +94,18 @@ fitted model, rather than an intermediate used in optimization.}
 
 \item{...}{Other arguments: ignored.}
 }
-\details{ This routine is basically \code{\link{glm.fit}} with some
+\details{ These routines are basically \code{\link{glm.fit}} with some
 modifications to allow (i) for quadratic penalties on the log likelihood;
 (ii) derivatives of the model coefficients with respect to
 log smoothing parameters to be obtained (by updating alongside the P-IRLS
-iteration) and (iii) derivatives of the GAM GCV and UBRE scores to be
+iteration in the case of \code{gam.fit2}, and by an extra iteration in the
+case of \code{gam.fit3}) and (iii) derivatives of the GAM GCV and UBRE scores to be
 evaluated at convergence. 
 
-In addition the routine applies step halving to any step that increases the
+In addition the routines apply step halving to any step that increases the
 penalized deviance substantially.
 
-The most costly parts of the calculation are performed by calls to compiled C
+The most costly parts of the calculations are performed by calls to compiled C
 code (which in turn calls LAPACK routines) in place of the compiled code that
 would usually perform least squares estimation on the working model in the
 IRLS iteration. 

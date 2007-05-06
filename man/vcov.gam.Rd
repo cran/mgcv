@@ -30,6 +30,10 @@ covariance matrix of the parameters, depending on the argument \code{freq}.
 Maintained by Simon N. Wood \email{simon.wood@r-project.org}
 }
 
+\references{
+Wood, S.N. (2006) On confidence intervals for generalized additive models based on penalized regression splines. Australian and New Zealand Journal of Statistics. 48(4): 445-464.
+}
+
 
 \seealso{ \code{\link{gam}}}
 
