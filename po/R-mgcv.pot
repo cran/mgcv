@@ -513,3 +513,5 @@ msgstr ""
 msgid "Pearson based GCV is unsupported for newton or nlm outer methods, reset"
 msgstr ""
 
+msgid "`object' is not of class \"gam\""
+msgstr ""

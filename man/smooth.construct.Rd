@@ -87,7 +87,13 @@ enough to reach the last re-parameterized marginal in the list.
 
 }
 
-\details{ 
+\details{ There are built in methods for objects with the following classes:
+\code{tp.smooth.spec} (thin plate regression splines); 
+\code{cr.smooth.spec} (cubic regression splines);
+\code{ts.smooth.spec} (thin plate regression splines with shrinkage-to-zero);
+\code{cs.smooth.spec} (cubic regression splines with shrinkage-to-zero);
+\code{cc.smooth.spec} (cyclic cubic regression splines);
+\code{tensor.smooth.spec} (tensor product smooths).
 
 The returned objects for the built in smooth classes have the following extra elements.
 \code{cr.smooth} objects (generated using \code{bs="cr"}) have an additional array \code{xp} giving the knot locations used to generate the basis.

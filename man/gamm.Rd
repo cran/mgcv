@@ -129,7 +129,8 @@ One advantage of this approach is that it allows correlated errors to be dealt w
 or the correlation structures available in the \code{nlme} library. 
 
 
-Some brief details of how GAMs are represented as mixed models and estimated using \code{lme} or \code{glmmPQL} in \code{gamm} can be found in Wood (2004a,b). In addition \code{gamm} obtains a posterior covariance matrix for the parameters of all the fixed effects and the smooth terms. The approach is similar to that described in (Lin & Zhang, 1999) - the covariance matrix of the data (or pseudodata in the generalized case) implied by the weights, correlation and random effects structure is obtained, based on the estimates of the parameters of these terms and this is used to obtain the posterior covariance matrix of the fixed and smooth effects. 
+Some details of how GAMs are represented as mixed models and estimated using
+\code{lme} or \code{glmmPQL} in \code{gamm} can be found in Wood (2004 ,2006a,b). In addition \code{gamm} obtains a posterior covariance matrix for the parameters of all the fixed effects and the smooth terms. The approach is similar to that described in (Lin & Zhang, 1999) - the covariance matrix of the data (or pseudodata in the generalized case) implied by the weights, correlation and random effects structure is obtained, based on the estimates of the parameters of these terms and this is used to obtain the posterior covariance matrix of the fixed and smooth effects. 
 
 The bases used to represent smooth terms are the same as those used in \code{\link{gam}}.
 
@@ -178,14 +179,16 @@ with S. Fourth edition.  Springer.
 Wahba, G. (1983) Bayesian confidence intervals for the cross validated smoothing spline. 
 JRSSB 45:133-150
 
-Wood, S.N. (2004a) Stable and efficient multiple smoothing parameter estimation for
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. Journal of the American Statistical Association. 99:673-686
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
+Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
+generalized additive mixed models. Biometrics 62(4):1025-1036
 
-Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Biometrics.
+Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
 
 
 Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statist. Soc. B 60, 159-174

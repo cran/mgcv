@@ -172,31 +172,17 @@ useful for CI's as smooths are usually biased.}
 
 \references{
 
-Key References on this implementation:
+A Key Reference on this implementation:
 
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+& Hall/ CRC, Boca Raton, Florida
 
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
-
-Wood, S.N. (in press) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass.
-
-Wood, S.N. (2004) On confidence intervals for GAMs based on penalized
-regression splines. Technical Report 04-12 Department of Statistics,
-University of Glasgow.
-
-Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
-generalized additive mixed models. Biometrics.
-
-Key Reference on GAMs and related models:
+Key Reference on GAMs generally:
 
 Hastie (1993) in Chambers and Hastie (1993) Statistical Models in S. Chapman
 and Hall.
 
 Hastie and Tibshirani (1990) Generalized Additive Models. Chapman and Hall.
-
-Wahba (1990) Spline Models of Observational Data. SIAM 
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}

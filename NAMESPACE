@@ -14,7 +14,7 @@ anova.gam,coef.pdIdnot,coef.pdTens,
      logDet.pdIdnot,
        initial.sp,logLik.gam,
        magic, magic.post.proc, mgcv, mgcv.control, mgcv.find.theta, 
-       mgcv.get.scale, mono.con, mroot, new.name, 
+       mgcv.get.scale, model.matrix.gam, mono.con, mroot, new.name, 
        notExp,notExp2,notLog,notLog2,pcls,null.space.dimension, 
        pdConstruct.pdIdnot,pdFactor.pdIdnot,pdMatrix.pdIdnot,pdIdnot,
        pdConstruct.pdTens,pdFactor.pdTens,pdMatrix.pdTens,pdTens,
@@ -54,6 +54,7 @@ S3method(influence, gam)
 S3method(cooks.distance, gam)
 S3method(formula, gam)
 S3method(logLik, gam)
+S3method(model.matrix,gam)
 S3method(plot, gam)
 S3method(predict, gam)
 S3method(print, anova.gam)

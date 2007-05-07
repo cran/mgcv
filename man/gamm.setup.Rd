@@ -12,8 +12,12 @@ by \code{gamm} to set up a generalized additive mixed model in a form suitable f
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. Journal of the American Statistical Association. 99:673-686
 
-Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Biometrics
+
+Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
+generalized additive mixed models. Biometrics 62(4):1025-1036
+
+Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
 
 
 \url{http://www.maths.bath.ac.uk/~sw283/}

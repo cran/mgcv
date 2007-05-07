@@ -35,6 +35,6 @@ generalized additive models. J. Amer. Statist. Ass. 99:637-686
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
-\seealso{ \code{\link{gam.fit2}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
+\seealso{ \code{\link{gam.fit3}}, \code{\link{gam.fit2}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

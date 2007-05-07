@@ -5,8 +5,9 @@
 GAMs with GCV smoothness estimation and GAMMs by REML/PQL
 }
 \description{
-\code{mgcv} provides functions for generalized additive modelling and
-generalized additive mixed modelling. Particular features of the package are
+\code{mgcv} provides functions for generalized additive modelling  and
+generalized additive mixed modelling (including
+variable coefficient models). Particular features of the package are
 facilities for automatic smoothness selection, and the provision of a variety
 of smooths of more than one variable. User defined smooths are also
 supported. A Bayesian approach to confidence/credible interval calculation is
