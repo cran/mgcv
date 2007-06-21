@@ -36,16 +36,15 @@ x<-matrix(res[[1]][1:n],res[[2]],res[[3]])
 x
 }
 
-
 null.space.dimension<-function(d,m)
 # vectorized function for calculating null space dimension for penalties of order m
-# for dimension d data M=(m+d+1)!/(d!(m-d)!). Any m not satisfying 2m>d is reset so 
+# for dimension d data M=(m+d-1)!/(d!(m-1)!). Any m not satisfying 2m>d is reset so 
 # that 2m>d+1 (assuring "visual" smoothness) 
 { if (sum(d<0)) stop("d can not be negative in call to null.space.dimension().")
   ind<-2*m<d+1
   if (sum(ind)) # then default m required for some elements
   { m[ind]<-1;ind<-2*m<d+2
-    while (sum(ind)) { m[ind]<-m[ind]+1;ind<-2+m<d+2;}
+    while (sum(ind)) { m[ind]<-m[ind]+1;ind<-2*m<d+2;}
   }
   M<-m*0+1;ind<-M==1;i<-0
   while(sum(ind))
@@ -57,9 +56,6 @@ null.space.dimension<-function(d,m)
   }
   M
 }
-
-
-
 
 
 
