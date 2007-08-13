@@ -8,7 +8,7 @@
   based smooths.
 }
 
-\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE)
+\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NA)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -56,6 +56,10 @@ product smooth. This parameterization represents any 1-d marginal smooths
 using a parameterization where the parameters are function values at `knots'
 spread evenly through the data. The parameterization makes the penalties
 easily interpretable, however it can reduce numerical stability.}
+
+\item{xt}{Either a single object, providing any extra information to be passed
+to each marginal basis constructor, or a list of such objects, one for each
+marginal basis. }
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases
@@ -110,13 +114,13 @@ be ignored, \code{FALSE}, otherwise. }
   
 
   
-\item{full.call}{Text for pasting into a string to be converted to a
-    gam formula, which has the values of function options given explicitly -
-  this is useful for constructing a fully expanded gam formula which can
-be used without needing access to any variables that may have been used
-to define k, fx, bs or m in the original call. i.e. this is text which
-when parsed and evaluated generates a call to \code{s()} with all the
-options spelled out explicitly.}
+%%\item{full.call}{Text for pasting into a string to be converted to a
+%%    gam formula, which has the values of function options given explicitly -
+%%  this is useful for constructing a fully expanded gam formula which can
+%%be used without needing access to any variables that may have been used
+%%to define k, fx, bs or m in the original call. i.e. this is text which
+%%when parsed and evaluated generates a call to \code{te()} with all the
+%%options spelled out explicitly.}
 
 \item{label}{A suitable text label for this smooth term.}
 

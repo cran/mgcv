@@ -13,7 +13,7 @@ choise of fitting method, see \code{\link{gam.method}}.
 gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
             mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
-            max.tprs.knots=5000,nlm=list(),optim=list(),newton=list(),
+            nlm=list(),optim=list(),newton=list(),
             outerPIsteps=1) 
 }
 \arguments{ 
@@ -67,13 +67,6 @@ covariate values). If \code{FALSE} then the ordinary parameterizations of the
 smooths are used, which require constraints to be imposed during fitting. Not
 all estimation methods can deal with the \code{FALSE} case.}
 
-\item{max.tprs.knots}{This is the default initial maximum number of knots to allow
-when constructing a t.p.r.s bases (\code{bs="tp"}). The set up cost (and
-storage) for these smooths scales as the square of the number of initial knots, so if it's too
-high you can appear to freeze R. Usually one would want to use an alternative
-smoothing basis (or \code{\link{te}} terms), or the approach illustrated in the
-examples in \code{\link{gam}}, rather than simply increasing this default.}
-
 \item{nlm}{list of control parameters to pass to \code{\link{nlm}} if this is
 used for outer estimation of smoothing parameters (not default). See details.}
 
@@ -123,7 +116,8 @@ When fitting is been done by calls to routine \code{\link{mgcv}} (not default),
 \code{maxit} and \code{globit} control the maximum iterations of the IRLS algorithm, as follows: 
 the algorithm will first execute up to
 \code{globit} steps in which the GCV/UBRE algorithm performs a global search for the best overall 
-smoothing parameter at every iteration. If convergence is not achieved within \code{globit} iterations, then a further 
+smoothing parameter at every iteration. If convergence is not achieved within
+\code{globit} iterations, then a further 
 \code{maxit} steps are taken, in which the overall smoothing parameter estimate is taken as the 
 one locally minimising the GCV/UBRE score and resulting in the lowest EDF change. The difference 
 between the two phases is only significant if the GCV/UBRE function develops more than one minima. 

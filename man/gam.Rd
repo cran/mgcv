@@ -18,7 +18,7 @@ regression splines (isotropic) or tensor product splines (when an isotropic smoo
 For more on specifying models see \code{\link{gam.models}}. For more on model 
 selection see \code{\link{gam.selection}}. For faster fits use the \code{"cr"}
 bases for smooth terms and \code{\link{te}} smooths for smooths of several
-variables. For large datasets see warnings and tricks given at end of example code.
+variables.
 
  \code{gam()} is not a clone of what S-PLUS provides: the major
   differences are (i) that by default estimation of the
@@ -145,10 +145,14 @@ on checking the basis dimension choise.
   are nested within smooths of higher rank, so that it is legitimate to
   use conventional hypothesis testing methods to compare models based on
   pure regression splines. The t.p.r.s. basis can become expensive to
-  calculate for large datasets. In this case the user can supply a reduced 
-  set of knots to use in basis construction (see knots, in the argument list), or 
-use tensor products of cheaper bases.
-  
+  calculate for large datasets. For this reason the default behaviour is to
+  randomly subsample \code{max.knots} unique data locations if there are more than \code{max.knots}
+  such, and to use the sub-sample for basis construction. The sampling is
+  always done with the same random seed to ensure repeatability (does not
+  reset R RNG). \code{max.knots} is 3000, by default. Both seed and
+  \code{max.knots} can be modified using the \code{xt} argument to \code{s}.
+   Alternatively the user can supply knots from which to construct a basis. 
+
   In the case of the cubic regression spline basis, knots  of the spline are placed evenly
   throughout the covariate values to which the term refers:  For
   example, if fitting 101 data with an 11 knot spline of \code{x} then
@@ -497,7 +501,7 @@ contour(xs,zs,fit1)
 persp(xs,zs,truth)
 vis.gam(b4)
 par(old.par)
-# very large dataset example using knots
+# very large dataset example with user defined knots
 n<-10000
 x<-runif(n);z<-runif(n);
 y<-test1(x,z)+rnorm(n)
@@ -508,6 +512,10 @@ vis.gam(b5)
 b6<-gam(y~s(x,z,k=100),knots=list(x= rep((1:10-0.5)/10,10),
         z=rep((1:10-0.5)/10,rep(10,10))))
 vis.gam(b6,color="heat")
+# varying the default large dataset behaviour via `xt'
+b7 <- gam(y~s(x,z,k=50,xt=list(max.knots=1000,seed=2)))
+vis.gam(b7)
+
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

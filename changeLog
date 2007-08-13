@@ -1,10 +1,46 @@
+1.3-26
+
+* modification to `gam' so that GCV/UBRE scores reported with all fixed 
+  smoothing parameters are consistent with equivalent under s.p. 
+  estimation.
+
+* gam.fit3 modified to test for convergence of coefficients as well
+  as penalized deviance, otherwise in extreme cases the derivative 
+  iterations can diverge.
+
+* modifications of gam.setup, predict.gam and plot.gam to allow smooths
+  to contribute an offset term to the model (offset is returned from 
+  smooth.construct or Predict.matrix as an "offset" attribute of 
+  model/prediction matrix). This is useful for smooths which have known 
+  boundary conditions of some sort.
+
+* PredictMat can now handle NAs in a returned prediction matrix.
+ 
+* vis.gam can handle NA's in predictions.
+
+* Modification of large dataset handling for "tp" and "ts" bases. If there
+  are more that 3000 unique covariate combinations for a tprs then 3000 
+  combinations are randomly sub-sampled, and used as the initial knots for 
+  tprs basis construction. The same random number seed is used every time, 
+  (R's RNG state is unaltered by this). Control of this is usually via the 
+  `max.knots' (default 3000) and `seed' (default 1) elements of the `xt'
+  argument of `s'. In consequence, `max.tprs.knots' has been removed from 
+  `gam.control'.
+
+* Modification of `s' and `te' to allow an extra argument `xt' which can 
+  contain extra information to pass to the basis constructors for smooths.
+
+* removal of `full.call' from smooth.spec objects - it wasn't used 
+  anywhere any more, and is a pain to maintain.
+
+* removal of `full.formula' from the `gam' object - it is no longer used 
+  anywhere and requires alot of code to construct.
+
 1.3-25
 
 * A bug in `null.space.dimension' caused prediction to fail for `s' terms 
   of 4 or more variables, unless the `m' argument was supplied explicitly 
   (and was large enough for the number of variables). Fixed. 
-
-
 
 1.3-24
 
@@ -207,7 +243,7 @@
   frame which contains, e.g. log(x) rather than x itself. offset handling 
   simplified as a result.
 
-* prediction from te smooths could fail becuase of a bug in handling the 
+* prediction from te smooths could fail because of a bug in handling the 
   list of re-parameterization matrices for 1-D terms in 
   Predict.matrix.tensor.smooth. Fixed. (tensor product docs also updated)
 

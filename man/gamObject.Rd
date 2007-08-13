@@ -57,9 +57,9 @@ parameter estimation method used.}
 
 \item{formula}{the model formula.}
 
-\item{full.formula}{the model formula with each smooth term fully
-  expanded and with option arguments given explicitly (i.e. not with reference
-  to other variables) - useful for later prediction from the model.}
+%%\item{full.formula}{the model formula with each smooth term fully
+%%  expanded and with option arguments given explicitly (i.e. not with reference
+%%  to other variables) - useful for later prediction from the model.}
 
 \item{gcv.ubre}{The minimized GCV or UBRE score.}
 
