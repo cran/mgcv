@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
-
+    
 
 msgid "illegal `family' argument"
 msgstr ""
@@ -515,3 +515,6 @@ msgstr ""
 
 msgid "`object' is not of class \"gam\""
 msgstr ""
+
+msgid "xt argument is faulty"
+msgstr "" 

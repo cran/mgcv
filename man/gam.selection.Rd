@@ -5,9 +5,10 @@
 \description{ This page is intended to provide some more information on
   how to select GAMs. Given a model structure specified by a gam model formula,
 \code{gam()} attempts to find the appropriate smoothness for each applicable model 
-term using Generalized Cross Validation (GCV) or an Un-Biased Risk Estimator (UBRE),
-the latter being used in cases in which the scale parameter is assumed known. GCV and 
-UBRE are covered in Craven and Wahba (1979) and Wahba (1990), see
+term using Generalized Cross Validation (GCV) or an Un-Biased Risk Estimator
+(UBRE). The latter is used in cases in
+which the scale parameter is assumed known, in which case it is very similar
+to AIC or Mallows' Cp. GCV and UBRE are covered in Craven and Wahba (1979) and Wahba (1990), see
 \code{\link{gam.method}} for more detail about the numerical optimization
 approaches available. 
 
@@ -26,9 +27,22 @@ suspicious of smoothing parameter estimates, try changing fit method (see
 some or all of the smoothing parameters `manually' (argument \code{sp} of \code{\link{gam}}). 
 
 
-In general the most logically consistent method to use for deciding which terms to include in the model is to compare GCV/UBRE scores
-for models with and without the term. More generally the score for the model with a smooth term can be compared to the score for the model with 
-the smooth term replaced by appropriate parametric terms. Candidates for removal can be identified by reference to the approximate p-values provided by \code{summary.gam}. Candidates for replacement by parametric terms are smooth terms with estimated degrees of freedom close to their 
+In general the most logically consistent method to use for deciding which
+terms to include in the model is to compare GCV/UBRE scores for models with 
+and without the term. When UBRE is the smoothness selection method this will
+give the same result as comparing by \code{\link{AIC}} (the AIC in this case
+uses the model EDF in place of the usual model DF). Similarly, comparison via
+GCV score and via AIC seldom yields different answers. Note that the negative
+binomial with estimated \code{\theta} parameter is a special case: the GCV
+score is not informative in this case, because of the \code{theta} estimation
+scheme used.
+ 
+More generally the score for the model with a smooth 
+term can be compared to the score for the model with 
+the smooth term replaced by appropriate parametric terms. Candidates for
+removal can be identified by reference to the approximate p-values provided 
+by \code{summary.gam}. Candidates for replacement by parametric terms are 
+smooth terms with estimated degrees of freedom close to their 
 minimum possible.
 
 One appealing approach to model selection is via shrinkage. Smooth classes

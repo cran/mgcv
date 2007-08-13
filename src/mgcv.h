@@ -51,4 +51,4 @@ void construct_cr(double *x,int *nx,double *k,int *nk,double *X,double *S,double
 void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *nXu,
                   double *UZ,double *by,int *by_exists,double *X);
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
-                    double *UZ,double *Xu,int *nXu,double *C,int *max_knots);
+                    double *UZ,double *Xu,int *nXu,double *C);

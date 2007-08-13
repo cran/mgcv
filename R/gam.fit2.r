@@ -99,7 +99,6 @@ rep(1, nobs), start = NULL, etastart = NULL,
         mu <- linkinv(eta)
         if (!(validmu(mu) && valideta(eta))) 
             stop("Can't find valid starting values: please specify some")
-        devold <- sum(dev.resids(y, mu, weights))
         boundary <- conv <- FALSE
         rV=matrix(0,ncol(x),ncol(x))   
         old.pdev <- 0     
@@ -132,7 +131,7 @@ rep(1, nobs), start = NULL, etastart = NULL,
               z1 <- as.vector((yg-mug)*d2g*mevg)*eta1
               w1 <- as.vector(-0.5*w^3/weg*(dV/mevg + 2*var.mug*d2g))*eta1
             }
-            ngoodobs <- as.integer(nobs - sum(!good))
+            
             ## Here a Fortran call has been replaced by update.beta call
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
@@ -239,7 +238,6 @@ rep(1, nobs), start = NULL, etastart = NULL,
                 break
             }
             else {  old.pdev <- pdev
-                devold <- dev
                 coef <- coefold <- start
                 if (deriv) beta1old <- upe$beta1
             }

@@ -28,7 +28,9 @@ evaluated.}
 }
 
 \value{ A matrix which will map the parameters associated with the smooth to the vector of values of the smooth 
-evaluated at the covariate values given in \code{object}.}
+evaluated at the covariate values given in \code{object}. If the smooth class
+is one which generates offsets the corresponding offset is returned as
+attribute \code{"offset"} of the matrix.}
 
 
 \details{ Smooth terms in a GAM formula are turned into smooth specification objects of 

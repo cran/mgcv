@@ -7,7 +7,7 @@
   smooth - it exists purely to help set up a model using spline based smooths.
 }
 
-\usage{s(..., k=-1,fx=FALSE,bs="tp",m=0,by=NA)}
+\usage{s(..., k=-1,fx=FALSE,bs="tp",m=0,by=NA,xt=NA)}
 
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -43,6 +43,9 @@
     variable would usually be the dummy variable coding one level of the
   factor. See the examples below. This is the means by which `variable
   coefficient models' can be specified.}
+
+\item{xt}{Any extra information required to set up a particular basis. Used
+  e.g. to set large data set handling behaviour for \code{"tp"} basis.}
   }
 
 \details{The function does not evaluate the variable arguments. To use this function to specify use of
@@ -66,14 +69,17 @@ the term is a function of.}
   \item{p.order}{The order of the t.p.r.s. penalty, or 0 for
     auto-selection of the penalty order.}
   \item{by}{is the name of any \code{by} variable as text (\code{"NA"} for none).}
-  \item{full.call}{Text for pasting into a string to be converted to a
-    gam formula, which has the values of function options given explicitly -
-  this is useful for constructing a fully expanded gam formula which can
-be used without needing access to any variables that may have been used
-to define \code{k}, \code{fx}, \code{bs} or \code{m} in the original call. i.e. this is text which
-when parsed and evaluated generates a call to \code{s()} with all the
-options spelled out explicitly.}
+
+%%  \item{full.call}{Text for pasting into a string to be converted to a
+%%    gam formula, which has the values of function options given explicitly -
+%%  this is useful for constructing a fully expanded gam formula which can
+%% be used without needing access to any variables that may have been used
+%% to define \code{k}, \code{fx}, \code{bs} or \code{m} in the original call. i.e. this is text which
+%% when parsed and evaluated generates a call to \code{s()} with all the
+%% options spelled out explicitly.}
+
 \item{label}{A suitable text label for this smooth term.}
+\item{xt}{The object passed in as argument \code{xt}.}
 }
 
 

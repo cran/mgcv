@@ -612,7 +612,7 @@ void construct_cr(double *x,int *nx,double *k,int *nk,double *X,double *S,double
 } 
 
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
-                    double *UZ,double *Xu,int *nXu,double *C,int *max_knots)
+                    double *UZ,double *Xu,int *nXu,double *C)
 /* inputs: 
    x contains the n values of each of the d covariates, stored end to end
    knt contains the nk knot locations packed as x
@@ -637,7 +637,7 @@ void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,do
   { kk=(double **)calloc((size_t)(*d),sizeof(double*));
     for (i=0;i<*d;i++) kk[i]=knt + i * *nk;
   }
-  tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk,*max_knots); /* Do actual setup */
+  tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk); /* Do actual setup */
   RArrayFromMatrix(X,Xm.r,&Xm);
   RArrayFromMatrix(S,Sm.r,&Sm);
   RArrayFromMatrix(UZ,UZm.r,&UZm);  

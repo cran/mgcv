@@ -160,8 +160,3 @@ msgid ""
 "degrees of freedom"
 msgstr ""
 
-#: tprs.c:359
-msgid ""
-"Too many knots for t.p.r.s term: see `gam.control' to increase limit, or use "
-"a different basis, or see large data set help for `gam'."
-msgstr ""

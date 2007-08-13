@@ -43,7 +43,7 @@ notLog <- function(x)
 notExp2 <- function (x,d=.Options$mgcv.vc.logrange,b=1/d)
 ## to avoid needing to modify solve.pdIdnot, this transformation must
 ## maintain the property that 1/notExp2(x) = notExp2(-x)
-{ f <- exp(d*sin(x*b))
+{ exp(d*sin(x*b))
 }
 
 notLog2 <- function(x,d=.Options$mgcv.vc.logrange,b=1/d)
@@ -91,12 +91,13 @@ pdConstruct.pdTens <-
   if (is.matrix(val)) {			# initialize from a positive definite
     S <- attr(form,"S")
     m <- length(S)
+    ## codetools gets it wrong about `y'
     y <- as.numeric((crossprod(val)))   # it's a factor that gets returned in val
     lform <- "y ~ as.numeric(S[[1]])"
     if (m>1) for (i in 2:m) lform <- paste(lform," + as.numeric(S[[",i,"]])",sep="")
     lform <- formula(paste(lform,"-1"))
     mod1<-lm(lform)
-    y <- as.numeric(solve(crossprod(val)))
+    y <- as.numeric(solve(crossprod(val))) ## ignore codetools complaint about this
     mod2<-lm(lform)
     ## `value' and `val' can relate to the cov matrix or its inverse:
     ## the following seems to be only way to tell which.
@@ -389,7 +390,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
   }  
   else  m<-length(split$smooth.spec) # number of smooth terms
   
-  G<-list(m=m,full.formula=split$full.formula)
+  G<-list(m=m)##,full.formula=split$full.formula)
 
   if (is.null(attr(data,"terms"))) # then data is not a model frame
   mf<-model.frame(split$pf,data,drop.unused.levels=FALSE) # FALSE or can end up with wrong prediction matrix!
@@ -546,7 +547,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
   G$random<-random
   G$X<-X  
 
-  G$y <- data[[deparse(split$full.formula[[2]],backtick=TRUE)]]
+  G$y <- data[[split$response]] ##data[[deparse(split$full.formula[[2]],backtick=TRUE)]]
   
   G$n<-nrow(data)
 
@@ -612,7 +613,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
     # Cind[i] is where row i of sorted Cgrps is in original data frame order 
     rCind <- 1:n; rCind[Cind] <- 1:n
     # rCind[i] is location of ith original datum in the coarse ordering
-    CFgrps <- grps[Cind] # fine group levels in coarse group order (unused!!)
+    ## CFgrps <- grps[Cind] # fine group levels in coarse group order (unused!!)
     Clevel <- levels(Cgrps) # levels of coarse grouping factor
     n.cg <- length(Clevel)  # number of outer groups
     size.cg <- array(0,n.cg)  
@@ -913,7 +914,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     } else cor.vars<-NULL
     # create model frame.....
     gp<-interpret.gam(formula) # interpret the formula 
-    cl<-match.call() # call needed in gamm object for update to work
+    ##cl<-match.call() # call needed in gamm object for update to work
     mf<-match.call(expand.dots=FALSE)
   
     allvars <- c(cor.vars,random.vars)
@@ -948,7 +949,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (is.null(random)&&n.sr==0) 
     stop("gamm models must have at least 1 smooth with unknown smoothing parameter or at least one other random effect")
 
-    g<-as.factor(G$y*0+1)
+    g<-as.factor(G$y*0+1) ## needed, whatever codetools says
 
     offset.name <- attr(mf,"names")[attr(attr(mf,"terms"),"offset")]
 
@@ -1049,7 +1050,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       object$smooth[[i]]$last.para<-length(p)
     }
  
-    cov<-as.matrix(ret$lme$modelStruct$reStruct)
+   ## cov<-as.matrix(ret$lme$modelStruct$reStruct)
     var.param <- coef(ret$lme$modelStruct$reStruct)
     n.v <- length(var.param) 
     k <- 1
@@ -1140,7 +1141,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     object$prior.weights <- weights
     class(object)<-"gam"
-    object$full.formula <- G$full.formula
+    ##object$full.formula <- G$full.formula
 
     object$fitted.values <- predict.gam(object,type="response")
     object$residuals <- residuals(ret$lme) #as.numeric(G$y) - object$fitted.values
@@ -1191,7 +1192,7 @@ test.gamm <- function(control=nlme::lmeControl(niterEM=3,tolerance=1e-11,msTol=1
   y <- f + rnorm(n)*0.2
   cat("testing covariate scale invariance ... ")  
   b <- gamm(y~te(x,z), control=control )
-  x1 <- x*100
+  x1 <- x*100 
   b1 <- gamm(y~te(x1,z),control=control)
   res <- compare(b$gam,b1$gam)
  
@@ -1208,7 +1209,8 @@ test.gamm <- function(control=nlme::lmeControl(niterEM=3,tolerance=1e-11,msTol=1
   cat("testing equivalence of gam and gamm with same sp ... ")
   b1 <- gam(y~te(x,z),sp=b$gam$sp)
   res <- compare(b$gam,b1)  
-
+  
+  if (FALSE) cat(res,x1,y1) ## fool codetools
 }
 
 

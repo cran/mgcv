@@ -1168,7 +1168,8 @@ void gdi(double *X,double *E,double *rS,
       /* store D1 and D2 for convergence testing */
       for (p0=D1,p2=D1_old,p1=D1 + *M;p0<p1;p0++,p2++) *p2 = *p0;
       if (deriv2) for (p0=D2,p2=D2_old,p1=D2 + *M * *M;p0<p1;p0++,p2++) *p2 = *p0;
-      
+
+
     } /* end of main derivative iteration */
   } /* end of if (*deriv) */ 
   else { /* keep compilers happy */

@@ -104,7 +104,7 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
         mu <- linkinv(eta)
         if (!(validmu(mu) && valideta(eta))) 
             stop("Can't find valid starting values: please specify some")
-        devold <- sum(dev.resids(y, mu, weights))
+    
         boundary <- conv <- FALSE
         rV=matrix(0,ncol(x),ncol(x))   
         old.pdev <- 0     
@@ -130,13 +130,9 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
             var.mug<-variance(mug)
             w <- sqrt((weg * mevg^2)/var.mug)
 
-            ngoodobs <- as.integer(nobs - sum(!good)) ### ????
             ## Here a Fortran call has been replaced by update.beta call
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
-           
-
-            dum1 <- rep(0,ncol(x));dum2 <- rep(0,nobs);dum3 <- rep(0,nSp)
             
             oo<-.C(C_pls_fit,y=as.double(z),as.double(x[good,]),as.double(w),as.double(Sr),as.integer(sum(good)),
             as.integer(ncol(x)),as.integer(ncol(Sr)),eta=as.double(z),penalty=as.double(1),
@@ -228,12 +224,17 @@ gam.fit3 <- function (x, y, sp, S=list(),rS=list(),off, H=NULL,
             } 
 
             if (abs(pdev - old.pdev)/(0.1 + abs(pdev)) < control$epsilon) {
-                conv <- TRUE
-                coef <- start
-                break
+                if (max(abs(start-coefold))>control$epsilon*max(abs(start+coefold))/2){
+                  old.pdev <- pdev
+                  coef <- coefold <- start
+                  etaold <- eta 
+                } else {
+                  conv <- TRUE
+                  coef <- start
+                  break 
+                }
             }
             else {  old.pdev <- pdev
-                devold <- dev
                 coef <- coefold <- start
                 etaold <- eta 
             }

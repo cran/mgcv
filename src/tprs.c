@@ -155,8 +155,8 @@ int null_space_dimension(int d, int m)
 { int M,i;
   if (2*m<=d) {m=1;while (2*m<d+2) m++;} 
   M=1;     /* dimension of penalty null space */
-  for (i=0;i<d;i++) M*=d+m-1-i;
-  for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
+  for (i=0;i<d;i++) M*=d+m-1-i;/* get (m+d-1)!/(m-1)! = (m+d-1)*(m+d-2) ... *(m) -- d terms */ 
+  for (i=2;i<=d;i++) M/=i;     /* M = (m+d-1)!/(d!(m-1)!) */
   return(M);
 }
 
@@ -287,7 +287,7 @@ int *Xd_strip(matrix *Xd)
 }
 
 void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,matrix *X,matrix *S,
-                matrix *UZ,matrix *Xu,int n_knots,int max_knots)
+                matrix *UZ,matrix *Xu,int n_knots)
 
 /* Takes d covariates x_1,..,x_d and creates the truncated basis for an order m 
    smoothing spline, returning the design matrix and wiggliness penalty matrix 
@@ -355,8 +355,6 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   Xu->c--; /* hide indexing column */
   if (Xu->r<k) 
   ErrorMessage(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"),1);
-  if (Xu->r>max_knots)
-  ErrorMessage(_("Too many knots for t.p.r.s term: see `gam.control' to increase limit, or use a different basis, or see large data set help for `gam'."),1);
   if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
   tpsE(&E,Xu,m,d); /* The important matrix in the full t.p.s. problem */
   tpsT(&T,Xu,m,d); /* The tps constraint matrix */
@@ -437,7 +435,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
         XMi++;      
       } 
     }
-    tps_g(Xu,&p,xc,0,0,&X1,constant); /* tell tps_g to clear up its internally allocated memory - only d=0 mmatters here*/
+    tps_g(Xu,&p,xc,0,0,&X1,constant); /* tell tps_g to clear up its internally allocated memory - only d=0 matters here*/
     free(xc);freemat(X1);
   }
   /* Next, create the penalty matrix...... */

@@ -27,7 +27,7 @@ null.space.dimension(d,m)
   \eqn{m}{m} giving visual smoothness
   for the given \eqn{d}{d}, otherwise the supplied \eqn{m}{m} is used. The null space dimension is given by:
 
-  \eqn{M=(m+d+1)!/(d!(m-d)!)}{M=(m+d+1)!/(d!(m-d)!}
+  \eqn{M=(m+d-1)!/(d!(m-1)!)}{M=(m+d-1)!/(d!(m-1)!}
 
   which is the value returned.
 
