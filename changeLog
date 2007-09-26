@@ -1,8 +1,10 @@
-1.3-26
+1.3-27
 
-* modification to `gam' so that GCV/UBRE scores reported with all fixed 
-  smoothing parameters are consistent with equivalent under s.p. 
-  estimation.
+* Fix of nasty bug in large dataset handling with "tp" basis. Subsampling 
+  code was re-seeding RNG instead of intended behaviour of saving RNG 
+  state and  restoring it. Fixed and tested.
+
+1.3-26
 
 * gam.fit3 modified to test for convergence of coefficients as well
   as penalized deviance, otherwise in extreme cases the derivative 

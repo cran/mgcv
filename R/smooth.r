@@ -383,12 +383,15 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
     xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
     if (nu>xtra$max.knots) { ## then there is really a problem 
-      seed <- .Random.seed ## store RNG seed
+      seed <- get(".Random.seed",envir=.GlobalEnv) ## store RNG seed
+      kind <- RNGkind(NULL)
+      RNGkind("default","default")
       set.seed(xtra$seed) ## ensure repeatability
       nk <- xtra$max.knots ## going to create nk knots
       ind <- sample(1:nu,nk,replace=FALSE)  ## by sampling these rows from xu
       knt <- as.numeric(xu[ind,])  ## ... like this
-      .Random.seed <- seed ## RNG behaves as if it had not been used
+      RNGkind(kind[1],kind[2])
+      assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
     }
   } ## end of large data set handling
   k<-object$bs.dim 
