@@ -747,6 +747,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   } else ## do performance iteration.... 
   object<-gam.fit(G,family=G$family,control=control,gamma=gamma,fixedSteps=fixedSteps,...)
   
+   
   # fill returned s.p. array with estimated and supplied terms
   temp.sp<-object$sp
   object$sp<-G$all.sp
@@ -772,6 +773,21 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     temp.sp <- G$all.sp
     temp.sp[G$all.sp<0] <- object$sp # copy estimated sp's into whole vector
     object$sp <- temp.sp   # correct object sp vector
+  } else { ## check for all fixed sp case ...
+    if (!G$am && (method$gam=="perf.outer"||method$gam=="outer")) {
+      ## need to fix up GCV/UBRE score 
+      if (G$sig2>0) {criterion <- "UBRE";scale <- G$sig2} else { 
+                 criterion <- method$gcv;scale <- -1}
+      if (criterion=="UBRE") object$gcv.ubre <- object$deviance/G$n - scale +
+                             2 * gamma * scale* sum(object$edf)/G$n else 
+      if (criterion=="deviance") object$gcv.ubre <- G$n *
+                        object$deviance/(G$n-sum(object$edf))^2 else 
+      if (criterion=="GACV") { 
+        P <- sum(object$weights*object$residuals^2)
+        tau <- sum(object$edf)
+        object$gcv.ubre <- object$deviance/G$n + 2 * gamma*tau * P / (G$n*(G$n-tau))
+      }  
+    }
   }
 
   ## correct null deviance if there's an offset ....

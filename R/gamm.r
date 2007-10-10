@@ -848,14 +848,14 @@ extract.lme.cov<-function(b,data,start.level=1)
 formXtViX <- function(V,X)
 ## forms X'V^{-1}X as efficiently as possible given the structure of
 ## V (diagonal, block-diagonal, full)
-{ X <- X[V$ind,] # have to re-order X according to V ordering
+{ X <- X[V$ind,,drop=FALSE] # have to re-order X according to V ordering
   if (is.list(V$V)) {     ### block diagonal case
     Z <- X
     j0<-1
     for (i in 1:length(V$V))
     { Cv <- chol(V$V[[i]])
       j1 <- j0+nrow(V$V[[i]])-1
-      Z[j0:j1,]<-backsolve(Cv,as.matrix(X[j0:j1,]),transpose=TRUE)
+      Z[j0:j1,]<-backsolve(Cv,X[j0:j1,,drop=FALSE],transpose=TRUE)
       j0 <- j1 + 1
     }
     res <- t(Z)%*%Z
@@ -883,6 +883,69 @@ new.name <- function(proposed,old.names)
   prop
 }
 
+gammPQL <- function (fixed, random, family, data, correlation, weights,
+    control, niter = 30, verbose = TRUE, ...)
+
+## service routine for `gamm' to do PQL fitting. Based on glmmPQL
+## from the MASS library (Venables & Ripley). In particular, for back 
+## compatibility the numerical results should be identical with gamm 
+## fits by glmmPQL calls. Because `gamm' already does some of the 
+## preliminary stuff that glmmPQL does, gammPQL can be simpler. It also 
+## deals with the possibility of the original data frame containing 
+## variables called `zz' `wts' or `invwt'
+
+{ off <- model.offset(data)
+  if (is.null(off)) off <- 0
+
+  wts <- weights
+  if (is.null(wts)) wts <- rep(1, nrow(data))
+  wts.name <- new.name("wts",names(data)) ## avoid overwriting what's already in `data'
+  data[[wts.name]] <- wts 
+
+  fit0 <- NULL ## keep checking tools happy 
+  ## initial fit (might be better replaced with `gam' call)
+  eval(parse(text=paste("fit0 <- glm(formula = fixed, family = family, data = data,",
+                        "weights =",wts.name,",...)")))
+  w <- fit0$prior.weights
+  eta <- fit0$linear.predictors
+    
+  zz <- eta + fit0$residuals - off
+  wz <- fit0$weights
+  fam <- family
+
+  ## find non clashing name for pseudodata and insert in formula
+  zz.name <- new.name("zz",names(data))
+  eval(parse(text=paste("fixed[[2]] <- quote(",zz.name,")")))
+ 
+  data[[zz.name]] <- zz ## pseudodata to `data' 
+  
+  ## find non-clashing name fro inverse weights, and make 
+  ## varFixed formula using it...
+  
+  invwt.name <- new.name("invwt",names(data))
+  data[[invwt.name]] <- 1/wz
+  w.formula <- as.formula(paste("~",invwt.name,sep=""))
+
+  for (i in 1:niter) {
+    if (verbose) message("iteration ", i)
+    fit<-lme(fixed=fixed,random=random,data=data,correlation=correlation,
+             control=control,weights=varFixed(w.formula),method="ML",...)
+    etaold <- eta
+    eta <- fitted(fit) + off
+    if (sum((eta - etaold)^2) < 1e-06 * sum(eta^2)) break
+    mu <- fam$linkinv(eta)
+    mu.eta.val <- fam$mu.eta(eta)
+    ## get pseudodata and insert in `data' 
+    data[[zz.name]] <- eta + (fit0$y - mu)/mu.eta.val - off
+    wz <- w * mu.eta.val^2/fam$variance(mu)
+    data[[invwt.name]] <- 1/wz
+  } ## end i in 1:niter
+  fit
+}
+
+
+
+
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
       subset=NULL,na.action,knots=NULL,control=nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
@@ -896,7 +959,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # NOTE: need to fill out the gam object properly
 
 {   if (!require("nlme")) stop("gamm() requires package nlme to be installed")
-    if (!require("MASS")) stop("gamm() requires package MASS to be installed")
+  #  if (!require("MASS")) stop("gamm() requires package MASS to be installed")
     # check that random is a named list
     if (!is.null(random))
     { if (is.list(random)) 
@@ -1001,7 +1064,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (lme.used)
     { ## following construction is a work-around for problem in nlme 3-1.52 
       eval(parse(text=paste("ret$lme<-lme(",deparse(fixed.formula),
-          ",random=rand,data=strip.offset(mf),correlation=correlation,control=control,weights=weights,method=method)"
+          ",random=rand,data=strip.offset(mf),correlation=correlation,",
+          "control=control,weights=weights,method=method)"
             ,sep=""    ))) 
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
@@ -1009,8 +1073,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       if (inherits(weights,"varFunc")) 
       stop("weights must be like glm weights for generalized case")
       if (verbosePQL) cat("\n Maximum number of PQL iterations: ",niterPQL,"\n")
-      eval(parse(text=paste("ret$lme<-glmmPQL(",deparse(fixed.formula),
-          ",random=rand,data=strip.offset(mf),family=family,correlation=correlation,control=control,",
+      eval(parse(text=paste("ret$lme<-gammPQL(",deparse(fixed.formula),
+          ",random=rand,data=strip.offset(mf),family=family,",
+          "correlation=correlation,control=control,",
             "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
      
       ##ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
@@ -1069,9 +1134,6 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     V<-extract.lme.cov2(ret$lme,mf,n.sr+1) # the data covariance matrix, excluding smooths
     XVX <- formXtViX(V,G$Xf)
-#    Cv<-chol(V)
-#    X<-G$Xf
-#    Z<-backsolve(Cv,X,transpose=TRUE)
     S<-matrix(0,ncol(G$Xf),ncol(G$Xf)) # penalty matrix
     first <- G$nsdf+1
     k <- 1
@@ -1089,7 +1151,6 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       first <- last + 1 
     }
     S<-S/ret$lme$sigma^2 # X'V^{-1}X divided by \sigma^2, so should S be
-#    Z<-t(Z)%*%Z # X'V^{-1}X # this was XVX
     Vb <- chol2inv(chol(XVX+S)) # covariance matrix - in constraint space
     # need to project out of constraint space
     Vp <- matrix(Vb[1:G$nsdf,],G$nsdf,ncol(Vb))
