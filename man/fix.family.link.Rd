@@ -47,7 +47,7 @@ one of the standard families.
 
 \seealso{  
 \code{\link{gam.fit3}}} 
-}
+
 
 \keyword{models} \keyword{regression}%-- one or more ..
 

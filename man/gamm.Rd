@@ -199,9 +199,10 @@ Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statis
 
 \section{WARNINGS }{
 
-This version of \code{gamm} works best with \code{nlme} 3.1-62 and above and R
-2.2.0 and above. This is because it is designed to work with the optimizers
-used from these versions onwards, rather than the earlier default optimizers.
+\code{gamm} assumes that you know what you are doing! For example, unlike 
+\code{glmmPQL} from \code{MASS} it will return the complete \code{lme} object
+from the working model at convergence of the PQL iteration, including the `log 
+likelihood', even though this is not the likelihood of the fitted GAMM. 
 
 The routine will be very slow and memory intensive if correlation structures
 are used for the very large groups of data. e.g. attempting to run the

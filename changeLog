@@ -1,10 +1,23 @@
+1.3-28
+
+* `gamm' modified to call a routine `gammPQL' in place of MASS::glmmPQL. 
+  This avoids some duplication, and facilitates maintainance. 
+
+* Bug fix in `formXtViX' where matrix dimensions got dropped when 
+  subsetting thereby messing up variance calculations for gamm fits in 
+  which some group sizes were 1. 
+
 1.3-27
 
-* Fix of nasty bug in large dataset handling with "tp" basis. Subsampling 
-  code was re-seeding RNG instead of intended behaviour of saving RNG 
-  state and  restoring it. Fixed and tested.
+* Fix of nasty bug in large dataset handling with "tp" basis (introduced 
+  in 1.3-26). Subsampling code was re-seeding RNG instead of intended 
+  behaviour of saving RNG state and  restoring it. Fixed and tested.
 
 1.3-26
+
+* modification to `gam' so that GCV/UBRE scores reported with all fixed 
+  smoothing parameters are consistent with equivalent under s.p. 
+  estimation.
 
 * gam.fit3 modified to test for convergence of coefficients as well
   as penalized deviance, otherwise in extreme cases the derivative 
