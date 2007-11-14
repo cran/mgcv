@@ -2140,6 +2140,7 @@ long alias(X,aliased,tol) matrix X;long *aliased;double tol;
 { matrix F,x,xp,p,w;
   double e,x2,y;
   long i,j,k,n;
+  w=initmat(1L,1L); /* keep gcc -Wall happy */
   w.r=0L;
   F=initmat(X.r,X.c);x=initmat(X.r,1L);p=initmat(X.c,1L);
   xp=initmat(x.r,1L);
@@ -2161,6 +2162,7 @@ long alias(X,aliased,tol) matrix X;long *aliased;double tol;
     { aliased[n]=i;n++;}
   }
   freemat(F);freemat(xp);freemat(x);freemat(p);
+  w.r=1L;freemat(w);
   return(n);
 }
 

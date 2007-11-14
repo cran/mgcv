@@ -1,33 +1,6 @@
-citHeader("2000 for basics set up and old smoothness selection method;
-2003 for thin plate regression splines etc; 2004 for newer, default, 
-methods and basics of gamm; 2006 for overview.")
-
-citEntry(
- entry="Article",
- title="Modelling and smoothing parameter estimation with 
-        multiple quadratic penalties",
- journal="Journal of the Royal Statistical Society (B)",
- volume= "62",
- number="2",
- pages="413-428",
- year="2000",
- author="S. N. Wood",
- textVersion="Wood, S.N. (2000) Modelling and smoothing parameter 
-estimation with multiple quadratic penalties. Journal of the Royal 
-Statistical Society (B) 62(2):413-428. " )
-
-
-citEntry(
- entry="Article",
- title="Thin-plate regression splines",
- journal="Journal of the Royal Statistical Society (B)",
- volume= "65",
- number="1",
- pages="95-114",
- year="2003",
- author="S. N. Wood",
- textVersion="Wood, S.N. (2003) Thin-plate regression splines.
-Journal of the Royal Statistical Society (B) 65(1):95-114." )
+citHeader("2004 for additive model method and basics of gamm; 2008 for
+generalized additive model method; 2006 for overview; 2003 for thin plate
+regression splines; 2000 is the original method, but no longer the default.")
 
 
 citEntry(
@@ -46,6 +19,21 @@ citEntry(
 )
 
 citEntry(
+ entry="Article",
+ title="Fast stable direct fitting and smoothness selection for generalized
+ additive models",
+ journal="Journal of the Royal Statistical Society (B)",
+ volume= "70",
+ number="2",
+ pages="-",
+ year="2008",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2008) Fast stable direct fitting and smoothness 
+ selection for generalized additive models. Journal of the Royal 
+ Statistical Society (B) 70(2): - . " )
+
+
+citEntry(
 entry="Book",
 title="Generalized Additive Models: An Introduction with R",
 year="2006",
@@ -55,3 +43,29 @@ textVersion="Wood, S.N. (2006) Generalized Additive Models: An
 Introduction with R. Chapman and Hall/CRC. "
 )
 
+citEntry(
+ entry="Article",
+ title="Thin-plate regression splines",
+ journal="Journal of the Royal Statistical Society (B)",
+ volume= "65",
+ number="1",
+ pages="95-114",
+ year="2003",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2003) Thin-plate regression splines.
+Journal of the Royal Statistical Society (B) 65(1):95-114." )
+
+
+citEntry(
+ entry="Article",
+ title="Modelling and smoothing parameter estimation with 
+        multiple quadratic penalties",
+ journal="Journal of the Royal Statistical Society (B)",
+ volume= "62",
+ number="2",
+ pages="413-428",
+ year="2000",
+ author="S. N. Wood",
+ textVersion="Wood, S.N. (2000) Modelling and smoothing parameter 
+estimation with multiple quadratic penalties. Journal of the Royal 
+Statistical Society (B) 62(2):413-428. " )

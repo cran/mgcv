@@ -485,7 +485,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
       "Tensor product penalty rank appears to be too low: please email Simon.Wood@R-project.org with details.")
       D<-1/sqrt(D)
       XZU<-XZ%*%U
-      if (p.rank<k-j) Xf<-as.matrix(XZU[,(p.rank+1):(k-j)])
+      if (p.rank<k-j) Xf<-XZU[,(p.rank+1):(k-j),drop=FALSE]
       else Xf<-matrix(0,nrow(sm$X),0) # no fixed terms left
       if (mult.pen) 
       { Xr <- XZU[,1:p.rank] # tensor product case
@@ -709,7 +709,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
         X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
                   contrasts.arg=c("contr.treatment","contr.treatment")) }
       # Get `model matrix' columns relevant to current grouping level...
-      X[[2]] <- as.matrix(Zt[,i.col:(i.col+grp.dims[i]-1)])
+      X[[2]] <- Zt[,i.col:(i.col+grp.dims[i]-1),drop=FALSE]
       i.col <- i.col+grp.dims[i]
       # tensor product the X[[1]] and X[[2]] rows...
       Z <- cbind(Z,tensor.prod.model.matrix(X))
@@ -740,7 +740,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
       Vz <- list()
       for (i in 1:n.cg) {
         j1 <- size.cg[i] + j0 -1
-        if (j0==j1) Zi <- t(as.matrix(Z[j0,])) else Zi <- Z[j0:j1,]
+        Zi <- Z[j0:j1,,drop=FALSE]
         Vz[[i]] <- Zi %*% Vr %*% t(Zi) 
         j0 <- j1+1
       }
@@ -823,7 +823,7 @@ extract.lme.cov<-function(b,data,start.level=1)
         X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
                   contrasts.arg=c("contr.treatment","contr.treatment")) }
       # Get `model matrix' columns relevant to current grouping level...
-      X[[2]] <- as.matrix(Zt[,i.col:(i.col+grp.dims[i]-1)])
+      X[[2]] <- Zt[,i.col:(i.col+grp.dims[i]-1),drop=FALSE]
       i.col <- i.col+grp.dims[i]
       # tensor product the X[[1]] and X[[2]] rows...
       Z <- cbind(Z,tensor.prod.model.matrix(X))
@@ -1049,8 +1049,13 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     { # first get the existing grouping structure ....
       corGroup <- paste(names(rand),collapse="/")
       groupForm<-nlme::getGroupsFormula(correlation)
-      if (!is.null(groupForm)) 
-      corGroup <- paste(corGroup,paste(all.vars(nlme::getGroupsFormula(correlation)),collapse="/"),sep="/")
+      if (!is.null(groupForm)) {
+        groupFormNames <- all.vars(groupForm)
+        exind <- groupFormNames %in% names(rand)
+        groupFormNames <- groupFormNames[!exind] ## dumping duplicates 
+        if (length(groupFormNames)) corGroup <- 
+             paste(corGroup,paste(groupFormNames,collapse="/"),sep="/")
+      }
       # now make a new formula for the correlation structure including these groups
       corForm <- as.formula(paste(deparse(nlme::getCovariateFormula(correlation)),"|",corGroup))
       attr(correlation,"formula") <- corForm

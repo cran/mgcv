@@ -167,8 +167,8 @@ on checking the basis dimension choise.
   interpretability. 
 
      
-     Details of some underlying fitting methods are given in Wood (2000, 2004,
-     2006b). 
+     Details of the default underlying fitting methods are given in Wood (2004
+     and 2008). Some alternative methods are discussed in Wood (2000 and 2006). 
 
  }
 
@@ -328,13 +328,15 @@ Otherwise the function returns an object of class \code{"gam"} as described in \
 
 Key References on this implementation:
 
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass. 99:673-686. [Default
+method for additive case (but no longer for generalized)]
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
+additive models. J.R.Statist.Soc.B 70(2): --- [Default method for generalized
+additive model case]
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
-
-Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
 Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics 62(4):1025-1036
@@ -344,6 +346,9 @@ and Hall/CRC Press.
 
 Wood, S.N. (2006c) On confidence intervals for generalized additive models based on penalized regression splines. Australian and New Zealand Journal of Statistics. 48(4): 445-464.
 
+Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
+with Multiple Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428 [The original
+paper, but no longer the default methods.]
 
 
 Key Reference on GAMs and related models:

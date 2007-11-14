@@ -2856,7 +2856,13 @@ magic <- function(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gc
     ns.qr<-qr(t(C)) # last n.b-n.con columns of Q are the null space of C
     X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b] # last n.b-n.con cols of XQ (=(Q'X')')
     # need to work through penalties forming Z'S_i^0.5 's
-    if (n.p>0) for (i in 1:n.p) S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,,drop=FALSE]
+    if (n.p>0) for (i in 1:n.p) { 
+      S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,,drop=FALSE]
+      ## following essential given assumptions of the C code...
+      if (ncol(S[[i]])>nrow(S[[i]])) { ## no longer have a min col square root.
+        S[[i]] <- t(qr.R(qr(t(S[[i]])))) ## better!
+      }
+    }
     # and Z'HZ too
     if (!is.null(H))
     { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,] # Z'H
