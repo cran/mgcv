@@ -1,6 +1,10 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.3-30
+
+* change to DESCRIPTION file
+
 1.3-29
 
 * `magic' could segfault if supplied with many constraints and relatively 
