@@ -792,7 +792,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
   ## correct null deviance if there's an offset ....
 
-  if (G$intercept&&any(G$offset)) object$null.deviance <-
+  if (G$intercept&&any(G$offset!=0)) object$null.deviance <-
                                   glm(G$y~offset(G$offset),family=G$family)$deviance
 
   if (G$sig2<0) object$method <- "GCV" else object$method <- "UBRE"
