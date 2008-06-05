@@ -4,10 +4,10 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Summary for a GAM fit}
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} and produces various useful
-summaries from it. 
+summaries from it. (See \code{\link{sink}} to divert output to a file.)
 }
 \usage{
-\method{summary}{gam}(object, dispersion=NULL, freq=TRUE, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, ...)
 
 \method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
@@ -38,17 +38,46 @@ Residual degrees of freedom are taken as number of data minus model degrees of
 freedom. 
 Let \eqn{ {\bf P}_i}{P_i} be the matrix 
 giving the parameters of the ith smooth when applied to the data (or pseudodata in the generalized case) and let \eqn{ {\bf X}}{X} 
-be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this definition causes 
-the edf's to add up properly! 
+be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this definition causes the edf's to add up properly! 
 
 \code{print.summary.gam} tries to print various bits of summary information useful for term selection in a pretty way.
 
-If \code{freq=FALSE} then the Bayesian parameter covariance matrix,
-\code{object$Vp}, is used to calculate test statistics for terms, and the
-degrees of freedom for reference distributions is taken as the estimated
-degrees of freedom for the term concerned. This is not easy to justify
-theoretically, and the resulting `Bayesian p-values' are difficult to
-interpret and often have much worse frequentist performance than the default p-values. 
+If \code{freq=TRUE} then the frequentist approximation for p-values of smooth terms described in section
+4.8.5 of Wood (2006) is used. The approximation is not great.  If \eqn{ {\bf p}_i}{p_i} 
+is the parameter vector for the ith smooth term, and this term has estimated
+covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
+statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
+p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
+pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  
+\eqn{{\bf V_i}}{V_i}. p-values are obtained as follows. In the case of
+known dispersion parameter, they are obtained by comparing the chi.sq statistic to the 
+chi-squared distribution with k degrees of freedom, where k is the estimated
+rank of  \eqn{ {\bf V_i}}{V_i}. If the dispersion parameter is unknown (in 
+which case it will have been estimated) the statistic is compared
+to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model. 
+Typically the p-values will be somewhat too low.
+
+If \code{freq=FALSE} then `Bayesian p-values' are returned for the smooth terms, based on a test statistic motivated
+by Nychka's (1988) analysis of the frequentist properties of Bayesian confidence intervals for smooths. 
+These appear to have better frequentist performance (in terms of power and distribution under the null) 
+than the alternative strictly frequentist approximation. Let \eqn{\bf f}{f} denote the vector of 
+values of a smooth term evaluated at the original 
+covariate values and let \eqn{{\bf V}_f}{V_f} denote the corresponding Bayesian covariance matrix. Let 
+\eqn{{\bf V}_f^{r-}}{V*_f} denote the rank \eqn{r}{r} pseudoinverse of \eqn{{\bf V}_f}{V_f}, where \eqn{r}{r} is the 
+EDF for the term, rounded up, (or the numerical rank of \eqn{{\bf V}_f}{V_f} if this is smaller). The statistic used is
+then 
+\deqn{T = {\bf f}^T {\bf V}_f^{r-}{\bf f}}{T = f'V*_f f}
+(this can be calculated efficiently without forming the pseudoinverse explicitly). \eqn{T}{T} is compared to a 
+chi-squared distribution with degrees of freedom given by the EDF for the term + 0.5, 
+or \eqn{T}{T} is used as a component in an F ratio statistic if the scale parameter has been estimated. The heuristic justification
+for the reference DoF is that, away from the lower bound on the EDF, the
+theoretically correct reference level appears to be \eqn{r}{r}, which if on
+average close to EDF + 0.5. However EDF + 0.5 behaves better than \eqn{r}{r} 
+when the EDF is near its lower limit.
+
+The definition of Bayesian p-value used is: 
+the probability of observing an \eqn{\bf f}{f} less probable than \eqn{\bf 0}{0}, under the approximation for the posterior 
+for \eqn{\bf f}{f} implied by the truncation used in the test statistic.
 }
 
 \value{\code{summary.gam} produces a list of summary information for a fitted \code{gam} object. 
@@ -65,26 +94,10 @@ estimated, and the standard normal if not.}
 \item{m}{The number of smooth terms in the model.}
 
 \item{chi.sq}{An array of test statistics for assessing the significance of
-model smooth terms. If \eqn{ {\bf p}_i}{p_i} 
-is the parameter vector for the ith smooth term, and this term has estimated
-covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
-statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
-p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
-pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  \eqn{
-{\bf V_i}}{V_i}.}
+model smooth terms. See details.}
 
 \item{s.pv}{An array of approximate p-values for the null hypotheses that each
-smooth term is zero. Be warned, these are only approximate. In the case of
-known dispersion parameter, they are obtained by comparing the chi.sq statistic given above to the 
-chi-squared distribution with k degrees of freedom, where k is the estimated
-rank of  \eqn{ {\bf V_i}}{V_i}. If the dispersion parameter is unknown (in 
-which case it will have been estimated) the statistic is compared
-to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model . 
-Typically the p-values will be somewhat too low, because they are conditional
-on the smoothing parameters, which are usually uncertain, but note that the
-statistic can also have low power if the rank, k, is too high relative to the
-EDF of the term!
-}
+smooth term is zero. Be warned, these are only approximate.}
 
 \item{se}{array of standard error estimates for all parameter estimates.}
 
@@ -120,8 +133,8 @@ explained is probably more appropriate for non-normal errors.}
 each parametric term is zero.}
 
 \item{pTerms.pv}{p-values associated with the tests that each term is
-zero. For penalized fits these are approximate, being conditional on the smoothing
-parameters. The reference distribution is an appropriate chi-squared when the
+zero. For penalized fits these are approximate. The reference distribution 
+is an appropriate chi-squared when the
 scale parameter is known, and is based on an F when it is not.}
 
 \item{cov.unscaled}{The estimated covariance matrix of the parameters (or
@@ -140,6 +153,9 @@ by scale parameter.}
 
 \references{
 
+Nychka (1988) Bayesian Confidence Intervals for Smoothing Splines. 
+Journal of the American Statistical Association 83:1134-1143.
+
 Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
 and Hall/CRC Press.
 
@@ -147,9 +163,7 @@ and Hall/CRC Press.
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}
 
-\section{WARNING }{ The supplied p-values will often be underestimates if
-smoothing parameters have been estimated as part of model fitting.
-
+\section{WARNING }{ The p-values are approximate. 
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
@@ -158,29 +172,21 @@ smoothing parameters have been estimated as part of model fitting.
 \examples{
 library(mgcv)
 set.seed(0)
-n<-200
-sig2<-4
-x0 <- runif(n, 0, 1)
-x1 <- runif(n, 0, 1)
-x2 <- runif(n, 0, 1)
-x3 <- runif(n, 0, 1)
-pi <- asin(1) * 2
-y <- 2 * sin(pi * x0)
-y <- y + exp(2 * x1) - 3.75887
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
-e <- rnorm(n, 0, sqrt(abs(sig2)))
-y <- y + e
-b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3))
+dat <- gamSim(1,n=200,scale=2) ## simulate data
+
+b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
 plot(b,pages=1)
 summary(b)
-# now check the p-values by using a pure regression spline.....
-b.d<-round(summary(b)$edf)+1 ## get edf per smooth
-b.d<-pmax(b.d,3) # can't have basis dimension less than 3!
+
+## now check the p-values by using a pure regression spline.....
+b.d <- round(summary(b)$edf)+1 ## get edf per smooth
+b.d <- pmax(b.d,3) # can't have basis dimension less than 3!
 bc<-gam(y~s(x0,k=b.d[1],fx=TRUE)+s(x1,k=b.d[2],fx=TRUE)+
-        s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE))
+        s(x2,k=b.d[3],fx=TRUE)+s(x3,k=b.d[4],fx=TRUE),data=dat)
 plot(bc,pages=1)
 summary(bc)
-# p-value check - increase k to make this useful!
+
+## p-value check - increase k to make this useful!
 n<-200;p<-0;k<-20
 for (i in 1:k)
 { b<-gam(y~s(x,z),data=data.frame(y=rnorm(n),x=runif(n),z=runif(n)))

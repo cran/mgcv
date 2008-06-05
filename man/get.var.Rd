@@ -6,9 +6,9 @@
 string is the name of a variable in the data frame/ list. If it is then the value of this variable is returned. 
 Otherwise the routine tries to evaluate the expression within the data.frame/list (but nowhere else) and if 
 successful returns the result. If neither step works then \code{NULL} is returned. The routine is useful for
-processing gam formulae.}
+processing gam formulae. If the variable is a matrix then it is coerced to a numeric vector, by default.}
 
-\usage{ get.var(txt,data)
+\usage{ get.var(txt,data,vecMat=TRUE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -16,9 +16,10 @@ processing gam formulae.}
 parsed is an expression that can be evaluated in \code{data}. It can also be neither in which case the
 function returns \code{NULL}.}
 \item{data}{A data frame or list.} 
+\item{vecMat}{Should matrices be coerced to numeric vectors?}
 }
 
-\value{The evaluated variable, or \code{NULL}}
+\value{The evaluated variable or \code{NULL}. May be coerced to a numeric vector if it's a matrix.}
 
 \references{
 \url{http://www.maths.bath.ac.uk/~sw283/}
@@ -32,6 +33,8 @@ y <- 1:4;dat<-data.frame(x=5:10)
 get.var("x",dat)
 get.var("y",dat)
 get.var("x==6",dat)
+dat <- list(X=matrix(1:6,3,2))
+get.var("X",dat)
 }
 \keyword{models} \keyword{smooth} \keyword{regression} %-- one or more ..
 

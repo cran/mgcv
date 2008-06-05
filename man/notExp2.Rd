@@ -25,7 +25,7 @@ simply have flattened.
 
 This parameterization is really just a numerical trick, in order to get
 \code{lme} to fit \code{gamm} models, without failing due to indefiniteness. 
-Note in particular that asymptoticresults on the likelihood/REML criterion are 
+Note in particular that asymptotic results on the likelihood/REML criterion are 
 not invalidated by the trick,
 unless parameter estimates end up close to the effective zero or effective
 infinity: but if this is the case then the asymptotics would also have been invalid

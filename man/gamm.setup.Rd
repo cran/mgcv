@@ -4,7 +4,10 @@
 \title{Generalized additive mixed model set up}
 \description{ This is an internal function of package \code{mgcv}. It is called 
 by \code{gamm} to set up a generalized additive mixed model in a form suitable for fitting by calls to 
-\code{glmmPQL} from the \code{MASS} library or \code{lme} from the \code{nlme} library. The main task is the representation of the smooth terms as random effects. 
+\code{gammPQL} or \code{lme} from the \code{nlme} library. The main task is the representation 
+of the smooth terms as random effects. The routine first calls \code{\link{gam.setup}}, then checks that
+a model estimable by \code{\link{gamm}} has been specified in the model formula, and then transforms the 
+problem to a form suitable for mixed model estimation.
 }
 
 \references{

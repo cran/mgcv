@@ -1000,23 +1000,24 @@ void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int 
 
 
 
-void RuniqueCombs(double *X,int *r, int *c)
+void RuniqueCombs(double *X,int *ind,int *r, int *c)
 
 /* X is a matrix. This routine finds its unique rows and strips out the 
    duplicates. This is useful for finding out the number of unique covariate
    combinations present in a set of data. */
 
 { matrix B,Xd;
-  int i,*ind;
+  int i,*ind1;
   B=Rmatrix(X,(long)(*r),(long)(*c));
   Xd=initmat(B.r,B.c+1);
   Xd.c--;mcopy(&B,&Xd);freemat(B);Xd.c++;
   for (i=0;i<Xd.r;i++) Xd.M[i][Xd.c-1]=(double)i;
-  ind=Xd_strip(&Xd);
+  ind1=Xd_strip(&Xd);
+  for (i=0;i<*r;i++) ind[i] = ind1[i]; /* copy index for return */
   Xd.c--; /* hide index array  */
   RArrayFromMatrix(X,Xd.r,&Xd);  /* NOTE: not sure about rows here!!!! */
   *r = (int)Xd.r; 
-  freemat(Xd);free(ind);
+  freemat(Xd);free(ind1);
 #ifdef MEM_CHECK
   dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
@@ -1109,8 +1110,9 @@ else
 #endif
 }
 
-void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,
-      int *off,int *dim,double *theta, int *m,int *nar)
+void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,
+            double *Afd,double *Hd,double *Sd,
+            int *off,int *dim,double *theta, int *m,int *nar)
 
 /* Interface routine for PCLS the constrained penalized weighted least squares solver.
    nar is an array of dimensions. Let:

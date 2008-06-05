@@ -353,12 +353,6 @@ msgstr ""
 msgid "pearson should be TRUE or FALSE - set to FALSE."
 msgstr ""
 
-msgid "Negative binomial family not (yet) usable with type 2 iteration methods."
-msgstr ""
-
-msgid "Must use gam.control(absorb.cons=TRUE), for type 2 iteration\n    methods."
-msgstr ""
-
 msgid "Model has more coefficients than data"
 msgstr ""
 
@@ -518,3 +512,41 @@ msgstr ""
 
 msgid "xt argument is faulty"
 msgstr "" 
+
+msgid "Smoothing parameter derivate iteration diverging. Decrease fit tolerance! See `epsilon' in `gam.contol'"
+msgstr ""
+
+msgid "L must be a matrix."
+msgstr ""
+
+msgid "L must have at least as many rows as columns."
+msgstr ""
+
+msgid "L has inconsistent dimensions."
+msgstr ""
+
+msgid "\"perf.magic\" is deprecated: reset to \"perf\""
+msgstr ""
+
+msgid "only outer method `newton' supports `negbin' family and theta selection: reset"
+msgstr ""
+
+
+msgid "Discrete Theta search not available with performance iteration"
+msgstr
+
+
+msgid "arguments of smooth not same dimension"
+msgstr ""
+
+msgid "factor `by' variables can not be used with matrix arguments."
+msgstr ""
+
+msgid "`by' variable must be same dimension as smooth arguments"
+msgstr ""
+
+msgid "Penalized model matrix must have no more columns than rows"
+msgstr ""
+
+msgid "Model matrix not full column rank"
+msgstr ""

@@ -36,6 +36,10 @@ msgid ""
 "Multiple GCV didn't improve autoinitialized relative smoothing parameters"
 msgstr ""
 
+#:magic.c:magic
+msgid "magic requires smoothing parameter starting values if L supplied"
+msgstr ""
+
 #: magic.c:809
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr ""

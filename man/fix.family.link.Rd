@@ -13,7 +13,7 @@ fix.family.var(fam)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
-  \item{fam}{ A \code{family}.}
+\item{fam}{A \code{family}.}
 }
 \details{ Outer iteration GAM estimation requires derivatives of the GCV/UBRE
 score, which are obtained by differentiating the P-IRLS GAM fitting iteration

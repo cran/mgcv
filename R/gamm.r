@@ -338,11 +338,153 @@ summary.pdIdnot <-
 ### end of pdIdnot class
 
 
-gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),knots=NULL,
+gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
                      parametric.only=FALSE,absorb.cons=FALSE)
 # set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 # needed for a gamm fit.
+# NOTE: lme can't deal with offset terms.
+# There is an implicit assumption that any rank deficient penalty does not penalize 
+# the constant term in a basis. 
+{ 
+  ## first simply call `gam.setup'....
 
+  G <- gam.setup(formula,pterms,data=data,knots=knots,sp=NULL,
+                    min.sp=NULL,H=NULL,absorb.cons=TRUE)
+ 
+  if (!is.null(G$L)) stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
+  # now perform re-parameterization...
+
+  first.f.para<-G$nsdf+1
+  first.r.para<-1
+ 
+  G$Xf <- G$X # full GAM model matrix, treating smooths as fixed effects
+  random<-list()
+  random.i<-0
+
+  X <- G$X[,1:G$nsdf] # accumulate fixed effects into here
+
+  xlab <- rep("",0)
+  if (G$m)
+  for (i in 1:G$m) 
+  { sm <- G$smooth[[i]]
+    sm$X <- G$X[,sm$first.para:sm$last.para]
+    if (inherits(sm,"tensor.smooth"))
+    { if (sum(sm$fx)==length(sm$fx)) sm$fixed <- TRUE
+      else 
+      { sm$fixed <- FALSE
+        if (sum(sm$fx)!=0) warning("gamm can not fix only some margins of tensor product.")
+      }
+    } 
+    if (!sm$fixed) random.i <- random.i+1
+   
+    ZSZ <- list()
+    if (!sm$fixed) 
+    for (l in 1:length(sm$S)) ZSZ[[l]]<-sm$S[[l]]
+    XZ<-sm$X
+    k <- ncol(sm$X);j<-0
+   
+    if (!sm$fixed) 
+    { sm$ZSZ <- ZSZ            # store these too - for construction of Vp matrix
+      if (inherits(sm,"tensor.smooth")) { 
+        # tensor product term - need to find null space from sum of penalties
+        sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
+        null.rank <- sm$margin[[1]]$bs.dim-sm$margin[[1]]$rank
+        bs.dim <- sm$margin[[1]]$bs.dim
+        if (length(ZSZ)>1) for (l in 2:length(ZSZ)) 
+        { sum.ZSZ <- sum.ZSZ + ZSZ[[l]]/mean(abs(ZSZ[[l]]))
+          null.rank <- # the rank of the null space of the penalty 
+                       null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
+          bs.dim <- bs.dim*sm$margin[[l]]$bs.dim
+        }
+        null.rank <- null.rank - bs.dim + sm$df
+        sum.ZSZ <- (sum.ZSZ+t(sum.ZSZ))/2 # ensure symmetry
+        ev <- eigen(sum.ZSZ,symmetric=TRUE)
+        mult.pen <- TRUE
+      } else            # regular s() term
+      { ZSZ[[1]] <- (ZSZ[[1]]+t(ZSZ[[1]]))/2
+        ev<-eigen(ZSZ[[1]],symmetric=TRUE)
+        null.rank <- sm$df - sm$rank
+        mult.pen <- FALSE
+      }
+      p.rank <- ncol(XZ) - null.rank
+      if (p.rank>ncol(XZ)) p.rank <- ncol(XZ)
+      U<-ev$vectors
+      D<-ev$values[1:p.rank]
+      if (sum(D<=0)) stop(
+      "Tensor product penalty rank appears to be too low: please email Simon.Wood@R-project.org with details.")
+      D<-1/sqrt(D)
+      XZU<-XZ%*%U
+      if (p.rank<k-j) Xf<-XZU[,(p.rank+1):(k-j),drop=FALSE]
+      else Xf<-matrix(0,nrow(sm$X),0) # no fixed terms left
+      if (mult.pen) 
+      { Xr <- XZU[,1:p.rank] # tensor product case
+        for (l in 1:length(ZSZ))   # transform penalty explicitly
+        { ZSZ[[l]] <- (t(U)%*%ZSZ[[l]]%*%U)[1:p.rank,1:p.rank]
+          ZSZ[[l]] <- (ZSZ[[l]]+t(ZSZ[[l]]))/2
+        }
+      }
+      else Xr<-t(t(XZU[,1:p.rank])*D)
+      n.para<-k-j-p.rank # indices for fixed parameters
+      sm$first.f.para<-first.f.para
+      first.f.para<-first.f.para+n.para
+      sm$last.f.para<-first.f.para-1
+      n.para<-ncol(Xr) # indices for random parameters
+      sm$first.r.para<-first.r.para
+      first.r.para<-first.r.para+n.para
+      sm$last.r.para<-first.r.para-1
+    
+      sm$D<-D;sm$U<-U # information (with qrc) for backtransforming to original space 
+
+      term.name <- paste("Xr.",random.i,sep="")
+      term.name <- new.name(term.name,names(data))
+      form <- as.formula(paste("~",term.name,"-1",sep=""))
+      if (mult.pen)  # tensor product case
+      { attr(form,"S") <- ZSZ
+        random[[random.i]] <- pdTens(form)
+      } else  # single penalty smooth
+      random[[random.i]] <- pdIdnot(form)
+      names(random)[random.i] <- term.name
+      eval(parse(text=paste("G$",term.name,"<-Xr",sep="")))
+    } else # term is fixed, so model matrix appended to fixed matrix
+    { Xf <- XZ # whole term goes to fixed 
+      n.para <- ncol(Xf)       # now define where the parameters of this term live 
+      sm$first.f.para <- first.f.para
+      first.f.para <- first.f.para+n.para
+      sm$last.f.para <- first.f.para-1
+    }
+    ## now add appropriate column names to Xf.
+    ## without these, summary.lme will fail
+    
+    if (ncol(Xf)) {
+      Xfnames<-rep("",ncol(Xf)) 
+      k<-length(xlab)+1
+      for (j in 1:ncol(Xf)) {
+        xlab[k] <- Xfnames[j] <-
+        new.name(paste(sm$label,"Fx",j,sep=""),xlab)
+        k <- k + 1
+      } 
+      colnames(Xf) <- Xfnames
+    }
+
+    X<-cbind(X,Xf) # add fixed model matrix to overall X
+  
+    sm$X <- NULL
+  
+    G$smooth[[i]] <- sm  ## replace smooth object with transformed version 
+  }
+ 
+  G$random<-random
+  G$X<-X  ## fixed effects model matrix
+
+  G
+}
+
+
+gamm.setup2<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
+                     parametric.only=FALSE,absorb.cons=FALSE)
+## OLD redundant code
+# set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
+# needed for a gamm fit.OLD version.
 # NOTE: lme can't deal with offset terms.
 # There is an implicit assumption that any rank deficient penalty does not penalize 
 # the constant term in a basis. 
@@ -421,7 +563,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
             # smooths as fixed effects
   random<-list()
   random.i<-0
-  k.sp <- 0  # counter for penalties
+ # k.sp <- 0  # counter for penalties
   xlab <- rep("",0)
   if (m)
   for (i in 1:m) 
@@ -438,16 +580,16 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
       }
     } 
     if (!sm$fixed) random.i <- random.i+1
-    k<-ncol(sm$X)
-    j<-nrow(sm$C)
+   
     ZSZ <- list()
-    if (nrow(sm$C)) # there are constraints
-    { qrc<-qr(t(sm$C))
+    if (!is.null(sm$C)&&nrow(sm$C)) # there are constraints
+    { k<-ncol(sm$X)
+      j<-nrow(sm$C)
+      qrc<-qr(t(sm$C))
       if (!sm$fixed)
       for (l in 1:length(sm$S)) # tensor product terms have > 1 penalty 
       { ZSZ[[l]]<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
         ZSZ[[l]]<-t(qr.qty(qrc,t(ZSZ[[l]]))[(j+1):k,])
-        k.sp <- k.sp+1
       }
       XZ<-t(qr.qy(qrc,t(sm$X))[(j+1):k,])
       sm$qrc<-qrc
@@ -455,6 +597,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
     { if (!sm$fixed) 
       for (l in 1:length(sm$S)) ZSZ[[l]]<-sm$S[[l]]
       XZ<-sm$X
+      k <- ncol(sm$X);j<-0
     }
     G$Xf<-cbind(G$Xf,XZ)   # accumulate model matrix that treats all smooths as fixed
     if (!sm$fixed) 
@@ -463,21 +606,24 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gam.setup"),k
         # tensor product term - need to find null space from sum of penalties
         sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
         null.rank <- sm$margin[[1]]$bs.dim-sm$margin[[1]]$rank
+        bs.dim <- sm$margin[[1]]$bs.dim
         if (length(ZSZ)>1) for (l in 2:length(ZSZ)) 
         { sum.ZSZ <- sum.ZSZ + ZSZ[[l]]/mean(abs(ZSZ[[l]]))
           null.rank <- # the rank of the null space of the penalty 
                        null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
+          bs.dim <- bs.dim*sm$margin[[l]]$bs.dim
         }
+        null.rank <- null.rank - bs.dim + sm$df
         sum.ZSZ <- (sum.ZSZ+t(sum.ZSZ))/2 # ensure symmetry
         ev <- eig(sum.ZSZ)
         mult.pen <- TRUE
       } else            # regular s() term
       { ZSZ[[1]] <- (ZSZ[[1]]+t(ZSZ[[1]]))/2
         ev<-eig(ZSZ[[1]])
-        null.rank <- sm$bs.dim - sm$rank
+        null.rank <- sm$df - sm$rank
         mult.pen <- FALSE
       }
-      p.rank <- ncol(sm$X) - null.rank
+      p.rank <- ncol(XZ) - null.rank
       if (p.rank>ncol(XZ)) p.rank <- ncol(XZ)
       U<-ev$vectors
       D<-ev$values[1:p.rank]
@@ -1005,7 +1151,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
   
     # now call gamm.setup 
 
-    G<-gamm.setup(gp,pterms=pTerms,data=mf,knots=knots,parametric.only=FALSE,absorb.cons=FALSE)
+    G<-gamm.setup(gp,pterms=pTerms,data=mf,knots=knots,parametric.only=FALSE,absorb.cons=TRUE)
 
     n.sr <- length(G$random) # number of random smooths (i.e. s(...,fx=FALSE,...) terms)
 
@@ -1093,7 +1239,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     object<-list(model=mf,formula=formula,smooth=G$smooth,nsdf=G$nsdf,family=family,
                  df.null=nrow(G$X),y=G$y,terms=Terms,pterms=pTerms,xlevels=G$xlevels,
-                 contrasts=G$contrasts,assign=G$assign,na.action=attr(mf,"na.action"))
+                 contrasts=G$contrasts,assign=G$assign,na.action=attr(mf,"na.action"),
+                 cmX=G$cmX)
     # Transform  parameters back to the original space....
     bf<-as.numeric(ret$lme$coefficients$fixed)
     br<-as.numeric(unlist(ret$lme$coefficients$random))
@@ -1113,8 +1260,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
         else b <- c(G$smooth[[i]]$D*b,beta) # single penalty case
         b<-G$smooth[[i]]$U%*%b 
       }
-      nc <- nrow(G$smooth[[i]]$C) 
-      if (nc) b <- qr.qy(G$smooth[[i]]$qrc,c(rep(0,nc),b))
+      ## if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C) 
+      ## if (nc) b <- qr.qy(G$smooth[[i]]$qrc,c(rep(0,nc),b))
       object$smooth[[i]]$first.para<-length(p)+1
       p<-c(p,b)
       object$smooth[[i]]$last.para<-length(p)
@@ -1143,8 +1290,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     first <- G$nsdf+1
     k <- 1
     if (G$m>0) for (i in 1:G$m) # Accumulate the total penalty matrix
-    { n.para <- object$smooth[[i]]$last.para - object$smooth[[i]]$first.para + 1 - 
-                nrow(G$smooth[[i]]$C)
+    { ## if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C) 
+      n.para <- object$smooth[[i]]$last.para - object$smooth[[i]]$first.para + 1 ##  - nc
       last <- first + n.para - 1 
       if (!object$smooth[[i]]$fixed)
       { for (l in 1:length(object$smooth[[i]]$ZSZ))
@@ -1157,19 +1304,21 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     }
     S<-S/ret$lme$sigma^2 # X'V^{-1}X divided by \sigma^2, so should S be
     Vb <- chol2inv(chol(XVX+S)) # covariance matrix - in constraint space
+
     # need to project out of constraint space
+   
+    if (FALSE) { ## old code before constraint absorption
     Vp <- matrix(Vb[1:G$nsdf,],G$nsdf,ncol(Vb))
     X <- matrix(XVX[1:G$nsdf,],G$nsdf,ncol(XVX))
     first <- G$nsdf+1
     if (G$m >0) for (i in 1:G$m)
-    { nc <- nrow(G$smooth[[i]]$C)
+    { if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C)  
       last <- first+object$smooth[[i]]$df-1 # old code: nrow(object$smooth[[i]]$ZSZ)-1
-      if (nc)
       { V <- rbind(matrix(0,nc,ncol(Vp)),Vb[first:last,])
-        V <- qr.qy(G$smooth[[i]]$qrc,V)
+        if (nc) V <- qr.qy(G$smooth[[i]]$qrc,V)
         Vp <- rbind(Vp,V) # cov matrix
         V <- rbind(matrix(0,nc,ncol(Vp)),XVX[first:last,])
-        V <- qr.qy(G$smooth[[i]]$qrc,V)
+        if (nc) V <- qr.qy(G$smooth[[i]]$qrc,V)
         X <- rbind(X,V)  # X'V^{-1}X
       }
       first <- last+1
@@ -1178,14 +1327,13 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     Z <- matrix(X[,1:G$nsdf],nrow(X),G$nsdf)
     first<-G$nsdf+1
     if (G$m>0) for (i in 1:G$m)
-    { last <- first + object$smooth[[i]]$df-1   # old code: nrow(object$smooth[[i]]$ZSZ)-1
-      nc <- nrow(G$smooth[[i]]$C)
-      if (nc)
+    { last <- first + object$smooth[[i]]$df-1   
+      if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C) 
       { V <- cbind(matrix(0,nrow(Vb),nc),Vp[,first:last])
-        V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
+        if (nc) V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
         Vb<-cbind(Vb,V) 
         V <- cbind(matrix(0,nrow(Vb),nc),X[,first:last])
-        V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
+        if (nc) V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
         Z<-cbind(Z,V) 
       }
       first <- last+1
@@ -1193,7 +1341,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     # then get edf diag(Vb%*%Z)
     
-    object$edf<-rowSums(Vb*t(Z))
+    object$edf<-rowSums(Vb*t(Z)) } else {
+      object$edf<-rowSums(Vb*t(XVX))
+    }
     
     
     object$sig2 <- ret$lme$sigma^2
@@ -1202,8 +1352,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     if (!lme.used||method=="ML") Vb<-Vb*length(G$y)/(length(G$y)-G$nsdf)
     object$Vp <- Vb
-    object$Ve <- Vb%*%Z%*%Vb
-
+    ## object$Ve <- Vb%*%Z%*%Vb
+    object$Ve <- Vb%*%XVX%*%Vb
     
     object$prior.weights <- weights
     class(object)<-"gam"

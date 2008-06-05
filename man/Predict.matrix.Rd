@@ -1,11 +1,14 @@
 \name{Predict.matrix}
 \alias{Predict.matrix}
+\alias{Predict.matrix2}
 \alias{Predict.matrix.tprs.smooth}
 \alias{Predict.matrix.cr.smooth}
 \alias{Predict.matrix.ts.smooth}
 \alias{Predict.matrix.cs.smooth}
 \alias{Predict.matrix.cyclic.smooth}
 \alias{Predict.matrix.tensor.smooth}
+\alias{Predict.matrix.pspline.smooth}
+\alias{Predict.matrix.cpspline.smooth}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction methods for smooth terms in a GAM}
 \description{ Takes \code{smooth} objects produced by \code{smooth.construct} methods and obtains the matrix mapping 
@@ -16,6 +19,7 @@ In practice this method is often called via the wrapper function \code{\link{Pre
 
 \usage{
 Predict.matrix(object,data)
+Predict.matrix2(object,data)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -23,8 +27,9 @@ Predict.matrix(object,data)
 contains all the information required to specify the basis for a term of its class, and this information is
 used by the appropriate \code{Predict.matrix} function to produce a prediction matrix for new covariate values.
  Further details are given in \code{\link{smooth.construct}}.}
+
 \item{data}{A data frame containing the values of the (named) covariates at which the smooth term is to be 
-evaluated.}
+evaluated. Exact requirements are as for \code{\link{smooth.construct}} and \code{smooth.construct2}}.
 }
 
 \value{ A matrix which will map the parameters associated with the smooth to the vector of values of the smooth 

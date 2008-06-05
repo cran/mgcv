@@ -11,7 +11,7 @@
          n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade=FALSE,shade.col="gray80",
-         shift=0,trans=I,...)
+         shift=0,trans=I,seWithMean=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -95,6 +95,12 @@ predictor) before plotting. Can be useful for some diagnostics, or with \code{tr
 plotting. \code{shift} and \code{trans} are occasionally useful as a means for
 getting plots on the response scale, when the model consists only of a single smooth.}
 
+\item{seWithMean}{if \code{TRUE} the component smooths are shown with confidence 
+intervals that include the uncertainty about the overall mean. If \code{FALSE} then the 
+uncertainty relates purely to the centred smooth itself. An extension of the argument
+presented in Nychka (1988) suggests that \code{TRUE} results in better coverage performance,
+and this is also suggested by simulation.}
+
 \item{...}{ other graphics parameters to pass on to plotting commands.}
 
 }
@@ -124,6 +130,10 @@ always easy to achieve. Note that these plots can not be modified to the same ex
 Fine control of plots for parametric terms can be obtained by calling
 \code{\link{termplot}} directly, taking care to use its \code{terms} argument.
 
+Note that, if \code{seWithMean=TRUE}, the confidence bands include the uncertainty about the overall mean. In other words 
+although each smooth is shown centred, the confidence bands are obtained as if every other term in the model was 
+constrained to have average 0, (average taken over the covariate values), except for the smooth concerned. This seems to correspond more closely to how most users interpret componentwise intervals in practice, and also results in intervals with
+close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results.
    }
 
 \value{ The function simply generates plots.
@@ -132,6 +142,9 @@ Fine control of plots for parametric terms can be obtained by calling
 \references{
 
 Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
+
+Nychka (1988) Bayesian Confidence Intervals for Smoothing Splines. 
+Journal of the American Statistical Association 83:1134-1143.
 
 Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
 and Hall/CRC Press.
@@ -160,7 +173,6 @@ The function can not deal with smooths of more than 2 variables!
 library(mgcv)
 set.seed(0)
 ## fake some data...
-
 f1 <- function(x) {exp(2 * x)}
 f2 <- function(x) { 
   0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10 
@@ -180,6 +192,7 @@ x0 <- factor(x0)
 ## fit and plot...
 b<-gam(y~x0+s(x1)+s(x2)+s(x3))
 plot(b,pages=1,residuals=TRUE,all.terms=TRUE,shade=TRUE,shade.col=2)
+plot(b,pages=1,seWithMean=TRUE) ## better coverage intervals
 
 ## just parametric term alone...
 termplot(b,terms="x0",se=TRUE)

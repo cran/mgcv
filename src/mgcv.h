@@ -10,8 +10,8 @@ void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,
 		 double *rank_tol,double *beta, double *trA, double *beta1,
 		 double *trA1,double *rV,int *rank_est);
 
-void magic(double *y,double *X,double *sp,double *def_sp,double *S,double *H,
-	   double *gamma,double *scale, int *control,int *cS,double *rank_tol,
+void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
+	   double *lsp0,double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score);
 
 void gdi(double *X,double *E,double *rS,
@@ -27,7 +27,7 @@ void pls_fit(double *y,double *X,double *w,double *E,int *n,int *q,int *cE,doubl
 
 /* various service routines */
 void RQT(double *A,int *r,int *c);
-void RuniqueCombs(double *X,int *r, int *c);
+void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
 void mgcv_AtA(double *AA,double *A,int *q,int *n);

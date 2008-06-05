@@ -1,3 +1,21 @@
+/* Copyright (C) 2007,2008 Simon N. Wood  simon.wood@r-project.org
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+(www.gnu.org/copyleft/gpl.html)
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+USA. */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -100,10 +118,12 @@ void get_trA(double *trA,double *trA1,double *trA2,double *U1,double *KU1t,doubl
   int i,m,k,bt,ct,j,one=1,km,mk,rSoff,deriv2;
   if (*deriv==2) deriv2=1; else deriv2=0;
   /* obtain tr(A) and diag(A) */ 
-  diagA = (double *)calloc((size_t)*n,sizeof(double));
-  *trA = diagABt(diagA,K,K,n,r);
-  if (!(*deriv)) { /* then only tr(A) is required so return now*/
-      free(diagA);
+  if (*deriv) {
+    diagA = (double *)calloc((size_t)*n,sizeof(double));
+    *trA = diagABt(diagA,K,K,n,r);
+  } else { /* then only tr(A) is required so return now*/
+      for (xx=0.0,i=0,j=i+ *q * *r;i<j;i++,U1++) xx+= *U1 * *U1;
+      *trA = xx;
       return;
   }
   /* set up work space */
@@ -765,7 +785,7 @@ void gdi(double *X,double *E,double *rS,
     
 
 */
-{ double *zz,*WX,*tau,*work,*pd,*p0,*p1,*p2,*p3,*K,*R,*d,*Vt,*V,*U1,*KU1t,xx,*b1,*b2,*P,
+{ double *zz,*WX,*tau,*work,*pd,*p0,*p1,*p2,*p3,*K=NULL,*R,*d,*Vt,*V,*U1,*KU1t=NULL,xx,*b1,*b2,*P,
          *c0,*c1,*c2,*a0,*a1,*a2,*B2z,*B2zBase,*B1z,*B1zBase,*eta1,*mu1,*eta2,*KKtz,
          *PKtz,*KPtSPKtz,*v1,*v2,*wi,*wis,*z1,*z2,*zz1,*zz2,*pz2,*w1,*w2,*pw2,*Tk,*Tkm,
          *pb2,*B1z1, *dev_grad,*dev_hess=NULL,diff,mag,*D1_old,*D2_old,Rcond,*tau2;
@@ -882,19 +902,22 @@ void gdi(double *X,double *E,double *rS,
     }
     free(pivot2);   
   }
-  K = (double *)calloc((size_t) *n * rank,sizeof(double));
-  p0=U1;p1=K; /* first q rows of U0 should be U1 */
-  for (j=0;j<rank;j++,p1+= *n) { p3=p1 + *q;for (p2=p1;p2<p3;p2++,p0++) *p2 = *p0;} 
-  left=1;tp=0;mgcv_qrqy(K,WX,tau,n,&rank,q,&left,&tp); /* QU1 = Q%*%U1, now */
-
-  KU1t = (double *)calloc((size_t) *n * *q,sizeof(double));
-  bt=0;ct=1;mgcv_mmult(KU1t,K,U1,&bt,&ct,n,q,&rank);
-
- 
 
   PKtz = (double *)calloc((size_t) *q,sizeof(double)); /* PK'z */
-  if (!(*deriv)) { /* then evaluate coefficients here */
-    bt=1;ct=0;mgcv_mmult(work,K,zz,&bt,&ct,&rank,&one,n);
+  
+  if (*deriv) { /* then following O(nq^2) required */
+    K = (double *)calloc((size_t) *n * rank,sizeof(double));
+    p0=U1;p1=K; /* first q rows of U0 should be U1 */
+    for (j=0;j<rank;j++,p1+= *n) { p3=p1 + *q;for (p2=p1;p2<p3;p2++,p0++) *p2 = *p0;} 
+    left=1;tp=0;mgcv_qrqy(K,WX,tau,n,&rank,q,&left,&tp); /* QU1 = Q%*%U1, now */
+
+    KU1t = (double *)calloc((size_t) *n * *q,sizeof(double));
+    bt=0;ct=1;mgcv_mmult(KU1t,K,U1,&bt,&ct,n,q,&rank);
+  } else { /* evaluate coefficients more efficiently */
+    /* PKtz is P[U1]'Q'zz */
+    left=1;tp=1;mgcv_qrqy(zz,WX,tau,n,&one,q,&left,&tp); /* puts Q'zz in zz */
+    bt=1;ct=0;mgcv_mmult(work,U1,zz,&bt,&ct,&rank,&one,q); /* puts [U1]'Q'zz in work */
+    /*    bt=1;ct=0;mgcv_mmult(work,K,zz,&bt,&ct,&rank,&one,n);*/
     bt=0;ct=0;mgcv_mmult(PKtz,P,work,&bt,&ct,q,&one,&rank);
   }
 
@@ -1213,11 +1236,10 @@ void gdi(double *X,double *E,double *rS,
   get_trA(trA,trA1,trA2,U1,KU1t,P,K,sp,rS,rSncol,Tk,Tkm,n,q,&rank,M,deriv);
 
   /* clear up the remainder */
-  free(U1);free(KU1t);free(K);free(V);
+  free(U1);free(V);
 
   if (*deriv)
-  { free(Tk);
-    free(Tkm);
+  { free(Tk);free(Tkm);free(KU1t);free(K);
   }
 }
 
@@ -1266,7 +1288,8 @@ void R_cond(double *R,int *r,int *c,double *work,double *Rcondition)
 }
 
 
-void pls_fit(double *y,double *X,double *w,double *E,int *n,int *q,int *cE,double *eta,double *penalty,double *rank_tol)
+void pls_fit(double *y,double *X,double *w,double *E,int *n,int *q,int *cE,double *eta,
+             double *penalty,double *rank_tol)
 /* Fast but stable PLS fitter. Obtains linear predictor, eta, of weighted penalized linear model,
    without evaluating the coefficients, but also returns coefficients in case they are needed. 
 

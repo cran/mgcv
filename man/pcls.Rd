@@ -107,7 +107,7 @@ dat<-data.frame(x=x,y=y)
 # Show regular spline fit (and save fitted object)
 f.ug<-gam(y~s(x,k=10,bs="cr"));lines(x,fitted(f.ug))
 # Create Design matrix, constraints etc. for monotonic spline....
-sm<-smoothCon(s(x,k=10,bs="cr"),dat,knots=NULL)
+sm<-smoothCon(s(x,k=10,bs="cr"),dat,knots=NULL)[[1]]
 F<-mono.con(sm$xp);   # get constraints
 G<-list(X=sm$X,C=matrix(0,0,0),sp=f.ug$sp,p=sm$xp,y=y,w=y*0+1)
 G$Ain<-F$A;G$bin<-F$b;G$S<-sm$S;G$off<-0
@@ -121,7 +121,7 @@ lines(x,fv,col=2)
 
 f.ug<-gam(y~s(x,k=10));lines(x,fitted(f.ug))
 # Create Design matrix, constriants etc. for monotonic spline....
-sm<-smoothCon(s(x,k=10,bs="tp"),dat,knots=NULL)       
+sm<-smoothCon(s(x,k=10,bs="tp"),dat,knots=NULL)[[1]]
 xc<-0:39/39 # points on [0,1]  
 nc<-length(xc)  # number of constraints
 xc<-xc*4-1  # points at which to impose constraints

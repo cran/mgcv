@@ -7,7 +7,8 @@
   modification is that rather than solving a weighted least squares problem at each IRLS step, 
   a weighted, penalized least squares problem
   is solved at each IRLS step with smoothing parameters associated with each penalty chosen by GCV or UBRE,
-  using routine \code{mgcv} or \code{magic}. For further information on usage see code for \code{gam}. Some regularization of the 
+  using routine \code{\link{magic}}. 
+For further information on usage see code for \code{gam}. Some regularization of the 
 IRLS weights is also permitted as a way of addressing identifiability related problems (see 
 \code{\link{gam.control}}). Negative binomial parameter estimation is
 supported.
@@ -35,6 +36,6 @@ generalized additive models. J. Amer. Statist. Ass. 99:637-686
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
-\seealso{ \code{\link{gam.fit3}}, \code{\link{gam.fit2}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
+\seealso{ \code{\link{gam.fit3}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

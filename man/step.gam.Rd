@@ -7,7 +7,7 @@
 such as GCV or UBRE/AIC. Since the smoothness estimation part of model
 selection is done in this way it is logically most consistent to perform model
 selection on the basis of such criteria: i.e. to decide which terms to include
-or omit by looking at changes in GCV/UBRE score. 
+or omit by looking at changes in GCV/UBRE/AIC score. 
 
 To facilitate fully automatic model selection the package includes 2 classes
 of smoothers (\code{"cs"} and \code{"ts"}: see \code{\link{s}}) which can be
@@ -26,23 +26,18 @@ approach, where selection is a fully integrated part of model estimation.
 ## an example of GCV based model selection as
 ## an alternative to stepwise selection
 library(mgcv)
-set.seed(0) 
-n<-400;sig<-2
-x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
-x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
-x4 <- runif(n, 0, 1);x5 <- runif(n, 0, 1)
-f <- 2 * sin(pi * x0)
-f <- f + exp(2 * x1) - 3.75887
-f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
-e <- rnorm(n, 0, sig)
-y <- f + e
+set.seed(0);n <- 400
+dat <- gamSim(1,n=n,scale=2)
+dat$x4 <- runif(n, 0, 1)
+dat$x5 <- runif(n, 0, 1)
+attach(dat)
 ## Note the increased gamma parameter below to favour
 ## slightly smoother models...
 b<-gam(y~s(x0,bs="ts")+s(x1,bs="ts")+s(x2,bs="ts")+
    s(x3,bs="ts")+s(x4,bs="ts")+s(x5,bs="ts"),gamma=1.4)
 summary(b)
 plot(b,pages=1)
-
+detach(dat);rm(dat)
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..

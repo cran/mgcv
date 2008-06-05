@@ -16,7 +16,7 @@ extract.lme.cov2(b,data,start.level=1)
 
 %- maybe also `usage' for other objects documented here.
 \arguments{
-\item{b}{ A fitted model object returned by a call to \code{\link[nlme]{lme}}}
+\item{b}{ A fitted model object returned by a call to \code{\link[nlme]{lme}}}.
 
 \item{data}{ The data frame/ model frame that was supplied to
  \code{\link[nlme]{lme}}.}
