@@ -422,7 +422,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
   int k,i,j,tk,*I,*ignore,iter=0,*fixed,*delog,maxdel=100;
   double x;
   I=(int *)calloc((size_t) p->r,sizeof(int)); /* I[i] is the row of Ain containing ith active constraint */
-  fixed=(int *)calloc((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequlity constraint is to be left in regardless of l.m. estimate */
+  fixed=(int *)calloc((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequality constraint is to be left in regardless of l.m. estimate */
   ignore=(int *)calloc((size_t) Ain->r,sizeof(int)); /* ignore[i] is 1 if ith row of Ain is in active set, 0 otherwise */
   delog=(int *)calloc((size_t) Ain->r,sizeof(int)); /* counts up number of times a constraint is deleted */
   p1=initmat(p->r,1L);    /* a working space vector for stepping & lagrange */

@@ -14,8 +14,8 @@ approaches available.
 
 
 Automatic smoothness selection is unlikely to be successful with few data, particularly with
-multiple terms to be selected. In addition GCV and UBRE score can occasionally
-display local minima that can trap the minimisation algorithms. GCV/UBRE
+multiple terms to be selected. In addition GCV and UBRE/AIC score can occasionally
+display local minima that can trap the minimisation algorithms. GCV/UBRE/AIC
 scores become constant with changing smoothing parameters at very low or very
 high smoothng parameters, and on occasion these `flat' regions can be
 separated from regions of lower score by a small `lip'. This seems to be the
@@ -24,7 +24,8 @@ extreme smoothing parameters as starting values in optimization, and by
 avoiding big jumps in smoothing parameters while optimizing. Never the less, if you are
 suspicious of smoothing parameter estimates, try changing fit method (see
 \code{\link{gam.method}}) and see if the estimates change, or try changing
-some or all of the smoothing parameters `manually' (argument \code{sp} of \code{\link{gam}}). 
+some or all of the smoothing parameters `manually' (argument \code{sp} of \code{\link{gam}},
+or \code{sp} arguments to \code{\link{s}} or \code{\link{te}}). 
 
 
 In general the most logically consistent method to use for deciding which
@@ -33,8 +34,8 @@ and without the term. When UBRE is the smoothness selection method this will
 give the same result as comparing by \code{\link{AIC}} (the AIC in this case
 uses the model EDF in place of the usual model DF). Similarly, comparison via
 GCV score and via AIC seldom yields different answers. Note that the negative
-binomial with estimated \code{\theta} parameter is a special case: the GCV
-score is not informative in this case, because of the \code{theta} estimation
+binomial with estimated \code{theta} parameter is a special case: the GCV
+score is not informative, because of the \code{theta} estimation
 scheme used.
  
 More generally the score for the model with a smooth 
@@ -55,7 +56,8 @@ shrinkage component of the penalty is set at a level that usually makes negligab
 contribution to the penalization of the model, only becoming effective when
 the term is effectively `completely smooth' according to the conventional penalty.
 
-
+Note that GCV and UBRE are not appropriate for comparing models using different families: 
+in that case AIC should be used.
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
@@ -67,10 +69,10 @@ Venables and Ripley (1999) Modern Applied Statistics with S-PLUS
 
 Wahba (1990) Spline Models of Observational Data. SIAM.
 
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
-
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for
+generalized additive models. J.R.Statist. Soc. B 70(3):495-518
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 }
@@ -78,23 +80,15 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \examples{
 ## an example of GCV based model selection
 library(mgcv)
-set.seed(0) 
-n<-400;sig<-2
-x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
-x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
-x4 <- runif(n, 0, 1);x5 <- runif(n, 0, 1)
-f <- 2 * sin(pi * x0)
-f <- f + exp(2 * x1) - 3.75887
-f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10-1.396
-e <- rnorm(n, 0, sig)
-y <- f + e
+set.seed(0);n<-400
+dat <- gamSim(1,n=n,scale=2) ## simulate data
+dat$x4 <- runif(n, 0, 1);dat$x5 <- runif(n, 0, 1) ## spurious
 ## Note the increased gamma parameter below to favour
 ## slightly smoother models (See Kim & Gu, 2004, JRSSB)...
 b<-gam(y~s(x0,bs="ts")+s(x1,bs="ts")+s(x2,bs="ts")+
-   s(x3,bs="ts")+s(x4,bs="ts")+s(x5,bs="ts"),gamma=1.4)
+   s(x3,bs="ts")+s(x4,bs="ts")+s(x5,bs="ts"),gamma=1.4,data=dat)
 summary(b)
 plot(b,pages=1)
-
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..

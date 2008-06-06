@@ -23,8 +23,8 @@ for penalization). Note,  when using \code{AIC} for penalized models, that the
 degrees of freedom are the effective degrees of freedom and not the number of
 parameters, and the model maximizes the penalized likelihood, not the actual
 likelihood! This seems to be reasonably well founded for the known scale
-parameter case (see Hastie and Tibshirani, 1990, section 6.8.3), and in fact
-in this case the default smoothing parameter estimation criterion is
+parameter case (see Hastie and Tibshirani, 1990, section 6.8.3 and also Wood 2008), 
+and in fact in this case the default smoothing parameter estimation criterion is
 effectively this modified AIC.  
 }
 
@@ -32,7 +32,11 @@ effectively this modified AIC.
 }
 
 
-\references{Hastie and Tibshirani, 1990, Generalized Additive Models.}
+\references{Hastie and Tibshirani, 1990, Generalized Additive Models.
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
+additive models. J.R.Statist.Soc.B 70(3):495-518
+}
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} based directly on \code{logLik.glm}}
 

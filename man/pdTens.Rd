@@ -41,7 +41,7 @@ covariance matrix for these random effects.}
 \details{ If using this class directly note that it is worthwhile scaling the
 \code{S} matrices to be of `moderate size', for example by dividing each
 matrix by its largest singular value: this avoids problems with \code{lme}
-defaults (\code{\ref{smooth.construct.tensor.smooth.spec}} does this automatically).  
+defaults (\code{\link{smooth.construct.tensor.smooth.spec}} does this automatically).  
 
 This appears to be the minimum set of functions required to implement a new \code{pdMat} class. 
 

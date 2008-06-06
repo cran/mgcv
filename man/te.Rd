@@ -5,10 +5,13 @@
 \description{ Function used in definition of tensor product smooth terms within
   \code{gam} model formulae. The function does not evaluate a
   smooth - it exists purely to help set up a model using tensor product 
-  based smooths.
+  based smooths. Designed to construct tensor products from any marginal
+  smooths with a basis-penalty representation (with the restriction that each 
+  marginal smooth must have only one penalty).
 }
 
-\usage{te(..., k=NA,bs="cr",m=0,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NA)
+\usage{te(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,
+              mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -25,24 +28,26 @@
 marginal basis. \code{"cr"} for cubic regression spline; \code{"cs"} for cubic
 regression spline with shrinkage; \code{"cc"} for periodic/cyclic 
 cubic regression spline; \code{"tp"} for thin plate regression spline;
-\code{"ts"} for t.p.r.s. with extra shrinkage. User defined bases can 
+\code{"ts"} for t.p.r.s. with extra shrinkage. See \code{\link{smooth.terms}} for details 
+and full list. User defined bases can 
 also be used here (see \code{\link{smooth.construct}} for an example). If only one 
-identifier is given then this is used for all bases.}
+basis code is given then this is used for all bases.}
 
-\item{m}{The order of the penalty for each t.p.r.s. term (e.g. 2 for
-    normal cubic spline penalty with 2nd derivatives). If a single number is given 
-    then it is used for all terms. \code{0} autoinitializes. \code{m} is ignored for the 
-\code{"cr"} and \code{"cc"} bases.}
+\item{m}{The order of the penalty (for smooth classes that use this) for each term. 
+   If a single number is given  then it is used for all terms. \code{NA} autoinitializes. 
+  \code{m} is ignored by some bases (e.g. \code{"cr"}).}
 
 \item{d}{array of marginal basis dimensions. For example if you want a smooth for 3 covariates 
 made up of a tensor product of a 2 dimensional t.p.r.s. basis and a 1-dimensional basis, then 
 set \code{d=c(2,1)}.}
 
-\item{by}{specifies a covariate by which the whole smooth term is to
-    be multiplied. This is particularly useful for creating models in
-    which a smooth interacts with a factor: in this case the \code{by}
-    variable would usually be the dummy variable coding one level of the
-  factor. See the examples below.}
+\item{by}{a numeric or factor variable of the same dimension as each covariate. 
+In the numeric vector case the elements multiply the smooth evaluated at the corresponding 
+covariate values (a `varying coefficient model' results). 
+In the factor case causes a replicate of the smooth to be produced for
+each factor level. See \code{\link{gam.models}} for further details. May also be a matrix 
+if covariates are matrices: in this case implements linear functional of a smooth 
+(see \code{\link{gam.models}} and \code{\link{linear.functional.terms}} for details).}
 
 \item{fx}{indicates whether the term is a fixed d.f. regression
   spline (\code{TRUE}) or a penalized regression spline (\code{FALSE}).}
@@ -52,14 +57,27 @@ a single penalty: single penalties are not recommended - they tend to allow only
 wiggly models.}
 
 \item{np}{ \code{TRUE} to use the `normal parameterization' for a tensor
-product smooth. This parameterization represents any 1-d marginal smooths
-using a parameterization where the parameters are function values at `knots'
+product smooth. This represents any 1-d marginal smooths
+via parameters that are function values at `knots',
 spread evenly through the data. The parameterization makes the penalties
-easily interpretable, however it can reduce numerical stability.}
+easily interpretable, however it can reduce numerical stability in some cases.}
 
 \item{xt}{Either a single object, providing any extra information to be passed
 to each marginal basis constructor, or a list of such objects, one for each
 marginal basis. }
+
+\item{id}{A label or integer identifying this term in order to link its smoothing
+          parameters to others of the same type. If two or more smooth terms have the same 
+          \code{id} then they will have the same smoothing paramsters, and, by default,
+          the same bases (first occurance defines basis type, but data from all terms 
+          used in basis construction).}
+
+\item{sp}{any supplied smoothing parameters for this term. Must be an array of the same
+length as the number of penalties for this smooth. Positive or zero elements are taken as fixed 
+smoothing parameters. Negative elements signal auto-initialization. Over-rides values supplied in 
+\code{sp} argument to \code{\link{gam}}. Ignored by \code{gamm}.}
+
+
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases
@@ -88,7 +106,7 @@ of the smooth. This means that the penalty of the tensor product associated
 with any particular covariate direction can be interpreted as the penalty of
 the appropriate marginal smooth applied in that direction and averaged over
 the smooth. Currently this is only done for marginals of a single
-variable. This parameterization can reduce numerical stability for when used
+variable. This parameterization can reduce numerical stability  when used
 with marginal smooths other than \code{"cc"}, \code{"cr"} and \code{"cs"}: if
 this causes problems, set \code{np=FALSE}.
 
@@ -113,15 +131,6 @@ the term is a function of.}
 be ignored, \code{FALSE}, otherwise. }
   
 
-  
-%%\item{full.call}{Text for pasting into a string to be converted to a
-%%    gam formula, which has the values of function options given explicitly -
-%%  this is useful for constructing a fully expanded gam formula which can
-%%be used without needing access to any variables that may have been used
-%%to define k, fx, bs or m in the original call. i.e. this is text which
-%%when parsed and evaluated generates a call to \code{te()} with all the
-%%options spelled out explicitly.}
-
 \item{label}{A suitable text label for this smooth term.}
 
 \item{dim}{The dimension of the smoother - i.e. the number of
@@ -131,6 +140,10 @@ be ignored, \code{FALSE}, otherwise. }
 
 \item{np}{\code{TRUE} to re-parameterize 1-D marginal smooths in terms of function
 values (defualt).}
+
+\item{id}{the \code{id} argument supplied to \code{te}.}
+
+\item{sp}{the \code{sp} argument supplied to \code{te}.}
 }
 
 

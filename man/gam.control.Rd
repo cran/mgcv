@@ -10,11 +10,11 @@ loss of numerical stability during fitting.  To change the default
 choise of fitting method, see \code{\link{gam.method}}.
 }
 \usage{
-gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,globit = 20,
-            mgcv.tol=1e-7,mgcv.half=15,nb.theta.mult=10000, trace = FALSE,
-            rank.tol=.Machine$double.eps^0.5,absorb.cons=TRUE,
+gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,
+            mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
+            rank.tol=.Machine$double.eps^0.5,
             nlm=list(),optim=list(),newton=list(),
-            outerPIsteps=1) 
+            outerPIsteps=1,idLinksBases=TRUE,scalePenalty=TRUE) 
 }
 \arguments{ 
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
@@ -23,24 +23,14 @@ problems in a model with a log link, because a mean of zero corresponds to an in
 values. Such convergence problems are caused by a fundamental lack of identifiability, but do not show up as 
 lack of identifiability in the penalized linear model problems that have to be solved at each stage of iteration.
 In such circumstances it is possible to apply a ridge regression penalty to the model to impose identifiability, and 
-\code{irls.reg} is the size of the penalty. The penalty can not be used if the
-underlying fitting method is \code{\link{mgcv}} (not the default - see
-\code{\link{gam.method}} for details).
+\code{irls.reg} is the size of the penalty.
 }
 
 \item{epsilon}{This is used for judging conversion of the GLM IRLS loop in
-\code{\link{gam.fit}}, \code{\link{gam.fit2}} or \code{\link{gam.fit3}}.}
+\code{\link{gam.fit}} or \code{\link{gam.fit3}}.}
 
-\item{maxit}{Maximum number of IRLS iterations to perform. When using
-performance iteration (not default) then these iterations re in addition to
-\code{globit} initial iterations.  If fitting is based on
-\code{\link{mgcv}} (not default, even for performance iteration) then GCV/UBRE 
-will be cautious for these iterations.}
+\item{maxit}{Maximum number of IRLS iterations to perform.}
 
-\item{globit}{Maximum number of initial IRLS iterations to perform (with normal 
-GCV/UBRE optimization) when using performance iteration (only). If convergence
-is  not achieved after these iterations then a further \code{maxit} iterations
-will be performed. Ignored for default outer iteration.} 
 
 \item{mgcv.tol}{The convergence tolerance parameter to use in GCV/UBRE optimization.}
 
@@ -48,24 +38,12 @@ will be performed. Ignored for default outer iteration.}
 to a worse GCV/UBRE score, then the step length is halved. This is
 the number of halvings to try before giving up.}
 
-\item{nb.theta.mult}{Controls the limits on theta when negative binomial 
-parameter is to be estimated. Maximum theta is set to the initial value 
-multiplied by \code{nb.theta.mult}, while the minimum value is set to
-the initial value divided by \code{nb.theta.mult}. }
-
 \item{trace}{Set this to \code{TRUE} to turn on diagnostic output.}
 
 
 \item{rank.tol}{The tolerance used to estimate the rank of the fitting
 problem, for methods which deal with rank deficient cases (basically all
 except those based on \code{\link{mgcv}}).}
-
-\item{absorb.cons}{If \code{TRUE} then the GAM is set up using a
-parameterization which requires no further constraint. Usually this means that
-all the smooths are automatically centered (i.e. they sum to zero over the
-covariate values). If \code{FALSE} then the ordinary parameterizations of the
-smooths are used, which require constraints to be imposed during fitting. Not
-all estimation methods can deal with the \code{FALSE} case.}
 
 \item{nlm}{list of control parameters to pass to \code{\link{nlm}} if this is
 used for outer estimation of smoothing parameters (not default). See details.}
@@ -80,9 +58,32 @@ used for outer estimation of log smoothing parameters. See details.}
 initialize outer iteration. Less than 1 means
 that only one performance iteration step is taken to get the function scale,
 but the corresponding smoothing parameter estimates are discarded. }
+
+\item{idLinksBases}{If smooth terms have their smoothing parameters linked via 
+the \code{id} mechanism (see \code{\link{s}}), should they also have the same 
+bases. Set this to \code{FALSE} only if you are sure you know what you are doing 
+(you should almost surely set \code{scalePenalty} to \code{FALSE} as well in this 
+case).}
+
+\item{scalePenalty}{\code{\link{gamm}} is somewhat sensitive to the absolute scaling 
+of the penalty matrices of a smooth relative to its model matrix. This option rescales 
+the penalty matrices to accomodate this problem. Probably should be set to \code{FALSE} 
+if you are linking smoothing parameters but have set \code{idLinkBases} to \code{FALSE}.}
 }
 
-\details{ When outer iteration is used for fitting then the control list
+\details{ 
+
+Outer iteration using \code{newton} is controlled by the list \code{newton}
+with the following elements: \code{conv.tol} (default
+1e-6) is the relative convergence tolerance; \code{maxNstep} is the maximum
+length allowed for an element of the Newton search direction (default 5);
+\code{maxSstep} is the maximum length allowed for an element of the steepest
+descent direction (only used if Newton fails - default 2); \code{maxHalf} is
+the maximum number of step halvings to permit before giving up (default 30); 
+\code{use.svd} determines whether to use an SVD step or QR step for the part
+of fitting that determines problem rank, etc. (defaults to \code{FALSE}).
+
+If outer iteration using \code{\link{nlm}} is used for fitting, then the control list
 \code{nlm} stores control arguments for calls to routine
 \code{\link{nlm}}. The list has the following named elements: (i) \code{ndigit} is
 the number of significant digits in the GCV/UBRE score - by default this is
@@ -97,50 +98,19 @@ calculations should be checked numerically - defaults to \code{FALSE}. Any of
 these which are not supplied and named in the list are set to their default
 values.
 
-Outer iteration using \code{newton} is controlled by the list \code{newton}
-with the following elements : \code{conv.tol} (default
-1e-6) is the relative convergence tolerance; \code{maxNstep} is the maximum
-length allowed for an element of the Newton search direction (default 5);
-\code{maxSstep} is the maximum length allowed for an element of the steepest
-descent direction (only used if Newton fails - default 2); \code{maxHalf} is
-the maximum number of step halvings to permit before giving up (default 30); 
-\code{use.svd} determines whether to use an SVD step or QR step for the part
-of fitting that determines problem rank, etc. (defaults to \code{FALSE}).
-
 Outer iteration using \code{\link{optim}} is controlled using list
 \code{optim}, which currently has one element: \code{factr} which takes
 default value 1e7.
-
-
-When fitting is been done by calls to routine \code{\link{mgcv}} (not default), 
-\code{maxit} and \code{globit} control the maximum iterations of the IRLS algorithm, as follows: 
-the algorithm will first execute up to
-\code{globit} steps in which the GCV/UBRE algorithm performs a global search for the best overall 
-smoothing parameter at every iteration. If convergence is not achieved within
-\code{globit} iterations, then a further 
-\code{maxit} steps are taken, in which the overall smoothing parameter estimate is taken as the 
-one locally minimising the GCV/UBRE score and resulting in the lowest EDF change. The difference 
-between the two phases is only significant if the GCV/UBRE function develops more than one minima. 
-The reason for this approach is that the GCV/UBRE score for the IRLS problem can develop `phantom'
-minimima for some models: these are minima which are not present in the GCV/UBRE score of the IRLS
-problem resulting from moving the parameters to the minimum! Such minima can lead to convergence 
-failures, which are usually fixed by the second phase. 
 }
 
 
 \references{
 
-Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters via
-the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
-
-Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
-with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
-
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 
-65(1):95-114
-
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
-generalized additive models. J. Amer. Statist. Ass.
+generalized additive models. J. Amer. Statist. Ass.99:673-686.
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
+additive models. J.R.Statist.Soc.B 70(3):495-518.
 
 
 \url{http://www.maths.bath.ac.uk/~sw283/}

@@ -8,7 +8,7 @@ Function to efficiently estimate smoothing parameters in generalized
 ridge regression problems with multiple (quadratic) penalties, by GCV 
 or UBRE. The function uses Newton's method in multi-dimensions, backed up by 
 steepest descent to iteratively adjust the smoothing parameters for each penalty 
-(one penalty may have a smoothing parameter fixed at unity ). 
+(one penalty may have a smoothing parameter fixed at 1). 
 
 For maximal numerical stability the method is based on orthogonal decomposition methods, 
 and attempts to deal with numerical rank deficiency gracefully using a truncated singular 
@@ -16,7 +16,7 @@ value decomposition approach.
 } %- end description
 
 \usage{
-magic(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,
+magic(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,
       scale=1,gcv=TRUE,ridge.parameter=NULL,
       control=list(maxit=50,tol=1e-6,step.half=25,
       rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y))
@@ -28,8 +28,11 @@ magic(y,X,sp,S,off,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,
 
 \item{X}{is the model matrix.}
 
-\item{sp}{is the array of smoothing parameters multiplying the penalty matrices stored in 
-\code{S}. Any that are negative are autoinitialized, otherwise they are taken as supplying 
+\item{sp}{is the array of smoothing parameters. The vector \code{L\%*\%log(sp)
++ lsp0} 
+contains the logs of the smoothing parameters that actually multiply the penalty matrices stored in 
+\code{S} (\code{L} is taken as the identity if \code{NULL}). 
+Any \code{sp} values that are negative are autoinitialized, otherwise they are taken as supplying 
 starting values. A supplied starting value will be reset to a default starting value if the
 gradient of the GCV/UBRE score is too small at the supplied value.  }
  
@@ -37,10 +40,19 @@ gradient of the GCV/UBRE score is too small at the supplied value.  }
 that it is not stored as a full matrix, but rather as the smallest square matrix including all 
 the non-zero elements of the penalty matrix. Element 1,1 of \code{S[[i]]}  occupies 
 element \code{off[i]}, \code{off[i]} of the ith penalty matrix. Each \code{S[[i]]} must be 
-positive semi-definite.  }
+positive semi-definite. Set to \code{list()} if there are no smoothing
+parameters to be estimated. }
 
 \item{off}{is an array indicating the first parameter in the parameter vector that is 
 penalized by the penalty involving \code{S[[i]]}.}
+
+\item{L}{is a matrix mapping \code{log(sp)} to the log smoothing parameters that actually multiply the
+penalties defined by the elemts of \code{S}. Taken as the identity, if \code{NULL}. See above under \code{sp}.}
+
+\item{lsp0}{If \code{L} is not \code{NULL} this is a vector of constants in
+the linear transformation from \code{log(sp)} to the actual log smoothing
+parameters. So the logs of the smoothing parameters multiplying the
+\code{S[[i]]} are given by \code{L\%*\%log(sp) + lsp0}. Taken as 0 if \code{NULL}.}
 
 \item{rank}{ is an array specifying the ranks of the penalties. This is useful, but not 
 essential, for forming square roots of the penalty matrices.}
@@ -159,10 +171,14 @@ The method is coded in \code{C} with matrix factorizations performed using LINPA
 
 \item{sp}{an array of the estimated smoothing parameters.}
 
+\item{sp.full}{an array of the smoothing parameters that actually multiply the elements of
+\code{S} (same as \code{sp} if \code{L} was \code{NULL}). This is \code{exp(L\%*\%log(sp))}.}
+
 \item{rV}{a factored form of the parameter covariance matrix. The (Bayesian)  covariance
 matrix of the parametes \code{b} is given by \code{rV\%*\%t(rV)*scale}. }
 
 \item{gcv.info}{is a list of information about the performance of the method with the following elements:
+\itemize{
 \item{full.rank}{The apparent rank of the problem: number of parameters less number of equality constraints.}
 \item{rank}{The estimated actual rank of the problem (at the final iteration of the method).}
 \item{fully.converged}{is \code{TRUE} if the method converged by satisfying the convergence criteria, and \code{FALSE} if it coverged 
@@ -171,7 +187,7 @@ by failing to decrease the score along the search direction.}
 \item{iter}{is the number of Newton/Steepest descent iterations taken.}
 \item{score.calls}{is the number of times that the GCV/UBRE score had to be evaluated.}
 \item{rms.grad}{is the root mean square of the gradient of the UBRE/GCV score w.r.t. the smoothing parameters.}
-}
+}}
 Note that some further useful quantities can be obtained using \code{\link{magic.post.proc}}.
 
 }
@@ -187,38 +203,34 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
 \seealso{  
 \code{\link{magic.post.proc}},
-\code{\link{mgcv}},
-\code{\link{gam}},
+\code{\link{mgcv}},\code{\link{gam}}
 }
+
 \examples{
 ## Use `magic' for a standard additive model fit ... 
    library(mgcv)
-   set.seed(1);n <- 400;sig2 <- 4
-   x0 <- runif(n, 0, 1);x1 <- runif(n, 0, 1)
-   x2 <- runif(n, 0, 1);x3 <- runif(n, 0, 1)
-   f <- 2 * sin(pi * x0)
-   f <- f + exp(2 * x1) - 3.75887
-   f <- f+0.2*x2^11*(10*(1-x2))^6+10*(10*x2)^3*(1-x2)^10
-   e <- rnorm(n, 0, sqrt(sig2))
-   y <- f + e
+   set.seed(1);n <- 400;sig <- 2
+   dat <- gamSim(1,n=n,scale=sig)
 ## set up additive model
-   G <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE)
+   G <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE,data=dat)
 ## fit using magic
-   mgfit <- magic(G$y,G$X,G$sp,G$S,G$off,G$rank,C=G$C)
+   mgfit <- magic(G$y,G$X,G$sp,G$S,G$off,rank=G$rank,C=G$C)
 ## and fit using gam as consistency check
    b <- gam(G=G)
    mgfit$sp;b$sp  # compare smoothing parameter estimates
    edf <- magic.post.proc(G$X,mgfit,G$w)$edf  # extract e.d.f. per parameter
-## get termwise e.d.f.s
-   twedf <- 0;for (i in 1:4) twedf[i] <- sum(edf[((i-1)*10+1):(i*10)])
-   twedf;b$edf  # compare
+   range(edf-b$edf)  # compare
+
+## constrain first two smooths to have identical smoothing parameters
+   L <- diag(3);L <- rbind(L[1,],L)
+   mgfit <- magic(G$y,G$X,rep(-1,3),G$S,G$off,L=L,rank=G$rank,C=G$C)
 
 ## Now a correlated data example ... 
     library(nlme)
 ## simulate truth
     set.seed(1);n<-400;sig<-2
     x <- 0:(n-1)/(n-1)
-    f <- 0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10-1.396
+    f <- 0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10
 ## produce scaled covariance matrix for AR1 errors...
     V <- corMatrix(Initialize(corAR1(.6),data.frame(x=x)))
     Cv <- chol(V)  # t(Cv)%*%Cv=V
@@ -235,7 +247,7 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686
     ## Use `gam' to set up model for fitting...
     G <- gam(y~s(x,k=20),fit=FALSE)
     ## fit using magic, with weight *matrix*
-    mgfit <- magic(G$y,G$X,G$sp,G$S,G$off,G$rank,C=G$C,w=w)
+    mgfit <- magic(G$y,G$X,G$sp,G$S,G$off,rank=G$rank,C=G$C,w=w)
 ## Modify previous gam object using new fit, for plotting...    
     mg.stuff <- magic.post.proc(G$X,mgfit,w)
     b$edf <- mg.stuff$edf;b$Vp <- mg.stuff$Vb

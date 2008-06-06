@@ -1,13 +1,152 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.4-0
+
+*** Model terms can now include linear functionals of smooths, by 
+    supplying matrix arguments and matrix `by' variables to model 
+    smooth terms. This allows, for example, a model to depend on the 
+    integral of a smooth function, or its derivative, or for models to 
+    depend on functional  predictors. See ?linear.functional.terms. Main 
+    code changes are in `smoothCon' and `predMat'.
+
+** Smooth terms can now be linked in order that they have the same 
+   smoothing parameters (and, by default, bases). Linkage is specified
+   using the `id' argument to `s' or `te'. Terms with the same `id' value
+   will have the same smoothing parameter(s).
+
+** `by' variables can now be factor variables. Also smooth terms with a 
+   `by' variable are only subject to a sum-to-zero constraint if it
+   is needed for identifiability.
+
+** Argument `paraPen' of `gam' allows (multiple) penalization of 
+   parametric model terms. This allows `gam' to fit any model that
+   can be expressed as a penalized GLM.
+
+** p-values returned by `summary.gam' now default to a Bayesian 
+   approximation which gives (substantially) better frequentist behaviour 
+   than the old method.
+
+** The 2 standard error bands for smooths shown by `plot.gam' can now
+   include the uncertainty about the overall mean, by default. Such
+   intervals have better coverage probability (of their target of 
+   inference) than intervals for centred smooths. Argument 
+   `type="iterms"' to `predict.gam' will return such standard errors.
+
+** An adaptive smoother class has been added, for smoothing with respect
+   to one or two variables: invoked with `s(...,bs="ad",...). 
+
+** `gamm' now supports nested smooth terms, and uses the same, constraint 
+   absorbed, parameterization as `gam'.
+
+** `s' and `te' terms accept an `sp' argument setting the term specific 
+   smoothing parameters (and over-riding argument `sp' of `gam'). Ignored
+   by `gamm'.
+
+** Negative binomial handling changed. `negbin' family added: adapted from 
+   MASS to work with gam outer iteration fitting. `gam.negbin' fitting 
+   routine added in order to enable use of `negbin' with outer iteration.
+   See ?negbin for details. MASS families no longer supported. 
+   `nb.theta.mult' removed from `gam.control'.
+
+** The Eilers and Marx style p-spline class is now one of the default 
+   smoothing classes, rather than just being an example of how to set up
+   a class in the help file. cyclic versions are also available.
+
+** `smoothCon' now handles `by' variables and centering constraints 
+   automatically, removing the need for smooth constructors to do so.
+   `PredMat' handles `by' variables automatically. Users can over-ride 
+   this behaviour when adding smooth classes, if needed - see 
+   documentation. 
+
+** The interface for adding user defined smooths has been simplified, 
+   but this may mean that some user defined classes which worked before
+   no longer work: see ?user.defined.smooths
+
+* `smooth.construct' methods are now expected to set default values
+   for the penalty order `p.order' and the basis dimension `bs.dim'
+   if none are supplied. They should also sanity check supplied 
+   values. Previously this was done by `s', but this put unhelpful
+   restrictions on new smooth classes.
+
+* `smooth.construct' now expects to recieve `data' and `knots' arguments
+   with names corresponding exactly to `object$term'. In addition `data'
+   should contain only what is required by `object$term' + a final column
+   containing a `by' variable, if present. Predict.mat expects the same of 
+   its `data' argument. wrapper functions smooth.construct2 and 
+   Predict.mat2 will accept a data frame containing any number of variables 
+   -- all that is required is that `object$terms' can be evaluated using 
+   it. These functions handle repeat rows in matrix arguments efficiently.
+
+* bug fix in `plot.gam' -- no longer requires to hit return if `select'
+  used (ever).
+
+* bug fix in `fixDependence' --- a completely dependent `X2' would not
+  be detected, since the first element of R2 would be zero: used first
+  element of R1 to set scale instead.
+
+* `gam.fit' passes corrected n to `magic' so that `n' used in gcv/ubre
+   does not include obs with zero prior weight. `gam.fit3' already doing 
+   this...
+
+* `magic' and `gam.fit3' now allow log smoothing parameters to be a 
+  linear transformation of a smaller set of underlying smoothing parameters.
+
+* `mgcv' based fitting has been removed as an option in `gam', as has 
+  Pearson based GCV. In consequence `am' argument removed from 
+  `gam.method' and `globit' removed from `gam.control'.
+
+* `get.var' now coerces matrix values to numeric vectors, to facilitate 
+   the handling of linear functionals of smooths.
+
+* `gam.fit2' has been removed, since gam.fit3 is simply better.
+
+* The default optimizer for the generalized case has been made slightly 
+  more efficient (derivative free evaluation of GCV/AIC has been 
+  improved). The upshot is that the default is now faster than performance
+  iteration in almost all cases (while still being more reliable).
+
+* the `absorb.cons' option has been removed from `gam.control'.
+
+* `fix.family.link' and `fix.family.var' bug fix --- only return 
+   family unmodified if all required derivative functions are present.
+
+* `smoothCon' now returns a list of smooth objects to facilitate factor
+  `by' variables.
+
+* `smoothCon' makes smooth object labels more informative, if there are 
+  `by' variables... this also makes default plots more informative.
+
+* `plot.gam' indicates `by' variables in labels
+
+* `gamm.setup' modified to call `gam.setup' for most of the setup, leaving 
+  just the re-parameterization step to do. 
+
+* `gamm' modified to allow constraint absorption (same as `gam')
+
+* `gamm' bug fixed whereby "cc" smooths would get the wrong null space 
+  dimension (effect was small, but noticeable, in practice e.g. Cairo 
+  temperature example from chapter 6 of Wood, 2006, book).
+
+* print methods now return first argument invisibly as they should.
+
+* code for (very) old style summary removed. 
+
+* `gam.fit3' now traps derivative iteration divergence, and suggests 
+  tightening the convergence tolerance `epsilon' in `gam.control'. 
+  Divergence can happen for ill-conditioned models if the PIRLS has 
+  not converged sufficiently.
+
+* gamm.Rd updated to reflect change to gammPQL in 1.3-28.
+
 1.3-31
 
-* R 2.7.0 warning fix
+* There was a most annoying warning generated by R 2.7.0 every time `gam'
+  was used. Now there isn't.
 
 1.3-30
 
-* change to DESCRIPTION file
+* change to DESCRIPTION file.
 
 1.3-29
 

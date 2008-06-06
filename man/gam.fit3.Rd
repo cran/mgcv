@@ -1,32 +1,26 @@
-\name{gam.fit2}
-\alias{gam.fit2}
+\name{gam.fit3}
 \alias{gam.fit3}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{P-IRLS GAM estimation with GCV \& UBRE derivative calculation}
+\title{P-IRLS GAM estimation with GCV \& UBRE/AIC derivative calculation}
 \description{Estimation of GAM smoothing parameters is most stable if
-optimization of the UBRE or GCV score is outer to the penalized iteratively
+optimization of the UBRE/AIC or GCV score is outer to the penalized iteratively
 re-weighted least squares scheme used to estimate the model given smoothing 
 parameters.
 
-These routines estimates a GAM given log smoothing paramaters, and evaluate
-derivatives of the GCV and UBRE scores of the model with respect to the
+This routine estimates a GAM (any quadratically penalized GLM) given log 
+smoothing paramaters, and evaluates derivatives of the GCV and UBRE/AIC scores 
+of the model with respect to the
 log smoothing parameters. Calculation of exact derivatives is generally faster
 than approximating them by finite differencing, as well as generally improving
-the reliability of GCV/UBRE score minimization.
+the reliability of GCV/UBRE/AIC score minimization.
 
-\code{gam.fit2} evaluates first derivatives, by accumulating them as P-IRLS
-progresses. \code{gam.fit3} uses a more efficient approach in which the P-IRLS
-is first run to convergence, and only then are the derivatives evaluated by a
-separate iteration. \code{gam.fit3} can evaluate second as well as first derivatives.
+The approach is to run the P-IRLS
+to convergence, and only then to iterate for first and second derivatives. 
 
 Not normally called directly, but rather service routines for \code{\link{gam}}.
 }
 \usage{
-gam.fit2(x, y, sp, S=list(),rS=list(),off, H=NULL, 
-         weights = rep(1, nobs), start = NULL, etastart = NULL, 
-         mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
-         control = gam.control(), intercept = TRUE,deriv=TRUE,
-         gamma=1,scale=1,pearson=FALSE,printWarn=TRUE,...)
+
 gam.fit3(x, y, sp, S=list(),rS=list(),off, H=NULL, 
          weights = rep(1, nobs), start = NULL, etastart = NULL, 
          mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
@@ -35,7 +29,7 @@ gam.fit3(x, y, sp, S=list(),rS=list(),off, H=NULL,
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
-\item{x}{The model matrix for the GAM.}
+\item{x}{The model matrix for the GAM (or any penalized GLM).}
 
 \item{y}{The response variable.}
 
@@ -70,23 +64,18 @@ as possible, but as many rows as there are parameters.}
 \item{intercept}{does the model have and intercept, \code{TRUE} or
 \code{FALSE}}
 
-\item{deriv}{ Should derivatives of the GCV and UBRE scores be calculated?
-            \code{TRUE} or \code{FALSE} for \code{gam.fit2}, but 0, 1 or 2,
-            indicating the maximum order of differentiation to apply, for
-            \code{gam.fit3}.}
+\item{deriv}{ Should derivatives of the GCV and UBRE/AIC scores be calculated?
+             0, 1 or 2,
+            indicating the maximum order of differentiation to apply.}
 
 \item{use.svd}{Should the algorithm use SVD (\code{TRUE}) or the cheaper QR
 (\code{FALSE}) as the second matrix decomposition of the final
-derivative/coefficient evaluation method? Only used by \code{gam.fit3}. }
+derivative/coefficient evaluation method? }
 
 \item{gamma}{The weight given to each degree of freedom in the GCV and UBRE
 scores can be varied (usually increased) using this parameter.}
 
-\item{scale}{The scale parameter - needed for the UBRE score.}
-
-\item{pearson}{The GCV/UBRE score can be based either on the Pearson statistic
-or the deviance. The latter is generally to be preferred, as it is less prone
-to severe undersmoothing. Only used by \code{gam.fit2}.}
+\item{scale}{The scale parameter - needed for the UBRE/AIC score.}
 
 \item{printWarn}{Set to \code{FALSE} to suppress some warnings. Useful in
 order to ensure that some warnings are only printed if they apply to the final
@@ -94,12 +83,11 @@ fitted model, rather than an intermediate used in optimization.}
 
 \item{...}{Other arguments: ignored.}
 }
-\details{ These routines are basically \code{\link{glm.fit}} with some
+\details{ This routine is basically \code{\link{glm.fit}} with some
 modifications to allow (i) for quadratic penalties on the log likelihood;
 (ii) derivatives of the model coefficients with respect to
-log smoothing parameters to be obtained (by updating alongside the P-IRLS
-iteration in the case of \code{gam.fit2}, and by an extra iteration in the
-case of \code{gam.fit3}) and (iii) derivatives of the GAM GCV and UBRE scores to be
+log smoothing parameters to be obtained by an extra iteration  and 
+(iii) derivatives of the GAM GCV and UBRE/AIC scores to be
 evaluated at convergence. 
 
 In addition the routines apply step halving to any step that increases the
@@ -121,8 +109,13 @@ of the families as described in \code{\link{fix.family.link}}.
 
 \references{
 
+
 O 'Sullivan, Yandall & Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models. J. Amer. Statist. Assoc. 81:96-103.
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for
+generalized additive models. J.R.Statist. Soc. B 70(3):495-518
+
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 

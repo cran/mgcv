@@ -7,30 +7,29 @@
 fit convergence. The default fitting options specified by
 \code{\link{gam.method}} (as the default for argument \code{method} of
 \code{\link{gam}}), always opt for certainty of convergence over speed of
-fit. In the additive modelling contexts this means using fitting routine
-\code{\link{magic}} rather than the slightly faster routine
-\code{\link{mgcv}}. In the Generalized Additive Model case it means using
+fit. In the Generalized Additive Model case it means using
 `outer' iteration in preference to `performance iteration': see
 \code{\link{gam.outer}} for details. 
 
 It is possible for the default `outer' iteration to fail when finding intial
-smoothing parameters using a few steps of outer iteration (if you get a
+smoothing parameters using a few steps of performance iteration (if you get a
 convergence failure message from \code{magic} when outer iterating, then this
 is what has happened): lower \code{outerPIsteps} in \code{\link{gam.control}}
 to fix this. 
 
-There are two things that you can do to speed up GAM fitting. (i) Change the
+There are three things that you can try to speed up GAM fitting. (i) if you have large 
+numbers of smoothing parameters in the generalized case, then try the \code{"bfgs"} method as the \code{outer} 
+option in \code{\link{gam.method}}: this can be faster than the default. (ii) Change the
 \code{method} argument to \code{\link{gam}} so that `performance iteration' is
-used in place of the default outer iteration. See the \code{perf.magic} option
+used in place of the default outer iteration. See the \code{gam="perf"} option
 under \code{\link{gam.method}}, for example. Usually performance iteration
-converges well and it can be quicker than the default outer iteration. 
-(ii) For large datasets it may be worth changing
+converges well and it can sometimes be quicker than the default outer iteration. 
+(iii) For large datasets it may be worth changing
 the smoothing basis to use \code{bs="cr"} (see \code{\link{s}} for details)
 for 1-d smooths, and to use \code{\link{te}} smooths in place of
 \code{\link{s}} smooths for smooths of more than one variable. This is because
 the default thin plate regression spline basis \code{"tp"} is costly to set up
-for large datasets (much over 1000 data, say). Alternatively see the last few
-examples for \code{\link{gam}}. 
+for large datasets (much over 1000 data, say).
 
 If the GAM estimation process fails to converge when using performance
 iteration, then switch to outer iteration via the \code{method} argument of

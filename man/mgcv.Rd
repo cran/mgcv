@@ -8,10 +8,11 @@ Ridge Regression Problem with multiple (quadratic) penalties, by GCV
 or UBRE. The function uses Newton's method in multi-dimensions, backed up by steepest descent to iteratively 
 adjust a set of relative smoothing parameters for each penalty. To ensure that the overall level of smoothing
 is optimal, and to guard against trapping by local minima, a highly efficient global minimisation with respect to 
-one overall smoothing parameter is also made at each iteration.
+one overall smoothing parameter is also made at each iteration. This is the original Wood (2000) method. It has now 
+been superceded by the methods in \code{\link{magic}} (Wood, 2004) and \code{\link{gam.fit3}} (Wood, 2008).
 
 For a listing of all routines in the \code{mgcv} package type:\cr
-\code{library(help="mgcv")}
+\code{library(help="mgcv")}. For an overview of the \code{mgcv} package see \code{\link{mgcv-package}}.
 }
 \usage{
 mgcv(y,X,sp,S,off,C=NULL,w=rep(1,length(y)),H=NULL,
@@ -138,12 +139,17 @@ the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 Wood, S.N. (2000)  Modelling and Smoothing Parameter Estimation
 with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass. 99:673-686
+
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
+additive models. J.R.Statist.Soc.B 70(3):495-518
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
-\section{WARNING }{ The method may not behave well with near column rank deficient \eqn{ {\bf
+\section{WARNING }{ The method may not behave well with near column rank defficient \eqn{ {\bf
 X}}{X}
 especially in contexts where the weights vary wildly. } 
 

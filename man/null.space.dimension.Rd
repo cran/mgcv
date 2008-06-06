@@ -48,7 +48,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
 
 
-\seealso{\code{\link{gam}}}
+\seealso{\code{\link{tprs}}}
 
 \examples{
 null.space.dimension(2,0)

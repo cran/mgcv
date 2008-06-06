@@ -43,7 +43,7 @@ product smooth.
 \references{
 
 Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
-Generalized Additive Mixed Models. Biometrics
+Generalized Additive Mixed Models. Biometrics 62(4):1025-1036
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}} 

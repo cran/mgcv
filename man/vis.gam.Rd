@@ -61,7 +61,7 @@ data can be excluded by setting \code{too.far}
 
 All options to the underlying graphics functions can be reset by passing them
 as extra arguments \code{...}: such supplied values will always over-ride the
-defualt values used by \code{vis.gam}. 
+default values used by \code{vis.gam}. 
 }
 
 \author{Simon Wood \email{simon.wood@r-project.org}

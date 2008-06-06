@@ -26,27 +26,10 @@ are usually approximate, unless the models are un-penalized.
 \details{ If more than one fitted model is provided than \code{anova.glm} is
 used. If only one model is provided then the significance of each model term
 is assessed using Wald tests: see \code{\link{summary.gam}} for details of the
-actual computations. In the latter case \code{print.anova.gam} is used as the
-printing method.
+actual computations.
+In the latter case \code{print.anova.gam} is used as the
+printing method.  Note that the p-values for smooth terms are approximate only.
 
-P-values are usually reliable if the smoothing parameters are known, or
-the model is unpenalized. If smoothing parameters have been estimated then the
-p-values are typically somewhat too low under the null. This occurs because the uncertainty associated
-with the smoothing parameters is neglected in the calculations of the
-distributions under the null, which tends to lead to underdispersion in these
-distributions, and in turn to p-value estimates that are too low. (In
-simulations where the null is correct, I have seen p-values that are as low as half of what they should
-be.) Note however that tests can have low power if the estimated rank of the test
-statistic is much higher than the EDF, so that p-values can also be too low in
-some cases. 
-
-If it is important to have  p-values that are as accurate as possible, then,
-at least in the single model case, it is probably advisable to perform tests using unpenalized smooths
-(i.e. \code{s(...,fx=TRUE)}) with the basis dimension, \code{k}, left at what would
-have been used with penalization. Such tests are not as powerful, of
-course, but the p-values are more accurate under the null. Whether or not extra accuracy is
-required will usually depend on whether or not hypothesis testing is a key
-objective of the analysis.
 }
 
 \value{In the multi-model case \code{anova.gam} produces output identical to
@@ -63,8 +46,7 @@ which is in fact an object returned from \code{\link{summary.gam}}.
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}
 
-\section{WARNING}{ P-values are only approximate, particularly as a result of ignoring
-smoothing parameter uncertainty.
+\section{WARNING}{ P-values for smooth terms are only approximate.
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
@@ -73,21 +55,11 @@ smoothing parameter uncertainty.
 \examples{
 library(mgcv)
 set.seed(0)
-n<-200
-sig<-2
-x0 <- rep(1:4,50)
-x1 <- runif(n, 0, 1)
-x2 <- runif(n, 0, 1)
-x3 <- runif(n, 0, 1)
-y <- 2 * x0
-y <- y + exp(2 * x1)
-y <- y + 0.2 * x2^11 * (10 * (1 - x2))^6 + 10 * (10 * x2)^3 * (1 - x2)^10
-e <- rnorm(n, 0, sig)
-y <- y + e
-x0<-as.factor(x0)
-b<-gam(y~x0+s(x1)+s(x2)+s(x3))
+dat <- gamSim(5,n=200,scale=2)
+
+b<-gam(y ~ x0 + s(x1) + s(x2) + s(x3),data=dat)
 anova(b)
-b1<-gam(y~x0+s(x1)+s(x2))
+b1<-gam(y ~ x0 + s(x1) + s(x2),data=dat)
 anova(b,b1,test="F")
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
