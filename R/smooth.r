@@ -1223,12 +1223,14 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
 
   ## check whether smooth called with matrix argument
   if (nrow(sm$X)!=n) matrixArg <- TRUE else matrixArg <- FALSE
-
+  
+  offs <- NULL
   ## pick up "by variables" now...
   if (object$by!="NA"&&is.null(sm$by.done))
   { if (is.null(dataX)) by <- get.var(object$by,data) 
     else by <- get.var(object$by,dataX)
     if (is.null(by)) stop("Can't find by variable")
+    offs <- attr(sm$X,"offset")
     if (is.factor(by)) { 
       if (matrixArg) stop("factor `by' variables can not be used with matrix arguments.")
       sml <- list()
@@ -1239,6 +1241,9 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
         sml[[j]]$X <- by.dum*sm$X  ## multiply model matrix by dummy for level
         sml[[j]]$by.level <- lev[j] ## store level
         sml[[j]]$label <- paste(sm$label,":",object$by,lev[j],sep="") 
+        if (!is.null(offs)) {
+          attr(sml[[j]]$X,"offset") <- offs*by.dum
+        }
       }
     } else {
       sml <- list(sm)
@@ -1246,7 +1251,9 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       
       sml[[1]]$X <- as.numeric(by)*sm$X
       sml[[1]]$label <- paste(sm$label,":",object$by,sep="") 
-
+      if (!is.null(offs)) {
+        attr(sml[[1]]$X,"offset") <- offs*as.numeric(by)
+      }
       ## test for cases where no centring constraint on the smooth is needed. 
       if (!conSupplied) {
         if (matrixArg) {
@@ -1275,6 +1282,16 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       X <- X + sml[[1]]$X[ind,]
     }
     sml[[1]]$X <- X
+    if (!is.null(offs)) { ## deal with any term specific offset
+      offs <- attr(sml[[1]]$X,"offset") ## by variable multiplied version
+      ind <- 1:n 
+      offX <- offs[ind,]
+      for (i in 2:q) {
+        ind <- ind + n
+        offX <- offX + offs[ind,]
+      }
+      attr(sml[[1]]$X,"offset") <- offX
+    } ## end of term specific offset handling
   }
 
   

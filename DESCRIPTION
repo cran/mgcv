@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.4-0
+Version: 1.4-1
 Author: Simon Wood <simon.wood@r-project.org>
 Maintainer: Simon Wood <simon.wood@r-project.org>
 Title: GAMs with GCV smoothness estimation and GAMMs by REML/PQL
@@ -13,4 +13,4 @@ Imports: graphics, stats
 Suggests: nlme (>= 3.1-64), splines
 LazyLoad: yes
 License: GPL (>=2)
-Packaged: Thu Jun  5 20:34:47 2008; simon
+Packaged: Wed Jun 18 15:47:00 2008; simon

@@ -1,6 +1,15 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.4-1
+
+* `Predict.matrix2' was not in NAMESPACE: fixed.
+
+* term specific offsets handled properly w.r.t. `by' variables in 
+  `smoothCon' (a rather specialized topic!)
+
+* minor doc bug fix for `smooth.construct'.
+
 1.4-0
 
 *** Model terms can now include linear functionals of smooths, by 

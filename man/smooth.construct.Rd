@@ -88,8 +88,8 @@ The input argument \code{object}, assigned a new class to indicate what type of 
 following items added:
 \item{X}{The model matrix from this term. This may have an \code{"offset"}
 attribute:  a vector of length \code{nrow(X)} containing any contribution of
-the smooth to the model offset term. code{by} variables do not need to be
-dealt with here, but if they are then an item code{by.done} must be added to
+the smooth to the model offset term. \code{by} variables do not need to be
+dealt with here, but if they are then an item \code{by.done} must be added to
 the \code{object}.}
 \item{S}{A list of positive semi-definite penalty matrices that apply to this term. The list will be empty 
 if the term is to be left un-penalized.}
@@ -98,7 +98,7 @@ if the term is to be left un-penalized.}
 The following items may be added:
 
 \item{C}{The matrix defining any constraints on the term. If this is \code{NULL} then
-{\tt smoothCon} will add an identifiability constraint that each term should
+\code{smoothCon} will add an identifiability constraint that each term should
 sum to zero over the covariate values. Set to a zero row matrix if no
 constraints are required. Note that a supplied \code{C} is never ignored, even if any
 \code{by} variables of a smooth imply that no constraint is actually needed. }
