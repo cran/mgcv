@@ -40,11 +40,10 @@ then thin plate regression splines, but a little better than p-splines. See \cod
 \value{ An object of class \code{"cr.smooth"} \code{"cs.smooth"} or \code{"cyclic.smooth"}.
  In addition to the usual elements of a smooth class documented under \code{\link{smooth.construct}}, 
 this object will contain:
-\itemize{
 \item{xp}{giving the knot locations used to generate the basis.}
 \item{BD}{class \code{"cyclic.smooth"} objects include matrix \code{BD} which transforms function values 
           at the knots to second derivatives at the knots.}
-}}
+}
 
 \details{ 
 The constructor is not normally called directly, but is rather used internally by \code{\link{gam}}. 
