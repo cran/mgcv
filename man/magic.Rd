@@ -83,18 +83,20 @@ penalizing the parameters in the constrained space directly. Setting this parame
 greater than zero will cause such a penalty to be used, with the magnitude given by the 
 parameter value.}
 
-\item{control}{ is a list of iteration control constants with the following elements:
+\item{rank.tol}{is a constant used to test for numerical rank deficiency of the problem. 
+Basically any singular value less than \code{rank_tol} multiplied by the largest singular value of 
+the  problem is set to zero.}
 
+\item{control}{ is a list of iteration control constants with the following elements:
+\itemize{
 \item{maxit}{The maximum number of iterations of the magic algorithm to allow.}
 
 \item{tol}{The tolerance to use in judging convergence.}
 
 \item{step.half}{If a trial step fails then the method tries halving it up to a maximum of 
 \code{step.half} times.}
+}
 
-\item{rank.tol}{is a constant used to test for numerical rank deficiency of the problem. 
-Basically any singular value less than \code{rank_tol} multiplied by the largest singular value of 
-the  problem is set to zero.}
 
 
 } %- end of control

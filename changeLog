@@ -1,6 +1,12 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.4-2
+
+* Patched to fix some .Rd file errors picked up in R-devel checks.
+  
+* Only minor changes from now until version 1.5. 
+
 1.4-1
 
 * `Predict.matrix2' was not in NAMESPACE: fixed.
