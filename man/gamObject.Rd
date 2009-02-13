@@ -90,7 +90,7 @@ constraints; \code{rank}, The numerical rank of the problem;
  \code{fully.converged}, \code{TRUE} is multiple GCV/UBRE converged by meeting 
 convergence criteria and \code{FALSE} if method stopped with a steepest descent step 
 failure; \code{hess.pos.def}Was the hessian of the GCV/UBRE score positive definite at 
-smoothing parameter estimation convergence?; \code{iter}{How many iterations were required to find the smoothing parameters?}
+smoothing parameter estimation convergence?; \code{iter} How many iterations were required to find the smoothing parameters?
 \code{score.calls}, and how many times did the GCV/UBRE score have to be
 evaluated?; \code{rms.grad}, root mean square of the gradient of the GCV/UBRE score at 
 convergence.

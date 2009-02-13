@@ -24,6 +24,7 @@ the response.}
   }
 
 \details{See the source code for exactly what is simulated in each case. 
+\itemize{
 \item{1}{Gu and Wahba 4 univariate term example.}
 \item{2}{A smooth function of 2 variables.}
 \item{3}{Example with continuous by variable.}
@@ -31,7 +32,7 @@ the response.}
 \item{5}{An additive example plus a factor variable.}
 \item{6}{Additive + random effect.}
 \item{7}{As 1 but with correlated covariates.}
-}
+}}
 
 \value{ Depends on \code{eg}, but usually a dataframe, which may also contain some information on 
 the underlying truth. Sometimes a list with more items, including a data frame for model fitting.
