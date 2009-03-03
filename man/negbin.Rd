@@ -6,19 +6,21 @@
 the \code{\link{negbin}} family (a modification of MASS library \code{negative.binomial} family 
 by Venables and Ripley), with or without a known \eqn{\theta}{theta} parameter. 
 Two approaches to estimating the \code{theta} parameter are available:
+
 \itemize{
 \item If `performance iteration' is used for smoothing parameter estimation 
-(see \code{\link{gam.method}}), then smoothing parameters are chosen by GCV and 
+(see \code{\link{gam}}), then smoothing parameters are chosen by GCV and 
 \code{theta} is chosen in order to ensure that the Pearson estimate of the scale 
 parameter is as close as possible to 1, the value that the scale parameter should have.
 
-\item If `outer iteration' is used for smoothing parameter selection, then smoothing parameters 
-are chosen by UBRE/AIC (with scale parameter set to 1) and a value of \code{theta} is  
-searched for which minimizes the AIC of the model. 
+\item If `outer iteration' is used for smoothing parameter selection, and smoothing parameters 
+are chosen by UBRE/AIC (with scale parameter set to 1) then a value of \code{theta} is  
+searched for which minimizes the AIC of the model. Alternatively If (RE)ML is used for smoothing 
+parameter estimation then a value of \code{theta} is searched for which maximizes the (restricted) 
+likelihood. 
 }
 The second option is much slower than the first, but the first can sometimes fail to converge. 
-To use the first option, set \code{gam="perf"} in the \code{method} argument of \code{gam}: see 
-\code{\link{gam.method}} for details.
+To use the first option, set the \code{optimizer} argument of \code{\link{gam}} to \code{"perf"}.
 }
 
 \usage{
@@ -46,7 +48,7 @@ taken as the discrete set of values of theta over which to search for \code{thet
 option only works with AIC based outer iteration, if performance iteration is used then an array will only
 be used to define a search range.
 
-If performance iteration is used (see \code{\link{gam.method}}) then the method 
+If performance iteration is used (see \code{\link{gam}} argument \code{optimizer}) then the method 
 of estimation is to choose \eqn{\hat \theta}{theta}  so that the GCV (Pearson) estimate 
 of the scale parameter is one (since the scale parameter 
 is one for the negative binomial). In this case \eqn{\theta}{theta} estimation is nested within the IRLS loop 
@@ -106,7 +108,7 @@ print(b)
 
 ## unknown theta via performance iteration...
 b1 <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negbin(c(1,10)),
-          method=gam.method(gam="perf"),data=dat)
+          optimizer="perf",data=dat)
 plot(b1,pages=1)
 print(b1)
 
@@ -116,8 +118,15 @@ b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negbin(c(1,10)),
 plot(b2,pages=1)
 print(b2)
 
+## Same again all by  REML...
+b2a <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negbin(c(1,10)),
+        data=dat,method="REML")
+plot(b2a,pages=1)
+print(b2a)
+
+
 ## how to retrieve Theta...
-b2$family$getTheta()
+b2a$family$getTheta()
 
 ## unknown theta via outer iteration and AIC search
 ## over a discrete set of values...

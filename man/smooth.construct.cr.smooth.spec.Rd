@@ -8,9 +8,8 @@
 \title{Penalized Cubic regression splines in GAMs}
 
 \description{\code{\link{gam}} can use univariate penalized cubic regression spline smooths, specified via terms like
-\code{s(x,bs="cr")}. \code{s(x,bs="cs")} specifies a penalized cubic regression spline in which a small ridge 
-penalty has been added to the cubic spline penalty, in order to allow the term to be shrunk  to zero if the 
-smoothing parameter is high enough (as the smoothing parameter goes to infinity a normal cubic spline tends to a 
+\code{s(x,bs="cr")}. \code{s(x,bs="cs")} specifies a penalized cubic regression spline which has had its penalty modified 
+to shrink towards zero at high enough smoothing parameters (as the smoothing parameter goes to infinity a normal cubic spline tends to a 
 straight line.) \code{s(x,bs="cc")} specifies a cyclic penalized cubic regression spline smooth.
 
 `Cardinal' spline bases are used: Wood (2006) sections 4.1.2 and 4.1.3 gives full details. These bases have 
@@ -33,7 +32,7 @@ then thin plate regression splines, but a little better than p-splines. See \cod
             is the last element.} 
 
 \item{knots}{a list containing any knots supplied for basis setup --- in same order and with same names as \code{data}. 
-             Can be \code{NULL}}
+             Can be \code{NULL}. See details.}
 
 }
 
@@ -61,8 +60,17 @@ If they are not supplied then the knots  of the spline are placed evenly
      that the second derivative of the curve should be zero at the two end 
      knots).
 
-Note that the cyclic smoother will wrap at the smallest and largest covariate values, unless knots are supplied, and 
-is not subject to the condition that second derivatives go to zero at the first and last knots.
+The shrinkage version of the smooth, eigen-decomposes the wiggliness penalty matrix, and sets its 2 zero eigenvalues to small 
+multiples of the smallest strictly positive eigenvalue. The penalty is then set to the matrix with eigenvectors corresponding 
+to those of the original penalty, but eigenvalues set to the peturbed versions. This penalty matrix has full rank and shrinks 
+the curve to zero at high enough smoothing parameters.
+
+Note that the cyclic smoother will wrap at the smallest and largest covariate values, unless knots are supplied. If only two 
+knots are supplied then they are taken as the end points of the smoother (provided all the data lie between them), and the 
+remaining knots are generated automatically.
+
+The cyclic smooth is not 
+subject to the condition that second derivatives go to zero at the first and last knots.
 }
 
 \references{
@@ -83,6 +91,10 @@ and Hall/CRC Press.
 ## finished simulating data, now fit model...
   b <- gam(y ~ s(x,bs="cc",k=12) + s(z),family=poisson,
                       knots=list(x=seq(0,10,length=12)))
+## or more simply
+   b <- gam(y ~ s(x,bs="cc",k=12) + s(z),family=poisson,
+                      knots=list(x=c(0,10)))
+
 ## plot results...
   par(mfrow=c(2,2))
   plot(x,y);plot(b,select=1,shade=TRUE);lines(x,f-mean(f),col=2)

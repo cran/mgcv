@@ -20,9 +20,9 @@ basis dimensions for each marginal (If the penalty basis is based on a thin plat
 its dimension directly).
 
 By default, P-splines are used for the smoothing and penalty bases, but this can be modified by supplying a list as
-argument \code{xt} with a two element character vector \code{xt$bs} specifying the smoothing and penalty basis type, 
-respectively. Only \code{"ps"} and \code{"cr"} may be used for the smoothing basis, but for the penalty \code{"tp"}
-may also be used. However, the default usually gives the best performance.
+argument \code{xt} with a character vector \code{xt$bs} specifying the smoothing basis type. 
+Only \code{"ps"}, \code{"cp"}, \code{"cc"} and \code{"cr"} may be used for the smoothing basis. The penalty basis is 
+always a B-spline, or a cyclic B-spline for cyclic bases.
 
 The total number of smoothing parameters to be estimated for the term will be the dimension of the penalty basis. 
 Bear in mind that adaptive smoothing places quite severe demands on the data. For example, setting \code{m=10} for a 
@@ -59,7 +59,6 @@ To use for basis setup it is recommended to use \code{\link{smooth.construct2}}.
 
 This class can not be used as a marginal basis in a tensor product smooth, nor by \code{gamm}.
 
-
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
@@ -69,7 +68,7 @@ This class can not be used as a marginal basis in a tensor product smooth, nor b
 ## library(AdaptFit)
 set.seed(0)
 x <- 1:1000/1000
-mu <- exp(-400*(x-0.6)^2)+5*exp(-500*(x-0.75)^2)/3+2*exp(-500*(x-0.9)^2)
+mu <- exp(-400*(x-.6)^2)+5*exp(-500*(x-.75)^2)/3+2*exp(-500*(x-.9)^2)
 y <- mu+0.5*rnorm(1000)
 
 ##fit with default knots
@@ -87,31 +86,41 @@ b <- gam(y~s(x,k=40))             ## non-adaptive
 plot(b,shade=TRUE,main=round(cor(fitted(b),mu),digits=4))
 lines(x,mu-mean(mu),col=2)
 
-b <- gam(y~s(x,bs="ad",k=40,m=5,xt=list(bs="ps",bs="tp")))
+b <- gam(y~s(x,bs="ad",k=40,m=5,xt=list(bs="cr")))
 plot(b,shade=TRUE,main=round(cor(fitted(b),mu),digits=4))
 lines(x,mu-mean(mu),col=2)
 
-## disappointing 2D example
+## A 2D example....
 par(mfrow=c(2,2),mar=c(1,1,1,1))
 x <- seq(-.5, 1.5, length= 60)
 z <- x
-f3 <- function(x,z,k=15) {  r <- sqrt(x^2+z^2); f <- exp(-r^2*k);f}                          
+f3 <- function(x,z,k=15) { r<-sqrt(x^2+z^2);f<-exp(-r^2*k);f}  
 f <- outer(x, z, f3)
 op <- par(bg = "white")
-persp(x, z, f, theta = 30, phi = 30, col = "lightblue",ticktype="detailed")
+
+## Plot truth....
+persp(x,z,f,theta=30,phi=30,col="lightblue",ticktype="detailed")
 
 n <- 2000
 x <- runif(n)*2-.5
 z <- runif(n)*2-.5
 f <- f3(x,z)
-y <- f + rnorm(n)*.4
+y <- f + rnorm(n)*.1
 
+## Try tprs for comparison...
 b0 <- gam(y~s(x,z,k=150))
 vis.gam(b0,theta=30,phi=30,ticktype="detailed")
-## slow, uncomment to use...
-#b <- gam(y~s(x,z,bs="ad",k=15,m=3),gamma=1.4)
-#vis.gam(b,theta=30,phi=30,ticktype="detailed")
-#cor(fitted(b0),f);cor(fitted(b),f)
+
+## Tensor product with non-adaptive version of adaptive penalty
+b1 <- gam(y~s(x,z,bs="ad",k=15,m=1),gamma=1.4)
+vis.gam(b1,theta=30,phi=30,ticktype="detailed")
+
+## Now adaptive...
+b <- gam(y~s(x,z,bs="ad",k=15,m=3),gamma=1.4)
+vis.gam(b,theta=30,phi=30,ticktype="detailed")
+cor(fitted(b0),f);cor(fitted(b),f)
+
+
 
 }
 \keyword{models} \keyword{regression}%-- one or more ..

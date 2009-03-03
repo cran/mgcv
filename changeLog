@@ -1,11 +1,108 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.5-0
+
+*** Efficient and general REML/ML smoothing selection implemented. 
+    Smoothness selection criterion and numerical optimizer are now
+    selected using arguments `method' and `optimizer' of `gam', and 
+    `gam.method' has been removed.
+
+*** To further enhance stability and efficiency, Fisher scoring is now 
+    only used for canonical links, when it corresponds to full Newton. 
+    With non-canonical links PIRLS is based on full Newton. 
+
+** Derivative iteration as in Wood (2008) has been replaced by a direct
+   implicit function method (which costs no more given Newton based 
+   PIRLS).
+
+** An option `select' has been added to `gam' to allow terms to be
+   completely removed from a model by smoothness selection. 
+
+** The shrinkage smoothers "cs" and "ts" have been modified 
+   substantially. The Wood (2006, 4.1.6) proposal of adding a 
+   small multiple of the identity matrix to the penalty matrix 
+   is flawed in that it tends to corrupt small eigen values
+   of the penalty matrix for large (dimension) penalty matrices. 
+   It is much better to set the zero eigenvalues of the penalty matrix 
+   to a small proportion of the smallest +ve eigenvalue, and to 
+   use the matrix with the resulting eigen-decomposition as the 
+   penalty. This is now done. Thanks to Roman Torgovitsky for 
+   reporting the original problem.
+
+** Tweedie family added (including `ldTweedie' function to evaluate 
+   log Tweedie densities for powers in (1,2]).
+
+* "ps" "cp" and "cc" smooths can now be supplied with 2 knots to be 
+  treated as `endpoints' of the smooths (full set of knots can still 
+  be supplied as before).
+
+* The `newton' optimizer was dropping terms when their gradient was 
+  below the convergence threshold (and allowing re-entry). This 
+  promotes zig-zagging unless the terms are independent. Now only 
+  drops terms if gradient and second derivative are very small 
+  (so obective is really flat). 
+
+* The adaptive smoothing "ad" class has been greatly simplified and 2D 
+  penalty improved. Much faster as a result, and 2D adaptive actually 
+  quite good.
+
+* gam.fit3 now checks that the initial PIRLS step produces an 
+  improvement in penalized deviance relative to a null model. If not 
+  then step halving towards the null model parameter is employed.
+  The null model is as close to constant predicted values as the model
+  structure allows (it is estimated up front in estimate.gam, to save 
+  computation).
+
+* `gam.side' now takes account of whether the model has an intercept 
+   (or the model model matrix column corresponding to an intercept is 
+   in the column space of the model matrix of the parametric model 
+   components).  
+
+* The smoothing parameter array returned by `gam' now includes names
+  for the smoothing parameters.
+
+* s and te check that `id' is a single element.
+
+* By default, partial residuals are no longer plotted for smooths with 
+  `by' variables since they are usually meaningless here (they can 
+  be re-instated by argument `by.resids').
+
+* `min.sp' processing modified to work with `paraPen' argument to 
+  `gam'.
+
+* vcov.gam defaults to Bayesian covariance matrix.
+  
+* indexing error in `parametricPenalty' corrected.
+
+* plot.gam modified so that page change behaviour is like plot.glm 
+
+* negbin family upgraded to work with (RE)ML.
+
+* `sp.vcov' function added to extract covariance matrix of log 
+  smoothing parameters from (RE)ML based fits.
+
+* `power' links now handled by default fitting methods (i.e. gam.fit3)
+
+* `magic.post.proc' now expects weights, not sqrt(weights) as the 
+   `w' argument (unless `w' is a matrix).
+
+* p-values tweaked again, for slightly better performance with smooths of 
+  several variables. Still not quite right.
+
+* record of intial sp's is now carried in `smooth' objects in field 
+  `sp'.
+
+* ?linear.functional.term error fix.
+
+* memory leak in magic.c:magic fixed --- all fixed smoothing 
+  parameters lead to 2 arrays being left unfreed.
+
+* various .Rd file fixes.
+
 1.4-2
 
-* Patched to fix some .Rd file errors picked up in R-devel checks.
-  
-* Only minor changes from now until version 1.5. 
+* Some minor .Rd file fixes
 
 1.4-1
 

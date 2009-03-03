@@ -124,13 +124,104 @@ matrix(um[[2]],q,q);er$v
 }
 
 
+void mgcv_td_qy(double *S,double *tau,int *m,int *n, double *B,int *left,int *transpose)
+/* Multiplies m by n matrix B by orthogonal matrix returned from mgcv_tri_diag and stored in 
+   S, tau. B is overwritten with result. 
+    
+   Note that this is a bit inefficient if really only a few rotations matter!
+
+   Calls LAPACK routine dormtr 
+*/
+{ char trans='N',side='R',uplo='U';
+  int nq,lwork=-1,info;
+  double *work,work1;
+  if (*left) { side = 'L';nq = *m;} else nq = *n;
+  if (*transpose) trans = 'T';
+  /* workspace query ... */
+  F77_NAME(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,&work1,&lwork,&info);
+  lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
+  work=(double *)calloc((size_t)lwork,sizeof(double));
+  /* actual call ... */
+  F77_NAME(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,work,&lwork,&info);
+  free(work);
+}
+
+void mgcv_tri_diag(double *S,int *n,double *tau)
+/* Reduces symmetric n by n matrix S to tridiagonal form T 
+   by similarity transformation. Q'SQ = T, where Q is an
+   orthogonal matrix. Only the upper triangle of S is actually
+   used.
+
+   On exit the diagonal and superdiagonal of T are written in 
+   the corresponding position in S. The elements above the first 
+   superdiagonal, along with tau, store the householder reflections 
+   making up Q. 
+
+   Note that this is not optimally efficient if actually only a 
+   few householder rotations are needed because S does not have 
+   full rank.
+
+   The routine calls dsytrd from LAPACK.
+     
+*/
+{ int lwork=-1,info;
+  double *work,work1,*e,*d;
+  char uplo='U';
+  d = (double *)calloc((size_t)*n,sizeof(double));
+  e = (double *)calloc((size_t)*n-1,sizeof(double));
+  /* work space query... */
+  F77_NAME(dsytrd)(&uplo,n,S,n,d,e,tau,&work1,&lwork,&info);
+  lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
+  work=(double *)calloc((size_t)lwork,sizeof(double));
+  /* Actual call... */
+  F77_NAME(dsytrd)(&uplo,n,S,n,d,e,tau,work,&lwork,&info);
+  free(work);free(d);free(e);
+}
+
+
+void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc) 
+/* Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). This is just a standard back 
+   substitution loop.
+*/  
+{ int i,j,k;
+  double x,*pR,*pC;
+  for (j=0;j<*bc;j++) { /* work across columns of B & C */
+    for (i = *c-1;i>=0;i--) { /* work up each column of B & C */
+      x = 0.0;
+      /* for (k=i+1;k<*c;k++) x += R[i + *r * k] * C[k + j * *c]; ...following replaces...*/
+      pR = R + i + (i+1) * *r;pC = C + j * *c + i + 1;
+      for (k=i+1;k<*c;k++,pR+= *r,pC++) x += *pR * *pC;      
+      C[i + j * *c] = (B[i + j * *c] - x)/R[i + *r * i];
+    }
+  }
+}
+
+void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc) 
+/* Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). This is just a standard forward 
+   substitution loop.
+*/  
+{ int i,j,k;
+  double x;
+  for (j=0;j<*bc;j++) { /* work across columns of B & C */
+    for (i = 0;i< *c;i++) { /* work down each column of B & C */
+      x=0.0;
+      for (k=0;k<i;k++) x+= C[k + j * *c] * R[k + i * *r]; 
+      C[i + j * *c] = (B[i + j * *c] - x) / R[i + i * *r]; 
+    }
+  }
+}
+
 
 void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau)
 /* call LA_PACK to get pivoted QR decomposition of x
    tau is an array of length min(r,c)
    pivot is array of length c, zeroed on entry, pivoting order on return.
-   On exist upper triangle of x is R.Lower triangle plus tau represent reflectors 
-   making up Q.
+   On exist upper triangle of x is R. Below upper triangle plus tau 
+   represent reflectors making up Q.
    pivoting is always performed (not just when matrix is rank deficient), so
    leading diagonal of R is in descending order of magnitude.
    library(mgcv)
@@ -149,14 +240,15 @@ void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau)
    /* actual call */
   F77_NAME(dgeqp3)(r,c,x,r,pivot,tau,work,&lwork,&info); 
   free(work);
-  if (*r<*c) lwork= *r; else lwork= *c; for (ip=pivot;ip<pivot+lwork;ip++) (*ip)--;
+  /*if (*r<*c) lwork= *r; else lwork= *c;*/ 
+  for (ip=pivot;ip < pivot + *c;ip++) (*ip)--;
   /* ... for 'tis C in which we work and not the 'cursed Fortran... */
   
 }
 
 
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp)
-/* applies k reflectors of Q of a QR decomposition to matrix b.
+/* applies k reflectors of Q of a QR decomposition to r by c matrix b.
    Apply Q from left if left!=0, right otherwise.
    Transpose Q only if tp!=0.
    Information about Q has been returned from mgcv_qr, and is stored in tau and 
@@ -265,23 +357,34 @@ qr.R(qr(Xa,tol=0))
   free(x);free(work);
 }
 
-void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd)
-/* gets eigenvalues and vectors of symmetric matrix A. 
+void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
+                 int *descending)
+
+/* gets eigenvalues and (optionally) vectors of symmetric matrix A. 
+   
    Two alternative underlying LAPACK routines can be used, 
    either dsyevd (slower, robust) or dsyevr (faster, seems less robust). 
-   Vectors returned in columns of A, values in ev.
+   Vectors returned in columns of A, values in ev (ascending).
+   
+   ******************************************************
+   *** Eigenvalues are returned  in *ascending* order ***
+   *** unless descending is set to be non-zero        ***
+   ******************************************************
+
    Testing R code....
    library(mgcv)
    n<-4;A<-matrix(rnorm(n*n),n,n);A<-A%*%t(A);d<-array(0,n)
    er<-eigen(A)
-   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(n),as.integer(1),PACKAGE="mgcv")
+   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(n),
+           as.integer(1),as.integer(1),PACKAGE="mgcv")
    er$vectors;matrix(um[[1]],n,n)
    er$values;um[[2]]
 */  
 
 { char jobz='V',uplo='U',range='A'; 
-  double work1,*work,dum1=0,abstol=0.0,*Z,*dum2;
-  int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ;
+  double work1,*work,dum1=0,abstol=0.0,*Z,*dum2,x,*p;
+  int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ,i;
+  if (*get_vectors) jobz='V'; else jobz='N';
   if (*use_dsyevd)
   { F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,&work1,&lwork,&iwork1,&liwork,&info);
     lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
@@ -304,8 +407,21 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd)
 		   &abstol,&n_eval,ev, 
     		     Z,n,isupZ, work,&lwork,iwork,&liwork,&info);
     free(work);free(iwork);
-    dum2 = Z + *n * *n; /* copy vectors back into A */
-    for (work=Z;work<dum2;work++,A++) *A = *work;
+    
+    if (*descending) for (i=0;i<*n/2;i++) { /* reverse the eigenvalues */
+      x = ev[i]; ev[i] = ev[*n-i-1];ev[*n-i-1] = x;
+    }
+
+    if (*get_vectors) {  /* copy vectors back into A */
+      if (*descending) { /* need to reverse order */
+        dum2 = Z + *n * (*n-1);
+        for (work=dum2;work>=Z;work -= *n)
+	  for (p=work;p<work + *n;p++,A++) *A = *p; 
+      } else { /* simple copy */
+        dum2 = Z + *n * *n;
+        for (work=Z;work<dum2;work++,A++) *A = *work;
+      }
+    }
     free(Z);free(isupZ);
   }
 

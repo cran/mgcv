@@ -21,11 +21,12 @@ Not normally called directly, but rather service routines for \code{\link{gam}}.
 }
 \usage{
 
-gam.fit3(x, y, sp, S=list(),rS=list(),off, H=NULL, 
+gam.fit3(x, y, sp, Eb ,UrS=list(), 
          weights = rep(1, nobs), start = NULL, etastart = NULL, 
-         mustart = NULL, offset = rep(0, nobs), family = gaussian(), 
-         control = gam.control(), intercept = TRUE,deriv=2,use.svd=TRUE,
-         gamma=1,scale=1,printWarn=TRUE,...) 
+         mustart = NULL, offset = rep(0, nobs), U1 = diag(ncol(x)), 
+         Mp = -1, family = gaussian(), control = gam.control(), 
+         intercept = TRUE,deriv=2,gamma=1,scale=1,
+         printWarn=TRUE,scoreType="REML",null.coef=rep(0,ncol(x)),...) 
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -35,18 +36,11 @@ gam.fit3(x, y, sp, S=list(),rS=list(),off, H=NULL,
 
 \item{sp}{The log smoothing parameters.}
 
-\item{S}{A list of penalty matrices. Typically penalty matrices contain only a
-smallish square sub-matrix which is non-zero: this is what is actually
-stored. \code{off[i]} indicates which parameter is the first one penalized
-by \code{S[[i]]}.}
+\item{Eb}{A balanced version of the total penalty matrix: usd for numerical rank determination.}
 
-\item{rS}{List of square roots of penalty matrices, each having as few columns
-as possible, but as many rows as there are parameters.}
+\item{UrS}{List of square root penalties premultiplied by transpose of orthogonal
+           basis for the total penalty.}
 
-\item{off}{\code{off[i]} indicates which parameter \code{S[[i]][1,1]} relates to.}
-
-\item{H}{The fixed penalty matrix for the model.}
- 
 \item{weights}{prior weights for fitting.}
 
 \item{start}{optional starting parameter guesses.} 
@@ -56,6 +50,10 @@ as possible, but as many rows as there are parameters.}
 \item{mustart}{optional starting values for the mean.}
 
 \item{offset}{the model offset}
+
+\item{U1}{An orthogonal basis for the range space of the penalty --- required for ML smoothness estimation only.}
+
+\item{Mp}{The dimension of the total penalty null space --- required for ML smoothness estimation only.}
 
 \item{family}{the family - actually this routine would never be called with \code{gaussian()}} 
 
@@ -68,10 +66,6 @@ as possible, but as many rows as there are parameters.}
              0, 1 or 2,
             indicating the maximum order of differentiation to apply.}
 
-\item{use.svd}{Should the algorithm use SVD (\code{TRUE}) or the cheaper QR
-(\code{FALSE}) as the second matrix decomposition of the final
-derivative/coefficient evaluation method? }
-
 \item{gamma}{The weight given to each degree of freedom in the GCV and UBRE
 scores can be varied (usually increased) using this parameter.}
 
@@ -81,13 +75,18 @@ scores can be varied (usually increased) using this parameter.}
 order to ensure that some warnings are only printed if they apply to the final
 fitted model, rather than an intermediate used in optimization.}
 
+\item{scoreType}{specifies smoothing parameter selection criterion to use.}
+
+\item{null.coef}{coefficients for a model which gives some sort of upper bound on deviance.
+This allows immediate divergence problems to be controlled.}
+
 \item{...}{Other arguments: ignored.}
 }
 \details{ This routine is basically \code{\link{glm.fit}} with some
 modifications to allow (i) for quadratic penalties on the log likelihood;
 (ii) derivatives of the model coefficients with respect to
-log smoothing parameters to be obtained by an extra iteration  and 
-(iii) derivatives of the GAM GCV and UBRE/AIC scores to be
+log smoothing parameters to be obtained by use of the implicit function theorem and 
+(iii) derivatives of the GAM GCV, UBRE/AIC, REML or ML scores to be
 evaluated at convergence. 
 
 In addition the routines apply step halving to any step that increases the

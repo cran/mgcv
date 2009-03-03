@@ -93,6 +93,14 @@ if a model like:
   \code{gam} automatically generates side conditions to make this model
   identifiable. You can also estimate `overlapping' models like:\cr
   \code{y ~ s(x,z) + s(z,v)}.  
+
+  Note that optimum interpretability of such models is obtained by ensuring that 
+  lower order terms are strictly nested withing higher order ones. This is most easily achieved by
+  employing tensor product smooths for multidimensional terms, and ensuring that lower order terms are
+  using the same (marginal) bases as higher order ones. For example:\cr
+  \code{y ~ s(x,bs="cr",k=5) + s(z,bs="cr",k=5) + te(x,z)}\cr
+  would ensure strict nesting of the main effects within the interaction (given the \code{\link{te}} default 
+  \code{bs} and \code{k} arguments), since the main effects employ the same bases used as marginals for the \code{te} term.
 }
 
 \section{`by' variables}{
@@ -199,7 +207,8 @@ log smoothing parameters that actually multiply the individual quadratic penalti
 \code{sp} is a vector of (underlying) smoothing parameter values: positive values are taken as fixed, negative to signal that 
 the smoothing parameter should be estimated. Taken as all negative if not supplied.
 
-An obvious application of \code{paraPen} is to incorporate random effects, and an example of this is provided below.
+An obvious application of \code{paraPen} is to incorporate random effects, and an example of this is provided below. In this, divide the scale parameter by 
+the estimated smoothing parameters to recover variance component estimates.
 
 }
 
@@ -243,7 +252,7 @@ b1<-gam(y ~ s(x2,by=as.numeric(fac==1))+s(x2,by=as.numeric(fac==2))+
 plot(b1,pages=1)
 summary(b1)
 
-## repeat, but force all the s(x2) terms to have the same smoothing param
+## repeat forcing all s(x2) terms to have the same smoothing param
 ## (not a very good idea for these data!)
 b2 <- gam(y ~ fac+s(x2,by=fac,id=1)+s(x0),data=dat)
 plot(b2,pages=1)
@@ -269,6 +278,20 @@ rm <- gam(y~ X+s(x0)+s(x1)+s(x2)+s(x3),data=dat,paraPen=PP)
 plot(rm,pages=1)
 ## Get estimated random effects standard deviation...
 sig.b <- sqrt(rm$sig2/rm$sp[1]);sig.b 
+
+
+## Simple comparison with lme, using Rail data.
+## "ML" used as "REML" treatments of residual variance
+## differ slightly...
+require(nlme)
+b0 <- lme(travel~1,data=Rail,~1|Rail,method="ML") 
+Z <- model.matrix(~Rail-1,data=Rail,
+     contrasts.arg=list(Rail="contr.treatment"))
+b <- gam(travel~Z,data=Rail,paraPen=list(Z=list(diag(6))),method="ML")
+
+b0 
+(b$reml.scale/b$sp)^.5 ## `gam' ML estimate of Rail sd
+b$reml.scale^.5         ## `gam' ML estimate of residual sd
 
 }
 \keyword{models} \keyword{regression}%-- one or more ..

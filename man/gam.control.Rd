@@ -7,7 +7,7 @@ control of the numerical options for fitting a GAM.
 Typically users will want to modify the defaults if model fitting fails to
 converge, or if the warnings are generated which suggest a 
 loss of numerical stability during fitting.  To change the default
-choise of fitting method, see \code{\link{gam.method}}.
+choise of fitting method, see \code{\link{gam}} arguments \code{method} and \code{optimizer}.
 }
 \usage{
 gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,
@@ -17,6 +17,7 @@ gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,
             outerPIsteps=1,idLinksBases=TRUE,scalePenalty=TRUE) 
 }
 \arguments{ 
+
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
 by which GAMs are fitted  can fail to converge in some circumstances. For example, data with many zeroes can cause 
 problems in a model with a log link, because a mean of zero corresponds to an infinite range of linear predictor 
@@ -79,9 +80,7 @@ with the following elements: \code{conv.tol} (default
 length allowed for an element of the Newton search direction (default 5);
 \code{maxSstep} is the maximum length allowed for an element of the steepest
 descent direction (only used if Newton fails - default 2); \code{maxHalf} is
-the maximum number of step halvings to permit before giving up (default 30); 
-\code{use.svd} determines whether to use an SVD step or QR step for the part
-of fitting that determines problem rank, etc. (defaults to \code{FALSE}).
+the maximum number of step halvings to permit before giving up (default 30).
 
 If outer iteration using \code{\link{nlm}} is used for fitting, then the control list
 \code{nlm} stores control arguments for calls to routine
@@ -120,7 +119,7 @@ additive models. J.R.Statist.Soc.B 70(3):495-518.
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
-\seealso{\code{\link{gam.method}}   \code{\link{gam}}, \code{\link{gam.fit}}, \code{\link{glm.control}} }
+\seealso{\code{\link{gam}}, \code{\link{gam.fit}}, \code{\link{glm.control}} }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

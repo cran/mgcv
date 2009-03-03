@@ -33,7 +33,7 @@ in order to ensure that predictions are automatically on the right scale.
 
 When predicting from the model it is not necessary to provide matrix covariate and \code{by} variable values. 
 For example to simply examine the underlying smooth function one would use vectors of covariate values and vector 
-\code{by} variables, with the \code{by} variable and equivalent of \code{l1}, above, set to vectors of ones. 
+\code{by} variables, with the \code{by} variable and equivalent of \code{L1}, above, set to vectors of ones. 
 
 }
 
@@ -56,7 +56,7 @@ x <- runif(n, 0, .9)
 f2 <- function(x) 0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10
 x1 <- x + .1
 
-f <- f2(x) + f2(x1)    ## so response is sum of f at two adjacent x values 
+f <- f2(x) + f2(x1)  ## response is sum of f at two adjacent x values 
 y <- f + rnorm(n)*sig
 
 X <- matrix(c(x,x1),n,2) ## matrix covariate contains both x values
@@ -68,7 +68,7 @@ plot(f,fitted(b))
 ######################################################################
 ## multivariate integral example. Function `test1' will be integrated# 
 ## (by midpoint quadrature) over 100 equal area sub-squares covering # 
-## the unit square. Noise is added to the resulting simualted data.  #
+## the unit square. Noise is added to the resulting simulated data.  #
 ## `test1' is estimated from the resulting data using two alternative#
 ## smooths.                                                          #
 ######################################################################
@@ -114,7 +114,7 @@ L1 <- rowSums(L) ## smooths are centred --- need to add in L%*%1
 
 ## fit models to reconstruct `test1'....
 
-b <- gam(y~s(X,Z,by=L)+L1-1)   ## (note L1 and const are confounded here)
+b <- gam(y~s(X,Z,by=L)+L1-1)   ## (L1 and const are confounded here)
 b1 <- gam(y~te(X,Z,by=L)+L1-1) ## tensor product alternative
 
 ## plot results...
@@ -149,7 +149,7 @@ par(mfrow=c(3,3));for (i in 1:9) plot(x,rf(x),type="l",xlab="x")
 
 ## simulate 200 functions and store in rows of L...
 L <- matrix(NA,200,100) 
-for (i in 1:200) L[i,] <- rf()    ## simulate the functional predictors
+for (i in 1:200) L[i,] <- rf()  ## simulate the functional predictors
 
 f2 <- function(x) { ## the coefficient function
   (0.2*x^11*(10*(1-x))^6+10*(10*x)^3*(1-x)^10)/10 
@@ -161,9 +161,7 @@ y <- L\%*\%f + rnorm(200)*20 ## simulated response data
 
 ## Now fit the model E(y) = L\%*\%f(x) where f is a smooth function.
 ## The summation convention is used to evaluate smooth at each value
-## in matrix X to get matrix F, say. Then rowSum(L*F) gives E(y)
-## Note that centering constraint of f means that rowSums(L) is required
-## in model...
+## in matrix X to get matrix F, say. Then rowSum(L*F) gives E(y).
 
 ## create matrix of eval points for each function. Note that
 ## `smoothCon' is smart and will recognize the duplication...

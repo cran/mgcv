@@ -14,12 +14,13 @@
   applied to models constructed using any smooths, including user defined smooths.
 }
 \usage{
-gam.side(sm,tol=.Machine$double.eps^.5)
+gam.side(sm,Xp,tol=.Machine$double.eps^.5)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{sm}{ A list of smooth objects as returned by
   \code{\link{smooth.construct}}.}
+  \item{Xp}{The model matrix for the strictly parametric model components.}
   \item{tol}{The tolerance to use when assessing linear dependence of smooths.}
 }
 \details{ Models such as  \code{y~s(x)+s(z)+s(x,z)} can be estimated by
@@ -33,6 +34,11 @@ gam.side(sm,tol=.Machine$double.eps^.5)
   needed to ensure identifiability of these smooths is determined numerically, using
   \code{\link{fixDependence}}. This makes the routine rather general, and not
   dependent on any particular basis.
+
+  \code{Xp} is used to check whether there is a constant term in the model (or 
+  columns that can be linearly combined to give a constant). This is because 
+  centred smooths can appear independent, when they would be dependent if there 
+  is a constant in the model, so dependence testing needs to take account of this.
 
 }
 \value{ A list of smooths, with model matrices and penalty matrices adjusted

@@ -18,7 +18,7 @@ print an appropriate description of the model.
 }
 
 \details{ The formula supplied to \code{\link{gam}} is exactly like that supplied to 
-\code{\link{glm}} except that soooth terms, \code{\link{s}} and \code{\link{te}} can
+\code{\link{glm}} except that smooth terms, \code{\link{s}} and \code{\link{te}} can
 be added to the right hand side (and \code{.} is not supported in \code{gam} formulae).
 
 Smooth terms are specified by expressions of the form: \cr

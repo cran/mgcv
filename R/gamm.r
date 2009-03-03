@@ -1347,8 +1347,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     
     object$sig2 <- ret$lme$sigma^2
-    if (lme.used) { object$fit.method <- "lme";object$method <- method} 
-    else { object$fit.method <- "glmmPQL";object$method <- "PQL"}
+    if (lme.used) { object$method <- paste("lme.",method,sep="")} 
+    else { object$method <- "PQL"}
 
     if (!lme.used||method=="ML") Vb<-Vb*length(G$y)/(length(G$y)-G$nsdf)
     object$Vp <- Vb

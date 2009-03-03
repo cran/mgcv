@@ -30,9 +30,10 @@ regression splines. \code{m} specifies the order of the derivatives in the thin 
   \code{max.knots} can be modified using the \code{xt} argument to \code{s}.
    Alternatively the user can supply knots from which to construct a basis. 
 
- The \code{"ts"} smooths are t.p.r.s. with a small multiple of the identity matrix added to the 
- spline penalty so that the term can be shrink to zero, and not just to a function in the t.p.r.s.
- penalty null space. 
+ The \code{"ts"} smooths are t.p.r.s. with the penalty modified so that the term is shrunk to zero 
+for high enough smoothing parameter, rather than being shrunk towards a function in the 
+penalty null space (see details).
+ 
 }
 
 \usage{
@@ -65,7 +66,7 @@ wiggliness penalty for this term.}
 }
 
 \details{ The default basis dimension for this class is \code{k=10*3^(d-1)} where \code{d} is the number
- of covariates for the term.
+ of covariates for the term. This is essentially arbitrary, and should be checked.
 
 The default is to set \code{m} (the order of derivative in the thin plate spline penalty) to the smallest value satisfying \code{2m > d+1} where \code{d} if the number of covariates of the term: this yields `visually smooth' functions. In any case \code{2m>d} must be satisfied. 
 
@@ -92,7 +93,14 @@ The second possibility
 is to avoid the eigen-decomposition used to find the t.p.r.s. basis altogether and simply use 
 the basis implied by the chosen knots: this will happen if the number of knots supplied matches the 
 basis dimension, \code{k}. For a given basis dimension the second option is 
-faster, but gives poorer results (and the user must be quite careful in choosing knot locations). 
+faster, but gives poorer results (and the user must be quite careful in choosing knot locations).
+
+
+The shrinkage version of the smooth, eigen-decomposes the wiggliness penalty matrix, and sets its zero eigenvalues to small 
+multiples of the smallest strictly positive eigenvalue. The penalty is then set to the matrix with eigenvectors corresponding 
+to those of the original penalty, but eigenvalues set to the peturbed versions. This penalty matrix has full rank and shrinks 
+the curve to zero at high enough smoothing parameters.
+
 }
 
 \references{

@@ -47,7 +47,7 @@ constraints as equality constraints.}
   This solves the problem:
  
 \deqn{ minimise~ \| { \bf W}^{1/2} ({ \bf Xp - y} ) \|^2  +  \sum_{i=1}^m
-\lambda_i {\bf p^\prime S}_i{\bf p} }{ minimise || W^0.5 (Xp-y) ||^2 + 
+\lambda_i {\bf p^\prime S}_i{\bf p} }{ min || W^0.5 (Xp-y) ||^2 + 
 lambda_1 p'S_1 p + lambda_1 p'S_2 p + . . .}
 subject to constraints \eqn{ {\bf Cp}={\bf c}}{Cp=c} and \eqn{ {\bf
     A}_{in}{\bf p}>{\bf b}_{in}}{A_in p > b_in}, w.r.t. \eqn{\bf p}{p} given the
@@ -129,7 +129,8 @@ A0<-Predict.matrix(sm,data.frame(x=xc))
 # ... A0%*%p evaluates spline at xc points
 A1<-Predict.matrix(sm,data.frame(x=xc+1e-6)) 
 A<-(A1-A0)/1e-6    
-# ... approx. constraint matrix (A\%*\%p is -ve spline gradient at points xc)
+##  ... approx. constraint matrix (A\%*\%p is -ve 
+## spline gradient at points xc)
 G<-list(X=sm$X,C=matrix(0,0,0),sp=f.ug$sp,y=y,w=y*0+1,S=sm$S,off=0)
 G$Ain<-A;    # constraint matrix
 G$bin<-rep(0,nc);  # constraint vector
@@ -139,6 +140,63 @@ p<-pcls(G);  # fit spline (using s.p. from unconstrained fit)
 
 fv2<-Predict.matrix(sm,data.frame(x=x))\%*\%p
 lines(x,fv2,col=3)
+
+######################################
+## monotonic additive model example...
+######################################
+
+## First simulate data...
+
+set.seed(10)
+f1 <- function(x) 5*exp(4*x)/(1+exp(4*x));
+f2 <- function(x) {
+  ind <- x > .5
+  f <- x*0
+  f[ind] <- (x[ind] - .5)^2*10
+  f 
+}
+f3 <- function(x) 0.2 * x^11 * (10 * (1 - x))^6 + 
+      10 * (10 * x)^3 * (1 - x)^10
+n <- 200
+x <- runif(n); z <- runif(n); v <- runif(n)
+mu <- f1(x) + f2(z) + f3(v)
+y <- mu + rnorm(n)
+
+## Preliminary unconstrained gam fit...
+G <- gam(y~s(x)+s(z)+s(v,k=20),fit=FALSE)
+b <- gam(G=G)
+
+## generate constraints, by finite differencing
+## using predict.gam ....
+eps <- 1e-7
+pd0 <- data.frame(x=seq(0,1,length=100),z=rep(.5,100),
+                  v=rep(.5,100))
+pd1 <- data.frame(x=seq(0,1,length=100)+eps,z=rep(.5,100),
+                  v=rep(.5,100))
+X0 <- predict(b,newdata=pd0,type="lpmatrix")
+X1 <- predict(b,newdata=pd1,type="lpmatrix")
+Xx <- (X1 - X0)/eps ## Xx \%*\% coef(b) must be positive 
+pd0 <- data.frame(z=seq(0,1,length=100),x=rep(.5,100),
+                  v=rep(.5,100))
+pd1 <- data.frame(z=seq(0,1,length=100)+eps,x=rep(.5,100),
+                  v=rep(.5,100))
+X0 <- predict(b,newdata=pd0,type="lpmatrix")
+X1 <- predict(b,newdata=pd1,type="lpmatrix")
+Xz <- (X1-X0)/eps
+G$Ain <- rbind(Xx,Xz) ## inequality constraint matrix
+G$bin <- rep(0,nrow(G$Ain))
+G$sp <- b$sp
+G$p <- coef(b)
+## force inital parameters to meet constraint
+G$p[11:18] <- G$p[2:9]<- 0
+p <- pcls(G) ## constrained fit
+par(mfrow=c(2,3))
+plot(b) ## original fit
+b$coefficients <- p
+plot(b) ## constrained fit
+## note that standard errors in preceding plot are obtained from
+## unconstrained fit
+
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

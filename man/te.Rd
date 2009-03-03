@@ -194,7 +194,7 @@ n <- 500
 v <- runif(n);w<-runif(n);u<-runif(n)
 f <- test2(u,v,w)
 y <- f + rnorm(n)*0.2
-# tensor product of a 2-d thin plate regression spline and 1-d cr spline
+# tensor product of 2D thin plate regression spline and 1D cr spline
 b <- gam(y~te(v,w,u,k=c(30,5),d=c(2,1),bs=c("tp","cr")))
 op <- par(mfrow=c(2,2))
 vis.gam(b,cond=list(u=0),color="heat",zlim=c(-0.2,3.5))

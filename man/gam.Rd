@@ -13,7 +13,7 @@ available as model terms, as are linear functionals of such smooths; confidence/
 available for any quantity predicted using a fitted model; \code{gam} is extendable: users can add smooths. 
 
  Smooth terms are represented using penalized regression splines (or similar smoothers)
-with smoothing parameters selected by GCV/UBRE/AIC or by regression splines with
+with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines with
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
 (when an isotropic smooth is inappropriate). For an overview of the smooths available see \code{\link{smooth.terms}}. 
@@ -37,8 +37,9 @@ a clone of what S-PLUS provides use \link[gam]{gam} from package \code{gam}.
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action,offset=NULL,control=gam.control(),method=gam.method(),
-    scale=0,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
+    na.action,offset=NULL,method="GCV.Cp",
+    optimizer=c("outer","newton"),control=gam.control(),scale=0,
+    select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
     fit=TRUE,paraPen=NULL,G=NULL,in.out,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -79,18 +80,27 @@ included in \code{formula}: this conforms to the behaviour of
 \item{control}{A list of fit control parameters returned by 
 \code{\link{gam.control}}.}
 
-\item{method}{A list controlling the fitting methods used. This can make a
-difference to computational speed, and, in some cases, reliability of
-convergence: see \code{\link{gam.method}} for details.}
+\item{method}{The smoothing parameter estimation method. \code{"GCV.Cp"} to use GCV for unknown scale parameter and
+Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using GACV in place of GCV. \code{"REML"} 
+for REML estimation, including of unknown scale, \code{"P-REML"} for REML estimation, but using a Pearson estimate 
+of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likelihood in place of REML. }
 
-\item{scale}{ If this is zero then GCV is used for all distributions
-except Poisson and binomial where UBRE is used with scale parameter
-assumed to be 1. If this is greater than 1 it is assumed to be the scale
-parameter/variance and UBRE is used. If \code{scale} is negative  GCV 
-is always used, which means that the scale parameter will be estimated by GCV and the Pearson 
-estimator. For binomial models in 
-particular, it is probably worth  comparing UBRE and GCV results; for ``over-dispersed Poisson'' GCV is
-probably more appropriate than UBRE.} 
+\item{optimizer}{An array specifying the numerical optimization method to use to optimize the smoothing 
+parameter estimation criterion (given by \code{method}). \code{"perf"} for performance iteration. \code{"outer"} 
+for the more stable direct approach. \code{"outer"} can use several alternative optimizers, specified in the 
+second element of \code{optimizer}: \code{"newton"} (default), \code{"bfgs"}, \code{"optim"}, \code{"nlm"} 
+and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). }
+
+\item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
+scale paraemter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
+Note that (RE)ML methods can only work with scale parameter 1 for the Poisson and binomial cases.    
+} 
+
+\item{select}{ If this is \code{TRUE} then \code{gam} can add an extra penalty to each term so 
+that it can be penalized to zero.  This means that the smoothing parameter estimation that is 
+part of fitting can completely remove terms from the model. If the corresponding 
+smoothing parameter is estimated as zero then the extra penalty has no effect.
+}
 
 \item{knots}{this is an optional list containing user specified knot values to be used for basis construction. 
 For most bases the user simply supplies the knots to be used, which must match up with the \code{k} value
@@ -139,6 +149,7 @@ initialization values for all smoothing parameters (there must be a value for
 all smoothing parameters, whether fixed or to be estimated, but those for
 fixed s.p.s are not used); \code{scale} is the typical scale of the GCV/UBRE function,
 for passing to the outer optimizer.}
+
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }
 
@@ -186,11 +197,15 @@ Generalized Cross Validation (GCV) criterion
 where \eqn{D}{D} is the deviance, \eqn{n}{n} the number of data, \eqn{s}{s}
 the scale parameter and 
 \eqn{DoF}{DoF} the effective degrees of freedom of the model. Notice that UBRE is effectively
-just AIC rescaled, but is only used when \eqn{s}{s} is known. An alternative is GACV
-(again see \code{\link{gam.method}}). Smoothing parameters are chosen to 
-minimize the GCV or UBRE/AIC score for the model, and the main computational challenge solved 
+just AIC rescaled, but is only used when \eqn{s}{s} is known. 
+
+Alternatives are GACV, or a Laplace approximation to REML, there
+is some evidence that the latter may actually be the most effective choise. 
+
+Smoothing parameters are chosen to 
+minimize the GCV, UBRE/AIC, GACV or REML scores for the model, and the main computational challenge solved 
 by the \code{mgcv} package is to do this efficiently and reliably. Various
-alternative numerical methods are provided: see \code{\link{gam.method}}.
+alternative numerical methods are provided which can be set by argument \code{optimizer}.
 
 
 Broadly \code{gam} works by first constructing basis functions and one or more quadratic penalty 
@@ -206,7 +221,7 @@ Smoothing parameter selection is integrated in one of two ways. (i)
 weighted least squares problem is solved, and the smoothing parameters of that problem can 
 estimated by GCV or UBRE. Eventually, in most cases, both model parameter estimates and smoothing 
 parameter estimates converge. (ii) Alternatively the P-IRLS scheme is iterated to
-convergence for each trial set of smoothing parameters, and GCV or UBRE scores
+convergence for each trial set of smoothing parameters, and GCV, UBRE or REML scores
 are only evaluated on convergence - optimization is then `outer' to the P-IRLS
 loop: in this case the P-IRLS iteration has to be differentiated, to
 facilitate optimization, and \code{\link{gam.fit3}} is used in place of
@@ -248,8 +263,7 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686. [Default
 method for additive case (but no longer for generalized)]
 
 Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
-additive models. J.R.Statist.Soc.B 70(3):495-518 --- [Default method for generalized
-additive model case]
+additive models. J.R.Statist.Soc.B 70(3):495-518. [Generalized additive model case]
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
@@ -332,12 +346,23 @@ set.seed(0) ## simulate some data...
 dat <- gamSim(1,n=400,dist="normal",scale=2)
 b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
 summary(b)
-plot(b,pages=1,residuals=TRUE)
-plot(b,pages=1,seWithMean=TRUE)
+plot(b,pages=1,residuals=TRUE)  ## show partial residuals
+plot(b,pages=1,seWithMean=TRUE) ## `with intercept' CIs
+
 ## same fit in two parts .....
 G<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE,data=dat)
 b<-gam(G=G)
 print(b)
+
+## change the smoothness selection method to REML
+b0<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="REML")
+plot(b,pages=1)
+
+## ... and do automatic terms selection as well
+b1<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,
+       method="REML",select=TRUE)
+plot(b,pages=1)
+
 
 ## set the smoothing parameter for the first term, estimate rest ...
 bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),sp=c(0.01,-1,-1,-1),data=dat)
@@ -345,10 +370,17 @@ plot(bp,pages=1)
 ## alternatively...
 bp <- gam(y~s(x0,sp=.01)+s(x1)+s(x2)+s(x3),data=dat)
 
+
 # set lower bounds on smoothing parameters ....
 bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),
         min.sp=c(0.001,0.01,0,10),data=dat) 
 print(b);print(bp)
+
+# same with REML
+bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),
+        min.sp=c(0.1,0.1,0,10),data=dat,method="REML") 
+print(b0);print(bp)
+
 
 ## now a GAM with 3df regression spline term & 2 penalized terms
 b0<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15),data=dat)
@@ -369,17 +401,22 @@ b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,data=dat)
 plot(b2,pages=1)
 
 ## repeat fit using performance iteration
-gm <- gam.method(gam="perf")
+
 b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
-        data=dat,method=gm)
+        data=dat,optimizer="perf")
 plot(b3,pages=1)
 
 ## repeat using GACV as in Wood 2008...
 
-gm <- gam.method(gcv="GACV")
 b4<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
-        data=dat,method=gm,scale=-1)
+        data=dat,method="GACV.Cp",scale=-1)
 plot(b4,pages=1)
+
+## repeat using REML as in Wood 2008...
+
+b5<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
+        data=dat,method="REML")
+plot(b5,pages=1)
 
  
 
@@ -424,7 +461,8 @@ eg <- gamSim(2,n=10000,scale=.5)
 attach(eg)
 
 ind<-sample(1:10000,1000,replace=FALSE)
-b5<-gam(y~s(x,z,k=50),data=data,knots=list(x=data$x[ind],z=data$z[ind]))
+b5<-gam(y~s(x,z,k=50),data=data,
+        knots=list(x=data$x[ind],z=data$z[ind]))
 vis.gam(b5)
 
 ## and a pure "knot based" spline of the same data

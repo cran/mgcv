@@ -32,7 +32,8 @@ the response.}
 \item{5}{An additive example plus a factor variable.}
 \item{6}{Additive + random effect.}
 \item{7}{As 1 but with correlated covariates.}
-}}
+}
+}
 
 \value{ Depends on \code{eg}, but usually a dataframe, which may also contain some information on 
 the underlying truth. Sometimes a list with more items, including a data frame for model fitting.

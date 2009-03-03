@@ -68,7 +68,7 @@ problem of smoothing parameter selection in generalized ridge regression problem
 of 
 the form:
 \deqn{ minimise~ \| { \bf W} ({ \bf Xp - y} ) \|^2 \rho +  \sum_{i=1}^m
-\lambda_i {\bf p^\prime S}_i{\bf p} }{ minimise || W (Xp-y) ||^2 rho + 
+\lambda_i {\bf p^\prime S}_i{\bf p} }{ min ||W(Xp-y)||^2 rho + 
 lambda_1 p'S_1 p + lambda_1 p'S_2 p + . . .}
 possibly subject to constraints \eqn{ {\bf Cp}={\bf 0}}{Cp=0}. 
 \eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf p}{p} a parameter vector, 
