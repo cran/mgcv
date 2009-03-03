@@ -78,21 +78,21 @@ plot(b,pages=1)
 rsd <- residuals(b)
 gam(rsd~s(x0,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 gam(rsd~s(x1,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
-gam(rsd~s(x2,k=40,bs="cs"),gamma=1.4,data=dat) ## original `k' too low
+gam(rsd~s(x2,k=40,bs="cs"),gamma=1.4,data=dat) ## `k' too low
 gam(rsd~s(x3,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 
 ## similar example with multi-dimensional smooth
 b1 <- gam(y~s(x0)+s(x1,x2,k=15)+s(x3),data=dat)
 rsd <- residuals(b1)
 gam(rsd~s(x0,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
-gam(rsd~s(x1,x2,k=100,bs="ts"),gamma=1.4,data=dat) ## original `k' too low
+gam(rsd~s(x1,x2,k=100,bs="ts"),gamma=1.4,data=dat) ## `k' too low
 gam(rsd~s(x3,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
  
 ## and a `te' example
 b2 <- gam(y~s(x0)+te(x1,x2,k=4)+s(x3),data=dat)
 rsd <- residuals(b2)
 gam(rsd~s(x0,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
-gam(rsd~te(x1,x2,k=10,bs="cs"),gamma=1.4,data=dat) ## original `k' too low
+gam(rsd~te(x1,x2,k=10,bs="cs"),gamma=1.4,data=dat) ## `k' too low
 gam(rsd~s(x3,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 
 ## same approach works with other families in the original model
@@ -102,7 +102,7 @@ bp<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=6)+s(x3,k=6),
 rsd <- residuals(bp)
 gam(rsd~s(x0,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 gam(rsd~s(x1,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
-gam(rsd~s(x2,k=40,bs="cs"),gamma=1.4,data=dat) ## original `k' too low
+gam(rsd~s(x2,k=40,bs="cs"),gamma=1.4,data=dat) ## `k' too low
 gam(rsd~s(x3,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 
 rm(dat) 

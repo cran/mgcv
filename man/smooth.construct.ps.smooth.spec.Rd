@@ -29,7 +29,7 @@ The advantage of P-splines is the flexible way that penalty and basis order can 
             is the last element.} 
 
 \item{knots}{a list containing any knots supplied for basis setup --- in same order and with same names as \code{data}. 
-             Can be \code{NULL}}
+             Can be \code{NULL}. See details for further information.}
 
 }
 
@@ -42,9 +42,14 @@ with a third order difference penalty (0th order is a ridge penalty) on the coef
 
 The default basis dimension, \code{k}, is the larger of 10 and \code{m[1]+1} for a \code{"ps"} terms and the larger of 10 and \code{m[1]} for a \code{"cp"} term. \code{m[1]+1} and \code{m[1]} are the lower limits on basis dimension for the two types. 
 
-If knots are supplied, then the number of knots should be one more than the basis dimension (i.e. \code{k+1}) for a \code{"cp"}smooth. For the \code{"ps"} basis the number of supplied knots should be \code{k + m[1] + 2}, and the range of the middle 
+If knots are supplied, then the number of knots should be one more than the basis dimension 
+(i.e. \code{k+1}) for a \code{"cp"}smooth. For the \code{"ps"} basis the number of supplied knots should be \code{k + m[1] + 2}, and the range of the middle 
 \code{k-m[1]} knots should include all the covariate values. See example.
-  P-splines don't make much sense with uneven knot spacing.
+
+Alternatively, for both types of smooth, 2 knots can be supplied, denoting the 
+lower and upper limits between which the spline can be evaluated (Don't make this range too wide, however, or you 
+can end up with no information about some basis coefficients, because the corresponding basis functions have a 
+span that includes no data!). Note that P-splines don't make much sense with uneven knot spacing.
 }
 
 \references{
@@ -68,9 +73,13 @@ Statistical Science, 11(2):89-121
 ## finished simulating data, now fit model...
   b <- gam(y ~ s(x,bs="cp") + s(z,bs="ps"),family=poisson)
 
+## example with supplied knot ranges for x and z (can do just one)
+  b <- gam(y ~ s(x,bs="cp") + s(z,bs="ps"),family=poisson,
+           knots=list(x=c(0,10),z=c(0,1))) 
+
 ## example with supplied knots...
   bk <- gam(y ~ s(x,bs="cp",k=12) + s(z,bs="ps",k=13),family=poisson,
-                      knots=list(x=seq(0,10,length=13),z=(-3):13))
+                      knots=list(x=seq(0,10,length=13),z=(-3):13/10))
 
 ## plot results...
   par(mfrow=c(2,2))

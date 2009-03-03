@@ -12,13 +12,19 @@ magic.post.proc(X,object,w)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
- \item{X}{ is the model matrix.}
+\item{X}{ is the model matrix.}
+
 \item{object}{is the list returned by \code{magic} after fitting the 
 model with model matrix \code{X}.}
+
 \item{w}{is the weight vector used in fitting, or the weight matrix used 
-in fitting (i.e. supplied to \code{magic}, if one was.) \code{t(w)\%*\%w} should typically give
+in fitting (i.e. supplied to \code{magic}, if one was.). If \code{w} is a vector then its
+elements are typically proportional to reciprocal variances (but could even be negative). 
+If \code{w} is a matrix then 
+\code{t(w)\%*\%w} should typically give
 the inverse of the covariance matrix of the response data supplied to \code{magic}.}
 }
+
 \details{ \code{object} contains \code{rV} (\eqn{ {\bf V}}{V}, say), and 
 \code{scale} (\eqn{ \phi}{s}, say) which can be 
 used to obtain the require quantities as follows. The Bayesian covariance matrix of 

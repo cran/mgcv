@@ -14,7 +14,9 @@ although this behaviour can be over-ridden.
 }
 
 \usage{
-smoothCon(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=nrow(data),dataX=NULL)
+smoothCon(object,data,knots,absorb.cons=FALSE,
+          scale.penalty=TRUE,n=nrow(data),dataX=NULL,
+          null.space.penalty=FALSE)
 PredictMat(object,data,n=nrow(data))
 }
 %- maybe also `usage' for other objects documented here.
@@ -35,6 +37,8 @@ the number of rows in that matrix: must be supplied explicitly if \code{data} is
 \item{dataX}{Sometimes the basis should be set up using data in \code{data}, but the model matrix
 should be constructed with another set of data provided in \code{dataX} --- \code{n} is assumed to 
 be the same for both. Facilitates smooth id's.}
+\item{null.space.penalty}{Should an extra penalty be added to the smooth which will penalize the 
+components of the smooth in the penalty null space: provides a way of penalizing terms out of the model altogether.}
 }
 
 \value{ From \code{smoothCon} a list of \code{smooth} objects returned by the

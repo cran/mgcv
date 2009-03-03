@@ -9,7 +9,7 @@ usually called by \code{\link{nlm}} to optimize the smoothing parameters.
 This is basically a service routine for \code{\link{gam}}, and is not usually 
 called directly by users. It is only used in this context for GAMs fitted by
 outer iteration (see \code{\link{gam.outer}}) when the the outer method is 
-\code{"nlm.fd"} (see \code{\link{gam.method}}).
+\code{"nlm.fd"} (see \code{\link{gam}} argument \code{optimizer}).
 }
 \usage{
 full.score(sp,G,family,control,gamma,...)

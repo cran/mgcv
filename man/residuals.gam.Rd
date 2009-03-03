@@ -8,7 +8,8 @@
 }
 
 \usage{
-\method{residuals}{gam}(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
+\method{residuals}{gam}(object, type = c("deviance", "pearson","scaled.pearson", 
+                                         "working", "response"),...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{

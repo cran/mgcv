@@ -83,11 +83,8 @@ penalizing the parameters in the constrained space directly. Setting this parame
 greater than zero will cause such a penalty to be used, with the magnitude given by the 
 parameter value.}
 
-\item{rank.tol}{is a constant used to test for numerical rank deficiency of the problem. 
-Basically any singular value less than \code{rank_tol} multiplied by the largest singular value of 
-the  problem is set to zero.}
-
 \item{control}{ is a list of iteration control constants with the following elements:
+
 \itemize{
 \item{maxit}{The maximum number of iterations of the magic algorithm to allow.}
 
@@ -95,9 +92,11 @@ the  problem is set to zero.}
 
 \item{step.half}{If a trial step fails then the method tries halving it up to a maximum of 
 \code{step.half} times.}
+
+\item{rank.tol}{is a constant used to test for numerical rank deficiency of the problem. 
+Basically any singular value less than \code{rank_tol} multiplied by the largest singular value of 
+the  problem is set to zero.}
 }
-
-
 
 } %- end of control
 
@@ -120,7 +119,7 @@ AIC) to the
 problem of smoothing parameter selection in generalized ridge regression problems 
 of the form:
 \deqn{ minimise~ \| { \bf W} ({ \bf Xb - y} ) \|^2 + {\bf b}^\prime {\bf Hb} + \sum_{i=1}^m
-\theta_i {\bf b^\prime S}_i{\bf b} }{ minimise || W (Xb-y) ||^2 + b'Hb +
+\theta_i {\bf b^\prime S}_i{\bf b} }{ min ||W(Xb-y)||^2 + b'Hb +
 theta_1 b'S_1 b + theta_2 b'S_2 b + . . .}
 possibly subject to constraints \eqn{ {\bf Cb}={\bf 0}}{Cb=0}. 
 \eqn{ {\bf X}}{X} is a design matrix, \eqn{\bf b}{b} a parameter vector, 
@@ -220,7 +219,7 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686
 ## and fit using gam as consistency check
    b <- gam(G=G)
    mgfit$sp;b$sp  # compare smoothing parameter estimates
-   edf <- magic.post.proc(G$X,mgfit,G$w)$edf  # extract e.d.f. per parameter
+   edf <- magic.post.proc(G$X,mgfit,G$w)$edf # get e.d.f. per param
    range(edf-b$edf)  # compare
 
 ## constrain first two smooths to have identical smoothing parameters

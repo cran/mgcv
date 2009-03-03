@@ -1,3 +1,4 @@
+
 \name{smooth.construct}
 \alias{smooth.construct}
 \alias{smooth.construct2}
@@ -91,9 +92,13 @@ attribute:  a vector of length \code{nrow(X)} containing any contribution of
 the smooth to the model offset term. \code{by} variables do not need to be
 dealt with here, but if they are then an item \code{by.done} must be added to
 the \code{object}.}
+
 \item{S}{A list of positive semi-definite penalty matrices that apply to this term. The list will be empty 
 if the term is to be left un-penalized.}
-\item{rank}{an array giving the ranks of the penalties.}
+
+\item{rank}{An array giving the ranks of the penalties.}
+
+\item{null.space.dim}{The dimension of the penalty null space (before centering).}
 
 The following items may be added:
 
@@ -102,6 +107,11 @@ The following items may be added:
 sum to zero over the covariate values. Set to a zero row matrix if no
 constraints are required. Note that a supplied \code{C} is never ignored, even if any
 \code{by} variables of a smooth imply that no constraint is actually needed. }
+
+\item{no.rescale}{if this is non-NULL then the penalty coefficient matrix of the smooth will not be 
+rescaled for enhaced numerical stability (rescaling is the default, because \code{\link{gamm}} requires it). 
+Turning off rescaling is useful if the values of the smoothing parameters should be interpretable in a model, 
+for example because they are inverse variance components.  }
 
 \item{df}{the degrees of freedom associated with this term (when
 unpenalized and unconstrained). If this is null then \code{smoothCon} will set it to the basis 
@@ -207,7 +217,6 @@ smooth.construct.tr.smooth.spec<-function(object,data,knots)
   object$null.space.dim <- m+1  # dim. of unpenalized space
   ## store "tr" specific stuff ...
   object$knots<-k;object$m<-m;object$x.shift <- x.shift
-  ## get the centering constraint ...
  
   object$df<-ncol(object$X)     # maximum DoF (if unconstrained)
  

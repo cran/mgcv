@@ -22,10 +22,11 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
       y <- f + e
     } else if (dist=="poisson") {
       g<-exp(f*scale)
+      f <- log(g) ## true linear predictor
       y<-rpois(rep(1,n),g)
     } else if (dist=="binary") {
-      g <- (f-5)*scale
-      g <- binomial()$linkinv(g)
+      f <- (f-5)*scale
+      g <- binomial()$linkinv(f)
       y <- rbinom(g,1,g)
     } else stop("dist not recognised")
     data <- data.frame(y=y,x0=x0,x1=x1,x2=x2,x3=x3,f=f,f0=f0(x0),f1=f1(x1),f2=f2(x2),f3=x3*0)
@@ -84,7 +85,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     y <- y + e
     x0<-as.factor(x0)
     return(data.frame(y=y,x0=x0,x1=x1,x2=x2,x3=x3))
-  } else if (eg==6) { ## Gu and Wahba + a random ractor
+  } else if (eg==6) { ## Gu and Wahba + a random factor
     cat("4 term additive + random effect")
     dat <- gamSim(1,n=n,scale=0)
     fac <- rep(1:4,n/4)

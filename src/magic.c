@@ -1,3 +1,4 @@
+
 /* Copyright (C) 2003-2008 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
@@ -154,272 +155,6 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
 } 
 
 
-void update_beta(double *X,double *Sr,double *rS,double *theta,double *w,double *w1,
-                 double *z,double *z1,int *Srncol,int *rSncol,int *m, int *n,int *q,
-                 int *get_trA,int *deriv,double *rank_tol,double *beta, double *trA,
-                 double *beta1,double *trA1,double *rV,int *rank_est)
-/* Routine to update model coefficients and derivatives w.r.t. log s.p.s in type 2
-   GAM iteration. 
-   X - n by q model matrix; Sr - q by Srncol square root of full penalty, so 
-   Sr Sr' gives full penalty; rS - series of square roots of individual penalties, 
-   each q by rSncol[i], so rS_i rS_i' gives component penalty;
-   theta - the log smoothing parameters (dim m); w - the n weights; w1 - the n by m 
-   derivatives of weights w.r.t. theta; z - the n pseudodata; z1 - the n by m pseudodata.
-
-   `Outputs' are: beta - q vector of parameters; trA - the trace of the influence matrix
-                  beta1 - q by m matrix of derivatives of beta w.r.t. sps;
-                  trA1  - m vector of derivatives of trA w.r.t sps;
-                  derivatives only returned if deriv!=0; trA info. only
-                  returned if get_trA!=0; rank_tol used to judge rank of
-                  problem.
-                  rV is the square root of the posterior covariance matrix of the parameters
-                  rV%*%t(rV) gives cov matrix... only returned if trA requested.
-
-   Code assumes *q <= *n.
- 
-*/
-{ double *WX,*p,*p0,*p1,*p2,*p3,*p4,*p5,*p6,*p7,*R,*Vt,*d,xx,*V,*U1,*dum,*U1tQtz,*tau,*work,
-         *T,*TQU1U1tQtz,*Tz,*dum0,*dum2,*dum3,*VDU1tQtz,*U0,*QU1U1t,*VDU1t,*rSiVDU1t,
-         trTiA,trATiA,trBSiBt;
-  int i,j,k,*pi,r,rank,left,tp,ScS,*pivot,np0,np2,bt,ct,c;
-  /* transform things into w - transformed space */
-  if (deriv)
-  for (j=0;j<*m;j++) for (i=0;i<*n;i++) /* form derivs of Wz */
-  { k = i + *n * j;
-    z1[k]=w1[k]*z[i]+w[i]*z1[k];
-  } 
-  for (i=0;i< *n;i++) z[i] = z[i]*w[i]; /* form Wz itself*/
-  WX = (double *) calloc((size_t) (*n * *q),sizeof(double));
-  for (j=0;j<*q;j++) for (i=0;i<*n;i++) /* form WX */
-  { k = i + *n * j;
-    WX[k]=w[i]*X[k];
-  } 
-  /* get the QR decomposition of WX */
-  tau=(double *)calloc((size_t)*q,sizeof(double)); /* part of reflector storage */
- 
-  pivot=(int *)calloc((size_t)*q,sizeof(int));
-  /* Accuracy can be improved by pivoting on some occasions even though it's not going to be 
-     `used' as such here - see Golub and Van Loan (1983) section 6.4. page 169 for reference. */
-  mgcv_qr(WX,n,q,pivot,tau);
-  /* Apply pivoting to the parameter space - this simply means reordering the rows of Sr and the 
-     rS_i, and then unscrambling the parameter vector at the end (along with any covariance matrix)
-     pivot[i] gives the unpivoted position of the ith pivoted parameter.
-  */
-  ScS=0;for (pi=rSncol;pi<rSncol + *m;pi++) ScS+= *pi;  /* total columns of input rS */
-  work=(double *)calloc((size_t) *q,sizeof(double)); 
-  p0 = work + *q;
-  for (p=rS,i=0;i<ScS;i++,p += *q) /* work across columns */
-  { for (pi=pivot,p2=work;p2<p0;pi++,p2++) *p2 = p[*pi];  /* apply pivot into work */
-    p3 = p + *q;
-    for (p1=p,p2=work;p1<p3;p1++,p2++) *p1 = *p2;  /* copy back into rS */
-  } /* rS pivoting complete, do Sr .... */
-  p0 = work + *q;
-  for (p=Sr,i=0;i< *Srncol;i++,p += *q) /* work across columns */
-  { for (pi=pivot,p2=work;p2<p0;pi++,p2++) *p2 = p[*pi];  /* apply pivot into work */
-    p3 = p + *q;
-    for (p1=p,p2=work;p1<p3;p1++,p2++) *p1 = *p2;  /* copy back into Sr */
-  }
-  /* Now form the augmented R matrix [R',St']' */
-  r = *Srncol + *q;
-  R=(double *)calloc((size_t)(r * *q),sizeof(double));  
-  for (j=0;j< *q;j++) for (i=0;i<=j;i++) R[i+r*j] = WX[i + *n * j];
-  for (j=0;j< *q;j++) for (i= *q;i<r;i++) R[i+r*j]=Sr[j+ (i - *q) * *q ];
-  /* Get singular value decomposition, and hang the expense */
-
- 
-  d=(double *)calloc((size_t)*q,sizeof(double));
-  Vt=(double *)calloc((size_t)(*q * *q),sizeof(double));
-  mgcv_svd_full(R,Vt,d,&r,q);  
- 
-  /* now truncate the svd in order to deal with rank deficiency */
-  rank= *q;xx=d[0] * *rank_tol;
-  while(d[rank-1]<xx) rank--;
-  *rank_est = rank;
-  V = (double *) calloc((size_t)(*q * rank),sizeof(double));
-  U1 = (double *) calloc((size_t)(*q * rank),sizeof(double));
-  /* produce the truncated V (q by rank): columns dropped so V'V=I but VV'!=I   */
-  for (i=0;i< *q;i++) for (j=0;j< rank;j++) V[i+ *q * j]=Vt[j+ *q * i];
-  /* produce the truncated U1 (q by rank): rows and columns dropped - no-longer orthogonal */
-  for (i=0;i< *q;i++) for (j=0;j< rank;j++) U1[i+ *q * j]=R[i+r*j];
-  free(R);free(Vt);
-  /* get U1'Q'z ... */
-  dum = (double *)calloc((size_t) *n,sizeof(double));
-  p0 = z+ *n;
-  for (p=dum,p1=z;p1<p0;p++,p1++) *p = *p1;
-  left=1;tp=1;i=1;mgcv_qrqy(dum,WX,tau,n,&i,q,&left,&tp); /* first q elements are what's of interest */
- 
-  U1tQtz=(double *)calloc((size_t) rank,sizeof(double));
-  for (i=0;i< rank;i++) { for (xx=0.0,j=0;j< *q;j++) xx += U1[j + i* *q]*dum[j];U1tQtz[i] = xx;}
-  /* Now get the coefficient estimates beta = V D^{-1} U1' Q' z ... */
-  for (i=0;i<rank;i++) dum[i]=U1tQtz[i]/d[i];
-
-  for (i=0;i< *q;i++) 
-  { for (xx=0.0,j=0;j< rank;j++) xx += V[i + j * *q]*dum[j];beta[pivot[i]] = xx;}
-
-  if (get_trA) /* tr(A) = tr(U1'U1) and rV = VD^{-1}*/
-  { *trA=0.0;
-    p1 = U1 + rank * *q;
-    for (p0=U1;p0<p1;p0++) *trA += *p0 * *p0;
-    p1=V;p2=d+rank; /* Form rV = V D^{-1} and unpivot it!! */
-    for (i=0,p3=d;p3<p2;p3++,i++) 
-    for (j=0;j<*q;j++,p1++) rV[pivot[j] + i * *q] = *p1 / *p3;
-    p0 = rV + *q * rank;p1 = rV + *q * *q;
-    for (p2=p0;p2<p1;p2++) *p2 = 0.0; /* padding any trailing columns of rV with zeroes */
-  
-  }
-  /* If required, calculate tr(A) = tr(U1 U1') ... */
-  
-  if (*deriv) /* perform calculations associated with derivatives */
-  { T = (double *) calloc((size_t)*m * *n,sizeof(double));
-    for (j=0;j<*m;j++) for (i=0;i<*n;i++) /* form derivs of T_ij = dw_i/dsp_j /w_i */
-    { k = i + *n * j;
-      T[k]=w1[k]/w[i];
-    } 
-    /* Form U1 U1' Q' z (in first q elements of dum)*/
-
-    p0=dum;np0=*q;p1=U1;p2=U1tQtz;np2=rank;
-    /* standard p0 = p1 p2 loop where p0 is vector length np0, 
-    p2 is vector, length np2 and p1 is a matrix (column ordered as R) */
-    p6=p0+np0;p7=p2+np2; 
-    for (p3=p0;p3<p6;p3++,p1++)
-    { for (xx=0.0,p4=p1,p5=p2;p5<p7;p5++,p4+=np0) xx += *p4 * *p5;
-      *p3 = xx;
-    }
-    /* Then form Q U1 U1' Q' z */ 
-    for (i=*q;i<*n;i++) dum[i]=0.0;
-    left=1;tp=0;i=1;mgcv_qrqy(dum,WX,tau,n,&i,q,&left,&tp);
-    
-    TQU1U1tQtz = (double *)calloc((size_t) *m * *n,sizeof(double));
-    Tz  = (double *)calloc((size_t) *m * *n,sizeof(double));
-    for (j=0;j<*m;j++) for (i=0;i<*n;i++) /* T_ij (QU1U1tQtz)_i */
-    { k = i + *n * j;
-      TQU1U1tQtz[k] = T[k]*dum[i];
-      Tz[k] = T[k]*z[i];
-    } 
-    /* bind columns together for single Q' multiplication */
-    dum2 = (double *)calloc((size_t)*m * *n * 3,sizeof(double));
-    p1=dum2;
-    p2=TQU1U1tQtz + *m * *n;
-    for (p=TQU1U1tQtz;p<p2;p++,p1++) *p1 = *p;
-    p2=Tz + *m * *n;
-    for (p=Tz;p<p2;p++,p1++) *p1 = *p;
-    p2=z1 + *m * *n;
-    for (p=z1;p<p2;p++,p1++) *p1 = *p;
-    left=1;tp=1;i = 3 * *m;
-    mgcv_qrqy(dum2,WX,tau,n,&i,q,&left,&tp); /* only first *q rows of dum2 are interesting */
-    /* repack dum2 as q by 3m matrix... */
-    p1=p=dum2;
-    for (j=0;j< 3 * *m;j++,p1+= *n) 
-    { p3=p1+ *q;
-      for (p2=p1;p2<p3;p2++,p++) *p=*p2;     
-    }
-    bt=1;ct=0;c=3 * *m;
-    dum3=(double *)calloc((size_t)(c * *q),sizeof(double)); /* larger than need be to allow re-use */
-    mgcv_mmult(dum3,U1,dum2,&bt,&ct,&rank,&c,q);     
-    /* so first m columns of dum3 give: U1tQtTQU1'U'tQ'z; next 3 give:
-       U1tQtTz; final 3 give: U1tQtz1 */
-    /* pre-multiply by D = diag(d) ... */ 
-    p = dum3;for (j=0;j < *m * 3;j++) for (i=0;i<rank;i++,p++) *p = *p/d[i]; 
-    /* pre-multiply by V */  
-    bt=0;ct=0;c=3 * *m;
-    mgcv_mmult(dum2,V,dum3,&bt,&ct,q,&c,&rank);
-    /* columns of dum2 give components of the beta derivatives */
-
-    /* get V D^{-1} U1'Q'z ... */
-    VDU1tQtz = (double *)calloc((size_t)*q,sizeof(double));
-    for (i=0;i<rank;i++) U1tQtz[i]/=d[i];
-    p0=VDU1tQtz;np0=*q;p1=V;p2=U1tQtz;np2=rank;
-    /* standard p0 = p1 p2 loop where p0 is vector length np0, 
-    p2 is vector, length np2 and p1 is a matrix (column ordered as R) */
-    p6=p0+np0;p7=p2+np2; 
-    for (p3=p0;p3<p6;p3++,p1++)
-    { for (xx=0.0,p4=p1,p5=p2;p5<p7;p5++,p4+=np0) xx += *p4 * *p5;
-      *p3 = xx;
-    }
-    /* loop  to create V D^{-2} V' rSi rSi' V D^{-1} U1' Q' z */
-    dum0=(double *)calloc((size_t)*n,sizeof(double));
-    p=rS;
-    for (i=0;i< *m;i++)
-    { /* rSi' V D^{-1} U1' Q' z */
-      p0=dum0;np0=rSncol[i];p1=p;p2=VDU1tQtz;np2=*q;
-      /* standard p0 = p1' p2 loop where p0 is vector length np0, 
-         p2 is vector, length np2 and p1 is a matrix (column ordered as R) */
-      p6=p0+np0;p7=p2+np2; 
-      for (p3=p0;p3<p6;p3++)
-      { for (xx=0.0,p5=p2;p5<p7;p5++,p1++) xx += *p1 * *p5;
-	*p3 = xx;
-      }
-      /* rSi rSi' V D^{-1} U1' Q' z */
-      p0=dum;np0=*q;p1=p;p2=dum0;np2=rSncol[i];
-      /* standard p0 = p1 p2 loop */
-      p6=p0+np0;p7=p2+np2; 
-      for (p3=p0;p3<p6;p3++,p1++)
-      { for (xx=0.0,p4=p1,p5=p2;p5<p7;p5++,p4+=np0) xx += *p4 * *p5;
-        *p3 = xx;
-      }
-      p += rSncol[i] * *q; /* move pointer on to next square root */
-      /* V' rSi rSi' V D^{-1} U1' Q' z */
-      p0=dum0;np0=rank;p1=V;p2=dum;np2=*q;
-      /* standard p0 = p1' p2 loop */
-      p6=p0+np0;p7=p2+np2; 
-      for (p3=p0;p3<p6;p3++)
-      { for (xx=0.0,p5=p2;p5<p7;p5++,p1++) xx += *p1 * *p5;
-	*p3 = xx;
-      }
-      /* D^{-2} V' rSi rSi' V D^{-1} U1' Q' z */
-      for (k=0;k<rank;k++) dum0[k]/=(d[k]*d[k]);
-      /* V D^{-2} V' rSi rSi' V D^{-1} U1' Q' z */
-      p0=dum;np0=*q;p1=V;p2=dum0;np2=rank;
-      /* standard p0 = p1 p2 loop */
-      p6=p0+np0;p7=p2+np2; 
-      for (p3=p0;p3<p6;p3++,p1++)
-      { for (xx=0.0,p4=p1,p5=p2;p5<p7;p5++,p4+=np0) xx += *p4 * *p5;
-        *p3 = xx;
-      }
-      for (p1=dum3+i * *q,p2=p1 + *q,p3=dum;p1<p2;p1++,p3++) *p1 = * p3;
-    }
-   
-    for (j=0;j<*m;j++) 
-    { xx = exp(theta[j]);
-      for (i=0;i<*q;i++)
-      { beta1[pivot[i] + *q * j] = -xx * dum3[i + *q * j] -2 * dum2[i + *q * j] + 
-	                   dum2[i + *q * (j + *m)] + dum2[i + *q * (j + *m * 2)];
-      }
-    }
-    if (*get_trA) /* perform relatively expensive derivative of trA calculations */ 
-    { U0 = (double *)calloc((size_t) *n * rank,sizeof(double));
-      p0=U1;p1=U0; /* first q rows of U0 should be U1 */
-      for (j=0;j<rank;j++,p1+= *n) { p3=p1 + *q;for (p2=p1;p2<p3;p2++,p0++) *p2 = *p0;} 
-      left=1;tp=0;mgcv_qrqy(U0,WX,tau,n,&rank,q,&left,&tp); /* U0 = QU1, now */
-      QU1U1t = (double *) calloc((size_t) (*n * *q),sizeof(double));
-      bt=0;ct=1;mgcv_mmult(QU1U1t,U0,U1,&bt,&ct,n,q,&rank);      
-      for (p0=U1,i=0;i<rank;i++) 
-      { xx=d[i];for (j=0;j<*q;j++,p0++) *p0/=xx;
-      } /* U1 now contains t(D^{-1}t(U1)) */
-      VDU1t = (double *)calloc((size_t)(*q * *q),sizeof(double));
-      bt=0;ct=1;mgcv_mmult(VDU1t,V,U1,&bt,&ct,q,q,&rank); /* V D^{-1} U1' */
-      p=rS;
-      rSiVDU1t = (double *)calloc((size_t)(*q * *q),sizeof(double)); 
-      for (i=0;i<*m;i++) 
-      { trTiA=0.0;p0=U0; /* QU1 */
-        p1=T + i * *n;p2=p1 + *n;
-        for (j=0;j<rank;j++) for (p3=p1;p3<p2;p3++,p0++) trTiA += *p3 * *p0 * *p0;
-        /* ....  tr(Ti A) = tr(Ti Q U1 U1' Q') */
-        trATiA = 0.0;p0=QU1U1t;
-        for (j=0;j<*q;j++) for (p3=p1;p3<p2;p3++,p0++) trATiA += *p3 * *p0 * *p0;
-        /* ... tr(A Ti A) = tr(U1 U1' Q' Ti Q U1 U1') */
-        bt=1;ct=0;mgcv_mmult(rSiVDU1t,p,VDU1t,&bt,&ct,rSncol+i,q,q); /* rS[[i]]'VD^{-1} U1'*/
-        p += *q * rSncol[i]; 
-        trBSiBt=0.0;p0=rSiVDU1t;p1=p0+ *q * rSncol[i];
-        for (p2=p0;p2<p1;p2++) trBSiBt += *p2 * *p2;
-        trA1[i] = 2*trTiA - 2*trATiA - exp(theta[i])*trBSiBt;
-      }
-      free(U0);free(QU1U1t);free(VDU1t);free(rSiVDU1t);
-    } 
-    free(T);free(TQU1U1tQtz);free(Tz);free(dum0);free(dum2);free(dum3);free(VDU1tQtz);
-  } /* end of derivative section */
-  free(d);free(dum);free(U1tQtz);free(work);free(pivot);free(tau);free(V);free(U1);free(WX);
-}
 
 
 void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *scale,
@@ -707,7 +442,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
 
  */
 { int *pi,*pivot,q,n,autoinit,left,ScS,m,mp,i,j,tp,k,use_sd=0,rank,converged,iter=0,ok,
-    gcv,try,fit_call=0,step_fail=0,max_half,*spok,def_supplied,use_dsyevd=1,L_exists;
+    gcv,try,fit_call=0,step_fail=0,max_half,*spok,def_supplied,use_dsyevd=1,L_exists,TRUE=1,FALSE=0;
   double *sp=NULL,*p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
          min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign,*grad1,*u0;
@@ -941,7 +676,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
           p = grad;grad=grad1;grad1=p;
         }
                
-        mgcv_symeig(u,ev,&mp,&use_dsyevd); /* columns of hess are now eigen-vectors */
+        mgcv_symeig(u,ev,&mp,&use_dsyevd,&TRUE,&FALSE); /* columns of hess are now eigen-vectors */
         use_sd=0;for (p=ev;p<ev+mp;p++) if (*p<0.0) {use_sd=1;break;} /* check hessian +ve def */
         if (!use_sd) /* get the Newton direction Hess^{-1}grad */
         { for (i=0;i<mp;i++) { for (xx=0.0,j=0;j<mp;j++) xx+=u[j+mp*i]*grad[j];sd_step[i]=xx/ev[i];}
@@ -985,10 +720,10 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
     fit_magic(X,sp,Si,H,gamma,scale,control,*rank_tol,yy,y0,y1,U1,V,d,b,&score,&norm,&delta,&rank,norm_const,n_score);
    
     /* free search related memory */
-    free2d(Si);free2d(M);free2d(K);free2d(My);free2d(Ky);free2d(yK);free2d(hess);
+    free2d(M);free2d(K);free2d(My);free2d(Ky);free2d(yK);free2d(hess);
     free2d(d2norm);free2d(d2delta);free(U1U1);free(rSms);free(u);
     free(VS);free(grad);free(dnorm);free(ddelta);free(nsp);free(ev);
-    free(bsp);free(bag);free(spok);free(sp);free(grad1);free(u0);
+    free(bsp);free(bag);free(spok);free(grad1);free(u0);
   } /* end of smoothness selection (if (mp>0) {... )*/
 
   /* prepare ``outputs''... */
@@ -1008,6 +743,8 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
   control[2]=1-use_sd; /* 1 if Hessian +ve definite, 0 otherwise */
   control[3]=iter; /* iterations used */
   control[4]=fit_call; /* number of evaluations of GCV/UBRE score */
+
+  if (m>0) {free(sp);free2d(Si);}
   
   free(tau);free(pivot);free(work);free(y0);free(y1);free(U1);free(V);free(d);free(sd_step);
   free(n_step);
