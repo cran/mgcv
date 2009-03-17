@@ -1,18 +1,18 @@
 \name{gam.fit3}
 \alias{gam.fit3}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{P-IRLS GAM estimation with GCV \& UBRE/AIC derivative calculation}
+\title{P-IRLS GAM estimation with GCV \& UBRE/AIC or RE/ML derivative calculation}
 \description{Estimation of GAM smoothing parameters is most stable if
-optimization of the UBRE/AIC or GCV score is outer to the penalized iteratively
+optimization of the UBRE/AIC, GCV, GACV, REML or ML score is outer to the penalized iteratively
 re-weighted least squares scheme used to estimate the model given smoothing 
 parameters.
 
 This routine estimates a GAM (any quadratically penalized GLM) given log 
-smoothing paramaters, and evaluates derivatives of the GCV and UBRE/AIC scores 
+smoothing paramaters, and evaluates derivatives of the smoothness selection scores 
 of the model with respect to the
 log smoothing parameters. Calculation of exact derivatives is generally faster
 than approximating them by finite differencing, as well as generally improving
-the reliability of GCV/UBRE/AIC score minimization.
+the reliability of GCV/UBRE/AIC/REML score minimization.
 
 The approach is to run the P-IRLS
 to convergence, and only then to iterate for first and second derivatives. 

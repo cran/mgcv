@@ -4,7 +4,7 @@
 \title{Generalized Additive Mixed Models}
 \description{ Fits the specified  generalized additive mixed model (GAMM) to
 data, by a call to \code{lme} in the normal errors identity link case, or by 
-a call to \code{gammPGL} (a modification of \code{glmmPQL} from the \code{MASS} library) otherwise. 
+a call to \code{gammPQL} (a modification of \code{glmmPQL} from the \code{MASS} library) otherwise. 
 In the latter case estimates are only approximately MLEs. The routine is typically 
 slower than \code{gam}, and not quite as numerically robust.
 

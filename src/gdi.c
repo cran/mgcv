@@ -249,7 +249,7 @@ void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse)
 
    If `col' is non zero then columns are un/pivoted, otherwise rows.
 
-   Typical applications are to pivot matrices int the same way that a 
+   Typical applications are to pivot matrices in the same way that a 
    qr decomposition has been pivoted, or to reverse such a pivoting.
 */
 { double *dum,*px,*pd,*pd1,*p,*p1;
@@ -1168,6 +1168,9 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
    * This version uses only K and P, and is for the case where expressions involve weights which
      are reciprocal variances, not the squares of weights which are reciprocal standard deviations.
 
+   * Note that tr(A) = tr(KK') and it is tempting to view diag(K'K) as giving the edfs
+     of the parameters, but this seems to be wrong. It gives the edfs for R \beta, where
+     R is (pseudo) inverse of P. 
 
 */
 
@@ -1591,7 +1594,7 @@ void undrop_cols(double *X,int r,int c, int *drop, int n_drop)
   for (i = 0;i<n;i++,X--,Xs--) *X = *Xs;
   for (i=0;i<r;i++,X--) *X = 0.0; /* insert 0s at col drop[n_drop-1] */
   
-  for (k=n_drop-1;k>0;k++) { /* work through drop */
+  for (k=n_drop-1;k>0;k--) { /* work through drop */
     n = (drop[k] - drop[k-1]-1)*r; /* size of block between cols drop[k-1] and drop[k] */
     for (i=0;i<n;i++,X--,Xs--) *X = *Xs;
     for (i=0;i<r;i++,X--) *X = 0.0; /* insert 0s at col drop[k-1] */
@@ -1779,7 +1782,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
    indicating the order of differentiation. 
 
    The arguments of this function point to the following:
-   * X is and n by q model matrix.
+   * X is and n by q model matrix. On output this will contain K.
    * E is a q by Enrow square root of the total penalty matrix, so E'E=S
    * Es is the square root of a "well scaled" version of the total penalty,
      suitable for numerical determination of the theoretical rank of the problem.
@@ -2287,21 +2290,13 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
         if (deriv2) for (j=0;j<*M;j++,p1++,p2++) *p2 += *p1;   
     } 
   }
-  /* unpivot P into rV and PKtz into beta */
+  /* PKtz into beta */
 
   for (i=0;i< rank;i++) beta[pivot1[i]] = PKtz[i];
 
   undrop_rows(beta,*q,1,drop,n_drop); /* zero rows inserted */
 
-  /* note that PP' and hence rV rV' are propto the cov matrix. */
-
-  for (p1=P,i=0;i < rank; i++) for (j=0;j<rank;j++,p1++) rV[pivot1[j] + i * rank] = *p1;
-  
-  undrop_rows(rV,*q,rank,drop,n_drop); /* zero rows inserted */
-
-  p0 = rV + *q * rank;p1 = rV + *q * *q;
-  for (p2=p0;p2<p1;p2++) *p2 = 0.0; /* padding any trailing columns of rV with zeroes */
-
+ 
   /* Now get the REML penalty */
 
   if (*REML>0) { /* It's REML */
@@ -2335,7 +2330,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
   if (neg_w) free(Vt);   
   free(pivot);free(work);free(PKtz);free(zz);
-  free(pivot1);
+ 
   if (*deriv) {
     free(b1);free(eta1);
     free(eta2);
@@ -2376,15 +2371,35 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     for (p1=Q,p0=K,j=0;j<rank;j++,p1 += *Enrow) for (i=0;i<*n;i++,p1++,p0++) *p0 = *p1;
     free(Q);free(WX);free(tau);
     if (*deriv)  pivoter(rS,&rank,&ScS,pivot,&FALSE,&FALSE); /* apply the latest pivoting to rows of rS */
-    free(pivot); 
+    
   }
+
+ 
   if (*REML) i=0; else i = *deriv;
   get_trA2(trA,trA1,trA2,P,K,sp,rS,rSncol,Tfk,Tfkm,wf,n,&rank,&rank,M,&i);
 
 
+  /* unpivot P into rV.... */
+  /* note that PP' and hence rV rV' are propto the cov matrix. */
+
+  if (!*fisher) { /* first unpivot rows of P */
+    pivoter(P,&rank,&rank,pivot,&FALSE,&TRUE); /* unpivoting the rows of P */
+    free(pivot);
+  }
+
+  for (p1=P,i=0;i < rank; i++) for (j=0;j<rank;j++,p1++) rV[pivot1[j] + i * rank] = *p1;
+  undrop_rows(rV,*q,rank,drop,n_drop); /* zero rows inserted */
+  p0 = rV + *q * rank;p1 = rV + *q * *q;
+  for (p2=p0;p2<p1;p2++) *p2 = 0.0; /* padding any trailing columns of rV with zeroes */
+
+  /* Now unpack K into X -- useful for forming F = PK'W^.5X, diag of which is edf vector... */
+  for (p0=X,p1=K,p2=K + rank * *n;p1<p2;p0++,p1++) *p0 = *p1;
+  /* fill trailing columns with zero */ 
+  for (p0 = X + rank * *n,p1 = X + *q * *n;p0<p1;p0++) *p0 = 0.0;
+
   if (n_drop) free(drop);
   free(nulli);
-
+  free(pivot1);
   free(P);free(K);
   if (*deriv) { 
     free(Tk);free(Tkm);

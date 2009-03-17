@@ -20,7 +20,8 @@ difference derivatives.
 Not normally called directly, but rather a service routine for \code{\link{gam}}.
 }
 \usage{
-gam.outer(lsp,fscale,family,control,method,optimizer,criterion,scale,gamma,G,...)
+gam.outer(lsp,fscale,family,control,method,optimizer,
+          criterion,scale,gamma,G,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
