@@ -1008,7 +1008,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
     object$sp <- exp(lsp)
     return(object)
   }
-  ## some preparations for the other methods 
+  ## some preparations for the other methods, which all use gam.fit3...
  
   family <- fix.family.link(family)
   family <- fix.family.var(family)
@@ -1070,7 +1070,8 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   
   if (scale>0) object$scale <- scale else object$scale <- object$scale.est 
   
-  mv<-magic.post.proc(G$X,object,w=object$weights)
+  ## mv<-magic.post.proc(G$X,object,w=object$weights)
+  mv <- gam.fit3.post.proc(G$X,object)
   object$Vp <- mv$Vb
   object$hat<-mv$hat
   object$Ve <- mv$Ve

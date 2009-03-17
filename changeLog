@@ -1,6 +1,35 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+ISSUES
+------
+[none known]
+
+1.5-1
+
+* The stability of the fitting methods had become substantially greater 
+  than the stability of the edf calculations after fitting. So it was 
+  possible to fit very poor models, and then have non-sensical effective 
+  degrees of freedom reported. This has been fixed by using much more stable 
+  expressions for edf calculation, when outer iteration smoothness
+  selection is empolyed. (Changes are to gam.fit3, gam.outer and a new
+  routine gam.fit3.post.proc).
+
+* edfs in version 1.5-0 were calculated using newton, rather than fisher 
+  weights, in the matrix F=(X'WX+S)^{-1}X'WX, the diagonal of which gives 
+  the edf array. The problem with this is that it is possible for X'WX 
+  not to be +ve definite, and then degrees of freedom can be non-sensical.
+  Fisher weights are always used now (although the original problem is 
+  exceedingly hard to generate an example of).
+
+* The summation convention code could be *very* memory intensive for cases 
+  in which the matrix arguments of a smooth feature many repeated values. 
+  Code now fixed to make much more efficient use of any repeated rows in  
+  matrix arguments. This enables muc larger signal regression problems to 
+  be tackled. 
+
+* Some help file fixes.
+
 1.5-0
 
 *** Efficient and general REML/ML smoothing selection implemented. 

@@ -361,7 +361,7 @@ plot(b,pages=1)
 ## ... and do automatic terms selection as well
 b1<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,
        method="REML",select=TRUE)
-plot(b,pages=1)
+plot(b1,pages=1)
 
 
 ## set the smoothing parameter for the first term, estimate rest ...
