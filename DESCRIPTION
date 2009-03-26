@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.5-1
+Version: 1.5-2
 Author: Simon Wood <simon.wood@r-project.org>
 Maintainer: Simon Wood <simon.wood@r-project.org>
 Title: GAMs with GCV/AIC/REML smoothness estimation and GAMMs by PQL
@@ -8,10 +8,10 @@ Description: Routines for GAMs and other generalized ridge regression
         UBRE/AIC. Also GAMMs by REML or PQL. Includes a gam() function.
 Priority: recommended
 Depends: R (>= 2.3.0)
-Imports: graphics, stats
+Imports: graphics, stats, nlme
 Suggests: nlme (>= 3.1-64), splines
 LazyLoad: yes
 License: GPL (>=2)
-Packaged: Tue Mar 17 10:28:50 2009; simon
+Packaged: 2009-03-26 13:35:41 UTC; simon
 Repository: CRAN
-Date/Publication: 2009-03-17 18:17:32
+Date/Publication: 2009-03-26 18:25:48

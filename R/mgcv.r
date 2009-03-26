@@ -239,8 +239,6 @@ interpret.gam <- function (gf)
   for (i in 1:nt) # work through all terms
   { if (k<=ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i))) # it's a smooth
     { st<-eval(parse(text=terms[i]),envir=p.env)
-      ##if (k>1||kp>1) rf<-paste(rf,"+",st$full.call,sep="") # add to full formula
-      ##else rf<-paste(rf,st$full.call,sep="")
       smooth.spec[[k]]<-st
       if (ks<=len.sp&&sp[ks]==i) ks<-ks+1  # counts s() terms
       else kt<-kt+1              # counts te() terms
@@ -248,8 +246,6 @@ interpret.gam <- function (gf)
     } else          # parametric
     { if (kp>1) pf<-paste(pf,"+",terms[i],sep="") # add to parametric formula
       else pf<-paste(pf,terms[i],sep="")
-      ##if (k>1||kp>1) rf<-paste(rf,"+",terms[i],sep="") # add to full formula
-      ##else rf<-paste(rf,terms[i],sep="")
       kp<-kp+1    # counts parametric terms
     }
   }    
@@ -257,15 +253,14 @@ interpret.gam <- function (gf)
   { if (kp>1) pf<-paste(pf,"+",sep="")
     if (kp>1||k>1) rf<-paste(rf,"+",sep="")
     pf<-paste(pf,as.character(attr(tf,"variables")[1+off]),sep="")
-    ##rf<-paste(rf,as.character(attr(tf,"variables")[1+off]),sep="")
     kp<-kp+1          
   }
   if (attr(tf,"intercept")==0) 
-  { pf<-paste(pf,"-1",sep="")##;rf<-paste(rf,"-1",sep="")
+  { pf<-paste(pf,"-1",sep="")
     if (kp>1) pfok<-1 else pfok<-0
   } else { 
     pfok<-1;if (kp==1) { 
-    pf<-paste(pf,"1"); ##if (k==1) rf<-paste(rf,"1",sep="");
+    pf<-paste(pf,"1"); 
     }
   }
   
@@ -1269,6 +1264,52 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   object
 }
 
+variable.summary <- function(pf,dl,n) {
+## routine to summarize all the variables in dl, which is a list
+## containing raw input variables to a model (i.e. no functions applied)
+## pf is a formula containing for the strictly parametric part of the
+## model for the variables in af. A list is returned, with names given by 
+## the variables. For variables in the prametric part, then the list elements
+## may be:
+## * a 1 column matrix with elements set to the column medians, if variable 
+##   is a matrix.
+## * a 3 figure summary (min,median,max) for a numeric variable.
+## * a factor variable, with the most commonly occuring factor (all levels)
+## --- classes are as original data type, but anything not numeric, factor or matrix
+## is coerced to numeric. 
+## For non-parametric variables, any matrices are coerced to numeric, otherwise as 
+## parametric.      
+## medians in the above are always observed values (to deal with variables coerced to 
+## factors in the model formulae in a nice way).
+## variables with less than `n' entries are discarded
+
+   for (i in 1:length(dl)) if (length(dl[[i]])<n) dl[[i]] <- NULL 
+
+   v.name <- names(dl)    ## the variable names
+   p.name <- all.vars(pf[-2]) ## variables in parametric part (not response)
+   vs <- list()
+   for (i in 1:length(v.name)) {
+     if (v.name[i]%in%p.name) para <- TRUE else para <- FALSE ## is variable in the parametric part?
+     x <- dl[[v.name[i]]]
+     if (para&&is.matrix(x)) { ## parametric matrix --- a special case
+       x <- matrix(apply(x,2,quantile,probs=0.5,type=3,na.rm=TRUE),1,ncol(x)) ## nearest to median entries
+     } else { ## anything else
+       if (is.factor(x)) {
+         x <- x[!is.na(x)]
+         lx <- levels(x)
+         freq <- tabulate(x)
+         ii <- min((1:length(lx))[freq==max(freq)])
+         x <- factor(lx[ii],levels=lx) 
+       } else {
+         x <- as.numeric(x)
+         x <- c(min(x,na.rm=TRUE),as.numeric(quantile(x,probs=.5,type=3,na.rm=TRUE)) ,max(x,na.rm=TRUE)) ## 3 figure summary
+       }
+     }
+     vs[[v.name[i]]] <- x
+   }
+   vs
+}
+
 gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
                 method="GCV.Cp",optimizer=c("outer","newton"),control=gam.control(),
                 scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,
@@ -1292,6 +1333,16 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
     terms <- attr(mf,"terms")
     
+    ## summarize the *raw* input variables
+    ## note can't use get_all_vars here -- buggy with matrices
+    vars <- all.vars(gp$fake.formula[-2]) ## drop response here
+    inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
+    dl <- eval(inp, data, parent.frame())
+    names(dl) <- vars ## list of all variables needed
+    var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
+    rm(dl) ## save space    
+
+
     pmf$formula <- gp$pf
     pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part
 
@@ -1304,11 +1355,14 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (family$family[1]=="gaussian" && family$link=="identity") am <- TRUE
     else am <- FALSE
     
+    if (!control$keepData) rm(data) ## save space
+
     G<-gam.setup(gp,pterms=pterms,data=mf,knots=knots,sp=sp,min.sp=min.sp,
                  H=H,absorb.cons=TRUE,select=select,
                  idLinksBases=control$idLinksBases,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
     
+    G$var.summary <- var.summary
     G$family <- family
    
     if (ncol(G$X)>nrow(G$X)+nrow(G$C)) stop("Model has more coefficients than data")
@@ -1337,6 +1391,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (!is.null(G$L)) object$full.sp <- as.numeric(exp(G$L%*%log(object$sp)+G$lsp0))
   names(object$sp) <- names(G$sp)
   object$formula<-G$formula
+  object$var.summary <- G$var.summary 
   object$cmX <- G$cmX ## column means of model matrix --- useful for CIs
   object$model<-G$mf # store the model frame
   object$na.action <- attr(G$mf,"na.action") # how to deal with NA's
@@ -1347,7 +1402,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$contrasts <- G$contrasts
   object$xlevels <- G$xlevels
   object$offset <- G$offset
-  object$data <- data
+  if (control$keepData) object$data <- data
   object$df.residual <- nrow(G$X) - sum(object$edf)
   object$min.edf<-G$min.edf
   if (G$am&&!(method%in%c("REML","ML","P-ML","P-REML"))) object$optimizer <- "magic" else object$optimizer <- optimizer
@@ -1434,7 +1489,8 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,
                          mgcv.tol=1e-7,mgcv.half=15,trace =FALSE,
                          rank.tol=.Machine$double.eps^0.5,
                          nlm=list(),optim=list(),newton=list(),outerPIsteps=1,
-                         idLinksBases=TRUE,scalePenalty=TRUE) 
+                         idLinksBases=TRUE,scalePenalty=TRUE,
+                         keepData=FALSE) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -1488,7 +1544,8 @@ gam.control <- function (irls.reg=0.0,epsilon = 1e-06, maxit = 100,
          trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,
          rank.tol=rank.tol,nlm=nlm,
          optim=optim,newton=newton,outerPIsteps=outerPIsteps,
-         idLinksBases=idLinksBases,scalePenalty=scalePenalty)
+         idLinksBases=idLinksBases,scalePenalty=scalePenalty,
+         keepData=as.logical(keepData[1]))
     
 }
 
@@ -2718,6 +2775,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
   if (m>0) # form test statistics for each smooth
   { if (!freq) { 
       X <- model.matrix(object)
+      X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
       ## get corrected edf
       ##  edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
     }
@@ -2996,52 +3054,90 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
 
   dnm <- names(list(...))
 
-  #x$model <- strip.offset(x$model) 
-  ## ... remove "offset(" and ")" from offset column name
+  ## basic issues in the following are that not all objects will have a useful `data'
+  ## component, but they all have a `model' frame. Furthermore, `predict.gam' recognises
+  ## when a model fram has been supplied
 
-  v.names <- row.names(attr(delete.response(x$terms),"factors"))
+  v.names  <- names(x$var.summary) ## names of all variables
 
+  ## Note that in what follows matrices in the parametric part of the model
+  ## require special handling. Matrices arguments to smooths are different
+  ## as they follow the summation convention. 
   if (is.null(view)) # get default view if none supplied
-  { # v.names<-attr(attr(x$model,"terms"),"term.labels") # BUG... too many of these!!
-   
-    if (length(v.names)<2) stop("Model doesn't seem to have enough terms to do anything useful")
-    view<-v.names[1:2]
+  { ## need to find first terms that can be plotted against
+    k <- 0;view <- rep("",2) 
+    for (i in 1:length(v.names)) {
+      ok <- TRUE
+      if (is.matrix(x$var.summary[[i]])) ok <- FALSE else
+      if (is.factor(x$var.summary[[i]])) {
+        if (length(levels(x$var.summary[[i]]))<=1) ok <- FALSE 
+      } else {
+        if (length(unique(x$var.summary[[i]]))==1) ok <- FALSE
+      }
+      if (ok) {
+        k <- k + 1;view[k] <- v.names[i]
+      }
+      if (k==2) break;
+    }
+    if (k<2) stop("Model does not seem to have enough terms to do anything useful")
+  } else { 
+    if (sum(view%in%v.names)!=2) stop(
+        paste(c("view variables must be one of",v.names),collapse=", "))
+    for (i in 1:2) 
+    if  (!inherits(x$var.summary[[view[i]]],c("numeric","factor"))) 
+    stop("Don't know what to do with parametric terms that are not simple numeric or factor variables")
   }
-  if (!sum(view%in%names(x$model))) stop(
-  paste(c("view variables must be one of",v.names),collapse=", "))
-  if (length(unique(x$model[,view[1]]))<=1||length(unique(x$model[,view[2]]))<=1) 
+
+  ok <- TRUE
+  for (i in 1:2) if (is.factor(x$var.summary[[view[i]]])) {
+    if (length(levels(x$var.summary[[view[i]]]))<=1) ok <- FALSE
+  } else {
+    if (length(unique(x$var.summary[[view[i]]]))<=1) ok <- FALSE 
+  }
+  if (!ok) 
   stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
 
   # now get the values of the variables which are not the arguments of the plotted surface
-  marg<-x$model[1,]
-  m.name<-names(x$model)
-  for (i in 1:length(marg))
-  { ma<-cond[[m.name[i]]][1]
-    if (is.null(ma)) 
-    { if (is.factor(x$model[[i]]))
-      marg[i]<-factor(levels(x$model[[i]])[1],levels(x$model[[i]]))
-      else marg[i]<-mean(x$model[[i]]) 
-    } else
-    { if (is.factor(x$model[[i]]))
-      marg[i]<-factor(ma,levels(x$model[[i]]))
-      else marg[i]<-ma
-    }
-  }
-  # marg includes conditioning values for view variables, but these will be ignored
+#  marg<-x$model[1,]
+#  m.name<-names(x$model)
+#  for (i in 1:length(marg))
+#  { ma<-cond[[m.name[i]]]
+#    if (is.null(ma)) 
+#    { if (is.factor(x$model[[i]]))
+#      marg[[i]]<-factor(levels(x$model[[i]])[1],levels(x$model[[i]]))
+#      else if (para.term[i]&&is.matrix(x$model[[i]])) marg[[i]] <- t(colMeans(x$model[[i]]))
+#      else marg[[i]]<-mean(x$model[[i]]) 
+#    } else
+#    { if (is.factor(x$model[[i]]))
+#      marg[[i]]<-factor(ma,levels(x$model[[i]]))
+#      else marg[[i]]<-ma
+#    }
+#  }
+#  # marg includes conditioning values for view variables, but these will be ignored
   
   # Make dataframe....
-  if (is.factor(x$model[,view[1]]))
-  m1<-fac.seq(x$model[,view[1]],n.grid)
-  else { r1<-range(x$model[,view[1]]);m1<-seq(r1[1],r1[2],length=n.grid)}
-  if (is.factor(x$model[,view[2]]))
-  m2<-fac.seq(x$model[,view[2]],n.grid)
-  else {r2<-range(x$model[,view[2]]);m2<-seq(r2[1],r2[2],length=n.grid)}
+  if (is.factor(x$var.summary[[view[1]]]))
+  m1<-fac.seq(x$var.summary[[view[1]]],n.grid)
+  else { r1<-range(x$var.summary[[view[1]]]);m1<-seq(r1[1],r1[2],length=n.grid)}
+  if (is.factor(x$var.summary[[view[2]]]))
+  m2<-fac.seq(x$var.summary[[view[2]]],n.grid)
+  else { r2<-range(x$var.summary[[view[2]]]);m2<-seq(r2[1],r2[2],length=n.grid)}
   v1<-rep(m1,n.grid);v2<-rep(m2,rep(n.grid,n.grid))
-  newd<-data.frame(v1=rep(marg[[1]],n.grid*n.grid))
-  for (i in 2:dim(x$model)[2]) newd[[i]]<-rep(marg[[i]],n.grid*n.grid)
-  row.names <- attr(newd,"row.names")
-  attributes(newd) <- attributes(x$model) # done so that handling of offsets etc. works
-  attr(newd,"row.names") <- row.names
+  
+  newd <- data.frame(matrix(0,n.grid*n.grid,0)) ## creating prediction data frame full of conditioning values
+  for (i in 1:length(x$var.summary)) { 
+    ma <- cond[[v.names[i]]]
+    if (is.null(ma)) { 
+      ma <- x$var.summary[[i]]
+      if (is.numeric(ma)) ma <- ma[2] ## extract median
+    }
+    if (is.matrix(x$var.summary[[i]])) newd[[i]] <- matrix(ma,n.grid*n.grid,ncol(x$var.summary[[i]]),byrow=TRUE)
+    else newd[[i]]<-rep(ma,n.grid*n.grid)
+  }
+  names(newd) <- v.names
+  #row.names <- attr(newd,"row.names")
+  #attributes(newd) <- attributes(x$model) # done so that handling of offsets etc. works
+  #attr(newd,"row.names") <- row.names
   newd[[view[1]]]<-v1
   newd[[view[2]]]<-v2
   # call predict.gam to get predictions.....
@@ -3049,8 +3145,8 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
   else if (type=="response") zlab<-type
   else stop("type must be \"link\" or \"response\"")
   ## turn newd into a model frame, so that names and averages are valid
-  attributes(newd)<-attributes(x$model)
-  attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
+  #attributes(newd)<-attributes(x$model)
+  #attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
   fv<-predict.gam(x,newdata=newd,se=TRUE,type=type)
   z<-fv$fit # store NA free copy now
   if (too.far>0) # exclude predictions too far from data
@@ -3202,7 +3298,7 @@ mroot <- function(A,rank=NULL,method="chol")
     options(op) ## reset default warnings
     piv<-order(attr(L,"pivot"))
     if (is.null(rank)) rank<-attr(L,"rank")
-    L<-L[,piv];L<-t(L[1:rank,])
+    L<-L[,piv,drop=FALSE];L<-t(L[1:rank,,drop=FALSE])
     if (rank <= 1) dim(L) <- c(nrow(A),1)
     return(L)
   } else

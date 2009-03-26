@@ -3,7 +3,6 @@
 \alias{smooth.construct}
 \alias{smooth.construct2}
 \alias{user.defined.smooth}
-\alias{smooth.construct.tensor.smooth.spec}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Constructor functions for smooth terms in a GAM}
 \description{Smooth terms in a GAM formula are turned into smooth specification objects of 

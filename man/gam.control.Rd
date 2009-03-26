@@ -14,7 +14,8 @@ gam.control(irls.reg=0.0,epsilon = 1e-06, maxit = 100,
             mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,
             nlm=list(),optim=list(),newton=list(),
-            outerPIsteps=1,idLinksBases=TRUE,scalePenalty=TRUE) 
+            outerPIsteps=1,idLinksBases=TRUE,scalePenalty=TRUE,
+            keepData=FALSE) 
 }
 \arguments{ 
 
@@ -70,6 +71,10 @@ case).}
 of the penalty matrices of a smooth relative to its model matrix. This option rescales 
 the penalty matrices to accomodate this problem. Probably should be set to \code{FALSE} 
 if you are linking smoothing parameters but have set \code{idLinkBases} to \code{FALSE}.}
+
+\item{keepData}{Should a copy of the original \code{data} argument be kept in the \code{gam} 
+object? Strict compatibility with class \code{glm} would keep it, but it wastes space to
+do so. }
 }
 
 \details{ 

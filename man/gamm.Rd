@@ -225,7 +225,7 @@ Linked smoothing parameters and adaptive smoothing are not supported.
 \code{\link{te}}, \code{\link{s}}, 
 \code{\link{predict.gam}},
   \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{negbin}}, 
-\code{\link{vis.gam}},\code{\link{pdTens}},\code{\link{gamm.setup}}
+\code{\link{vis.gam}},\code{\link{pdTens}}
  }
 
 \examples{

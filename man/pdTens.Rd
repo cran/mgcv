@@ -12,8 +12,7 @@ tensor product smooths to be estimated by \code{lme} as called by \code{gamm}. T
 have a penalty matrix made up of a weighted sum of penalty matrices, where the weights are the smoothing 
 parameters. In the mixed model formulation the penalty matrix is the inverse of the covariance matrix for 
 the random effects of a term, and the smoothing parameters (times a half) are variance parameters to be estimated. 
-It's not 
-possible to transform the problem to make the required random effects covariance matrix look like one of the standard 
+It's not possible to transform the problem to make the required random effects covariance matrix look like one of the standard 
 \code{pdMat} classes: hence the need for the \code{pdTens} class. A \code{\link{notLog2}} parameterization ensures that 
 the parameters are positive. 
 

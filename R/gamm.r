@@ -1140,6 +1140,15 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
     Terms <- attr(mf,"terms")    
   
+    ## summarize the *raw* input variables
+    ## note can't use get_all_vars here -- buggy with matrices
+    vars <- all.vars(gp$fake.formula[-2]) ## drop response here
+    inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
+    dl <- eval(inp, data, parent.frame())
+    names(dl) <- vars ## list of all variables needed
+    var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
+    rm(dl) ## save space 
+
     pmf$formula <- gp$pf
     pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part 
 
@@ -1152,6 +1161,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     # now call gamm.setup 
 
     G<-gamm.setup(gp,pterms=pTerms,data=mf,knots=knots,parametric.only=FALSE,absorb.cons=TRUE)
+    G$var.summary <- var.summary    
 
     n.sr <- length(G$random) # number of random smooths (i.e. s(...,fx=FALSE,...) terms)
 
@@ -1240,7 +1250,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     object<-list(model=mf,formula=formula,smooth=G$smooth,nsdf=G$nsdf,family=family,
                  df.null=nrow(G$X),y=G$y,terms=Terms,pterms=pTerms,xlevels=G$xlevels,
                  contrasts=G$contrasts,assign=G$assign,na.action=attr(mf,"na.action"),
-                 cmX=G$cmX)
+                 cmX=G$cmX,var.summary=G$var.summary)
     # Transform  parameters back to the original space....
     bf<-as.numeric(ret$lme$coefficients$fixed)
     br<-as.numeric(unlist(ret$lme$coefficients$random))
