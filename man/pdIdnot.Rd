@@ -39,6 +39,10 @@ pdIdnot(value = numeric(0), form = NULL,
 \item{data}{data frame in which to evaluate formula.}
 }
 \details{ 
+The following functions are provided: \code{Dim.pdIndot}, \code{coef.pdIdnot}, \code{corMatrix.pdIdnot}, 
+\code{logDet.pdIdnot}, \code{pdConstruct.pdIdnot}, \code{pdFactor.pdIdnot}, \code{pdMatrix.pdIdnot},
+\code{solve.pdIdnot}, \code{summary.pdIdnot}. (e.g. \code{mgcv:::coef.pdIdnot} to access.)
+
 Note that while the \code{pdFactor} and \code{pdMatrix} functions return the inverse of the scaled random 
 effect covariance matrix or its factor, the \code{pdConstruct} function is initialised with estimates of the 
 scaled covariance matrix itself.

@@ -5,6 +5,26 @@ ISSUES
 ------
 [none known]
 
+1.5-2
+
+* Several exported functions had no usage entries in the help files.
+  Everything exported does now.
+
+* `vis.gam' had a bunch of bugs (which could make it fail altogether) 
+   as a result of trying to set default conditioning values from the gam 
+   object model frame. `gam' and `gamm' now obtain summary statistics of 
+   the predictor variables, stored in `var.summary' in the gam object, 
+   which `vis.gam' now uses. As a result `vis.gam' `view' and `cond' 
+   arguments should now contain original variable names, not model frame 
+   term names.
+
+* `data' argument of `gam' no longer stored in the `gam' object, by 
+  default to save memory (can restore this --- see `gam.control').
+
+* `summary.gam' failed under na.exclude. Fixed. 
+
+* `mroot' failed on 1 by 1 matrices, Fixed.
+
 1.5-1
 
 * The stability of the fitting methods had become substantially greater 
@@ -25,7 +45,7 @@ ISSUES
 * The summation convention code could be *very* memory intensive for cases 
   in which the matrix arguments of a smooth feature many repeated values. 
   Code now fixed to make much more efficient use of any repeated rows in  
-  matrix arguments. This enables muc larger signal regression problems to 
+  matrix arguments. This enables much larger signal regression problems to 
   be tackled. 
 
 * Some help file fixes.

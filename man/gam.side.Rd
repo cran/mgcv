@@ -5,7 +5,7 @@
 \description{ GAM formulae with repeated variables only correspond to
   identifiable models given some side conditions. This routine works 
   out appropriate side conditions, based on zeroing redundant parameters.
-  It is called from \code{\link{gam.setup}} and is not intended to be called by users. 
+  It is called from \code{mgcv:::gam.setup} and is not intended to be called by users. 
 
   The method identifies nested and repeated variables by their names, but
   numerically evaluates which constraints need to be imposed. Constraints are always

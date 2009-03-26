@@ -17,6 +17,36 @@ The basic idea of estimating smoothing parameters at each step of the P-IRLS
 is due to Gu (1992), and is termed `performance iteration' or `performance
 oriented iteration'.
 }
+\usage{ 
+
+gam.fit(G, start = NULL, etastart = NULL, 
+        mustart = NULL, family = gaussian(), 
+        control = gam.control(),gamma=1,
+        fixedSteps=(control$maxit+1),...) 
+
+}
+\arguments{ 
+\item{G}{An object of the type returned by \code{\link{gam}} when \code{fit=FALSE}.}
+
+\item{start}{Initial values for the model coefficients.}
+
+\item{etastart}{Initial values for the linear predictor.}
+
+\item{mustart}{Initial values for the expected response.}
+
+\item{family}{The family object, specifying the distribution and link to use.}
+
+\item{control}{Control option list as returned by \code{\link{gam.control}}.}
+
+\item{gamma}{Parameter which can be increased to up the cost of each effective degree of freedom in the
+GCV or AIC/UBRE objective.}
+
+\item{fixedSteps}{How many steps to take: useful when only using this routine to get rough starting values for other methods.}
+
+\item{...}{Other arguments: ignored.}
+}
+
+\value{A list of fit information.}
 
 \references{
 
@@ -36,6 +66,6 @@ generalized additive models. J. Amer. Statist. Ass. 99:637-686
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
-\seealso{ \code{\link{gam.fit3}},  \code{\link{gam}}, \code{\link{mgcv}}, \code{\link{magic}}}
+\seealso{ \code{\link{gam.fit3}},  \code{\link{gam}}, \code{\link{magic}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

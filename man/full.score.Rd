@@ -18,7 +18,7 @@ full.score(sp,G,family,control,gamma,...)
 \arguments{
 \item{sp}{The logs of the smoothing parameters}
 
-\item{G}{a list returned by \code{\link{gam.setup}}}
+\item{G}{a list returned by \code{mgcv:::gam.setup}}
 
 \item{family}{The family object for the GAM.}
 

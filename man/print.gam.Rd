@@ -1,12 +1,22 @@
 \name{print.gam}
 \alias{print.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Generalized Additive Model default print statement}
-\description{ This is the default print statement for a GAM object. If you need a list of everything
-that is part of a gam object see \code{\link{gam}}, or use \code{names()}. The family (including link), 
-model formula, and estimated degrees of freedom for each model term (plus total) are printed, as 
-well as the minimized GCV or UBRE/AIC score, depending on which was used.
+\title{Print a Generalized Additive Model object.}
+\description{ The default print method for a \code{gam} object. 
 }
+\usage{
+\method{print}{gam}(x, ...)
+}
+%- maybe also `usage' for other objects documented here.
+\arguments{ 
+\item{x, ...}{ fitted model objects of class \code{gam} as produced by \code{gam()}.}
+}
+\details{ Prints out the family, model formula, effective degrees of freedom for each smooth term, and optimized 
+value of the smoothness selection criterion used. See \code{\link{gamObject}} (or \code{names(x)}) for a listing 
+of what the object contains. \code{\link{summary.gam}} provides more detail.
+
+}
+
 
 
 \references{
@@ -20,7 +30,7 @@ Chapmand and Hall, Boca Raton, Florida.
 
 
 
-\seealso{   \code{\link{gam}},\code{\link{mgcv}}}
+\seealso{   \code{\link{gam}}, \code{\link{summary.gam}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

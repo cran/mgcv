@@ -38,7 +38,9 @@ cases, not at the MLE.}
 
 \item{converged}{indicates whether or not the iterative fitting method converged.} 
 
-\item{data}{the original supplied data argument (for class \code{"glm"} compatibility).}
+\item{data}{the original supplied data argument (for class \code{"glm"} compatibility). 
+            Only included if \code{\link{gam}} \code{control} argument element 
+            \code{keepData} is set to \code{TRUE} (default is \code{FALSE}).}
 
 \item{deviance}{model deviance (not penalized deviance).}
 
@@ -137,14 +139,24 @@ improve conditioning.}
 
 \item{terms}{\code{terms} object of \code{model} model frame.}
 
+\item{var.summary}{A named list of summary information on the predictor variables. If
+a parametric variable is a matrix, then the summary is a one row matrix, containing the 
+observed data value closest to the column median, for each matrix column. If the variable 
+is a factor the then summary is the modal factor level, returned as a factor, with levels 
+corresponding to those of the data. For numerics and matrix arguments of smooths, the summary 
+is the mean, nearest observed value to median and maximum, as a numeric vector. Used by 
+\code{\link{vis.gam}}, in particular. }
+
+\item{Ve}{frequentist estimated covariance matrix for the parameter
+estimators. Particularly useful for testing whether terms are zero. Not so
+useful for CI's as smooths are usually biased.}
+
+
 \item{Vp}{estimated covariance matrix for the parameters. This is a Bayesian
 posterior covariance matrix that results from adopting a particular Bayesian
 model of the smoothing process. Paricularly useful for creating
 credible/confidence intervals.}
 
-\item{Ve}{frequentist estimated covariance matrix for the parameter
-estimators. Particularly useful for testing whether terms are zero. Not so
-useful for CI's as smooths are usually biased.}
 
 \item{weights}{final weights used in IRLS iteration.}
 

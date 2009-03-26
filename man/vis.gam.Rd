@@ -13,14 +13,14 @@ vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,
 
   \item{view}{an array containing the names of the two main effect terms to be displayed on the 
    x and y dimensions of the plot. If omitted the first two suitable terms
-   will be used. Names must be names from
-   \code{names(x$model)}. i.e. \code{terms} are used, rather than \code{variables}.
+   will be used. Note that variables coerced to factors in the model formula won't work
+   as view variables, and \code{vis.gam} can not detect that this has happened when setting defaults. 
 }
 
   \item{cond}{a named list of the values to use for the other predictor terms
-  (not in \code{view}). Terms omitted from 
-this list will have their values set to their mean for continuous variables,
-or first level for factors. Names must correspond to \code{names(x$model)}.
+  (not in \code{view}). Variables omitted from this list will have the closest observed value to the median 
+  for continuous variables, or the most commonly occuring level for factors. Parametric matrix variables have 
+  all the entries in each column set to the observed column entry closest to the column median.
 }
   \item{n.grid}{The number of grid nodes in each direction used for calculating the 
    plotted surface.} 
@@ -68,6 +68,13 @@ default values used by \code{vis.gam}.
 
  Based on an original idea and design by Mike Lonergan.}
 
+\section{WARNINGS}{
+The routine can not detect that a variable has been coerced to factor within a model formula, 
+and will therefore fail if such a variable is used as a \code{view} variable. When setting 
+default \code{view} variables it can not detect this situation either, which can cause failures
+if the coerced variables are the first, otherwise suitable, variables encountered.
+}
+
 \seealso{
 \code{\link{persp}} and \code{\link{gam}}.
 }
@@ -86,13 +93,15 @@ vis.gam(g,se=2,theta=-35) # with twice standard error surfaces
 vis.gam(g, view=c("x1","x2"),cond=list(x0=0.75)) # different view 
 vis.gam(g, view=c("x1","x2"),cond=list(x0=.75),theta=210,phi=40,
         too.far=.07)
+# ..... areas where there is no data are not plotted
+
 # contour examples....
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="heat")
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="terrain")
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="topo")
 vis.gam(g, view=c("x1","x2"),plot.type="contour",color="cm")
 
-# ..... areas where there is no data are not plotted
+
 par(old.par)
 
 # Examples with factor and "by" variables

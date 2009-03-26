@@ -45,7 +45,7 @@ finite differencing is being used.}
 
 \item{gamma}{ The degree of freedom inflation factor for the GCV/UBRE/AIC score.}
 
-\item{G}{List produced by \code{\link{gam.setup}}, containing most of what's
+\item{G}{List produced by \code{mgcv:::gam.setup}, containing most of what's
 needed to actually fit a GAM.}
 
 \item{...}{other arguments, typically for passing on to \code{gam.fit3} (ultimately).}

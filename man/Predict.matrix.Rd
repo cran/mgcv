@@ -1,14 +1,7 @@
 \name{Predict.matrix}
 \alias{Predict.matrix}
 \alias{Predict.matrix2}
-\alias{Predict.matrix.tprs.smooth}
-\alias{Predict.matrix.cr.smooth}
-\alias{Predict.matrix.ts.smooth}
-\alias{Predict.matrix.cs.smooth}
-\alias{Predict.matrix.cyclic.smooth}
-\alias{Predict.matrix.tensor.smooth}
-\alias{Predict.matrix.pspline.smooth}
-\alias{Predict.matrix.cpspline.smooth}
+
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction methods for smooth terms in a GAM}
 \description{ Takes \code{smooth} objects produced by \code{smooth.construct} methods and obtains the matrix mapping 
