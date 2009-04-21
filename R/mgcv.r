@@ -1269,7 +1269,7 @@ variable.summary <- function(pf,dl,n) {
 ## containing raw input variables to a model (i.e. no functions applied)
 ## pf is a formula containing for the strictly parametric part of the
 ## model for the variables in af. A list is returned, with names given by 
-## the variables. For variables in the prametric part, then the list elements
+## the variables. For variables in the parametric part, then the list elements
 ## may be:
 ## * a 1 column matrix with elements set to the column medians, if variable 
 ##   is a matrix.
@@ -1282,13 +1282,14 @@ variable.summary <- function(pf,dl,n) {
 ## medians in the above are always observed values (to deal with variables coerced to 
 ## factors in the model formulae in a nice way).
 ## variables with less than `n' entries are discarded
-
-   for (i in 1:length(dl)) if (length(dl[[i]])<n) dl[[i]] <- NULL 
+   v.n <- length(dl)
+   if (v.n) for (i in 1:v.n) if (length(dl[[i]])<n) dl[[i]] <- NULL 
 
    v.name <- names(dl)    ## the variable names
    p.name <- all.vars(pf[-2]) ## variables in parametric part (not response)
    vs <- list()
-   for (i in 1:length(v.name)) {
+   v.n <- length(v.name)
+   if (v.n>0) for (i in 1:v.n) {
      if (v.name[i]%in%p.name) para <- TRUE else para <- FALSE ## is variable in the parametric part?
      x <- dl[[v.name[i]]]
      if (para&&is.matrix(x)) { ## parametric matrix --- a special case
@@ -1337,6 +1338,10 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     ## note can't use get_all_vars here -- buggy with matrices
     vars <- all.vars(gp$fake.formula[-2]) ## drop response here
     inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
+
+    ## allow a bit of extra flexibility in what `data' is allowed to be (as model.frame actually does)
+    if (!is.list(data)&&!is.data.frame(data)) data <- as.data.frame(data) 
+
     dl <- eval(inp, data, parent.frame())
     names(dl) <- vars ## list of all variables needed
     var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
