@@ -1,9 +1,17 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
-ISSUES
-------
-[none known]
+1.5-3
+
+* `gam' now attempts to coerce `data' to a data frame, if it is not 
+  already a list or a data frame, provided that it is already an object 
+  that model.frame can deal with. This is to support an undocumented 
+  feature of versions prior to 1.5-2 that `data' could actually be 
+  something other than a list or data frame. 
+
+* An offset of type "array" could cause gam.fit3 to fail. fixed.
+
+* `variable.summary' bug fixed, (it caused gam(y~1) to fail).   
 
 1.5-2
 
