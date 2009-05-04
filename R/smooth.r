@@ -330,13 +330,20 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
         np <- ncol(object$margin[[i]]$X) ## number of params
         ## note: to avoid extrapolating wiggliness measure
         ## must include extremes as eval points
-        knt <- quantile(unique(x),(0:(np-1))/(np-1)) ## evaluation points
-#        knt <- seq(min(x),max(x),length=np) 
+#        knt <- quantile(unique(x),(0:(np-1))/(np-1)) 
+        knt <- seq(min(x),max(x),length=np) ## evaluation points
         pd <- data.frame(knt)
         names(pd) <- object$margin[[i]]$term
-        XP[[i]] <- solve(Predict.matrix(object$margin[[i]],pd),tol=0)
-        Xm[[i]] <- Xm[[i]]%*%XP[[i]]
-        Sm[[i]] <- t(XP[[i]])%*%Sm[[i]]%*%XP[[i]]
+        sv <- svd(Predict.matrix(object$margin[[i]],pd))
+        if (sv$d[np]/sv$d[1]<.Machine$double.eps^.66) { ## condition number rather high
+          XP[[i]] <- NULL
+          warning("reparameterization unstable for margin: not done")
+        } else {
+          XP[[i]] <- sv$v%*%(t(sv$u)/sv$d)
+        ##XP[[i]] <- solve(Predict.matrix(object$margin[[i]],pd),tol=0) -- old code - could fail
+          Xm[[i]] <- Xm[[i]]%*%XP[[i]]
+          Sm[[i]] <- t(XP[[i]])%*%Sm[[i]]%*%XP[[i]]
+        }
       } else XP[[i]]<-NULL
     } else XP[[i]]<-NULL
   }

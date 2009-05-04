@@ -1,6 +1,14 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.5-4
+
+* smooth.construct.tensor.smooth.spec modified, so that 
+  re-parameterization in terms of function values is only if it's 
+  stable, and by default the parameters are function values with
+  even spacing. Otherwise it was possible for tensor products of
+  p-splines to fail.
+
 1.5-3
 
 * `gam' now attempts to coerce `data' to a data frame, if it is not 

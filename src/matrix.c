@@ -252,7 +252,7 @@ void readmat(M,filename) matrix *M;char *filename;
 { FILE *in;long i,j,k;char str[200];
   in=fopen(filename,"rb");
   if (in==NULL)
-  { sprintf(str,_("\n%s not found, nothing read ! "),filename);
+  { sprintf(str,_("\n%s not found, nothing read!"),filename);
     ErrorMessage(str,1);}
   fread(&i,sizeof(long),1,in);
   fread(&j,sizeof(long),1,in);
