@@ -388,13 +388,16 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),
       if (inherits(sm,"tensor.smooth")) { 
         # tensor product term - need to find null space from sum of penalties
         sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
-        null.rank <- sm$margin[[1]]$bs.dim-sm$margin[[1]]$rank
+        ## null.rank <- sm$margin[[1]]$bs.dim-sm$margin[[1]]$rank
+        null.rank <- ncol(sm$margin[[1]]$X)-sm$margin[[1]]$rank
         bs.dim <- sm$margin[[1]]$bs.dim
         if (length(ZSZ)>1) for (l in 2:length(ZSZ)) 
         { sum.ZSZ <- sum.ZSZ + ZSZ[[l]]/mean(abs(ZSZ[[l]]))
-          null.rank <- # the rank of the null space of the penalty 
-                       null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
-          bs.dim <- bs.dim*sm$margin[[l]]$bs.dim
+          dfl <- ncol(sm$margin[[l]]$X) ## actual df of term (`df' may not be set by constructor)
+          null.rank <- ## the rank of the null space of the penalty 
+                       ## null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
+                       null.rank * (dfl-sm$margin[[l]]$rank) 
+          bs.dim <- bs.dim*dfl
         }
         null.rank <- null.rank - bs.dim + sm$df
         sum.ZSZ <- (sum.ZSZ+t(sum.ZSZ))/2 # ensure symmetry

@@ -1,6 +1,16 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+ISSUES
+------
+
+* Some error message translation files need updating.
+
+1.5-5
+
+* `gamm.setup' made an assumption about basis dimensions which was not 
+  true for tensor products involving the "cc" basis. This is now fixed.
+
 1.5-4
 
 * smooth.construct.tensor.smooth.spec modified, so that 
