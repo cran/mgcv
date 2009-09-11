@@ -1,10 +1,83 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
-ISSUES
-------
+1.5-6
 
-* Some error message translation files need updating.
+* "ts" and "cs" modified so that zero eigen values of penalty
+   matrix are reset to 10% of smallest strictly positive eigen
+   value, rather than 1%. This seems to lead to more reliable
+   performance. 
+
+* `bfgs' simplified and improved so that it now checks the Wolfe 
+   conditions are met at each step. No longer uses any Newton steps,
+   so if it's used with gam.control(outerPIsteps=0) then it's
+   first derivative only for smoothing parameter optimization. 
+
+* `outerPIsteps' now defaults to zero in `gam.control'.
+
+* New routine `initial.spg' gets jth initial sp to equalize 
+  Frobenious norm of S_j and cols of sqrt(W)X which it penalizes, 
+  where W are initial fisher weights. This removes the need for a 
+  performance iteration step to get starting values (so 
+  outerPIsteps=0 in gam.control can now bypass PI completely).
+
+* fscale set from get.null.coef (facilitates cleaner initialization).
+
+* large data set rare event logistic regression example added to 
+  ?gam.
+
+* For p-value calculation for smooths, summary.gam subsamples rows of 
+  the model matrix if it has more than 3000 rows. This speeds things
+  up for large datasets.
+
+* minor bug fix in `gamm' so that intercept gets correct name, if 
+  it's the only non-smooth fixed effect.
+
+* .pot files updated, de translation added.
+
+* `in.out' was not working from 1.5 --- fixed.
+
+* loglik.gam now ups parameter count for Tweedie by one to account for 
+  scale estimation.
+
+* There was a bug in the calculation of the Bayesian cov matrix, when the 
+  scale parameter was known: it was always using an estimated scale 
+  parameter. Makes no statistically meaningful difference for a model  
+  that fits propoerly, of course. 
+
+* Some junk removed from gam object.
+
+* summary.gam pseudoinversion made slightly more efficient.
+
+* adaptive smooth constructor is a bit more careful about the ranks 
+  of the penalties.
+
+* 2d adaptive smoother bug fix --- part of penalty was missing due
+  to complete line error.
+
+* `smoothCon' and `PredictMat' modified so that sparse smooths can
+   optionally have sparse centering constraints applied. 
+
+* `gamm' fix: prediction and visualization from `x$gam' where x is a 
+  fitted `gamm' object should not require the random effects to be 
+  provided. Now it doesn't.
+
+* minor bug fix: a model with no penalties except a fixed one would fail
+  with an index error. 
+
+* `te' terms are now only subject to centering constraints if all 
+  marginals would usually have a centering constraint. 
+
+* `te' no longer resets multi-dimensional marginals to "tp", unless 
+  they have been set to "cr", "cs", "ps" or "cp". This allows tensor
+  products with user supplied smooths.
+
+* Example of obtaining derivatives of a smooth (with CIs) added to 
+  `predict.gam' help file.
+
+* `newdata.guaranteed' argument to predict.gam didn't work. fixed.
+
+
 
 1.5-5
 

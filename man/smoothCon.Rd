@@ -16,7 +16,7 @@ although this behaviour can be over-ridden.
 \usage{
 smoothCon(object,data,knots,absorb.cons=FALSE,
           scale.penalty=TRUE,n=nrow(data),dataX=NULL,
-          null.space.penalty=FALSE)
+          null.space.penalty=FALSE,sparse.cons=0)
 PredictMat(object,data,n=nrow(data))
 }
 %- maybe also `usage' for other objects documented here.
@@ -39,14 +39,21 @@ should be constructed with another set of data provided in \code{dataX} --- \cod
 be the same for both. Facilitates smooth id's.}
 \item{null.space.penalty}{Should an extra penalty be added to the smooth which will penalize the 
 components of the smooth in the penalty null space: provides a way of penalizing terms out of the model altogether.}
+\item{sparse.cons}{If \code{0} then default sum to zero constraints are used. If \code{1} then one
+coefficient is set to zero as constraint for sparse smooths. If \code{2} then sparse coefficient sum to zero 
+constraints are used for sparse smooths. None of these options has an effect if the smooth supplies its own 
+constriant.}
+
 }
 
 \value{ From \code{smoothCon} a list of \code{smooth} objects returned by the
 appropriate \code{\link{smooth.construct}} method function. If constraints are
 to be absorbed then the objects will have  attributes \code{"qrc"} and
-\code{"nCons"}, the qr decomposition of the constraint matrix (returned by
-\code{\link{qr}}) and the number of constraints, respectively: these are  used in
-the re-parameterization. 
+\code{"nCons"}. \code{"nCons"} is the number of constraints. \code{"qrc"} is
+usually the qr decomposition of the constraint matrix (returned by
+\code{\link{qr}}), but if it is a single positive integer it is the index of the 
+coefficient to set to zero, and if it is a negative number then this indicates that 
+the parameters are to sum to zero. 
 
 For \code{predictMat} a matrix which will map the parameters associated with
 the smooth to the vector of values of the smooth evaluated at the covariate
@@ -70,7 +77,8 @@ method handles \code{by} variables internally then the returned matrix should ha
 
 Default centering constraints, that terms should sum to zero over the covariates, are produced unless 
 the smooth constructor includes a matrix \code{C} of constraints. To have no constraints (in which case 
-you had better have a full rank penalty!) the matrix \code{C} should have no rows.
+you had better have a full rank penalty!) the matrix \code{C} should have no rows. There is an option to 
+use centering constraint that generate no, or limited infil, if the smoother has a sparse model matrix.
 
 \code{smoothCon} returns a list of smooths because factor \code{by} variables result in multiple copies 
 of a smooth, each multiplied by the dummy variable associated with one factor level. \code{smoothCon} modifies 

@@ -6,7 +6,10 @@
 data, by a call to \code{lme} in the normal errors identity link case, or by 
 a call to \code{gammPQL} (a modification of \code{glmmPQL} from the \code{MASS} library) otherwise. 
 In the latter case estimates are only approximately MLEs. The routine is typically 
-slower than \code{gam}, and not quite as numerically robust.
+slower than \code{gam}, and not quite as numerically robust. 
+
+To use \code{lme4} in place of \code{nlme} as the underlying fitting engine, 
+see \code{gamm4} from package \code{gamm4}.
 
 Smooths are specified as in a call to \code{\link{gam}} as part of the fixed 
 effects model formula, but the wiggly components of the smooth are treated as 
@@ -127,7 +130,7 @@ information on this option. Failing that, you can try increasing the
 \code{niterEM} option in \code{control}: this will perturb the starting values
 used in fitting, but usually to values with lower likelihood! Note that this
 version of \code{gamm} works best with R 2.2.0 or above and \code{nlme}, 3.1-62 and above,
-since these use an improved optimizer.  
+since these use an improved optimizer. 
 }
 
 
@@ -200,7 +203,8 @@ Models must contain at least one random effect: either a smooth with non-zero
 smoothing parameter, or a random effect specified in argument \code{random}.
 
 \code{gamm} is not as numerically stable as \code{gam}: an \code{lme} call
-will occasionally fail. See details section for suggestions.
+will occasionally fail. See details section for suggestions, or try the 
+`gamm4' package.
 
 \code{gamm} is usually much slower than \code{gam}, and on some platforms you may need to
 increase the memory available to R in order to use it with large data sets
@@ -218,14 +222,14 @@ them above and below by an effective infinity and effective zero. See
 \code{\link{notExp2}} for details of how to change this. 
 
 Linked smoothing parameters and adaptive smoothing are not supported.
-
 } 
 
 \seealso{\code{\link{magic}} for an alternative for correlated data,
 \code{\link{te}}, \code{\link{s}}, 
 \code{\link{predict.gam}},
   \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{negbin}}, 
-\code{\link{vis.gam}},\code{\link{pdTens}}
+\code{\link{vis.gam}},\code{\link{pdTens}}, \code{gamm4} (
+\url{http://cran.r-project.org/package=gamm4})
  }
 
 \examples{
@@ -252,6 +256,8 @@ b2<-gamm(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
 plot(b2$gam,pages=1)
 fac <- dat$fac
 rm(dat)
+vis.gam(b2$gam)
+
 
 ## now an example with autocorrelated errors....
 n <- 400;sig <- 2
@@ -306,7 +312,7 @@ b <- gamm(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+
   s(x3,bs="cr"),data=dat,random=list(fa=~1,fb=~1),
   correlation=corAR1())
 plot(b$gam,pages=1)
-
+vis.gam(b$gam)
 ## and a "spatial" example...
 library(nlme);set.seed(1);n <- 200
 dat <- gamSim(2,n=n,scale=0) ## standard example

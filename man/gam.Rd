@@ -141,7 +141,7 @@ would be required to fit is returned is returned. See argument \code{G}.}
 
 \item{G}{Usually \code{NULL}, but may contain the object returned by a previous call to \code{gam} with 
 \code{fit=FALSE}, in which case all other arguments are ignored except for
-\code{gamma}, \code{in.out}, \code{control}, \code{method} and \code{fit}.}
+\code{gamma}, \code{in.out}, \code{scale}, \code{control}, \code{method} \code{optimizer} and \code{fit}.}
 
 \item{in.out}{optional list for initializing outer iteration. If supplied
 then this must contain two elements: \code{sp} should be an array of
@@ -199,7 +199,7 @@ the scale parameter and
 \eqn{DoF}{DoF} the effective degrees of freedom of the model. Notice that UBRE is effectively
 just AIC rescaled, but is only used when \eqn{s}{s} is known. 
 
-Alternatives are GACV, or a Laplace approximation to REML, there
+Alternatives are GACV, or a Laplace approximation to REML. There
 is some evidence that the latter may actually be the most effective choise. 
 
 Smoothing parameters are chosen to 
@@ -263,7 +263,7 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686. [Default
 method for additive case (but no longer for generalized)]
 
 Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
-additive models. J.R.Statist.Soc.B 70(3):495-518. [Generalized additive model case]
+additive models. J.R.Statist.Soc.B 70(3):495-518. [Generalized additive model methods]
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
@@ -383,6 +383,7 @@ print(b0);print(bp)
 
 
 ## now a GAM with 3df regression spline term & 2 penalized terms
+
 b0<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15),data=dat)
 plot(b0,pages=1)
 
@@ -391,16 +392,27 @@ b1<-gam(y~s(x0,x1)+s(x2)+s(x3),data=dat)
 par(mfrow=c(2,2))
 plot(b1)
 
-
-
 par(mfrow=c(1,1))
 ## now simulate poisson data...
-dat <- gamSim(1,n=400,dist="poisson",scale=.25)
+dat <- gamSim(1,n=4000,dist="poisson",scale=.1)
 
-b2<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,data=dat)
+## use "cr" basis to save time, with 4000 data...
+b2<-gam(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+
+        s(x3,bs="cr"),family=poisson,data=dat,method="REML")
 plot(b2,pages=1)
 
-## repeat fit using performance iteration
+## drop x3, but initialize sp's from previous fit, to 
+## save more time...
+
+b2a<-gam(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr"),
+         family=poisson,data=dat,method="REML",
+         in.out=list(sp=b2$sp[1:3],scale=1))
+par(mfrow=c(2,2))
+plot(b2a)
+
+par(mfrow=c(1,1))
+## similar example using performance iteration
+dat <- gamSim(1,n=400,dist="poisson",scale=.25)
 
 b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,optimizer="perf")
@@ -412,15 +424,15 @@ b4<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,method="GACV.Cp",scale=-1)
 plot(b4,pages=1)
 
-## repeat using REML as in Wood 2008...
+## repeat using REML as in Wood 2009...
 
 b5<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,method="REML")
 plot(b5,pages=1)
 
  
+## a binary example (see later for large dataset version)...
 
-## a binary example 
 dat <- gamSim(1,n=400,dist="binary",scale=.33)
 
 lr.fit <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=binomial,data=dat)
@@ -455,7 +467,10 @@ vis.gam(b4)                     ## persp fit
 detach(eg)
 par(op)
 
-## very large dataset example with user defined knots
+##################################################
+## largish dataset example with user defined knots
+##################################################
+
 par(mfrow=c(1,1))
 eg <- gamSim(2,n=10000,scale=.5)
 attach(eg)
@@ -474,6 +489,41 @@ vis.gam(b6,color="heat")
 b7 <- gam(y~s(x,z,k=50,xt=list(max.knots=1000,seed=2)),data=data)
 vis.gam(b7)
 detach(eg)
+
+################################################################
+## Approximate large dataset logistic regression for rare events
+## based on subsampling the zeroes, and adding an offset to
+## approximately allow for this.
+## Doing the same thing, but upweighting the sampled zeroes
+## leads to problems with smoothness selection, and CIs.
+################################################################
+n <- 100000  ## simulate n data 
+dat <- gamSim(1,n=n,dist="binary",scale=.33)
+p <- binomial()$linkinv(dat$f-6) ## make 1's rare
+dat$y <- rbinom(p,1,p)      ## re-simulate rare response
+
+## Now sample all the 1's but only proportion S of the 0's
+S <- 0.02                   ## sampling fraction of zeroes
+dat <- dat[dat$y==1 | runif(n) < S,] ## sampling
+
+## Create offset based on total sampling fraction
+dat$s <- rep(log(nrow(dat)/n),nrow(dat))
+
+lr.fit <- gam(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+s(x3,bs="cr")+
+              offset(s),family=binomial,data=dat,method="REML")
+
+## plot model components with truth overlaid in red
+op <- par(mfrow=c(2,2))
+fn <- c("f0","f1","f2","f3");xn <- c("x0","x1","x2","x3")
+for (k in 1:4) {
+       plot(lr.fit,select=k,scale=0)
+       ff <- dat[[fn[k]]];xx <- dat[[xn[k]]]
+       ind <- sort.int(xx,index.return=TRUE)$ix
+       lines(xx[ind],(ff-mean(ff))[ind]*.33,col=2)
+}
+par(op)
+rm(dat)
+
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

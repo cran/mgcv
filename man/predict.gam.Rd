@@ -9,7 +9,7 @@ by standard errors, based on the posterior distribution of the model
 coefficients. The routine can optionally return the matrix by which the model
 coefficients must be pre-multiplied in order to yield the values of the linear predictor at
 the supplied covariate values: this is useful for obtaining credible regions
-for quantities derived from the model, and for lookup table prediction outside
+for quantities derived from the model (e.g. derivatives of smooths), and for lookup table prediction outside
 \code{R} (see example code below).}
 
 \usage{
@@ -136,12 +136,16 @@ b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3),data=dat)
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
 
+#############################################
 ## difference between "terms" and "iterms"
+#############################################
 nd2 <- data.frame(x0=c(.25,.5),x1=c(.25,.5),x2=c(.25,.5),x3=c(.25,.5))
 predict(b,nd2,type="terms",se=TRUE)
 predict(b,nd2,type="iterms",se=TRUE)
 
+#########################################################
 ## now get variance of sum of predictions using lpmatrix
+#########################################################
 
 Xp <- predict(b,newd,type="lpmatrix") 
 
@@ -151,8 +155,11 @@ a <- rep(1,31)
 Xs <- t(a) \%*\% Xp ## Xs \%*\% coef(b) gives sum of predictions
 var.sum <- Xs \%*\% b$Vp \%*\% t(Xs)
 
+
+#############################################################
 ## Now get the variance of non-linear function of predictions
 ## by simulation from posterior distribution of the params
+#############################################################
 
 library(MASS)
 br<-mvrnorm(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
@@ -167,6 +174,7 @@ mean(res);var(res)
 
 res <- colSums(log(abs(Xp \%*\% t(br))))
 
+##################################################################
 ## The following shows how to use use an "lpmatrix" as a lookup 
 ## table for approximate prediction. The idea is to create 
 ## approximate prediction matrix rows by appropriate linear 
@@ -177,6 +185,7 @@ res <- colSums(log(abs(Xp \%*\% t(br))))
 ## gam *outside* R: all that is needed is the coefficient vector 
 ## and the prediction matrix. Use larger `Xp'/ smaller `dx' and/or 
 ## higher order interpolation for higher accuracy.  
+###################################################################
 
 xn <- c(.341,.122,.476,.981) ## want prediction at these values
 x0 <- 1         ## intercept column
@@ -194,6 +203,40 @@ se <- sqrt(x0\%*\%b$Vp\%*\%t(x0));se ## get standard error
 ## compare to normal prediction
 predict(b,newdata=data.frame(x0=xn[1],x1=xn[2],
         x2=xn[3],x3=xn[4]),se=TRUE)
+
+####################################################################
+## Differentiating the smooths in a model (with CIs for derivatives)
+####################################################################
+
+## simulate data and fit model...
+dat <- gamSim(1,n=300,scale=sig)
+b<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
+plot(b,pages=1)
+
+## now evaluate derivatives of smooths with associated standard 
+## errors, by finite differencing...
+x.mesh <- seq(0,1,length=200) ## where to evaluate derivatives
+newd <- data.frame(x0 = x.mesh,x1 = x.mesh, x2=x.mesh,x3=x.mesh)
+X0 <- predict(b,newd,type="lpmatrix") 
+
+eps <- 1e-7 ## finite difference interval
+x.mesh <- x.mesh + eps ## shift the evaluation mesh
+newd <- data.frame(x0 = x.mesh,x1 = x.mesh, x2=x.mesh,x3=x.mesh)
+X1 <- predict(b,newd,type="lpmatrix")
+
+Xp <- (X1-X0)/eps ## maps coefficients to (fd approx.) derivatives
+colnames(Xp)      ## can check which cols relate to which smooth
+
+par(mfrow=c(2,2))
+for (i in 1:4) {  ## plot derivatives and corresponding CIs
+  Xi <- Xp*0 
+  Xi[,(i-1)*9+1:9+1] <- Xp[,(i-1)*9+1:9+1] ## Xi\%*\%coef(b) = smooth deriv i
+  df <- Xi\%*\%coef(b)              ## ith smooth derivative 
+  df.sd <- rowSums(Xi\%*\%b$Vp*Xi)^.5 ## cheap diag(Xi\%*\%b$Vp\%*\%t(Xi))^.5
+  plot(x.mesh,df,type="l",ylim=range(c(df+2*df.sd,df-2*df.sd)))
+  lines(x.mesh,df+2*df.sd,lty=2);lines(x.mesh,df-2*df.sd,lty=2)
+}
+
 
 
 }
