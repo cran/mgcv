@@ -39,7 +39,8 @@ basis code is given then this is used for all bases.}
 
 \item{d}{array of marginal basis dimensions. For example if you want a smooth for 3 covariates 
 made up of a tensor product of a 2 dimensional t.p.r.s. basis and a 1-dimensional basis, then 
-set \code{d=c(2,1)}.}
+set \code{d=c(2,1)}. Incompatibilities between built in basis types and dimension will be
+resolved by resetting the basis type.}
 
 \item{by}{a numeric or factor variable of the same dimension as each covariate. 
 In the numeric vector case the elements multiply the smooth evaluated at the corresponding 
@@ -110,6 +111,10 @@ variable. This parameterization can reduce numerical stability  when used
 with marginal smooths other than \code{"cc"}, \code{"cr"} and \code{"cs"}: if
 this causes problems, set \code{np=FALSE}.
 
+Note that tensor product smooths should not be centred (have identifiability constraints imposed) 
+if any marginals would not need centering. The constructor for tensor product smooths 
+ensures that this happens.
+
 The function does not evaluate the variable arguments.
 
 }
@@ -158,7 +163,8 @@ generalized additive mixed models. Biometrics 62(4):1025-1036
 
 }
 
-\seealso{ \code{\link{s}},\code{\link{gam}},\code{\link{gamm}}}
+\seealso{ \code{\link{s}},\code{\link{gam}},\code{\link{gamm}}, 
+\code{\link{smooth.construct.tensor.smooth.spec}}}
 
 \examples{
 

@@ -162,7 +162,7 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
   # now check the basis types
   if (length(bs)==1) bs<-rep(bs,n.bases)
   if (length(bs)!=n.bases) {warning("bs wrong length and ignored.");bs<-rep("cr",n.bases)}
-  bs[d>1&bs!="tp"&bs!="ts"]<-"tp"
+  bs[d>1&(bs=="cr"|bs=="cs"|bs=="ps"|bs=="cp")]<-"tp"
   # finally the penalty orders
   if (length(m)==1) m<-rep(m,n.bases)
   if (length(m)!=n.bases) 
@@ -305,6 +305,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
 ## the constructor for a tensor product basis object
 { m<-length(object$margin)  # number of marginal bases
   Xm<-list();Sm<-list();nr<-r<-d<-array(0,m)
+  C <- NULL
   for (i in 1:m)
   { knt <- dat <- list()
     term <- object$margin[[i]]$term
@@ -320,6 +321,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
     d[i]<-nrow(Sm[[i]])
     r[i]<-object$margin[[i]]$rank
     nr[i]<-object$margin[[i]]$null.space.dim
+    if (!is.null(object$margin[[i]]$C)&&nrow(object$margin[[i]]$C)==0) C <- matrix(0,0,0) ## no centering constraint needed
   }
   XP <- list()
   if (object$np) # reparameterize 
@@ -369,7 +371,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   }
 
   object$X<-X;object$S<-S;
-
+  object$C <- C ## really just in case a marginal has implies that no cons are needed
   object$df <- ncol(X)
   object$null.space.dim <- prod(nr) # penalty null space rank 
   object$rank<-r
@@ -537,7 +539,7 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
 smooth.construct.ts.smooth.spec<-function(object,data,knots)
 # implements a class of tprs like smooths with an additional shrinkage
 # term in the penalty... this allows for fully integrated GCV model selection
-{ attr(object,"shrink") <- 1e-2
+{ attr(object,"shrink") <- 1e-1
   object <- smooth.construct.tp.smooth.spec(object,data,knots)
   class(object) <- "ts.smooth"
   object
@@ -652,7 +654,7 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
 smooth.construct.cs.smooth.spec<-function(object,data,knots)
 # implements a class of cr like smooths with an additional shrinkage
 # term in the penalty... this allows for fully integrated GCV model selection
-{ attr(object,"shrink") <- .01
+{ attr(object,"shrink") <- .1
   object <- smooth.construct.cr.smooth.spec(object,data,knots)
   class(object) <- "cs.smooth"
   object
@@ -1043,7 +1045,9 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
       S <- list();l<-0
       for (i in 1:k) {
         S[[i]] <- t(Db)%*%(as.numeric(V[,i])*Db)
-        pspl$rank[i] <- sum(rowSums(abs(S[[i]]))>0)
+        ind <- rowSums(abs(S[[i]]))>0
+        ev <- eigen(S[[i]][ind,ind],symmetric=TRUE,only.values=TRUE)$values
+        pspl$rank[i] <- sum(ev>max(ev)*.Machine$double.eps^.9)
       }
       pspl$S <- S
     }
@@ -1079,9 +1083,9 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
       Db <- D2(ni=k[1],nj=k[2]) ## get the difference-on-grid matrices
       pspl$S <- list() ## delete original S list
       if (kp.tot==1) { ## return a single fixed penalty
-        pspl$S[[1]] <- t(Db[[1]])%*%Db[[1]] + t(Db[[2]])%*%Db[[2]] 
-                                          + t(Db[[3]])%*%Db[[3]]
-
+        pspl$S[[1]] <- t(Db[[1]])%*%Db[[1]] + t(Db[[2]])%*%Db[[2]] +
+                       t(Db[[3]])%*%Db[[3]]
+        pspl$rank <- ncol(pspl$S[[1]]) - 3
       } else { ## adaptive 
         if (kp.tot==3) { ## planar adaptiveness
           V <- cbind(rep(1,k.tot),Db[[4]],Db[[5]])
@@ -1102,8 +1106,8 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
       
         S <- list()
         for (i in 1:kp.tot) {
-          S[[i]] <- t(Db$Drr)%*%(as.numeric(Vrr[,i])*Db$Drr) + t(Db$Dcc)%*%(as.numeric(Vcc[,i])*Db$Dcc)
-                    + t(Db$Dcr)%*%(as.numeric(Vcr[,i])*Db$Dcr)
+          S[[i]] <- t(Db$Drr)%*%(as.numeric(Vrr[,i])*Db$Drr) + t(Db$Dcc)%*%(as.numeric(Vcc[,i])*Db$Dcc) +
+                    t(Db$Dcr)%*%(as.numeric(Vcr[,i])*Db$Dcr)
           ev <- eigen(S[[i]],symmetric=TRUE,only.values=TRUE)$values
           pspl$rank[i] <- sum(ev>max(ev)*.Machine$double.eps*10)
         }
@@ -1118,171 +1122,6 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
 }
 
 
-
-smooth.construct.ad1.smooth.spec<-function(object,data,knots)
-## an adaptive p-spline constructor method function
-## This version is the original 1.4 release --- it's way over-complicated and
-## a much simpler scheme is as good, and much more efficient...
-{ bs <- object$xt$bs
-  if (is.null(bs)) { ## use default bases  
-    bs <- c("ps","ps")
-  } else { # bases supplied, need to sanity check
-    if (!bs[1]%in%c("cc","cr","ps","cp")) bs[1] <- "ps"
-    if (length(bs)==1) bs[2] <- bs[1]
-    if (!bs[2]%in%c("cr","ps","tp","cc","cp")) bs[2] <- "ps"
-  }
-  if (object$dim> 2 )  stop("the adaptive smooth class is limited to 1 or 2 covariates.")
-  else if (object$dim==1) { ## following is 1D case...
-    if (object$bs.dim < 0) object$bs.dim <- 40 ## default
-    if (is.na(object$p.order[1])) object$p.order[1] <- 5
-    pobject <- object
-    pobject$p.order <- c(2,2)
-    class(pobject) <- paste(bs[1],".smooth.spec",sep="")
-    ## get basic spline object...
-    if (is.null(knots)&&bs[1]%in%c("cr","cc")) { ## must create knots
-      x <- data[[object$term]]
-      knots <- list(seq(min(x),max(x),length=object$bs.dim))
-      names(knots) <- object$term
-    } ## end of knot creation
-    pspl <- smooth.construct(pobject,data,knots)
-    nk <- ncol(pspl$X)
-    k <- object$p.order[1]   ## penalty basis size 
-    if (k>=nk-2) stop("penalty basis too large for smoothing basis")
-    if (k <= 0) { ## no penalty 
-      pspl$fixed <- TRUE
-      pspl$S <- NULL
-    } else if (k>=2) { ## penalty basis needed ...
-      x <- 1:(nk-2)/nk;m=2
-      ## All elements of V must be >=0 for all S[[l]] to be +ve semi-definite 
-      if (k==2) V <- cbind(rep(1,nk-2),x) else if (k==3) {
-         if (bs[2]=="ps") m <- 1
-         ps2 <- smooth.construct(s(x,k=k,bs=bs[2],m=m,fx=TRUE),data=data.frame(x=x),knots=NULL)
-         V <- ps2$X
-      } else { ## general penalty basis construction...
-        ps2 <- smooth.construct(s(x,k=k,bs=bs[2],m=m,fx=TRUE),data=data.frame(x=x),knots=NULL)
-        V <- ps2$X
-      }
-      if (min(V)<0) V <- V - min(V)  ## ensure all +ve definite
-      Db<-diff(diff(diag(nk))) ## base difference matrix
-      D <- list()
-      for (i in 1:k) D[[i]] <- as.numeric(V[,i])*Db
-      L <- matrix(0,k*(k+1)/2,k)
-      S <- list();l<-0
-      for (i in 1:k) for (j in i:k) { ## creating penalty coefficient list and L
-        if (sum(V[,i]*V[,j])!=0) { ## then don't drop term!
-          l <- l+1
-          if (i==j) {
-            S[[l]] <- t(D[[i]])%*%D[[i]];
-            L[l,i] <- 2
-          } else{
-            S[[l]] <- t(D[[i]])%*%D[[j]];
-            S[[l]] <- S[[l]] + t(S[[l]])
-            L[l,j] <- L[l,i] <- 1
-          }
-          pspl$rank[l] <- sum((V[,i]*V[,j])!=0)
-        }
-      } ## penalty coefficient matrix list finished
-      L <- L[1:l,] ## in case some potential S[[l]]'s were dropped
-      pspl$S <- S
-      pspl$L <- L
-    }
-  } else if (object$dim==2){ ## 2D case 
-    ## first task is to obtain a tensor product basis
-    object$bs.dim[object$bs.dim<0] <- 15 ## default
-    k <- object$bs.dim;if (length(k)==1) k <- c(k[1],k[1])
-    tec <- paste("te(",object$term[1],",",object$term[2],",bs=bs[1],k=k,m=2)",sep="")
-    pobject <- eval(parse(text=tec)) ## tensor smooth specification object
-    pobject$np <- FALSE ## do not re-parameterize
-    if (is.null(knots)&&bs[1]%in%c("cr","cc")) { ## create suitable knots 
-      for (i in 1:2) {
-        x <- data[[object$term[i]]]
-        knots <- list(seq(min(x),max(x),length=k[i]))
-        names(knots)[i] <- object$term[i]
-      } 
-    } ## finished knots
-    pspl <- smooth.construct(pobject,data,knots) ## create basis
-    ## now need to create the adaptive penalties...
-    ## First the penalty basis...
-    kp <- object$p.order
-    if (bs[2]=="tp") { 
-      kp <- kp[1] 
-      if (is.na(kp)) kp <- 10 ## default
-    } else {
-      if (length(kp)!=2) kp <- c(kp[1],kp[1])
-      kp[is.na(kp)] <- 3 ## default
-    }
-    kp.tot <- prod(kp);k.tot <- (k[1]-2)*(k[2]-2) ## rows of Difference matrices   
-    if (kp.tot > (k[1]-2)*(k[2]-2)) stop("penalty basis too large for smoothing basis") 
-    
-    if (kp.tot <= 0) { ## no penalty 
-      pspl$fixed <- TRUE
-      pspl$S <- NULL
-    } else { ## penalized, but how?
-      Db <- D2(ni=k[1],nj=k[2]) ## get the difference-on-grid matrices
-      pspl$S <- list() ## delete original S list
-      if (kp.tot==1) { ## return a single fixed penalty
-        pspl$S[[1]] <- t(Db[[1]])%*%Db[[1]] + t(Db[[2]])%*%Db[[2]] 
-                                          + t(Db[[3]])%*%Db[[3]]
-
-      } else { ## adaptive 
-        if (kp.tot==3) { ## planar adaptiveness
-          V <- cbind(rep(1,k.tot),Db[[4]],Db[[5]])
-        } else { ## spline adaptive penalty...
-          ## first check sanity of basis dimension request
-          ok <- TRUE
-          if (bs[2]=="tp"&&kp<4) ok <- FALSE
-          if (bs[2]%in%c("cp","ps") && sum(kp<2)) ok <- FALSE
-          if (bs[2]=="cr"&&sum(kp<3)) ok <- FALSE
-          if (bs[2]=="cc"&&sum(kp<4)) ok <- FALSE
-          if (!ok) stop("penalty basis too small")
-          if (bs[2]%in%c("cp","ps")) { m <- min(min(kp)-2,1); m<-c(m,m)} else m <- 2
-          if (bs[2]=="tp") {
-            ps2 <- smooth.construct(s(i,j,k=kp,bs="tp",fx=TRUE),
-                                  data=data.frame(i=Db$ri,j=Db$ci),knots=NULL)
-
-          } else  ps2 <- smooth.construct(te(i,j,bs=bs[2],k=kp,fx=TRUE,m=m,np=FALSE),
-                                data=data.frame(i=Db$ri,j=Db$ci),knots=NULL) 
-          V <- ps2$X
-          if (min(V)<0) V <- V - min(V) ## V must be +ve or S[[l]] may not be pos semi def
-        } ## spline adaptive basis finished
-        ## build penalty list and L
-        Dr <- Dc <- Dcr <- list()
-        for (i in 1:ncol(V)) { 
-          Dr[[i]] <- as.numeric(V[,i])*Db$Drr
-          Dc[[i]] <- as.numeric(V[,i])*Db$Dcc
-          Dcr[[i]] <- as.numeric(V[,i])*Db$Dcr
-        }
-
-        L <- matrix(0,kp.tot*(kp.tot+1)/2,kp.tot)
-        S <- list();l<-0
-        for (i in 1:kp.tot) for (j in i:kp.tot) { ## creating penalty coefficient list and L
-          if (sum(V[,i]*V[,j])!=0) { ## then don't drop term
-             l <- l+1 
-             if (i==j) { 
-               S[[l]] <- t(Dr[[i]])%*%Dr[[i]] + t(Dc[[i]])%*%Dc[[i]] + 
-                         t(Dcr[[i]])%*%Dcr[[i]]
-               L[l,i] <- 2
-            } else{
-              S1 <- t(Dr[[i]])%*%Dr[[j]];S1 <- S1 + t(S1)
-              S2 <- t(Dc[[i]])%*%Dc[[j]];S2 <- S2 + t(S2)
-              S3 <- t(Dcr[[i]])%*%Dcr[[j]];S3 <- S3 + t(S3)
-              S[[l]] <- S1 + S2 + S3
-              L[l,j] <- L[l,i] <- 1
-            }
-            ## theory fails me, but in the grand scheme of things the following
-            ## is cheap...
-            ev <- eigen(S[[l]],symmetric=TRUE,only.values=TRUE)$values
-            pspl$rank[l] <- sum(ev>max(ev)*.Machine$double.eps*10)
-          }
-        } ## penalty coefficient matrix list finished
-        L <- L[1:l,] ## in case some potential S[[l]]'s were dropped
-        pspl$L <- L
-        pspl$S <- S
-      } ## adaptive penalty finished
-    } ## penalized case finished
-  } 
-  pspl
-}
 
 
 
@@ -1395,7 +1234,7 @@ ExtractData <- function(object,data,knots) {
 #########################################################################
 
 smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=nrow(data),
-                      dataX = NULL,null.space.penalty = FALSE)
+                      dataX = NULL,null.space.penalty = FALSE,sparse.cons=0)
 ## wrapper function which calls smooth.construct methods, but can then modify
 ## the parameterization used. If absorb.cons==TRUE then a constraint free
 ## parameterization is used. 
@@ -1411,7 +1250,25 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   ## must be done here on original model matrix to ensure same
   ## basis for all `id' linked terms
   if (is.null(sm$C)) {
-    sm$C <- matrix(colSums(sm$X),1,ncol(sm$X))
+    if (sparse.cons==0) {
+      sm$C <- matrix(colSums(sm$X),1,ncol(sm$X))
+    } else { ## use sparse constraints for sparse terms
+      if (sum(sm$X==0)>.1*sum(sm$X!=0)) { ## treat term as sparse
+        if (sparse.cons==1) {
+          xsd <- apply(sm$X,2,FUN=sd)
+          if (sum(xsd==0)) ## are and columns constant?
+            sm$C <- ((1:length(xsd))[xsd==0])[1] ## index of coef to set to zero
+          else {
+            xz <- colSums(sm$X==0) ## find number of zeroes per column
+            sm$C <- ((1:length(xz))[xz==min(xz)])[1] ## index of coef to set to zero
+          }
+        } else if (sparse.cons==2) {
+            sm$C = -1 ## params sum to zero
+        } else  { stop("unimplemented sparse constraint type requested") }
+      } else { ## it's not sparse anyway 
+        sm$C <- matrix(colSums(sm$X),1,ncol(sm$X))
+      }
+    } ## end of sparse constraint handling
     conSupplied <- FALSE
   } else conSupplied <- TRUE
 
@@ -1513,7 +1370,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
           ind <- 0:(q-1)*n
           offs <- attr(sm$X,"offset")
           if (!is.null(offs)) offX <- rep(0,n) else offX <- NULL 
-          sml[[1]]$X <- matrix(0,n,ncol(sm$X))  ## something wrong with this case!!
+          sml[[1]]$X <- matrix(0,n,ncol(sm$X))  
           for (i in 1:n) { ## in this case have to work down the rows
             ind <- ind + 1
             sml[[1]]$X[i,] <- colSums(by[ind]*sm$X[sm$ind[ind],]) 
@@ -1550,29 +1407,59 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   ## absorb constraints.....
   if (absorb.cons)
   { k<-ncol(sm$X)
-    j<-nrow(sm$C)
-    if (j>0) # there are constraints
-    { qrc<-qr(t(sm$C))
-      for (i in 1:length(sml)) { ## loop through smooth list
-        if (length(sm$S)>0)
-        for (l in 1:length(sm$S)) # tensor product terms have > 1 penalty 
-        { ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
-          sml[[i]]$S[[l]]<-t(qr.qty(qrc,t(ZSZ))[(j+1):k,])
+    if (is.matrix(sm$C)) {
+      j<-nrow(sm$C)
+      if (j>0) # there are constraints
+      { qrc<-qr(t(sm$C))
+        for (i in 1:length(sml)) { ## loop through smooth list
+          if (length(sm$S)>0)
+          for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
+          { ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
+            sml[[i]]$S[[l]]<-t(qr.qty(qrc,t(ZSZ))[(j+1):k,])
+          }
+          sml[[i]]$X<-t(qr.qy(qrc,t(sml[[i]]$X))[(j+1):k,])
+          attr(sml[[i]],"qrc") <- qrc
+          attr(sml[[i]],"nCons") <- j;
+          sml[[i]]$C <- NULL
+          sml[[i]]$rank <- pmin(sm$rank,k-j)
+          sml[[i]]$df <- sml[[i]]$df - j
+          ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
+        } ## end smooth list loop
+      } else { ## no constraints
+        for (i in 1:length(sml)) {
+         attr(sml[[i]],"qrc") <- "no constraints"
+         attr(sml[[i]],"nCons") <- 0;
         }
-        sml[[i]]$X<-t(qr.qy(qrc,t(sml[[i]]$X))[(j+1):k,])
-        attr(sml[[i]],"qrc") <- qrc
-        attr(sml[[i]],"nCons") <- j;
-        sml[[i]]$C <- NULL
-        sml[[i]]$rank <- pmin(sm$rank,k-j)
-        sml[[i]]$df <- sml[[i]]$df - j
-        ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
-     } ## end smooth list loop
-   } else { ## no constraints
-     for (i in 1:length(sml)) {
-       attr(sml[[i]],"qrc") <- "no constraints"
-       attr(sml[[i]],"nCons") <- 0;
-     }
-   } ## end else 
+      } ## end else no constraints
+    } else if (sm$C>0) { ## set to zero constraints
+       for (i in 1:length(sml)) { ## loop through smooth list
+          if (length(sm$S)>0)
+          for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
+          { sml[[i]]$S[[l]] <- sml[[i]]$S[[l]][-sm$C,-sm$C]
+          }
+          sml[[i]]$X <- sml[[i]]$X[,-sm$C]
+          attr(sml[[i]],"qrc") <- sm$C
+          attr(sml[[i]],"nCons") <- 1;
+          sml[[i]]$C <- NULL
+          sml[[i]]$rank <- pmin(sm$rank,k-1)
+          sml[[i]]$df <- sml[[i]]$df - 1
+          ## so insert an extra 0 at position sm$C in coef vector to get original
+        } ## end smooth list loop
+    } else if (sm$C <0) { ## params sum to zero 
+       for (i in 1:length(sml)) { ## loop through smooth list
+          if (length(sm$S)>0)
+          for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
+          { sml[[i]]$S[[l]] <- diff(t(diff(sml[[i]]$S[[l]])))
+          }
+          sml[[i]]$X <- t(diff(t(sml[[i]]$X)))
+          attr(sml[[i]],"qrc") <- sm$C
+          attr(sml[[i]],"nCons") <- 1;
+          sml[[i]]$C <- NULL
+          sml[[i]]$rank <- pmin(sm$rank,k-1)
+          sml[[i]]$df <- sml[[i]]$df - 1
+          ## so insert an extra 0 at position sm$C in coef vector to get original
+        } ## end smooth list loop       
+    }
   } else for (i in 1:length(sml)) attr(sml[[i]],"qrc") <-NULL ## no absorption
 
   ## The idea here is that term selection can be accomplished as part of fitting 
@@ -1809,13 +1696,19 @@ PredictMat <- function(object,data,n=nrow(data))
     j <- attr(object,"nCons")
     if (j>0) { ## there were constraints to absorb - need to untransform
       k<-ncol(X)
-      if (sum(is.na(X))) {
-        ind <- !is.na(rowSums(X))
-        X1 <- t(qr.qy(qrc,t(X[ind,]))[(j+1):k,])
-        X <- matrix(NA,nrow(X),ncol(X1))
-        X[ind,] <- X1
-      } else {
-        X <- t(qr.qy(qrc,t(X))[(j+1):k,])
+      if (inherits(qrc,"qr")) {
+        if (sum(is.na(X))) {
+          ind <- !is.na(rowSums(X))
+          X1 <- t(qr.qy(qrc,t(X[ind,]))[(j+1):k,])
+          X <- matrix(NA,nrow(X),ncol(X1))
+          X[ind,] <- X1
+        } else {
+          X <- t(qr.qy(qrc,t(X))[(j+1):k,])
+        }
+      } else if (qrc>0) { ## simple set to zero constraint
+        X <- X[,-qrc]
+      } else if (qrc<0) { ## params sum to zero
+        X <- t(diff(t(X)))
       }
     }
   }
