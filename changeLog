@@ -1,6 +1,43 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.6-0
+
+*** Routine `bam' added for fitting GAMs to very large datasets.
+    See ?bam
+
+** p-value method tweaked again. Reference DoF for testing now 
+  defaults to the alternative EDF estimate (based on 2F - FF where 
+  F = (X'WX+S)^{-1}X'WX). `magic.post.proc' and `gam.fit3.post.proc'
+  changed to provide this. p-values still a bit too small, but only 
+  slightly so, if `method="ML"' is the smoothness selector.
+
+* bad bug in `get.null.coef' could cause fit failure as a result of 
+  initial null coefs predicting infinite deviance.
+
+* REML/ML convergence could be response scale sensitive, because of 
+  innapropriate convergence testing scaling in newton and bfgs - 
+  fixed.
+
+* Slight fix to REML (not ML) score calculation in gam.fit3 - 
+  Mp/2*log(2*pi*scale) was missing from REML score, where Mp is
+  total null space dimension for model.
+
+* `summary.gam' bug fix: REML/ML models were always treated as if
+  scale parameter had been estimated. gamObject should now contain 
+  `scale.estimated' indicating whether or not scale estimated
+
+* some modifications to smoothCon and gam.setup to allow smooth
+  constructors to return Matrix style sparse model matrices and 
+  penalty matrices.  
+
+* fixed misplaced bracket in print.mgcv.version, called on attachment.
+
+* added utility function `ls.list' to give memory usage for elements 
+  of a list.
+
+* added function `rig' to generate inverse Gaussian random deviates. 
+
 1.5-6
 
 * "ts" and "cs" modified so that zero eigen values of penalty

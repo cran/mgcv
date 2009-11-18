@@ -76,7 +76,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             weights = rep(1, nobs), start = NULL, etastart = NULL, 
             mustart = NULL, offset = rep(0, nobs),U1=diag(ncol(x)), Mp=-1, family = gaussian(), 
             control = gam.control(), intercept = TRUE,deriv=2,
-            gamma=1,scale=1,printWarn=TRUE,scoreType="REML",null.coef=rep(0,ncol(x)),...) 
+            gamma=1,scale=1,printWarn=TRUE,scoreType="REML",null.coef=rep(0,ncol(x)),
+            pearson.extra=0,dev.extra=0,n.true=-1,...) 
  
 ## Version with new reparameterization and truncation strategy. 
 ## ISSUES: 
@@ -96,6 +97,11 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 ## it deals with weights, rather than sqrt weights.
 ## deriv, sp, S, rS, H added to arg list. 
 ## need to modify family before call.
+## pearson.extra is an extra component to add to the pearson statistic in the P-REML/P-ML 
+## case, only.
+## dev.extra is an extra component to add to the deviance in the REML and ML cases only.
+## Similarly, n.true is to be used in place of the length(y) in ML/REML calculations,
+## and the scale.est only.
 {   if (family$link==family$canonical) fisher <- TRUE else fisher=FALSE ##if canonical Newton = Fisher, but Fisher cheaper!
     if (scale>0) scale.known <- TRUE else scale.known <- FALSE
     if (!scale.known&&scoreType%in%c("REML","ML")) { ## the final element of sp is actually log(scale)
@@ -163,6 +169,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
    
     conv <- FALSE
     n <- nobs <- NROW(y) ## n is just to keep codetools happy
+    if (n.true <= 0) n.true <- nobs ## n.true is used in criteria in place of nobs
     nvars <- ncol(x)
     EMPTY <- nvars == 0
     if (is.null(weights)) 
@@ -487,8 +494,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
          if (control$trace) cat("calling gdi...")
 
        REML <- 0 ## signals GCV/AIC used
-       if (scoreType%in%c("REML","P-REML")) REML <- 1 else 
-       if (scoreType%in%c("ML","P-ML")) REML <- -1 
+       if (scoreType%in%c("REML","P-REML")) {REML <- 1;remlInd <- 1} else 
+       if (scoreType%in%c("ML","P-ML")) {REML <- -1;remlInd <- 0} 
 
        if (REML==0) rSncol <- unlist(lapply(rS,ncol)) else rSncol <- unlist(lapply(UrS,ncol))
 
@@ -513,24 +520,24 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
          coef <- oo$beta;
          trA <- oo$trA;
-         scale.est <- dev/(nobs-trA)
+         scale.est <- (dev+dev.extra)/(n.true-trA)
          reml.scale <- NA  
 
         if (scoreType%in%c("REML","ML")) { ## use Laplace (RE)ML
           
-          ls <- family$ls(y,weights,n,scale) ## saturated likelihood and derivatives
-          Dp <- dev + oo$conv.tol
-          REML <- Dp/(2*scale) - ls[1] + oo$rank.tol/2 - rp$det/2
+          ls <- family$ls(y,weights,n,scale)*n.true/nobs ## saturated likelihood and derivatives
+          Dp <- dev + oo$conv.tol + dev.extra
+          REML <- Dp/(2*scale) - ls[1] + oo$rank.tol/2 - rp$det/2 - remlInd*Mp/2*log(2*pi*scale)
           if (deriv) {
-            REML1 <- oo$D1/(2*scale) + oo$trA1/2 - rp$det1/2
+            REML1 <- oo$D1/(2*scale) + oo$trA1/2 - rp$det1/2 
             if (deriv==2) REML2 <- (matrix(oo$D2,nSp,nSp)/scale + matrix(oo$trA2,nSp,nSp) - rp$det2)/2
             if (sum(!is.finite(REML2))) {
                stop("Non finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")
             }
           }
           if (!scale.known&&deriv) { ## need derivatives wrt log scale, too 
-            ls <- family$ls(y,weights,n,scale) ## saturated likelihood and derivatives
-            dlr.dlphi <- -Dp/(2 *scale) - ls[2]*scale
+            ##ls <- family$ls(y,weights,n,scale) ## saturated likelihood and derivatives
+            dlr.dlphi <- -Dp/(2 *scale) - ls[2]*scale - Mp/2*remlInd
             d2lr.d2lphi <- Dp/(2*scale) - ls[3]*scale^2 - ls[2]*scale
             d2lr.dspphi <- -oo$D1/(2*scale)
             REML1 <- c(REML1,dlr.dlphi)
@@ -541,24 +548,29 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
           }
           reml.scale <- scale
         } else if (scoreType%in%c("P-REML","P-ML")) { ## scale unknown use Pearson-Laplace REML
-          reml.scale <- phi <- oo$P ## REMLish scale estimate
-          ls <- family$ls(y,weights,n,phi) ## saturated likelihood and derivatives
+          reml.scale <- phi <- (oo$P*(nobs-Mp)+pearson.extra)/(n.true-Mp) ## REMLish scale estimate
+          ## correct derivatives, if needed...
+          oo$P1 <- oo$P1*(nobs-Mp)/(n.true-Mp)
+          oo$P2 <- oo$P2*(nobs-Mp)/(n.true-Mp)
+
+          ls <- family$ls(y,weights,n,phi)*n.true/nobs ## saturated likelihood and derivatives
         
-          Dp <- dev + oo$conv.tol
+          Dp <- dev + oo$conv.tol + dev.extra
          
           K <- oo$rank.tol/2 - rp$det/2
                  
-          REML <- Dp/(2*phi) - ls[1] + K
+          REML <- Dp/(2*phi) - ls[1] + K - Mp/2*log(2*pi*phi)*remlInd
+
           if (deriv) {
             phi1 <- oo$P1; Dp1 <- oo$D1; K1 <- oo$trA1/2 - rp$det1/2;
-            REML1 <- Dp1/(2*phi) - phi1*(Dp/(2*phi^2) + ls[2]) + K1
+            REML1 <- Dp1/(2*phi) - phi1*(Dp/(2*phi^2)+Mp/(2*phi)*remlInd + ls[2]) + K1
             if (deriv==2) {
                    phi2 <- matrix(oo$P2,nSp,nSp);Dp2 <- matrix(oo$D2,nSp,nSp)
                    K2 <- matrix(oo$trA2,nSp,nSp)/2 - rp$det2/2   
                    REML2 <- 
                    Dp2/(2*phi) - (outer(Dp1,phi1)+outer(phi1,Dp1))/(2*phi^2) +
-                   (Dp/phi^3 - ls[3])*outer(phi1,phi1) -
-                   (Dp/(2*phi^2)+ls[2])*phi2 + K2
+                   (Dp/phi^3 - ls[3] + Mp/(2*phi^2)*remlInd)*outer(phi1,phi1) -
+                   (Dp/(2*phi^2)+ls[2]+Mp/(2*phi)*remlInd)*phi2 + K2
             }
           }
  
@@ -666,12 +678,16 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
 gam.fit3.post.proc <- function(X,object) {
 ## get edf array and covariance matrices after a gam fit. 
-  Vb <- object$rV%*%t(object$rV)*object$scale
+  Vb <- object$rV%*%t(object$rV)*object$scale ## Bayesian cov.
   PKt <- object$rV%*%t(object$K)
-  edf <- rowSums(PKt*t(sqrt(object$weights)*X))
-  Ve <- PKt%*%t(PKt)*object$scale  
+  F <- PKt%*%(sqrt(object$weights)*X)
+  edf <- diag(F) ## effective degrees of freedom
+  edf1 <- 2*edf - rowSums(t(F)*F) ## alternative
+  ## edf <- rowSums(PKt*t(sqrt(object$weights)*X))
+  ## Ve <- PKt%*%t(PKt)*object$scale  ## frequentist cov
+  Ve <- F%*%Vb ## not quite as stable as above, but quicker
   hat <- rowSums(object$K*object$K)
-  list(Vb=Vb,Ve=Ve,edf=edf,hat=hat)
+  list(Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,hat=hat)
 }
 
 
@@ -914,7 +930,8 @@ simplyFit <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
                    control,gamma,scale,conv.tol=1e-6,maxNstep=5,maxSstep=2,
                    maxHalf=30,printWarn=FALSE,scoreType="deviance",
-                   mustart = NULL,null.coef=rep(0,ncol(X)),...)
+                   mustart = NULL,null.coef=rep(0,ncol(X)),pearson.extra,
+                   dev.extra=0,n.true=-1,...)
 ## Newton optimizer for GAM gcv/aic optimization that can cope with an 
 ## indefinite Hessian! Main enhancements are: i) always perturbs the Hessian
 ## to +ve definite ii) step halves on step 
@@ -977,8 +994,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   ## initial fit
   b<-gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
      offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
-     control=control,gamma=gamma,scale=scale,
-     printWarn=FALSE,mustart=mustart,scoreType=scoreType,null.coef=null.coef,...)
+     control=control,gamma=gamma,scale=scale,printWarn=FALSE,
+     mustart=mustart,scoreType=scoreType,null.coef=null.coef,pearson.extra=pearson.extra,
+     dev.extra=dev.extra,n.true=n.true,...)
 
   mustart<-b$fitted.values
 
@@ -1002,7 +1020,8 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     grad <- rho$rho1*grad
   }
 
-  score.scale <- b$scale.est + score;    
+  if (reml) score.scale <- abs(log(b$scale.est)) + abs(score) else 
+  score.scale <- b$scale.est + abs(score)    
   uconv.ind <- abs(grad) > score.scale*conv.tol
   ## check for all converged too soon, and undo !
   if (!sum(uconv.ind)) uconv.ind <- uconv.ind | TRUE
@@ -1060,8 +1079,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
     b<-gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
        offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
-       control=control,gamma=gamma,scale=scale,
-       printWarn=FALSE,mustart=mustart,scoreType=scoreType,null.coef=null.coef,...)
+       control=control,gamma=gamma,scale=scale,printWarn=FALSE,
+       mustart=mustart,scoreType=scoreType,null.coef=null.coef,
+       pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
     
     if (reml) {
       score1 <- b$REML
@@ -1111,8 +1131,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         b1<-gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
            offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=0,
            control=control,gamma=gamma,scale=scale,
-           printWarn=FALSE,mustart=mustart,
-           scoreType=scoreType,null.coef=null.coef,...)
+           printWarn=FALSE,mustart=mustart,scoreType=scoreType,
+           null.coef=null.coef,pearson.extra=pearson.extra,
+           dev.extra=dev.extra,n.true=n.true,...)
          
         if (reml) {       
           score1 <- b1$REML
@@ -1125,8 +1146,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         if (score1 <= score) { ## accept
           b<-gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
              offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
-             control=control,gamma=gamma,scale=scale,
-             printWarn=FALSE,mustart=mustart,scoreType=scoreType,null.coef=null.coef,...)
+             control=control,gamma=gamma,scale=scale,printWarn=FALSE,
+             mustart=mustart,scoreType=scoreType,null.coef=null.coef,
+             pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
           mustart <- b$fitted.values
           old.score <- score;lsp <- lsp1
          
@@ -1156,7 +1178,8 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
    
     ## test for convergence
     converged <- TRUE
-    score.scale <- b$scale.est + abs(score);
+    if (reml) score.scale <- abs(log(b$scale.est)) + abs(score) else
+    score.scale <- abs(b$scale.est) + abs(score)
     grad2 <- diag(hess)    
     uconv.ind <- (abs(grad) > score.scale*conv.tol*.1)|(abs(grad2)>score.scale*conv.tol*.1)
     if (sum(abs(grad)>score.scale*conv.tol)) converged <- FALSE
@@ -1224,7 +1247,8 @@ bfgs0 <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   grad <- t(L)%*%grad
   hess <- t(L)%*%hess%*%L
 
-  score.scale <- b$scale.est + score;    
+  if (reml)  score.scale <- abs(log(b$scale.est)) + abs(score)  
+  else score.scale <- b$scale.est + abs(score)    
   uconv.ind <- abs(grad) > score.scale*conv.tol
   ## check for all converged too soon, and undo !
   if (!sum(uconv.ind)) uconv.ind <- uconv.ind | TRUE
@@ -1332,7 +1356,8 @@ bfgs0 <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
     ## test for convergence
     converged <- TRUE
-    score.scale <- b$scale.est + abs(score);    
+    if (reml) score.scale <- abs(log(b$scale.est)) + abs(score)
+    else score.scale <- b$scale.est + abs(score);    
     uconv.ind <- abs(grad) > score.scale*conv.tol
     if (sum(uconv.ind)) converged <- FALSE
     if (abs(old.score-score)>score.scale*conv.tol) { 
@@ -1354,7 +1379,7 @@ bfgs0 <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
                    control,gamma,scale,conv.tol=1e-6,maxNstep=5,maxSstep=2,
                    maxHalf=30,printWarn=FALSE,scoreType="GCV",
-                   mustart = NULL,null.coef=rep(0,ncol(X)),...)
+                   mustart = NULL,null.coef=rep(0,ncol(X)),pearson.extra=0,dev.extra=0,n.true=-1,...)
 
 ## BFGS optimizer to estimate smoothing parameters of models fitted by
 ## gam.fit3....
@@ -1385,8 +1410,9 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
       lsp <- ilsp + step * trial$alpha
       b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
            offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=0,
-           control=control,gamma=gamma,scale=scale,
-           printWarn=FALSE,mustart=lo$mustart,scoreType=scoreType,null.coef=null.coef,...)
+           control=control,gamma=gamma,scale=scale,printWarn=FALSE,
+           mustart=lo$mustart,scoreType=scoreType,null.coef=null.coef,
+           pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
 
       trial$mustart <- fitted(b);trial$dev <- b$dev
       if (reml) {
@@ -1405,8 +1431,8 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
         b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
            offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=1,
-           control=control,gamma=gamma,scale=scale,
-           printWarn=FALSE,mustart=trial$mustart,scoreType=scoreType,null.coef=null.coef,...)
+           control=control,gamma=gamma,scale=scale,printWarn=FALSE,mustart=trial$mustart,
+           scoreType=scoreType,null.coef=null.coef,pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
 
         if (reml) {
           trial$grad <- L%*%b$REML1;
@@ -1447,8 +1473,9 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
   b <- gam.fit3(x=X, y=y, sp=L%*%ilsp+lsp0,Eb=Eb,UrS=UrS,
                offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=1,
-               control=control,gamma=gamma,scale=scale,
-               printWarn=FALSE,mustart=mustart,scoreType=scoreType,null.coef=null.coef,...)
+               control=control,gamma=gamma,scale=scale,printWarn=FALSE,mustart=mustart,
+               scoreType=scoreType,null.coef=null.coef,
+               pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
 
   initial <- list(alpha = 0,mustart=b$fitted.values)
   if (reml) {
@@ -1494,8 +1521,9 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
       lsp <- ilsp + trial$alpha*step
       b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
                     offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=deriv,
-                    control=control,gamma=gamma,scale=scale,
-                    printWarn=FALSE,mustart=prev$mustart,scoreType=scoreType,null.coef=null.coef,...)
+                    control=control,gamma=gamma,scale=scale,printWarn=FALSE,mustart=prev$mustart,
+                    scoreType=scoreType,null.coef=null.coef,
+                    pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
       if (reml) {
         trial$score <- b$REML; 
       } else if (scoreType=="GACV") {
@@ -1532,8 +1560,9 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
       if (is.null(trial$dscore)) { ## getting gradients
         b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
                       offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=1,
-                      control=control,gamma=gamma,scale=scale,
-                      printWarn=FALSE,mustart=trial$mustart,scoreType=scoreType,null.coef=null.coef,...)
+                      control=control,gamma=gamma,scale=scale,printWarn=FALSE,mustart=trial$mustart,
+                      scoreType=scoreType,null.coef=null.coef,pearson.extra=pearson.extra,
+                      dev.extra=dev.extra,n.true=n.true,...)
         if (reml) {
           trial$grad <- L%*%b$REML1;
         } else if (scoreType=="GACV") {
@@ -1581,7 +1610,8 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
       ## test for convergence
       converged <- TRUE
-      score.scale <- trial$dev/nrow(X) + abs(trial$score);    
+      if (reml) score.scale <- abs(log(trial$dev/nrow(X))) + abs(trial$score)
+      else score.scale <- trial$dev/nrow(X) + abs(trial$score)    
       uconv.ind <- abs(trial$grad) > score.scale*conv.tol
       if (sum(uconv.ind)) converged <- FALSE
       if (abs(initial$score-trial$score)>score.scale*conv.tol) { 
@@ -1606,8 +1636,8 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   ## final fit
   b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
                 offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=1,
-                control=control,gamma=gamma,scale=scale,
-                printWarn=FALSE,mustart=trial$mustart,scoreType=scoreType,null.coef=null.coef,...)
+                control=control,gamma=gamma,scale=scale,printWarn=FALSE,mustart=trial$mustart,
+                scoreType=scoreType,null.coef=null.coef,pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,...)
   if (reml) {
      score <- b$REML;grad <- L%*%b$REML1;
   } else if (scoreType=="GACV") {

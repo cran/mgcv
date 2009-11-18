@@ -18,8 +18,10 @@ parameter is unknown or an Un-Biased Risk Estimator (UBRE) when it is known. UBR
 scaled AIC (Generalized case) or Mallows' Cp (additive model case). 
 GCV and UBRE are covered in Craven and Wahba (1979) and Wahba (1990). 
 Alternatively REML of maximum likelihood (ML) may be used for smoothness 
-selection, by viewing the smooth components as random effects. The \code{method} argument
-to \code{\link{gam}} selects the smoothness selection criterion.
+selection, by viewing the smooth components as random effects (in this case the variance component for each 
+smooth random effect will be given by the scale parameter divided by the smoothing parameter --- for 
+smooths with multiple penalties, there will be multiple variance components). 
+The \code{method} argument to \code{\link{gam}} selects the smoothness selection criterion.
 
 
 Automatic smoothness selection is unlikely to be successful with few data, particularly with

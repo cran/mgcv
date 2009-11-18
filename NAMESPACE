@@ -1,6 +1,6 @@
 useDynLib(mgcv, .registration = TRUE, .fixes = "C_")
 
-export(anova.gam, cSplineDes,
+export(anova.gam, bam, cSplineDes,
        exclude.too.far,extract.lme.cov, extract.lme.cov2,
        formXtViX, full.score, formula.gam,fixDependence,fix.family.link,
        fix.family.var, fix.family.ls,   gam, gam2derivative, 
@@ -10,7 +10,7 @@ export(anova.gam, cSplineDes,
        interpret.gam, 
        gam.side,
        get.var,ldTweedie,
-       initial.sp,logLik.gam,
+       initial.sp,logLik.gam,ls.size,
        magic, magic.post.proc, mgcv, mgcv.control, model.matrix.gam, 
         mono.con, mroot, negbin, new.name, 
        notExp,notExp2,notLog,notLog2,pcls,null.space.dimension, 
@@ -25,7 +25,7 @@ export(anova.gam, cSplineDes,
        Predict.matrix.tprs.smooth,
        Predict.matrix.ts.smooth,
        Predict.matrix.pspline.smooth,
-       residuals.gam, s,
+       residuals.gam,rig, s,
        smoothCon,smooth.construct,smooth.construct2,
        smooth.construct.cc.smooth.spec,
        smooth.construct.cp.smooth.spec,
@@ -49,6 +49,8 @@ importFrom(stats,.checkMFClasses,.getXlevels, as.formula, anova,anova.glmlist,co
             predict,printCoefmat ,quantile,qqnorm, reformulate,residuals,rnorm,runif,termplot,terms,terms.formula, uniroot, 
            var,vcov)
 importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix)
+importFrom(Matrix,t,mean,colMeans,colSums)
+
 S3method(anova, gam)
 S3method(influence, gam)
 S3method(cooks.distance, gam)
