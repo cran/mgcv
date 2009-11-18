@@ -207,9 +207,13 @@ log smoothing parameters that actually multiply the individual quadratic penalti
 \code{sp} is a vector of (underlying) smoothing parameter values: positive values are taken as fixed, negative to signal that 
 the smoothing parameter should be estimated. Taken as all negative if not supplied.
 
-An obvious application of \code{paraPen} is to incorporate random effects, and an example of this is provided below. In this, divide the scale parameter by 
-the estimated smoothing parameters to recover variance component estimates.
-
+An obvious application of \code{paraPen} is to incorporate random effects, and an example of this is provided below. In this
+case the supplied penalty matrices will be (generalized) inverse covariance matrices for the random effects --- i.e. precision 
+matrices. The final estimate of the covariance matrix corresponding to one of these penalties is given by the (generalized) 
+inverse of the penalty matrix multiplied by the estimated scale parameter and divided by the estimated 
+smoothing parameter for the penalty. For example, if you use an identity matrix to penalize some coefficients that are to be viewed as i.i.d. 
+Gaussian random effects, then their estimated variance will be the estimated scale parameter divided by the estimate of the 
+smoothing parameter, for this penalty. See the `rail' example below. 
 }
 
 
@@ -281,8 +285,6 @@ sig.b <- sqrt(rm$sig2/rm$sp[1]);sig.b
 
 
 ## Simple comparison with lme, using Rail data.
-## "ML" used as "REML" treatments of residual variance
-## differ slightly...
 require(nlme)
 b0 <- lme(travel~1,data=Rail,~1|Rail,method="ML") 
 Z <- model.matrix(~Rail-1,data=Rail,
@@ -292,6 +294,15 @@ b <- gam(travel~Z,data=Rail,paraPen=list(Z=list(diag(6))),method="ML")
 b0 
 (b$reml.scale/b$sp)^.5 ## `gam' ML estimate of Rail sd
 b$reml.scale^.5         ## `gam' ML estimate of residual sd
+
+b0 <- lme(travel~1,data=Rail,~1|Rail,method="REML") 
+Z <- model.matrix(~Rail-1,data=Rail,
+     contrasts.arg=list(Rail="contr.treatment"))
+b <- gam(travel~Z,data=Rail,paraPen=list(Z=list(diag(6))),method="REML")
+
+b0 
+(b$reml.scale/b$sp)^.5 ## `gam' REML estimate of Rail sd
+b$reml.scale^.5         ## `gam' REML estimate of residual sd
 
 }
 \keyword{models} \keyword{regression}%-- one or more ..

@@ -12,7 +12,7 @@ estimation of degree of penalization). Isotropic or scale invariant smooths of a
 available as model terms, as are linear functionals of such smooths; confidence/credible intervals are readily
 available for any quantity predicted using a fitted model; \code{gam} is extendable: users can add smooths. 
 
- Smooth terms are represented using penalized regression splines (or similar smoothers)
+Smooth terms are represented using penalized regression splines (or similar smoothers)
 with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines with
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
@@ -33,6 +33,8 @@ terms can have more than one argument, implying an isotropic smooth and (b) \cod
 provided as an effective means for modelling smooth interactions of any
 number of variables via scale invariant tensor product smooths. If you want
 a clone of what S-PLUS provides use \link[gam]{gam} from package \code{gam}.
+
+For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gamm}}.
 }
 \usage{
 
@@ -435,7 +437,8 @@ plot(b5,pages=1)
 
 dat <- gamSim(1,n=400,dist="binary",scale=.33)
 
-lr.fit <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=binomial,data=dat)
+lr.fit <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=binomial,
+              data=dat,method="REML")
 ## plot model components with truth overlaid in red
 op <- par(mfrow=c(2,2))
 fn <- c("f0","f1","f2","f3");xn <- c("x0","x1","x2","x3")
@@ -447,9 +450,25 @@ for (k in 1:4) {
 }
 par(op)
 anova(lr.fit)
-lr.fit1 <- gam(y~s(x0)+s(x1)+s(x2),family=binomial,data=dat)
-lr.fit2 <- gam(y~s(x1)+s(x2),family=binomial,data=dat)
+lr.fit1 <- gam(y~s(x0)+s(x1)+s(x2),family=binomial,
+               data=dat,method="REML")
+lr.fit2 <- gam(y~s(x1)+s(x2),family=binomial,
+               data=dat,method="REML")
 AIC(lr.fit,lr.fit1,lr.fit2)
+
+## A Gamma example, by modify `gamSim' output...
+ 
+dat <- gamSim(1,n=400,dist="normal",scale=1)
+dat$f <- dat$f/4 ## true linear predictor 
+Ey <- exp(dat$f);scale <- .5 ## mean and GLM scale parameter
+## Note that `shape' and `scale' in `rgamma' are almost
+## opposite terminology to that used with GLM/GAM...
+dat$y <- rgamma(Ey*0,shape=1/scale,scale=Ey*scale)
+bg <- gam(y~ s(x0)+ s(x1)+s(x2)+s(x3),family=Gamma(link=log),
+          data=dat,method="REML")
+plot(bg,pages=1)
+
+## For inverse Gaussian, see ?rig
 
 ## now a 2D smoothing example...
 

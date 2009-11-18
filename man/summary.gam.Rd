@@ -41,7 +41,8 @@ Residual degrees of freedom are taken as number of data minus model degrees of
 freedom. 
 Let \eqn{ {\bf P}_i}{P_i} be the matrix 
 giving the parameters of the ith smooth when applied to the data (or pseudodata in the generalized case) and let \eqn{ {\bf X}}{X} 
-be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this definition causes the edf's to add up properly! 
+be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this 
+definition causes the edf's to add up properly! 
 
 \code{print.summary.gam} tries to print various bits of summary information useful for term selection in a pretty way.
 
@@ -72,10 +73,7 @@ EDF for the term. The statistic used is then
 (this can be calculated efficiently without forming the pseudoinverse explicitly). \eqn{T}{T} is compared to a 
 chi-squared distribution with degrees of freedom given by the EDF for the term + \code{alpha} * (number of 
 estimated smoothing parameters), or \eqn{T}{T} is used as a component in an F ratio statistic if the 
-scale parameter has been estimated. There is some simulation evidence that the adjustment per 
-smoothing parameter improves p-values when using GCV or AIC type smoothing parameter selection (\code{alpha=0.5}
-seems to be best). The default \code{alpha=0} seems to be appropriate when smoothing 
-parameters are selected by REML/ML/PQL. The non-integer rank truncated inverse is constructed to give an 
+scale parameter has been estimated.  The non-integer rank truncated inverse is constructed to give an 
 approximation varying smoothly between the bounding integer rank approximations, while yielding test statistics with the 
 correct mean and variance. 
 
@@ -86,10 +84,7 @@ for \eqn{\bf f}{f} implied by the truncation used in the test statistic.
 Note that the p-values distributional approximations start to break down below one effective degree of freedom, and 
 p-values are not reported below 0.5 degrees of freedom. 
 
-Also note that increasing the \code{gamma} parameter of \code{\link{gam}} tends to mean that \code{alpha} should be decreased, 
-to get close to uniform p-value distribution under the null.  
-
-For best p-value performance it seems to be best to use ML or REML smoothness selection. 
+In simualtions the p-values have best behaviour under ML smoothness selection, with REML coming second. 
 
 }
 

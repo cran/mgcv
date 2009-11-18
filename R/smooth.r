@@ -1256,10 +1256,12 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       if (sum(sm$X==0)>.1*sum(sm$X!=0)) { ## treat term as sparse
         if (sparse.cons==1) {
           xsd <- apply(sm$X,2,FUN=sd)
-          if (sum(xsd==0)) ## are and columns constant?
+          if (sum(xsd==0)) ## are any columns constant?
             sm$C <- ((1:length(xsd))[xsd==0])[1] ## index of coef to set to zero
           else {
-            xz <- colSums(sm$X==0) ## find number of zeroes per column
+            ## xz <- colSums(sm$X==0) 
+            ## find number of zeroes per column (without big memory footprint)...
+            xz <- apply(sm$X,2,FUN=function(x) {sum(x==0)}) 
             sm$C <- ((1:length(xz))[xz==min(xz)])[1] ## index of coef to set to zero
           }
         } else if (sparse.cons==2) {

@@ -52,6 +52,8 @@ cases, not at the MLE.}
 \item{edf}{estimated degrees of freedom for each model parameter. Penalization
 means that many of these are less than 1.}
 
+\item{edf1}{similar, but using alternative estimate of EDF. Useful for testing.}
+
 \item{family}{family object specifying distribution and link used.}
 
 
@@ -125,6 +127,10 @@ returned by the optimization routine used (currently \code{\link{nlm}} or \code{
 for smoothness estimation. }
 
 \item{residuals}{the working residuals for the fitted model.}
+
+\item{scale}{when present, the scale (as \code{sig2})}
+
+\item{scale.estimated}{ \code{TRUE} if the scale parameter was estimated, \code{FALSE} otherwise.}
 
 \item{sig2}{estimated or supplied variance/scale parameter.}
 

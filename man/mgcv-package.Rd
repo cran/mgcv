@@ -5,8 +5,8 @@
 GAMs with GCV/AIC/REML smoothness estimation and GAMMs by REML/PQL
 }
 \description{
-\code{mgcv} provides functions for generalized additive modelling  and
-generalized additive mixed modelling. The term GAM is taken to include 
+\code{mgcv} provides functions for generalized additive modelling (\code{\link{gam}} and \code{\link{bam}})  and
+generalized additive mixed modelling (\code{\link{gamm}}). The term GAM is taken to include 
 any GLM estimated by quadratically penalized (possibly quasi-) likelihood maximization.
 
 Particular features of the package are facilities for automatic smoothness selection, 
@@ -50,12 +50,17 @@ individual smooth terms for equality to the zero function, using similar ideas. 
 approximations can be used for hypothesis testing based model comparison. See \code{\link{anova.gam}} and
 \code{\link{summary.gam}} for more on hypothesis testing.
 
+For large datasets (that is large n) see \code{\link{bam}} which is a version of \code{\link{gam}} with 
+a much reduced memory footprint.
+
 The package also provides a generalized additive mixed modelling function,
 \code{\link{gamm}}, based on a PQL approach and  
-\code{lme} from the \code{nlme} library. \code{gamm} is particularly useful
+\code{lme} from the \code{nlme} library (for an \code{lme4} based version, see package \code{gamm4}). 
+\code{gamm} is particularly useful
 for modelling correlated data (i.e. where a simple independence model for the
 residual variation is inappropriate). In addition, low level routine \code{\link{magic}}
 can fit models to data with a known correlation structure.
+
 
 Some underlying GAM fitting methods are available as low level fitting
 functions: see \code{\link{magic}} and \code{\link{mgcv}}. But there is little functionality 
