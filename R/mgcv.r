@@ -1273,7 +1273,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   ## correct null deviance if there's an offset [Why not correct calc in gam.fit/3???]....
 
   if (G$intercept&&any(G$offset!=0)) object$null.deviance <-
-                                  glm(G$y~offset(G$offset),family=object$family)$deviance
+         glm(G$y~offset(G$offset),family=object$family,weights=object$prior.weights)$deviance
 
   object$method <- criterion
 
@@ -1485,9 +1485,9 @@ gam.check <- function(b)
       } else { ## just default print of information...
         cat("\n");print(b$outer.info)
       }
-    } else { ## perf iter or AM case
-      if (b$mgcv.conv$iter==0) 
-      cat("\nModel required no smoothing parameter selection")
+    } else { ## no sp, perf iter or AM case
+      if (length(b$sp)==0) ## no sp's estimated  
+        cat("\nModel required no smoothing parameter selection")
       else { 
         cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")       
         if (b$mgcv.conv$iter>1) cat("s")

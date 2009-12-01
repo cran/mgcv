@@ -129,7 +129,8 @@ Note that POI is not as stable as the default nested iteration used with \code{\
 datasets, this is unlikely to matter much. 
 
 Note that it is possible to spend most of the computational time on basis evaluation, if an expensive basis is used. In practice 
-this means that the default \code{"tp"} basis should be avoided. 
+this means that the default \code{"tp"} basis should be avoided: almost any other basis (e.g. \code{"cr"} or \code{"ps"}) 
+can be used in the 1D case, and tensor product smooths (\code{te}) are typically much less costly in the multi-dimensional case. 
 
 }
 
@@ -146,7 +147,7 @@ this means that the default \code{"tp"} basis should be avoided.
 
 \section{WARNINGS }{
 
-The routine will be slow if the default \code{"tp"} basis is used.
+The routine will be slow if the default \code{"tp"} basis is used. 
 
 You must have more unique combinations of covariates than the model has total
 parameters. (Total parameters is sum of basis dimensions plus sum of non-spline 

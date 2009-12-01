@@ -57,13 +57,14 @@ cSplineDes <- function (x, knots, ord = 4)
   if (ord<2) stop("order too low")
   if (nk<ord) stop("too few knots")
   knots <- sort(knots)
-  if (min(x)<knots[1]||max(x)>knots[nk]) stop("x out of range")
-  xc <- knots[nk-ord+1] ## wrapping invloved above this point
+  k1 <- knots[1]
+  if (min(x)<k1||max(x)>knots[nk]) stop("x out of range")
+  xc <- knots[nk-ord+1] ## wrapping involved above this point
   ## copy end intervals to start, for wrapping purposes...
-  knots <- c(knots[1]-(knots[nk]-knots[(nk-ord+1):(nk-1)]),knots)
+  knots <- c(k1-(knots[nk]-knots[(nk-ord+1):(nk-1)]),knots)
   ind <- x>xc ## index for x values where wrapping is needed
   X1 <- splineDesign(knots,x,ord,outer.ok=TRUE)
-  x[ind] <- x[ind]-max(knots)
+  x[ind] <- x[ind] - max(knots) + k1
   if (sum(ind)) {
     X2 <- splineDesign(knots,x[ind],ord,outer.ok=TRUE) ## wrapping part
     X1[ind,] <- X1[ind,] + X2
@@ -585,6 +586,7 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
 # It takes a cubic regression spline specification object and returns the 
 # corresponding basis object.
 { shrink <- attr(object,"shrink")
+  if (length(object$term)!=1) stop("Basis only handles 1D smooths")
   x <- data[[object$term]]
   nx<-length(x)
   if (is.null(knots)) ok <- FALSE
@@ -733,6 +735,7 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
     list(B=B,D=D)
   } # end of getBD local function
   # evaluate covariate, x, and knots, k.
+  if (length(object$term)!=1) stop("Basis only handles 1D smooths")
   x <- data[[object$term]]
   if (object$bs.dim < 0 ) object$bs.dim <- 10 ## default
   if (object$bs.dim <4) { object$bs.dim <- 4
@@ -813,6 +816,7 @@ smooth.construct.cp.smooth.spec<-function(object,data,knots)
   if (object$bs.dim<0) object$bs.dim <- max(10,m[1]) ## default
   nk <- object$bs.dim +1  ## number of interior knots
   if (nk<=m[1]) stop("basis dimension too small for b-spline order")
+  if (length(object$term)!=1) stop("Basis only handles 1D smooths")
   x <- data[[object$term]]    # find the data
   k <- knots[[object$term]]
   
@@ -878,6 +882,7 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
   if (object$bs.dim<0) object$bs.dim <- max(10,m[1]+1) ## default
   nk <- object$bs.dim - m[1]  # number of interior knots
   if (nk<=0) stop("basis dimension too small for b-spline order")
+  if (length(object$term)!=1) stop("Basis only handles 1D smooths")
   x <- data[[object$term]]    # find the data
   k <- knots[[object$term]]
   if (is.null(k)) { xl <- min(x);xu <- max(x) } else
