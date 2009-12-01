@@ -634,3 +634,6 @@ msgstr ""
 
 msgid "`by' variable must be same dimension as smooth arguments"
 msgstr ""
+
+msgid "Basis only handles 1D smooths"
+msgstr ""

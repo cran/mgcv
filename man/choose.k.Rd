@@ -8,7 +8,7 @@ penalized regression smoothers.
 Penalized regression smoothers gain computational efficiency by virtue of
 being defined using a basis of relatively modest size, \code{k}. When setting
 up models in the \code{mgcv} package, using \code{\link{s}} or \code{\link{te}}
-terms in a model formula, \code{k} must be chosen. 
+terms in a model formula, \code{k} must be chosen: the defualts are essentially arbitrary. 
 
 In practice \code{k-1} (or \code{k}) sets the upper limit on the degrees of freedom
 associated with an \code{\link{s}} smooth (1 degree of freedom is usually lost to the identifiability
@@ -16,7 +16,7 @@ constraint on the smooth). For \code{\link{te}} smooths the upper limit of the
 degrees of freedom is given by the product of the \code{k} values provided for
 each marginal smooth less one, for the constraint. However the actual
 effective degrees of freedom are controlled by the degree of penalization
-selected during fitting, by GCV, AIC or whatever is specified. The exception
+selected during fitting, by GCV, AIC, REML or whatever is specified. The exception
 to this is if a smooth is specified using the \code{fx=TRUE} option, in which
 case it is unpenalized.  
 
@@ -36,7 +36,11 @@ an equivalent, single, smooth to the residuals, using a substantially
 increased \code{k} to see if there is pattern in the residuals that could
 potentially be explained by increasing \code{k}. Examples are provided below.
 
-More sophisticated approaches based on partial residuals are also possible.
+The obvious, but more costly, alternative is simply to increase the suspect \code{k} 
+and refit the original model. If there are no statistically important changes as a result of 
+doing this, then \code{k} was large enough. (Change in the smoothness selection criterion, 
+and/or the effective degrees of freedom, when \code{k} is increased, provide the obvious 
+numerical measures for whether the fit has changed substantially.)
 
 One scenario that can cause confusion is this: a model is fitted with
 \code{k=10} for a smooth term, and the EDF for the term is estimated as 7.6,
@@ -66,10 +70,12 @@ Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. CRC.
 library(mgcv)
 set.seed(0) 
 dat <- gamSim(1,n=400,scale=2)
+
 ## fit a GAM with quite low `k'
 b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=6)+s(x3,k=6),data=dat)
 plot(b,pages=1)
 
+## Economical tactic (see below for more obvious approach)....
 ## check for residual pattern, removeable by increasing `k'
 ## typically `k', below, chould be substantially larger than 
 ## the original, `k' but certainly less than n/2.
@@ -106,6 +112,27 @@ gam(rsd~s(x2,k=40,bs="cs"),gamma=1.4,data=dat) ## `k' too low
 gam(rsd~s(x3,k=40,bs="cs"),gamma=1.4,data=dat) ## fine
 
 rm(dat) 
+
+## More obvious, but more expensive tactic... Just increase 
+## suspicious k until fit is stable.
+
+set.seed(0) 
+dat <- gamSim(1,n=400,scale=2)
+## fit a GAM with quite low `k'
+b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=6)+s(x3,k=6),data=dat,method="REML")
+b 
+## edf for 3rd smooth is highest as proportion of k -- increase k
+b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=12)+s(x3,k=6),data=dat,method="REML")
+b 
+## edf substantially up, -ve REML substantially down
+b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=24)+s(x3,k=6),data=dat,method="REML")
+b 
+## slight edf increase and -ve REML change
+b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=40)+s(x3,k=6),data=dat,method="REML")
+b 
+## defintely stabilized (but really k around 20 would have been fine here)
+
+
 }
 
 \keyword{models} \keyword{regression}%-- one or more ..
