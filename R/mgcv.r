@@ -567,7 +567,8 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
         temp.term <- split$smooth.spec[[i]]$term
         for (j in 1:length(temp.term)) id.list[[id]]$data[[j]] <- cbind(id.list[[id]]$data[[j]],
                                                           get.var(temp.term[j],data,vecMat=FALSE))
-      } else { ## new id
+       
+       } else { ## new id
         id.list[[id]] <- list(sm.i=i) ## start the array of indices of smooths with this id
         id.list[[id]]$data <- list()
         ## need to collect together all data for which this basis will be used,
@@ -669,7 +670,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
 
 ## min.sp must be length nrow(L) to make sense
 ## sp must be length ncol(L) --- need to partition
-## L into columns relating to free log smoothing paramters,
+## L into columns relating to free log smoothing parameters,
 ## and columns, L0, corresponding to values supplied in sp.
 ## lsp0 = L0%*%log(sp[sp>=0]) [need to fudge sp==0 case by
 ## setting log(0) to, e.g. 10*log(.Machine$double.xmin)]
@@ -985,7 +986,6 @@ gam.negbin <- function(lsp,fscale,family,control,method,optimizer,gamma,G,scale,
 
 
 
-
 gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale,gamma,G,...)
 # function for smoothing parameter estimation by outer optimization. i.e.
 # P-IRLS scheme iterated to convergence for each trial set of smoothing
@@ -1157,6 +1157,13 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
       else G$sig2 <- -1 #gcv
   } else {G$sig2 <- scale}
 
+  if (fam.name=="quasi"||fam.name=="quasipoisson"||fam.name=="quasibinomial") {
+    ## REML/ML invalid with quasi families
+    if (method=="REML") method <- "P-REML"
+    if (method=="ML") method <- "P-ML"
+    if (method=="P-ML"||method=="P-REML") warning("RE/ML is not recommended for quasi families")
+  }
+
   if (reml) { ## then RE(ML) selection, but which variant?
    criterion <- method
    if (fam.name == "binomial"||fam.name == "poisson") scale <- 1
@@ -1171,11 +1178,6 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
     }
   }
 
-  if (fam.name=="quasi"||fam.name=="quasipoisson"||fam.name=="quasibinomial") {
-    ## REML/ML invalid with quasi families
-    if (method=="REML") method <- "P-REML"
-    if (method=="ML") method <- "P-ML"
-  }
 
   if (substr(fam.name,1,17)=="Negative Binomial") { 
     scale <- 1; ## no choise
@@ -1459,16 +1461,16 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 }
 
 
-gam.check <- function(b)
+gam.check <- function(b,...)
 # takes a fitted gam object and produces some standard diagnostic plots
 { if (b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML"))
   { old.par<-par(mfrow=c(2,2))
     sc.name<-b$method
-    qqnorm(residuals(b))
+    qqnorm(residuals(b),...)
     plot(b$linear.predictors,residuals(b),main="Resids vs. linear pred.",
-         xlab="linear predictor",ylab="residuals");
-    hist(residuals(b),xlab="Residuals",main="Histogram of residuals");
-    plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values")
+         xlab="linear predictor",ylab="residuals",...);
+    hist(residuals(b),xlab="Residuals",main="Histogram of residuals",...);
+    plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values",...)
     
     ## now summarize convergence information 
     cat("\nMethod:",b$method,"  Optimizer:",b$optimizer)
@@ -1504,7 +1506,7 @@ gam.check <- function(b)
     cat("\n")
     par(old.par)
   } else ## probably a `gamm' `gam' object
-  plot(b$linear.predictor,residuals(b),xlab="linear predictor",ylab="residuals")
+  plot(b$linear.predictor,residuals(b),xlab="linear predictor",ylab="residuals",...)
 }
 
 print.gam<-function (x,...) 
@@ -2325,7 +2327,9 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     }
   }  ## end of sp.contour
 
-  # start of main function
+  #########################
+  ## start of main function
+  #########################
   w.resid<-NULL
   if (length(residuals)>1) # residuals supplied 
   { if (length(residuals)==length(x$residuals)) 
@@ -2351,7 +2355,9 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   # plot should ignore all "by" variables
   
   # sort out number of pages and plots per page
-  n.plots <- m + n.para
+  n.plots <- n.para
+  if (m>0) for (i in 1:m) n.plots <- n.plots + as.numeric(x$smooth[[i]]$plot.me) 
+
   if (pages>n.plots) pages<-n.plots
   if (pages<0) pages<-0
   if (pages!=0)    # figure out how to display things
@@ -2395,7 +2401,10 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   }
   pd<-list();
   i<-1 # needs a value if no smooths, but parametric terms ...
+
+  ## First the loop to get the data for the plots...
   if (m>0) for (i in 1:m) # work through smooth terms
+  if (x$smooth[[i]]$plot.me)
   { if (x$smooth[[i]]$dim==1)
     { raw<-x$model[x$smooth[[i]]$term]
       xx<-seq(min(raw),max(raw),length=n)   # generate x sequence for prediction
@@ -2482,14 +2491,15 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
       pd[[i]]<-pd.item;rm(pd.item)
     } else
     { pd[[i]]<-list(dim=x$smooth[[i]]$dim)}
-  }
+  } ## end of loop creating plot data
 
   
-  # now plot .....
+  ## now plot .....
   if (se)   # pd$fit and pd$se
   { k<-0
     if (scale==-1&&is.null(ylim)) # getting common scale for 1-d terms
     if (m>0) for (i in 1:m)
+    if (x$smooth[[i]]$plot.me)
     { if (pd[[i]]$dim==1)
       { ul<-pd[[i]]$fit+pd[[i]]$se
         ll<-pd[[i]]$fit-pd[[i]]$se
@@ -2509,6 +2519,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     }
     j<-1
     if (m>0) for (i in 1:m)
+    if (x$smooth[[i]]$plot.me)
     { if (is.null(select)||i==select)
       { ##if (interactive()&& is.null(select) && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) 
         ##readline("Press return for next page....")
@@ -2636,6 +2647,8 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
       j<-j+pd[[i]]$dim
     } 
   }
+
+
   if (n.para>0) # plot parameteric terms
   { class(x) <- c("gam","glm","lm") # needed to get termplot to call model.frame.glm 
     if (is.null(select)) {
@@ -2999,6 +3012,75 @@ sp.vcov <- function(x) {
     return(solve(x$outer.info$hess))
   } else return(NULL)
 }
+
+gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
+## Routine to convert smoothing parameters to variance components
+## in a fitted `gam' object.
+  if (!inherits(x,"gam")) stop("requires an object of class gam")
+  if (!is.null(x$reml.scale)&&is.finite(x$reml.scale)) scale <- x$reml.scale else scale <- x$sig2
+  if (length(x$sp)==0) return
+  if (rescale) { ## undo any rescaling of S[[i]] that may have been done
+    k <- 1;m <- length(x$smooth)
+    idx <- rep("",0)
+    if (m>0) for (i in 1:m) { ## loop through all smooths
+      if (!is.null(x$smooth[[i]]$id)) { ## smooth has an id
+        if (x$smooth[[i]]$id%in%idx) { 
+          ok <- FALSE ## id already dealt with --- ignore smooth
+        } else {
+          idx <- c(idx,x$smooth[[i]]$id) ## add id to id list
+          ok <- TRUE
+        } 
+      } else { ok <- TRUE} ## no id so proceed
+      if (ok) for (j in 1:length(x$smooth[[i]]$S.scale)) {
+        x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
+        k <- k + 1
+      }
+    } ## finished rescaling
+  }
+  ## variance components (original scale)
+  vc <- c(scale/x$sp)
+  names(vc) <- names(x$sp)
+
+  ## If a Hessian exists, get CI's for variance components...
+
+  if (x$method%in%c("ML","P-ML","REML","P-REML")&&!is.null(x$outer.info$hess)) {
+    H <- x$outer.info$hess ## the hessian w.r.t. log sps and log scale
+    if (ncol(H)>length(x$sp)) scale.est <- TRUE else scale.est <- FALSE
+    
+    ## get derivs of log sqrt var comps wrt log sp and log scale....
+    J <- matrix(0,nrow(H),ncol(H)) 
+    if (scale.est) { 
+      diag(J) <- -2
+      J[,ncol(J)] <- 2
+      vc <- c(vc,scale);names(vc) <- c(names(x$sp),"scale")
+    } else {
+      diag(J) <- -0.5
+    }
+    H <- t(J)%*%H%*%J ## hessian of log sqrt variances
+    eh <- eigen(H,symmetric=TRUE)
+    ind <- eh$values>max(eh$values)*.Machine$double.eps^75 ## index of non zero eigenvalues 
+    rank <- sum(ind) ## rank of hessian
+    iv <- eh$values*0;iv[ind] <- 1/eh$values[ind]
+    V <- eh$vectors%*%(iv*t(eh$vectors)) ## cov matrix for log sqrt variances
+    lsd <- log(sqrt(vc)) ## log sqrt variances
+    sd.lsd <- sqrt(diag(V))
+    if (conf.lev<=0||conf.lev>=1) conf.lev <- 0.95
+    crit <- qnorm(1-(1-conf.lev)/2)
+    ll <- lsd - crit * sd.lsd
+    ul <- lsd + crit * sd.lsd
+    res <- cbind(exp(lsd),exp(ll),exp(ul))
+    rownames(res) <- names(vc)
+    colnames(res) <- c("std.dev","lower","upper")
+    cat("\n")
+    cat(paste("Standard deviations and",conf.lev,"confidence intervals:\n\n"))
+    print(res)
+    cat("\nRank: ");cat(rank);cat("/");cat(ncol(H));cat("\n")
+    invisible(res)
+  } else {
+    return(vc)
+  } 
+} ## end of gam.vcomp
+
 
 vcov.gam <- function(object, freq = FALSE, dispersion = NULL, ...)
 ## supplied by Henric Nilsson <henric.nilsson@statisticon.se> 
@@ -3413,7 +3495,7 @@ initial.spg <- function(X,y,weights,family,S,off,L=NULL,lsp0=NULL,type=1) {
   start <- etastart <- mustart <- NULL
   nobs <- nrow(X)
   eval(family$initialize)
-  w <- weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart)
+  w <- as.numeric(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
   w <- sqrt(w)
   if (type==1) { ## what PI would have used
    lambda <-  initial.sp(w*X,S,off)
@@ -3617,7 +3699,8 @@ print.mgcv.version <- function()
   version <- version[pmatch("Version",version)]
   um <- strsplit(version," ")[[1]]
   version <- um[nchar(um)>0][2]
-  cat(paste("This is mgcv ",version,". For overview type `help(\"mgcv-package\")'.\n",sep=""))
+  hello <- paste("This is mgcv ",version,". For overview type 'help(\"mgcv-package\")'.",sep="")
+  packageStartupMessage(hello)
 }
 
 set.mgcv.options <- function()

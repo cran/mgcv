@@ -316,6 +316,7 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
     }
     object$margin[[i]]<-smooth.construct(object$margin[[i]],dat,knt)
     Xm[[i]]<-object$margin[[i]]$X
+    if (!is.null(object$margin[[i]]$te.ok) && !object$margin[[i]]$te.ok) stop("attempt to use unsuitable marginal smooth class")
     if (length(object$margin[[i]]$S)>1) 
     stop("Sorry, tensor products of smooths with multiple penalties are not supported.")
     Sm[[i]]<-object$margin[[i]]$S[[1]]
@@ -1122,10 +1123,58 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
       } ## adaptive penalty finished
     } ## penalized case finished
   } 
-  
+  pspl$te.ok <- FALSE ## not suitable as a tensor product marginal
   pspl
 }
 
+
+#################################
+# Random effects terms start here
+#################################
+
+
+smooth.construct.re.smooth.spec<-function(object,data,knots)
+## a simple random effects constructor method function
+## basic idea is that s(x,f,z,...,bs="re") generates model matrix
+## corresponding to ~ x:f:z: ... - 1. Corresponding coefficients 
+## have an identity penalty.
+{ 
+  ## id's with factor variables are problematic - should terms have
+  ## same levels, or just same number of levels, for example? 
+  ## => ruled out
+  if (!is.null(object$id)) stop("random effects don't work with ids.")
+  
+  form <- as.formula(paste("~",paste(object$term,collapse=":"),"-1"))
+  object$X <- model.matrix(form,data)
+  object$bs.dim <- ncol(object$X)
+ 
+  ## now construct penalty        
+  object$S <- list(diag(object$bs.dim))  # get penalty
+ 
+  object$rank <- object$bs.dim  # penalty rank 
+  object$null.space.dim <- 0    # dimension of unpenalized space 
+
+  object$C <- matrix(0,0,ncol(object$X)) # null constraint matrix
+
+  ## need to store formula (levels taken care of by calling function)
+  object$form <- form
+
+  object$plot.me <- FALSE ## "re" terms should not be plotted by plot.gam
+  object$te.ok <- FALSE ## these terms are not suitable as te marginals
+
+  class(object)<-"random.effect"  # Give object a class
+
+  object
+}
+
+
+
+Predict.matrix.random.effect<-function(object,data)
+# prediction method function for the p.spline smooth class
+{ require(splines)
+  X <- model.matrix(object$form,data)
+  X
+}
 
 
 
@@ -1251,6 +1300,10 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
 { sm <- smooth.construct3(object,data,knots)
   if (!is.null(attr(sm,"qrc"))) warning("smooth objects should not have a qrc attribute.")
  
+  ## add plotting indicator if not present.
+  ## plot.me tells `plot.gam' whether or not to plot the term
+  if (is.null(sm$plot.me)) sm$plot.me <- TRUE
+
   ## automatically produce centering constraint...
   ## must be done here on original model matrix to ensure same
   ## basis for all `id' linked terms
@@ -1293,12 +1346,16 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   ## but to do otherwise would mess up the meaning of smoothing parameters
   ## sufficiently that linking terms via `id's would not work properly (they 
   ## would have the same basis, but different penalties)
+
+  sm$S.scale <- rep(1,length(sm$S))
+
   if (scale.penalty && length(sm$S)>0 && is.null(sm$no.rescale)) # then the penalty coefficient matrix is rescaled
   {  maXX <- mean(abs(t(sm$X)%*%sm$X)) # `size' of X'X
       for (i in 1:length(sm$S)) {
-        maS <- mean(abs(sm$S[[i]]))
-        sm$S[[i]] <- sm$S[[i]] * maXX / maS
-      }
+        maS <- mean(abs(sm$S[[i]])) / maXX
+        sm$S[[i]] <- sm$S[[i]] / maS
+        sm$S.scale[i] <- maS ## multiply S[[i]] by this to get original S[[i]]
+      } 
   } 
 
   ## check whether different data to be used for basis setup

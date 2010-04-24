@@ -31,7 +31,7 @@ Wood, S.N. (2006) On confidence intervals for generalized additive models based 
 }
 
 
-\seealso{ \code{\link{gam}}}
+\seealso{ \code{\link{gam}}, \code{\link{gam.vcomp}}}
 
 
 \examples{ 

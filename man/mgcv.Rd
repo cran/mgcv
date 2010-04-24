@@ -117,7 +117,7 @@ wildly between observations.
 \item{edf}{array of estimated degrees of freedom for each parameter.}
 
 \item{info}{A list of convergence diagnostics, with the following elements:
-\itemize{
+\describe{
 \item{edf}{Array of whole model estimated degrees of freedom.}
 \item{score}{Array of ubre/gcv scores at the edfs for the final set of relative smoothing parameters.}
 \item{g}{the gradient of the GCV/UBRE score w.r.t. the smoothing parameters at termination.}

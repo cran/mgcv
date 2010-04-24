@@ -187,6 +187,13 @@ are provided in
 \code{\link{linear.functional.terms}}. 
 }
 
+\section{Random effects}{
+  Random effects can be added to \code{gam} models using \code{s(...,bs="re")} terms (see \code{\link{smooth.construct.re.smooth.spec}}), 
+or the \code{paraPen} argument to \code{\link{gam}} covered below. See \code{\link{gam.vcomp}}, \code{\link{random.effects}} and 
+\code{\link{smooth.construct.re.smooth.spec}} for further details. An alternative is to use the approach of \code{\link{gamm}}.
+
+}
+
 \section{Penalizing the parametric terms}{
 In case the ability to add smooth classes, smooth identities, \code{by} variables and the summation convention are 
 still not sufficient to implement exactly the penalized GLM that you require, \code{\link{gam}} also allows you to penalize the 
@@ -283,8 +290,12 @@ plot(rm,pages=1)
 ## Get estimated random effects standard deviation...
 sig.b <- sqrt(rm$sig2/rm$sp[1]);sig.b 
 
+## a much simpler approach uses "re" terms...
 
-## Simple comparison with lme, using Rail data.
+rm1 <- gam(y ~ s(fac,bs="re")+s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="ML")
+gam.vcomp(rm1)
+
+## Simple comparison with lme, using Rail data. See ?random.effects for a simpler method
 require(nlme)
 b0 <- lme(travel~1,data=Rail,~1|Rail,method="ML") 
 Z <- model.matrix(~Rail-1,data=Rail,

@@ -6,7 +6,7 @@ GAMs with GCV/AIC/REML smoothness estimation and GAMMs by REML/PQL
 }
 \description{
 \code{mgcv} provides functions for generalized additive modelling (\code{\link{gam}} and \code{\link{bam}})  and
-generalized additive mixed modelling (\code{\link{gamm}}). The term GAM is taken to include 
+generalized additive mixed modelling (\code{\link{gamm}}, and \code{\link{random.effects}}). The term GAM is taken to include 
 any GLM estimated by quadratically penalized (possibly quasi-) likelihood maximization.
 
 Particular features of the package are facilities for automatic smoothness selection, 
@@ -29,7 +29,8 @@ Use of \code{\link{gam}} is much like use of \code{\link{glm}}, except that
 within a \code{gam} model formula, isotropic smooths of any number of predictors can be specified using
 \code{\link{s}} terms, while scale invariant smooths of any number of
 predictors can be specified using \code{\link{te}} terms. \code{\link{smooth.terms}} provides an 
-overview of the built in smooth classes. Estimation is by
+overview of the built in smooth classes, and \code{\link{random.effects}} should be refered to for an overview 
+of random effects terms. Estimation is by
 penalized likelihood or quasi-likelihood maximization, with smoothness
 selection by GCV, GACV, gAIC/UBRE or (RE)ML. See \code{\link{gam}}, \code{\link{gam.models}}, 
 \code{\link{linear.functional.terms}} and \code{\link{gam.selection}} for some discussion of model specification and

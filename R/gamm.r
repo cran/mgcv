@@ -360,8 +360,10 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),
   G$Xf <- G$X # full GAM model matrix, treating smooths as fixed effects
   random<-list()
   random.i<-0
+  
+  if (G$nsdf>0) ind <- 1:G$nsdf else ind <- rep(0,0)  
 
-  X <- G$X[,1:G$nsdf,drop=FALSE] # accumulate fixed effects into here
+  X <- G$X[,ind,drop=FALSE] # accumulate fixed effects into here
 
   xlab <- rep("",0)
   if (G$m)
@@ -1095,48 +1097,15 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       first <- last + 1 
     }
     S<-S/ret$lme$sigma^2 # X'V^{-1}X divided by \sigma^2, so should S be
-    Vb <- chol2inv(chol(XVX+S)) # covariance matrix - in constraint space
+    
+    ## Vb <- chol2inv(chol(XVX+S)) # covariance matrix - in constraint space
+    ## replacement, more stable version...
+    ev <- eigen(XVX+S,symmetric=TRUE)
+    ind <- ev$values != 0
+    iv <- ev$values;iv[ind] <- 1/ev$values[ind]
+    Vb <- ev$vectors%*%(iv*t(ev$vectors))    
 
-    # need to project out of constraint space
-   
-    if (FALSE) { ## old code before constraint absorption
-    Vp <- matrix(Vb[1:G$nsdf,],G$nsdf,ncol(Vb))
-    X <- matrix(XVX[1:G$nsdf,],G$nsdf,ncol(XVX))
-    first <- G$nsdf+1
-    if (G$m >0) for (i in 1:G$m)
-    { if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C)  
-      last <- first+object$smooth[[i]]$df-1 # old code: nrow(object$smooth[[i]]$ZSZ)-1
-      { V <- rbind(matrix(0,nc,ncol(Vp)),Vb[first:last,])
-        if (nc) V <- qr.qy(G$smooth[[i]]$qrc,V)
-        Vp <- rbind(Vp,V) # cov matrix
-        V <- rbind(matrix(0,nc,ncol(Vp)),XVX[first:last,])
-        if (nc) V <- qr.qy(G$smooth[[i]]$qrc,V)
-        X <- rbind(X,V)  # X'V^{-1}X
-      }
-      first <- last+1
-    }
-    Vb<-matrix(Vp[,1:G$nsdf],nrow(Vp),G$nsdf)
-    Z <- matrix(X[,1:G$nsdf],nrow(X),G$nsdf)
-    first<-G$nsdf+1
-    if (G$m>0) for (i in 1:G$m)
-    { last <- first + object$smooth[[i]]$df-1   
-      if (is.null(G$smooth[[i]]$C)) nc <- 0 else nc <- nrow(G$smooth[[i]]$C) 
-      { V <- cbind(matrix(0,nrow(Vb),nc),Vp[,first:last])
-        if (nc) V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
-        Vb<-cbind(Vb,V) 
-        V <- cbind(matrix(0,nrow(Vb),nc),X[,first:last])
-        if (nc) V <- t(qr.qy(G$smooth[[i]]$qrc,t(V)))
-        Z<-cbind(Z,V) 
-      }
-      first <- last+1
-    }
-    
-    # then get edf diag(Vb%*%Z)
-    
-    object$edf<-rowSums(Vb*t(Z)) } else {
-      object$edf<-rowSums(Vb*t(XVX))
-    }
-    
+    object$edf<-rowSums(Vb*t(XVX))   
     
     object$sig2 <- ret$lme$sigma^2
     if (lme.used) { object$method <- paste("lme.",method,sep="")} 
