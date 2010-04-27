@@ -36,10 +36,13 @@ see \code{\link{smooth.terms}} for an over view of what is available.
     class can use a 2 item array giving the basis and penalty order separately.}
 
 \item{by}{a numeric or factor variable of the same dimension as each covariate. 
-In the numeric vector case the elements multiply the smooth evaluated at the corresponding 
-covariate values (a `varying coefficient model' results). 
-In the factor case causes a replicate of the smooth to be produced for
-each factor level. See \code{\link{gam.models}} for further details. May also be a matrix 
+In the numeric vector case the elements multiply the smooth, evaluated at the corresponding 
+covariate values (a `varying coefficient model' results). For the numeric \code{by} variable case the 
+resulting smooth is not usually subject to a centering constraint (so the \code{by variable} should 
+not be added as an additional main effect). 
+In the factor \code{by} variable case a replicate of the smooth is produced for
+each factor level (these smooths will be centered, so the factor usually needs to be added as 
+a main effect as well). See \code{\link{gam.models}} for further details. A \code{by} variable may also be a matrix 
 if covariates are matrices: in this case implements linear functional of a smooth 
 (see \code{\link{gam.models}} and \code{\link{linear.functional.terms}} for details).
 }

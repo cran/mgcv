@@ -69,7 +69,8 @@ of \code{\link{gam}}.}
 
 
 
-\item{gcv.ubre}{The minimized GCV or UBRE score.}
+\item{gcv.ubre}{The minimized smoothing parameter selection score: GCV, UBRE(AIC), GACV, negative log marginal 
+likelihood or negative log restricted likelihood.}
 
 
 \item{hat}{array of elements from the leading diagonal of the `hat' (or `influence') matrix. 

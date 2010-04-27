@@ -13,7 +13,10 @@
 }
 \details{ Prints out the family, model formula, effective degrees of freedom for each smooth term, and optimized 
 value of the smoothness selection criterion used. See \code{\link{gamObject}} (or \code{names(x)}) for a listing 
-of what the object contains. \code{\link{summary.gam}} provides more detail.
+of what the object contains. \code{\link{summary.gam}} provides more detail. 
+
+Note that the optimized smoothing parameter selection criterion reported is one of GCV, UBRE(AIC), GACV, 
+negative log marginal likelihood (ML), or negative log restricted likelihood (REML).
 
 }
 

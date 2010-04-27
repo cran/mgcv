@@ -205,6 +205,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
         object$Vp <- post$Vb
         object$sig2 <- object$scale <- fit$scale
         object$sp <- fit$sp
+        names(object$sp) <- names(G$sp)
         class(object)<-c("gam")
       }
 
@@ -277,7 +278,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method)
     G$n <- n
     G$y <- mf[[gp$response]]
    
-  } else { 
+  } else { ## n <= chunk.size
     qrx <- qr.update(sqrt(G$w)*G$X,sqrt(G$w)*G$y)
   }
 
@@ -321,14 +322,16 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method)
   } else {
     
   }
- 
+  G$smooth <- G$X <- NULL
+
+  object$gamma <- gamma;object$G <- G;object$qrx <- qrx ## to allow updating of the model
   object
 }
 
 
 
 
-bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,
+bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="REML",control=gam.control(),scale=0,gamma=1,knots=NULL,
                 sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,...)
 
@@ -473,6 +476,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$weights <- object$prior.weights
   object$xlevels <- G$xlevels
   object$y <- object$model[[gp$response]]
+  object$NA.action <- na.action ## version to use in bam.update
 
   gc()
   ## note that predict.gam assumes that it must be ok not to split the 
@@ -489,6 +493,126 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object
 }
 
+
+bam.update <- function(b,data,chunk.size=10000) {
+## update the strictly additive model `b' in the light of new data in `data'
+## Need to update modelframe (b$model) 
+  if (is.null(b$qrx)) { 
+    stop("Model can not be updated")
+  }
+  gp<-interpret.gam(b$formula) # interpret the formula 
+  
+  X <- predict(b,newdata=data,type="lpmatrix",na.action=b$NA.action) ## extra part of model matrix
+  
+  cnames <- names(b$coefficients)
+
+  ## now get the new data in model frame form...
+
+  if ("(weights)"%in%names(b$model)) { 
+    mf <- model.frame(gp$fake.formula,data,weights=weights,xlev=b$xlev,na.action=b$NA.action)
+    w <- mf[["(weights)"]]
+  } else {
+    mf <- model.frame(gp$fake.formula,data,xlev=b$xlev,na.action=b$NA.action)
+    w <- rep(1,nrow(mf))
+  }
+
+
+  b$model <- rbind(b$model,mf)
+
+  ## get response and offset...
+
+  off.col <- attr(attr(b$model,"terms"),"offset")
+  if (is.null(off.col)) offset <- rep(0,nrow(mf)) else offset <-  mf[,off.col]
+  y <-  mf[,attr(attr(b$model,"terms"),"response")] - offset
+  
+
+  ## update G
+  b$G$y <- c(b$G$y,y)
+  b$G$offset <- c(b$G$offset,offset)
+  b$G$w <- c(b$G$w,w)
+  b$G$n <- nrow(b$model)
+  n <- b$G$n;
+  ## update the qr decomposition...
+
+  w <- sqrt(w)
+
+  b$qrx <- mgcv:::qr.update(w*X,w*y,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+
+  ## now do the refit...
+  rss.extra <- b$qrx$y.norm2 - sum(b$qrx$f^2)
+
+  if (b$method=="GCV"||b$method=="UBRE") method <- "GCV.Cp" else method <- b$method
+
+ 
+  if (method=="GCV.Cp") {
+    if (b$method=="GCV") scale <- -1 else scale = b$sig2
+   
+    fit <- magic(b$qrx$f,b$qrx$R,b$sp,b$G$S,b$G$off,L=b$G$L,lsp0=b$G$lsp0,rank=b$G$rank,
+               H=b$G$H,C=b$G$C,gamma=b$gamma,scale=scale,gcv=(scale<=0),
+               extra.rss=rss.extra,n.score=n)
+ 
+    post <- magic.post.proc(b$qrx$R,fit,b$qrx$f*0+1) 
+    b$y <- b$G$y;b$offset <- b$G$offset; b$G$w -> b$weights -> b$prior.weights;
+    
+  } else { ## method is "REML" or "ML"
+    y <- b$G$y; w <- b$G$w;offset <- b$G$offset
+    b$G$y <- b$qrx$f
+    b$G$w <- b$G$y*0+1
+    b$G$X <- b$qrx$R
+    b$G$n <- length(b$G$y)
+    b$G$offset <- b$G$y*0
+    b$G$dev.extra <- rss.extra
+    b$G$pearson.extra <- rss.extra
+    b$G$n.true <- n
+    if (b$scale.estimated) scale <- -1 else scale = b$sig2
+    in.out <- list(sp=b$sp,scale=b$gcv.ubre)
+    object <- gam(G=b$G,method=method,gamma=b$gamma,scale=scale,in.out=in.out)
+    offset -> b$G$offset -> b$offset
+    w -> b$G$w -> b$weights -> b$prior.weights; n -> b$G$n
+    y -> b$G$y -> b$y;
+  }
+ 
+  if (method=="GCV.Cp") { 
+
+    b$coefficients <- fit$b
+    b$edf <- post$edf
+    b$full.sp <- fit$sp.full
+    b$gcv.ubre <- fit$score
+    b$hat <- post$hat
+    b$mgcv.conv <- fit$gcv.info 
+    b$optimizer="magic"
+    b$rank <- fit$gcv.info$rank
+    b$Ve <- post$Ve
+    b$Vp <- post$Vb
+    b$sig2 <- b$scale <- fit$scale
+    b$sp <- fit$sp
+
+  } else { ## REML or ML
+    b$coefficients <- object$coefficients
+    b$edf <- object$edf
+    b$full.sp <- object$sp.full
+    b$gcv.ubre <- object$gcv.ubre
+    b$hat <- object$hat
+    b$outer.info <- object$outer.info 
+    b$rank <- object$rank
+    b$Ve <- object$Ve
+    b$Vp <- object$Vp
+    b$sig2 <- b$scale <- object$sig2
+    b$sp <- object$sp
+    
+  }
+  b$G$X <- NULL
+  b$linear.predictors <- as.numeric(predict.gam(b,newdata=b$model,block.size=chunk.size))
+  b$fitted.values <- b$linear.predictor ## strictly additive only!
+  
+  b$residuals <- sqrt(b$family$dev.resids(b$y,b$fitted.values,b$weights)) * 
+                      sign(b$y-b$fitted.values)
+  b$deviance <- sum(b$residuals^2)
+  b$aic <- b$family$aic(b$y,1,b$fitted.values,b$weights,b$deviance)
+  b$null.deviance <- sum(b$family$dev.resids(b$y,mean(b$y),b$weights))
+  names(b$coefficients) <- names(b$edf) <- cnames
+  b
+} ## end of bam.update
 
 
 #### ISSUES:   

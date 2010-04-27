@@ -17,24 +17,24 @@ with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
 (when an isotropic smooth is inappropriate). For an overview of the smooths available see \code{\link{smooth.terms}}. 
-For more on specifying models see \code{\link{gam.models}} and \code{\link{linear.functional.terms}}. 
+For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. 
 For more on model selection see \code{\link{gam.selection}}. 
 
 \code{gam()} is not a clone of what S-PLUS provides: the major
 differences are (i) that by default estimation of the
 degree of smoothness of model terms is part of model fitting, (ii) a
 Bayesian approach to variance estimation is employed that makes for easier
-confidence interval calculation (with good coverage probabilites), (iii) that the model
+confidence interval calculation (with good coverage probabilities), (iii) that the model
 can depend on any (bounded) linear functional of smooth terms,
-and, (iv) the parametric part of the model can be penalized, and 
-(v) the facilities for incorporating smooths of more than one variable are
+and, (iv) the parametric part of the model can be penalized, (v) simple random effects can be incorporated, and 
+(vi) the facilities for incorporating smooths of more than one variable are
 different: specifically there are no \code{lo} smooths, but instead (a) \code{s}
 terms can have more than one argument, implying an isotropic smooth and (b) \code{te} smooths are
 provided as an effective means for modelling smooth interactions of any
 number of variables via scale invariant tensor product smooths. If you want
 a clone of what S-PLUS provides use \link[gam]{gam} from package \code{gam}.
 
-For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gamm}}.
+For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gamm}} and \code{\link{random.effects}}.
 }
 \usage{
 
@@ -94,7 +94,7 @@ second element of \code{optimizer}: \code{"newton"} (default), \code{"bfgs"}, \c
 and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). }
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
-scale paraemter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
+scale parameter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
 Note that (RE)ML methods can only work with scale parameter 1 for the Poisson and binomial cases.    
 } 
 
@@ -202,7 +202,7 @@ the scale parameter and
 just AIC rescaled, but is only used when \eqn{s}{s} is known. 
 
 Alternatives are GACV, or a Laplace approximation to REML. There
-is some evidence that the latter may actually be the most effective choise. 
+is some evidence that the latter may actually be the most effective choice. 
 
 Smoothing parameters are chosen to 
 minimize the GCV, UBRE/AIC, GACV or REML scores for the model, and the main computational challenge solved 
@@ -233,12 +233,12 @@ facilitate optimization, and \code{\link{gam.fit3}} is used in place of
 Several alternative basis-penalty types  are built in for representing model
 smooths, but alternatives can easily be added (see \code{\link{smooth.terms}} 
 for an overview and \code{\link{smooth.construct}} for how to add smooth classes). In practice the 
-default basis is usually the best choise, but the choise of the basis dimension (\code{k} in the 
+default basis is usually the best choice, but the choice of the basis dimension (\code{k} in the 
 \code{s} and \code{te} terms) is something that should be considered carefully (the exact value is not critical,
 but it is important not to make it restrictively small, nor very large and computationally costly). The basis should 
 be chosen to be larger than is believed to be necessary to approximate the smooth function concerned. 
 The effective degrees of freedom for the smooth will then be controlled by the smoothing penalty on 
-the term, and (usually) selected automatically (withy an upper limit set by
+the term, and (usually) selected automatically (with an upper limit set by
 \code{k-1} or occasionally \code{k}). Of course 
 the \code{k} should not be made too large, or computation will be slow (or in
 extreme cases there will be more 

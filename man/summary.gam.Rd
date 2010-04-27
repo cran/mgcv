@@ -122,9 +122,10 @@ explained is probably more appropriate for non-normal errors.}
 
 \item{n}{number of data.}
 
-\item{gcv}{minimized GCV score for the model, if GCV used.}
+\item{method}{The smoothing selection criterion used.}
 
-\item{ubre}{minimized UBRE score for the model, if UBRE used.}
+\item{sp.criterion}{The minimized value of the smoothness selection criterion. Note that for ML and REML methods, 
+what is reported is the negative log maginal likelihood or negative log restricted likelihood. }
 
 \item{scale}{estimated (or given) scale parameter.}
 
@@ -175,7 +176,7 @@ improvements by Henric Nilsson.}
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},
-\code{\link{gam.check}}, \code{\link{anova.gam}} }
+\code{\link{gam.check}}, \code{\link{anova.gam}}, \code{\link{gam.vcomp}}, \code{\link{sp.vcov}} }
 
 \examples{
 library(mgcv)

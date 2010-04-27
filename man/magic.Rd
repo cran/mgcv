@@ -85,7 +85,7 @@ parameter value.}
 
 \item{control}{ is a list of iteration control constants with the following elements:
 
-\itemize{
+\describe{
 \item{maxit}{The maximum number of iterations of the magic algorithm to allow.}
 
 \item{tol}{The tolerance to use in judging convergence.}
@@ -179,7 +179,7 @@ The method is coded in \code{C} with matrix factorizations performed using LINPA
 matrix of the parametes \code{b} is given by \code{rV\%*\%t(rV)*scale}. }
 
 \item{gcv.info}{is a list of information about the performance of the method with the following elements:
-\itemize{
+\describe{
 \item{full.rank}{The apparent rank of the problem: number of parameters less number of equality constraints.}
 \item{rank}{The estimated actual rank of the problem (at the final iteration of the method).}
 \item{fully.converged}{is \code{TRUE} if the method converged by satisfying the convergence criteria, and \code{FALSE} if it coverged 

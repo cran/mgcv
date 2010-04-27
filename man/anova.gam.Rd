@@ -2,7 +2,7 @@
 \alias{anova.gam}
 \alias{print.anova.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Hypothesis tests related to  GAM fits}
+\title{Approximate hypothesis tests related to  GAM fits}
 \description{ Performs hypothesis tests relating to one or more fitted
 \code{gam} objects. For a single fitted \code{gam} object, Wald tests of
 the significance of each parametric and smooth term are performed. Otherwise

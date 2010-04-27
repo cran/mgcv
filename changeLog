@@ -1,6 +1,35 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.6-2
+
+** Random effect support for `gam' improved with the addition of 
+   a random effect "smooth" class, and a function for extracting 
+   variance components. See ?random.effects and links for details. 
+
+* smooths now contain extra elements: S.scale records the scale factor 
+  used in any linear rescaling of a penalty matrix; plot.me indicates 
+  whether `plot.gam' should attempt to plot the term; te.ok indicates 
+  whether the smooth is a suitable marginal for a tensor product.
+
+* Fix in `gamm.setup' -- models with no fixed effects (except smooths) 
+  could fail to fit properly, because of an indexing error (caused odd 
+  results with indicator by variables)
+
+* help files have had various misuses on `itemize' fixed. 
+
+* initialization could fail if response was actually a 1D array. fixed.
+
+* New function `bam.update' allows efficient updating of very large
+  strictly additive models fitted by `bam' when additional data become 
+  available. 
+
+* gam now warns if RE/ML used with quasi families.
+
+* gam.check now accepts graphics parameters.
+
+* fixed problem in welcome message that messed up ESS.
+
 1.6-1
 
 * Bug in cSplineDes caused bases to be non-cyclic unless first 

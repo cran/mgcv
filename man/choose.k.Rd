@@ -8,7 +8,7 @@ penalized regression smoothers.
 Penalized regression smoothers gain computational efficiency by virtue of
 being defined using a basis of relatively modest size, \code{k}. When setting
 up models in the \code{mgcv} package, using \code{\link{s}} or \code{\link{te}}
-terms in a model formula, \code{k} must be chosen: the defualts are essentially arbitrary. 
+terms in a model formula, \code{k} must be chosen: the defaults are essentially arbitrary. 
 
 In practice \code{k-1} (or \code{k}) sets the upper limit on the degrees of freedom
 associated with an \code{\link{s}} smooth (1 degree of freedom is usually lost to the identifiability
@@ -119,19 +119,22 @@ rm(dat)
 set.seed(0) 
 dat <- gamSim(1,n=400,scale=2)
 ## fit a GAM with quite low `k'
-b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=6)+s(x3,k=6),data=dat,method="REML")
+b <- gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=6)+s(x3,k=6),
+         data=dat,method="REML")
 b 
 ## edf for 3rd smooth is highest as proportion of k -- increase k
-b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=12)+s(x3,k=6),data=dat,method="REML")
+b <- gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=12)+s(x3,k=6),
+         data=dat,method="REML")
 b 
 ## edf substantially up, -ve REML substantially down
-b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=24)+s(x3,k=6),data=dat,method="REML")
+b <- gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=24)+s(x3,k=6),
+         data=dat,method="REML")
 b 
 ## slight edf increase and -ve REML change
-b<-gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=40)+s(x3,k=6),data=dat,method="REML")
+b <- gam(y~s(x0,k=6)+s(x1,k=6)+s(x2,k=40)+s(x3,k=6),
+         data=dat,method="REML")
 b 
-## defintely stabilized (but really k around 20 would have been fine here)
-
+## defintely stabilized (but really k around 20 would have been fine)
 
 }
 

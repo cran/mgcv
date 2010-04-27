@@ -13,7 +13,7 @@ pcls(M)
 \arguments{
   \item{M}{is the single list argument to \code{pcls}. It should have  the 
   following elements:
-\itemize{
+\describe{
  \item{y}{The response data vector.}
  \item{w}{A vector of weights for the data (often proportional to the 
            reciprocal of the variance). }
@@ -39,7 +39,7 @@ constraints as equality constraints.}
 \item{Ain}{Matrix for the inequality constraints \eqn{ {\bf A}_{in}
     {\bf p} > {\bf b}_{in}}{A_in p > b}. }
 \item{bin}{vector in the inequality constraints. }
-} % end itemize
+} % end describe
 } % end M
 }
 \details{ 

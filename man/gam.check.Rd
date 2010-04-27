@@ -7,11 +7,12 @@ about the fitting procedure and results. The default is to produce 4 residual
 plots, and some information about the convergence of the smoothness selection optimization.
 }
 \usage{
-gam.check(b)
+gam.check(b,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
 \item{b}{ a fitted \code{gam} object as produced by \code{gam()}.}
+\item{...}{extra graphics parameters to pass to plotting functions.}
 }
 \details{ This function plots 4 standard diagnostic plots, and some other
 convergence diagnostics. Usually the 4 plots are various residual plots. The
