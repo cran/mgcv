@@ -17,7 +17,7 @@ for large datasets.
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="REML",control=gam.control(),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
-    chunk.size=10000,...)
+    chunk.size=10000,rho=0,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -103,6 +103,8 @@ if smooths share smoothing parameters).}
 
 \item{chunk.size}{The model matrix is created in chunks of this size, rather than ever being formed whole.}
 
+\item{rho}{An AR1 error model can be used for the residuals (based on dataframe order), of Gaussian-identity 
+           link models. This is the AR1 correlation parameter.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }

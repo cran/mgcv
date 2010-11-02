@@ -23,6 +23,68 @@ USA. */
 #include "matrix.h"
 #include "mgcv.h"
 
+/* inside polygon tester.... */
+
+void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n)
+/* finds out whether points in arrays x,y are inside boundary or outside, by counting boundary 
+   crossings. The boundaries nodes are defined by bx, by.  bx[i] and by[i] less than or equal to 
+   break_code signals a break in the boundary (e.g. between island and external boundary.) Each 
+   section of boundary is assumed to be a closed loop. nb is dimenion of bx and by; n is dimension 
+   of x and y. `in' will contain a 1 for an interior point and a 0 otherwise, on exit. 
+   Both bx[i] and by[i] or neither must be less than the break_code.
+*/ 
+{ double xx,yy,dum,x0,x1,y0,y1;
+  int i,j,count,start,swap;
+  for (i=0;i<*n;i++) { /* loop through all test points */
+      xx=x[i];yy=y[i]; /* the current test point */
+      start=0; /* start of current boundary section */
+      for (count=0,j=0;j<*nb;j++) { /* loop through entire boundary */
+	x0 = bx[j]; /* start node */
+        if (x0 <= *break_code) start=j+1; /* next segment start */
+        else { /* not a new section start */
+          if (j==*nb-1) x1=bx[start]; else x1 = bx[j+1];  /* end node */
+          if (x1 <= *break_code) x1 = bx[start]; /* must join up segment end */
+          if (x0!=x1) { /* x0==x1 => segment immaterial to decision */
+	    if (x1<x0) { dum=x0;x0=x1;x1=dum;swap=1;} else swap=0; /* ordered */
+            if (x0<xx&&x1>=xx) { /* might have a crossing */
+	      y0 = by[j]; /* start node y co-ord */
+              if (j==*nb-1) y1=by[start]; else
+              y1 = by[j+1]; /* end node y co-ord */
+              if (y1 <= *break_code) y1=by[start]; /* must join up */
+              if (y0<=yy&&y1<=yy) count++; /* definite crossing */
+              else { /* more detail needed to determine crossing */
+		if (!(y0>yy&&y1>yy)) { /* could still be one */
+                  if (swap) {dum=y0;y0=y1;y1=dum;}
+                  dum = (xx-x0)*(y1-y0)/(x1-x0)+y0; /* at what y does vertical cross segment */
+                  if (yy>=dum) count++; /* it's a crossing */
+		} /* end - could still be one */
+              } /* end - more detail */
+            } /* end - might be a crossing */
+          } /* end - does seg matter */
+        } /* end - not skipped because break */
+      } /* end boundary loop */
+     if (count%2) in[i]=1;else in[i]=0; /* record result */
+  } /* end x,y test loop */
+} /* end of in_out */
+
+
+
+
+/******************************/
+/* Tweedie distribution stuff */
+/******************************/
+
+void psum(double *y, double *x,int *index,int *n) {
+  /* y is of length max(index). x and index are of the same length, n.
+     This routine fills y[index[i]-1] so that it contains the sum of 
+     the x[i]'s sharing index[i]. It is assumed that y is cleared to zero
+     on entry.
+  */
+  int i; 
+  for (i=0;i< *n;i++) {
+    y[index[i]-1] += x[i];
+  }
+}
 
 double *forward_buf(double *buf,int *jal,int update)
 /* extend buffer forward 1000 */
@@ -265,3 +327,50 @@ x <- rtweedie(10000,power=1.5,mu=1,phi=1)
   range(d2-log(d1))
 
 */ 
+
+
+/*******************************************************/
+/** Fast re-weighting routines                         */
+/*******************************************************/
+
+void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p) {
+/* Function to recombine rows of n by p matrix X (column ordered).
+   ith row of X' is made up of row[stop[i-1]...stop[i]], weighted by 
+   w[stop[i-1]...stop[i]]. stop[-1]=0 by convention.
+   stop is an n vector.     
+   
+   See rwMatrix in bam.r for call from R. 
+*/
+  int i,j,jump,start=0,end,off;
+  double *X1p,*Xp,weight,*Xpe,*X1;
+  /* create storage for output matrix, cleared to zero */
+  X1 = (double *)calloc((size_t)(*n * *p),sizeof(double));
+  jump = *n;
+  off = *n * *p;
+  for (i=0;i<*n;i++) { /* loop through rows of output X1 */
+    end = stop[i]+1;
+    for (j=start;j<end;j++) { /* loop through the input rows */
+      X1p = X1 + i;    /* pointer to start of row i of output */
+      Xp = X + row[j]; /* pointer to start of source row */
+      weight = w[j];   
+      for (Xpe=Xp+off;Xp<Xpe;Xp+=jump,X1p+=jump) *X1p += weight * *Xp;
+    }
+    start = end;
+  }
+  /* coppy output to input for return...*/
+  for (Xp=X,X1p=X1,Xpe=Xp+off;Xp<Xpe;Xp++,X1p++) *Xp = *X1p;
+  free(X1);
+}
+
+/* Example code for rwMatrix in R....
+   n <- 10;p<-5
+   X <- matrix(runif(n*p),n,p)
+   ## create transform to take AR1(rho) to independence...
+   stop <- c(1:(n-1)*2,2*n-1)
+   row <- rep(1:n,rep(2,n))[-1]
+   rho <- .7;ld <- 1/sqrt(1-rho^2);sd <- -rho*ld
+   w <- c(rep(c(ld,sd),n-1),1)
+   mgcv:::rwMatrix(stop,row,w,X)
+   
+*/
+

@@ -15,6 +15,18 @@ ls.size <- function(x) {
  sz
 }
 
+rwMatrix <- function(stop,row,weight,X) {
+## Routine to recombine the rows of a matrix X according to info in 
+## stop,row and weight. Consider the ith row of the output matrix 
+## ind <- 1:stop[i] if i==1 and ind <- (stop[i-1]+1):stop[i]
+## otherwise. The ith output row is then X[row[ind],]*weight[ind]
+  if (is.matrix(X)) { n <- nrow(X);p<-ncol(X);ok <- TRUE} else { n<- length(X);p<-1;ok<-FALSE}
+  stop <- stop - 1;row <- row - 1 ## R indeces -> C indeces
+  oo <-.C(C_rwMatrix,as.integer(stop),as.integer(row),as.double(weight),X=as.double(X),as.integer(n),as.integer(p))
+  if (ok) return(matrix(oo$X,n,p)) else
+  return(oo$X) 
+}
+
 
 qr.update <- function(Xn,yn,R=matrix(0,0,ncol(Xn)),f=array(0,0),y.norm2=0)
 ## Let X = QR and f = Q'y. This routine updates f and R
@@ -243,43 +255,89 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
 } ## end bgam.fit
 
 
-bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method) 
+
+bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0) 
 ## function that does big additive model fit in strictly additive case
-{  n <- nrow(mf)
+{  ## first perform the QR decomposition, blockwise....
+   n <- nrow(mf)
+   if (rho!=0) { ## AR1 error model
+     ld <- 1/sqrt(1-rho^2) ## leading diagonal of root inverse correlation
+     sd <- -rho*ld         ## sub diagonal
+   }
    if (n>chunk.size) { 
     G$coefficients <- rep(0,ncol(G$X))
     class(G) <- "gam"
-    ind <- 1:chunk.size
-    G$model <- mf[ind,]
-    X <- predict(G,type="lpmatrix")
-    y <- G$model[[gp$response]] - G$offset[ind]
-    w <- sqrt(G$w[ind])
-    qrx <- qr.update(w*X,w*y)
     n.block <- n%/%chunk.size ## number of full sized blocks
     stub <- n%%chunk.size ## size of end block
-    if (n.block>1) for (i in 2:n.block) {
-      ind <- ind + chunk.size
+    if (stub>0) n.block <- n.block + 1
+#    start <- 0:(n.block-1)*chunk.size + 1 ## block starts
+#    end <- start + chunk.size;           ## block ends
+#    if (rho==0) end <- end - 1  ## otherwise most blocks go to 1 beyond block end
+#    end[n.block] <- n           ## block ends
+
+    start <- 0:(n.block-1)*chunk.size    ## block starts
+    end <- start + chunk.size;           ## block ends
+    end[n.block] <- n
+    if (rho==0) start <- start + 1  ## otherwise most blocks go to 1 before block start
+    start[1] <- 1  
+
+    qrx <- list(R=matrix(0,0,ncol(G$X)),f=array(0,0),y.norm2=0) ## initial empty qr object
+    for (i in 1:n.block) {
+      ind <- start[i]:end[i] 
+      if (rho!=0) {
+        N <- end[i]-start[i]+1
+        ## following are alternative form (harder to update)...       
+        #row <- rep(1:N,rep(2,N))[-1]
+        #weight <- c(rep(c(ld,sd),N-1),ld)
+        #if (end[i]==n) weight[2*N-1] <- 1
+        #stop <- c(1:(N-1)*2,2*N-1)
+        row <- c(1,rep(1:N,rep(2,N))[-c(1,2*N)])
+        weight <- c(1,rep(c(sd,ld),N-1))
+        stop <- c(1,1:(N-1)*2+1)
+        
+      }
       G$model <- mf[ind,]
-      X <- predict(G,type="lpmatrix")
-      y <- G$model[[gp$response]] - G$offset[ind]
       w <- sqrt(G$w[ind])
-      qrx <- qr.update(w*X,w*y,qrx$R,qrx$f,qrx$y.norm2)
+      X <- w*predict(G,type="lpmatrix")
+      y <- w*(G$model[[gp$response]] - G$offset[ind])
+      if (rho!=0) {
+        ## Apply transform...
+     #   if (end[i]==n) {
+     #     X <- rwMatrix(stop,row,weight,X)
+     #     y <- rwMatrix(stop,row,weight,y)
+     #   } else {
+     #     X <- rwMatrix(stop,row,weight,X)[-N,]
+     #     y <- rwMatrix(stop,row,weight,y)[-N]
+     #   }
+        if (end[i]==n) yX.last <- c(y[nrow(X)],X[nrow(X),]) ## store final row, in case of update
+        if (i==1) {
+           X <- rwMatrix(stop,row,weight,X)
+           y <- rwMatrix(stop,row,weight,y)
+        } else {
+           X <- rwMatrix(stop,row,weight,X)[-1,]
+           y <- rwMatrix(stop,row,weight,y)[-1]
+        } 
+      }      
+
+      qrx <- qr.update(X,y,qrx$R,qrx$f,qrx$y.norm2)
       gc()
     }
-    if (stub>0) {
-      ind <- (n-stub+1):n
-      G$model <- mf[ind,]
-      X <- predict(G,type="lpmatrix")
-      y <- G$model[[gp$response]] - G$offset[ind]
-      w <- sqrt(G$w[ind])
-      qrx <- qr.update(w*X,w*y,qrx$R,qrx$f,qrx$y.norm2)
-      gc()
-    }    
     G$n <- n
     G$y <- mf[[gp$response]]
    
   } else { ## n <= chunk.size
-    qrx <- qr.update(sqrt(G$w)*G$X,sqrt(G$w)*G$y)
+    if (rho==0) qrx <- qr.update(sqrt(G$w)*G$X,sqrt(G$w)*G$y) else {
+       #row <- rep(1:n,rep(2,n))[-1]
+       #weight <- c(rep(c(ld,sd),n-1),1)
+       #stop <- c(1:(n-1)*2,2*n-1)
+       row <- c(1,rep(1:n,rep(2,n))[-c(1,2*n)])
+       weight <- c(1,rep(c(sd,ld),n-1))
+       stop <- c(1,1:(n-1)*2+1)
+       yX.last <- c(G$y[n],G$X[n,])  ## store final row, in case of update
+       X <- rwMatrix(stop,row,weight,sqrt(G$w)*G$X)
+       y <- rwMatrix(stop,row,weight,sqrt(G$w)*G$y)
+       qrx <- qr.update(X,y)
+    }
   }
 
   rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
@@ -302,6 +360,9 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method)
     G$n.true <- n
     object <- gam(G=G,method=method,gamma=gamma,scale=scale)
     y -> G$y; w -> G$w; n -> G$n;offset -> G$offset
+    if (rho!=0) { ## correct RE/ML score for AR1 transform
+      object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
+    }
   }
 
   if (method=="GCV.Cp") { 
@@ -316,13 +377,18 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method)
     object$rank <- fit$gcv.info$rank
     object$Ve <- post$Ve
     object$Vp <- post$Vb
-     object$sig2 <- object$scale <- fit$scale
-      object$sp <- fit$sp
+    object$sig2 <- object$scale <- fit$scale
+    object$sp <- fit$sp
     class(object)<-c("gam")
   } else {
     
   }
   G$smooth <- G$X <- NULL
+
+  object$AR1.rho <- rho
+  if (rho!=0) { ## need to store last model matrix row, to allow update
+    object$yX.last <- yX.last
+  }
 
   object$gamma <- gamma;object$G <- G;object$qrx <- qrx ## to allow updating of the model
   object
@@ -333,7 +399,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method)
 
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="REML",control=gam.control(),scale=0,gamma=1,knots=NULL,
-                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,...)
+                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -356,7 +422,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   mf<-match.call(expand.dots=FALSE)
   mf$formula<-gp$fake.formula 
   mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <-
-  mf$gamma <- mf$paraPen<- mf$chunk.size  <- mf$...<-NULL
+  mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$...<-NULL
   mf$drop.unused.levels<-TRUE
   mf[[1]]<-as.name("model.frame")
   pmf <- mf
@@ -425,8 +491,9 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (control$trace) cat("Setup complete. Calling fit\n")
 
   if (am) {
-    object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method)
+    object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho)
   } else {
+    if (rho!=0) warning("AR1 parameter rho unused with generalized model")
     object <- bgam.fit(G, mf, chunk.size, gp ,scale ,gamma,method=method,
                        control = control,...)
   }
@@ -517,7 +584,7 @@ bam.update <- function(b,data,chunk.size=10000) {
   }
 
 
-  b$model <- rbind(b$model,mf)
+  b$model <- rbind(b$model,mf) ## complete model frame --- old + new
 
   ## get response and offset...
 
@@ -536,7 +603,29 @@ bam.update <- function(b,data,chunk.size=10000) {
 
   w <- sqrt(w)
 
-  b$qrx <- mgcv:::qr.update(w*X,w*y,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+  if (b$AR1.rho!=0) { ## original model had AR1 error structure...
+    rho <- b$AR1.rho
+    ld <- 1/sqrt(1-rho^2) ## leading diagonal of root inverse correlation
+    sd <- -rho*ld         ## sub diagonal
+    ## append the final row of weighted X and y from original fit, first
+    wy <- c(b$yX.last[1],w*y)
+    wX <- rbind(b$yX.last[-1],w*X)
+    m <- nrow(wX)
+    b$yX.last <- c(wy[m],wX[m,])
+
+    row <- c(1,rep(1:m,rep(2,m))[-c(1,2*m)])
+    weight <- c(1,rep(c(sd,ld),m-1))
+    stop <- c(1,1:(m-1)*2+1)
+   
+    ## re-weight to independence....
+    wX <- rwMatrix(stop,row,weight,wX)[-1,]
+    wy <- rwMatrix(stop,row,weight,wy)[-1]    
+
+    ## update
+    b$qrx <- mgcv:::qr.update(wX,wy,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+  } else {
+    b$qrx <- mgcv:::qr.update(w*X,w*y,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+  }
 
   ## now do the refit...
   rss.extra <- b$qrx$y.norm2 - sum(b$qrx$f^2)
@@ -565,7 +654,7 @@ bam.update <- function(b,data,chunk.size=10000) {
     b$G$pearson.extra <- rss.extra
     b$G$n.true <- n
     if (b$scale.estimated) scale <- -1 else scale = b$sig2
-    in.out <- list(sp=b$sp,scale=b$gcv.ubre)
+    in.out <- list(sp=b$sp,scale=b$reml.scale)
     object <- gam(G=b$G,method=method,gamma=b$gamma,scale=scale,in.out=in.out)
     offset -> b$G$offset -> b$offset
     w -> b$G$w -> b$weights -> b$prior.weights; n -> b$G$n
@@ -599,7 +688,9 @@ bam.update <- function(b,data,chunk.size=10000) {
     b$Vp <- object$Vp
     b$sig2 <- b$scale <- object$sig2
     b$sp <- object$sp
-    
+    if (b$AR1.rho!=0) { ## correct RE/ML score for AR1 transform
+      b$gcv.ubre <- b$gcv.ubre - (n-1)*log(ld)
+    }
   }
   b$G$X <- NULL
   b$linear.predictors <- as.numeric(predict.gam(b,newdata=b$model,block.size=chunk.size))

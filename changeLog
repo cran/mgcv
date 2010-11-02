@@ -1,5 +1,69 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
+ISSUES:
+
+1.7-0
+
+** `t2' alternative tensor product smooths added. These can be used with 
+  gamm4. 
+
+** "mrf" smooth class added (at the suggestion of Thomas Kneib). 
+   Implements smoothing over discrete geographic districts using a
+   Markov random field penalty. See ?mrf
+
+* qq.gam added to allow better checking of distribution of residuals.
+
+* gam.check modified to use qq.gam for QQ plots of deviance residuals.
+  Also, it now works with gam(*, na.action = "na.replace") and NAs.
+
+* `concurvity' function added to provide simple concurvity measures.
+
+* plot.gam automatic layout modified to be a bit more sensible (i.e.
+  to recognise that most screens are landscape, and that usually 
+  squarish plots are wanted). 
+
+* Plot method added for mrf smooths. 
+
+* in.out function added to test whether points are interior to 
+  a region defined by a set of polygons. Useful when working with 
+  MRFs.
+
+* `plot.gam' restructured so that smooths are plotted by smooth specific
+  plot methods.
+
+* Plot method added for "random.effect" smooth class.
+
+* `pen.edf' function added to extract EDF associated with each penalty.
+   Useful with t2 smooths. 
+
+* Facilty provided to allow different identifiability constraints to be
+  used for fitting and prediction. This allows t2 smooths to be fitted
+  with a constraint that allows fitting by gamm4, but still perform 
+  inference with the componentwise optimal sum to zero constraints.
+
+* mgcv-FAQ.Rd added.
+
+* paraPen works properly with `gam.vcomp' and full.sp names returned 
+  correctly.
+
+* bam (and bam.update) can now employ an AR1 error model in the 
+  guassian-identity case. 
+
+* bam.update modified for faster updates (initial scale parameter 
+  estimate now supplied in RE/ML case)
+
+* Absorption of identifiability constraints modified to allow 
+  constraints that only affect some parameters to leave rest of 
+  parameters completely unchanged.  
+
+* rTweedie added for quick simulation of Tweedie random deviates 
+  when 1<p<2.
+
+* smooth.terms help file fixed so cyclic p spline identifies as "cp"
+  and not "cs"!
+
+* bug fix in `gamm' so that binomial response can be provided as 2 column 
+  matrix, in standard `glm' way.
 
 1.6-2
 
@@ -16,7 +80,7 @@
   could fail to fit properly, because of an indexing error (caused odd 
   results with indicator by variables)
 
-* help files have had various misuses on `itemize' fixed. 
+* help files have had various misuses of `itemize' fixed. 
 
 * initialization could fail if response was actually a 1D array. fixed.
 
@@ -123,7 +187,7 @@
 * There was a bug in the calculation of the Bayesian cov matrix, when the 
   scale parameter was known: it was always using an estimated scale 
   parameter. Makes no statistically meaningful difference for a model  
-  that fits propoerly, of course. 
+  that fits properly, of course. 
 
 * Some junk removed from gam object.
 
@@ -156,7 +220,6 @@
   `predict.gam' help file.
 
 * `newdata.guaranteed' argument to predict.gam didn't work. fixed.
-
 
 
 1.5-5
@@ -211,7 +274,7 @@
   possible to fit very poor models, and then have non-sensical effective 
   degrees of freedom reported. This has been fixed by using much more stable 
   expressions for edf calculation, when outer iteration smoothness
-  selection is empolyed. (Changes are to gam.fit3, gam.outer and a new
+  selection is employed. (Changes are to gam.fit3, gam.outer and a new
   routine gam.fit3.post.proc).
 
 * edfs in version 1.5-0 were calculated using newton, rather than fisher 

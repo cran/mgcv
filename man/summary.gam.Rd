@@ -21,9 +21,9 @@ summaries from it. (See \code{\link{sink}} to divert output to a file.)
 \item{dispersion}{A known dispersion parameter. \code{NULL} to use estimate or
                   default (e.g. 1 for Poisson).}
 
-\item{freq}{By default p-values for individual terms are calculated using the frequentist estimated
-covariance matrix of the parameter estimators. If this is set to FALSE then
-the Bayesian covariance matrix of the parameters is used instead. See details. }
+\item{freq}{By default p-values for individual terms are calculated using the Bayesian estimated
+covariance matrix of the parameter estimators. If this is set to TRUE then
+the frequentist covariance matrix of the parameters is used instead. See details. }
 
 \item{alpha}{ adjustment to reference distribution per estimated smoothing parameter. 
 }

@@ -1,5 +1,5 @@
 
-##  R routines for the package mgcv (c) Simon Wood 2000-2009
+##  R routines for the package mgcv (c) Simon Wood 2000-2010
 ##  With contributions from Henric Nilsson
 
 
@@ -13,6 +13,18 @@ rig <- function(n,mean,scale) {
   ind <- runif(n) > mean/(mean+x)
   x[ind] <- mu2[ind]/x[ind]
   x ## E(x) = mean; var(x) = scale*mean^3
+}
+
+strip.offset <- function(x)
+# sole purpose is to take a model frame and rename any "offset(a.name)"
+# columns "a.name"
+{ na <- names(x)
+  for (i in 1:length(na)) {
+    if (substr(na[i],1,7)=="offset(") 
+      na[i] <- substr(na[i],8,nchar(na[i])-1)
+  }
+  names(x) <- na
+  x
 }
 
 
@@ -216,7 +228,7 @@ interpret.gam <- function (gf)
 # 1. a model formula for the parametric part: pf (and pfok indicating whether it has terms)
 # 2. a list of descriptors for the smooths: smooth.spec
 { p.env<-environment(gf) # environment of formula
-  tf<-terms.formula(gf,specials=c("s","te")) # specials attribute indicates which terms are smooth
+  tf<-terms.formula(gf,specials=c("s","te","t2")) # specials attribute indicates which terms are smooth
  
   terms<-attr(tf,"term.labels") # labels of the model terms 
   nt<-length(terms) # how many terms?
@@ -226,8 +238,9 @@ interpret.gam <- function (gf)
     pf<-rf<-paste(response,"~",sep="")
   }
   else pf<-rf<-"~"
-  sp<-attr(tf,"specials")$s     # array of indices of smooth terms 
-  tp<-attr(tf,"specials")$te    # indices of tensor product terms
+  sp <- attr(tf,"specials")$s     # array of indices of smooth terms 
+  tp <- attr(tf,"specials")$te    # indices of tensor product terms
+  t2p <- attr(tf,"specials")$t2   # indices of type 2 tensor product terms
   off<-attr(tf,"offset") # location of offset in formula
   ## have to translate sp,tp so that they relate to terms,
   ## rather than elements of the formula (26/11/05)
@@ -239,26 +252,32 @@ interpret.gam <- function (gf)
   if (length(tp)>0) for (i in 1:length(tp)) {
     ind <- (1:nt)[as.logical(vtab[tp[i],])]
     tp[i] <- ind # the term that smooth relates to
+  } 
+  if (length(t2p)>0) for (i in 1:length(t2p)) {
+    ind <- (1:nt)[as.logical(vtab[t2p[i],])]
+    t2p[i] <- ind # the term that smooth relates to
   } ## re-referencing is complete
 
-  ns<-length(sp)+length(tp) # number of smooths
-  k<-kt<-ks<-kp<-1 # counters for terms in the 2 formulae
+  ns<-length(sp)+length(tp)+length(t2p) # number of smooths
+  k<-kt<-kt2<-ks<-kp<-1 # counters for terms in the 2 formulae
   len.sp <- length(sp)
   len.tp <- length(tp)
+  len.t2p <- length(t2p)
 
   smooth.spec<-list()
   if (nt)
   for (i in 1:nt) # work through all terms
-  { if (k<=ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i))) # it's a smooth
+  { if (k<=ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||(kt2<=len.t2p&&t2p[kt2]==i))) # it's a smooth
     { st<-eval(parse(text=terms[i]),envir=p.env)
       smooth.spec[[k]]<-st
-      if (ks<=len.sp&&sp[ks]==i) ks<-ks+1  # counts s() terms
-      else kt<-kt+1              # counts te() terms
-      k<-k+1     # counts smooth terms 
+      if (ks<=len.sp&&sp[ks]==i) ks <- ks + 1 else # counts s() terms
+      if (kt<=len.tp&&tp[kt]==i) kt <- kt + 1 else # counts te() terms
+      kt2 <- kt2 + 1                           # counts t2() terms
+      k <- k+1      # counts smooth terms 
     } else          # parametric
     { if (kp>1) pf<-paste(pf,"+",terms[i],sep="") # add to parametric formula
       else pf<-paste(pf,terms[i],sep="")
-      kp<-kp+1    # counts parametric terms
+      kp <- kp+1    # counts parametric terms
     }
   }    
   if (!is.null(off)) # deal with offset
@@ -293,10 +312,11 @@ interpret.gam <- function (gf)
 }
 
 
-fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5)
+fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0)
 # model matrix X2 may be linearly dependent on X1. This 
 # routine finds which columns of X2 should be zeroed to 
-# fix this.
+# fix this. If rank.def>0 then it is taken as the known degree 
+# of dependence of X2 on X1 and tol is ignored.
 { qr1 <- qr(X1,LAPACK=TRUE)
   R11 <- abs(qr.R(qr1)[1,1])
   r<-ncol(X1);n<-nrow(X1)
@@ -304,10 +324,11 @@ fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5)
   qr2 <- qr(QtX2,LAPACK=TRUE)
   R <- qr.R(qr2)
   # now final diagonal block of R may be zero, indicating rank 
-  # deficiency. 
-  r0<-r<-nrow(R)
-  while (mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1
-  r0<-r0+1
+  # deficiency.
+  r0 <- r <- nrow(R)
+  if (rank.def > 0 && rank.def <= nrow(R)) r0 <- r - rank.def else ## degree of rank def known
+    while (mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
+  r0 <- r0 + 1
   if (r0>r) return(NULL) else
   qr2$pivot[r0:r] # the columns of X2 to zero in order to get independence
 }
@@ -317,7 +338,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
 # works through a list of smooths, sm, aiming to identify nested or partially
 # nested terms, and impose identifiability constraints on them.
 # Xp is the parametric model matrix. It is needed in order to check whether
-# there is a constant (or equivalent) in the model. If there is then this needs 
+# there is a constant (or equivalent) in the model. If there is, then this needs 
 # to be included when working out side constraints, otherwise dependencies can be 
 # missed. 
 { m <- length(sm)
@@ -381,12 +402,32 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
         ## ... the columns to zero to ensure independence
         if (!is.null(ind)) { 
           sm[[i]]$X <- sm[[i]]$X[,-ind]
-          for (j in 1:length(sm[[i]]$S)) { 
+          ## work through list of penalty matrices, applying constraints...
+          for (j in length(sm[[i]]$S):1) { ## working down so that dropping is painless
             sm[[i]]$S[[j]] <- sm[[i]]$S[[j]][-ind,-ind]
-            sm[[i]]$rank[j] <- qr(sm[[i]]$S[[j]],tol=tol,LAPACK=FALSE)$rank
+            if (sum(sm[[i]]$S[[j]]!=0)==0) rank <- 0 else
+            rank <- qr(sm[[i]]$S[[j]],tol=tol,LAPACK=FALSE)$rank
+            if (rank == 0) { ## drop the penalty
+              sm[[i]]$rank <- sm[[i]]$rank[-j]
+              sm[[i]]$S[[j]] <- NULL
+              if (!is.null(sm[[i]]$L)) sm[[i]]$L <- sm[[i]]$L[-j,,drop=FALSE]
+            }
+          } ## penalty matrices finished
+          if (!is.null(sm[[i]]$L)) {
+            ind <- as.numeric(colSums(sm[[i]]$L!=0))!=0
+            sm[[i]]$L <- sm[[i]]$L[,ind,drop=FALSE] ## retain only those sps that influence something!
           }
+
           sm[[i]]$df <- ncol(sm[[i]]$X)
           attr(sm[[i]],"del.index") <- ind
+          ## Now deal with case in which prediction constraints differ from fit constraints
+          if (!is.null(sm[[i]]$Xp)) { ## need to get deletion indeces under prediction parameterization
+            ## Note that: i) it doesn't matter what the identifiability con on X1 is
+            ##            ii) the degree of rank deficiency can't be changed by an identifiability con
+            ind <- fixDependence(X1,sm[[i]]$Xp,rank.def=length(ind)) 
+            sm[[i]]$Xp <- sm[[i]]$Xp[,-ind]
+            attr(sm[[i]],"del.index") <- ind ## over-writes original
+          }
         }
         sm[[i]]$vn <- NULL
       } ## end if
@@ -402,7 +443,7 @@ clone.smooth.spec <- function(specb,spec) {
  ## check dimensions same...
  if (specb$dim!=spec$dim) stop("`id' linked smooths must have same number of arguments") 
  ## Now start cloning...
- if (inherits(specb,"tensor.smooth.spec")) { ##`te' generated base smooth.spec
+ if (inherits(specb,c("tensor.smooth.spec","t2.smooth.spec"))) { ##`te' or `t2' generated base smooth.spec
     specb$term <- spec$term
     specb$label <- spec$label 
     specb$by <- spec$by
@@ -415,7 +456,7 @@ clone.smooth.spec <- function(specb,spec) {
          }
          specb$margin[[i]]$label <- ""
  
-      } else { ## second term was at least `te', so margin cloning is easy
+      } else { ## second term was at least `te'/`t2', so margin cloning is easy
         specb$margin[[i]]$term <- spec$margin[[i]]$term
         specb$margin[[i]]$label <- spec$margin[[i]]$label
         specb$margin[[i]]$xt <- spec$margin[[i]]$xt
@@ -441,6 +482,7 @@ parametricPenalty <- function(pterms,assign,paraPen,sp0) {
   off <- rep(0,0) ## offset array
   rank <- rep(0,0) ## rank array
   sp <- rep(0,0)    ## smoothing param array
+  full.sp.names <- rep("",0) ## names for sp's multiplying penalties (not underlying)
   L <- matrix(0,0,0) 
   k <- 0
   tind <- unique(assign) ## unique term indices
@@ -474,6 +516,7 @@ parametricPenalty <- function(pterms,assign,paraPen,sp0) {
         L <- rbind(cbind(L,matrix(0,nrow(L),ncol(Li))),
                    cbind(matrix(0,nrow(Li),ncol(L)),Li))
         ind <- (length(sp)+1):(length(sp)+ncol(Li))
+        ind2 <- (length(sp)+1):(length(sp)+nrow(Li)) ## used to produce names for full sp array
         if (is.null(spi)) {
           sp[ind] <- -1 ## auto-initialize
         } else {
@@ -483,6 +526,9 @@ parametricPenalty <- function(pterms,assign,paraPen,sp0) {
         ## add smoothing parameter names....
         if (length(ind)>1) names(sp)[ind] <- paste(term.label,ind-ind[1]+1,sep="") 
         else names(sp)[ind] <- term.label
+        
+        if (length(ind2)>1) full.sp.names[ind2] <- paste(term.label,ind2-ind2[1]+1,sep="") 
+        else full.sp.names[ind2] <- term.label
       }
     } ## end !is.null(P)  
   } ## looped through all terms
@@ -495,7 +541,7 @@ parametricPenalty <- function(pterms,assign,paraPen,sp0) {
   ## S is list of penalty matrices, off[i] is index of first coefficient penalized by each S[[i]]
   ## sp is array of underlying smoothing parameter (-ve to estimate), L is matrix mapping log
   ## underlying smoothing parameters to log smoothing parameters, rank[i] is the rank of S[[i]].
-  list(S=S,off=off,sp=sp,L=L,rank=rank)
+  list(S=S,off=off,sp=sp,L=L,rank=rank,full.sp.names=full.sp.names)
 }
 
 gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
@@ -565,6 +611,9 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
         
         ## add data for this term to the data list for basis setup...
         temp.term <- split$smooth.spec[[i]]$term
+       
+        ## note cbind deliberate in next line, as construction will handle matrix argument 
+        ## correctly... 
         for (j in 1:length(temp.term)) id.list[[id]]$data[[j]] <- cbind(id.list[[id]]$data[[j]],
                                                           get.var(temp.term[j],data,vecMat=FALSE))
        
@@ -605,17 +654,31 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
   
   G$m <- m <- newm ## number of actual smooths
 
+  ## at this stage, it is neccessary to impose any side conditions required
+  ## for identifiability
+  if (m>0) sm <- gam.side(sm,X,tol=.Machine$double.eps^.5)
+
+
   ## The matrix, L, mapping the underlying log smoothing parameters to the
   ## log of the smoothing parameter multiplying the S[[i]] must be
   ## worked out...
   idx <- list() ## idx[[id]]$c contains index of first col in L relating to id
   L <- matrix(0,0,0)
-  sp.names <- rep("",0) ## need a list of names to identify sps in global sp array
+  lsp.names <- sp.names <- rep("",0) ## need a list of names to identify sps in global sp array
   if (m>0) for (i in 1:m) {
     id <- sm[[i]]$id
     ## get the L matrix for this smooth...
     length.S <- length(sm[[i]]$S)
     if (is.null(sm[[i]]$L)) Li <- diag(length.S) else Li <- sm[[i]]$L 
+     
+    if (length.S > 0) { ## there are smoothing parameters to name
+       if (length.S == 1) spn <- sm[[i]]$label else {
+          Sname <- names(sm[[i]]$S)
+          if (is.null(Sname)) spn <- paste(sm[[i]]$label,1:length.S,sep="") else
+          spn <- paste(sm[[i]]$label,Sname,sep="")
+       }
+    }
+
     ## extend the global L matrix...
     if (is.null(id)||is.null(idx[[id]])) { ## new `id'     
       if (!is.null(id)) { ## create record in `idx'
@@ -625,9 +688,8 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
       L <- rbind(cbind(L,matrix(0,nrow(L),ncol(Li))),
                  cbind(matrix(0,nrow(Li),ncol(L)),Li))
       if (length.S > 0) { ## there are smoothing parameters to name
-        if (length.S == 1) spn <- sm[[i]]$label else 
-          spn <- paste(sm[[i]]$label,1:length.S,sep="")
         sp.names <- c(sp.names,spn) ## extend the sp name vector
+        lsp.names <- c(lsp.names,spn) ## extend full.sp name vector
       }
     } else { ## it's a repeat id => shares existing sp's
       L0 <- matrix(0,nrow(Li),ncol(L))
@@ -636,14 +698,17 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
       }
       L0[,idx[[id]]$c:(idx[[id]]$c+ncol(Li)-1)] <- Li
       L <- rbind(L,L0)
+      if (length.S > 0) { ## there are smoothing parameters to name
+        lsp.names <- c(lsp.names,spn) ## extend full.sp name vector
+      }
     }
   }
 
 
-  ## at this stage, it is neccessary to impose any side conditions required
-  ## for identifiability
-  if (m>0) sm<-gam.side(sm,X,tol=.Machine$double.eps^.5)
 
+  ## create the model matrix...
+
+  Xp <- NULL ## model matrix under prediction constraints, if given
   if (m>0) for (i in 1:m) 
   { n.para<-ncol(sm[[i]]$X)
     # define which elements in the parameter vector this smooth relates to....
@@ -657,14 +722,28 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
       else G$offset <- G$offset + Xoff
     }
     ## model matrix accumulation ...
-    X<-cbind2(X,sm[[i]]$X);sm[[i]]$X<-NULL
+    
+    ## alternative version under alternative constraint first (prediction only)
+    if (is.null(sm[[i]]$Xp)) {
+      if (!is.null(Xp)) Xp <- cbind2(Xp,sm[[i]]$X)
+    } else { 
+      if (is.null(Xp)) Xp <- X
+      Xp <- cbind2(Xp,sm[[i]]$Xp);sm[[i]]$Xp <- NULL
+    }
+    ## now version to use for fitting ...
+    X <- cbind2(X,sm[[i]]$X);sm[[i]]$X<-NULL
    
     G$smooth[[i]] <- sm[[i]]   
   }
-  G$cmX <- colMeans(X) ## useful for componentwise CI construction 
+  if (is.null(Xp)) {
+    G$cmX <- colMeans(X) ## useful for componentwise CI construction 
+  } else {
+    G$cmX <- colMeans(Xp)
+    G$P <- qr.coef(qr(Xp),X) ## transform from fit params to prediction params
+  }
   G$cmX[-(1:G$nsdf)] <- 0 ## zero the smooth parts here 
-  G$X<-X;rm(X)
-  n.p<-ncol(G$X) 
+  G$X <- X;rm(X)
+  n.p <- ncol(G$X) 
   # deal with penalties
 
 
@@ -764,7 +843,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
     } 
   }
  
-  ## need to modify L, G$S, G$sp, G$rank and G$off to include any penalties
+  ## need to modify L, lsp.names, G$S, G$sp, G$rank and G$off to include any penalties
   ## on parametric stuff, at this point....
   if (!is.null(PP)) { ## deal with penalties on parametric terms
     L <- rbind(cbind(L,matrix(0,nrow(L),ncol(PP$L))),
@@ -773,6 +852,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
     G$S <- c(PP$S,G$S)
     G$rank <- c(PP$rank,G$rank)
     G$sp <- c(PP$sp,G$sp)
+    lsp.names <- c(PP$full.sp.names,lsp.names)
     G$n.paraPen <- length(PP$off)
     if (!is.null(PP$min.sp)) { ## deal with minimum sps
       if (is.null(H)) H <- matrix(0,n.p,n.p)
@@ -794,7 +874,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
     ind <- lsp0==0
     lsp0[!ind] <- log(lsp0[!ind])
     lsp0[ind] <- log(.Machine$double.xmin)*1000 ## zero fudge
-    lsp0 <- L[,fix.ind,drop=FALSE]%*%lsp0
+    lsp0 <- as.numeric(L[,fix.ind,drop=FALSE]%*%lsp0)
 
     L <- L[,!fix.ind,drop=FALSE]  
     G$sp <- G$sp[!fix.ind]
@@ -805,6 +885,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
   if (ncol(L)==nrow(L)&&!sum(L!=diag(ncol(L)))) L <- NULL ## it's just the identity
 
   G$L <- L;G$lsp0 <- lsp0
+  names(G$lsp0) <- lsp.names ## names of all smoothing parameters (not just underlying)
 
   # deal with constraints 
    
@@ -833,6 +914,8 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
 
   
   ### Should check that there are enough unique covariate combinations to support model dimension
+
+  G$pP <- PP ## return paraPen object, if present
 
   G
 }
@@ -1252,7 +1335,11 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
       if (fixedSteps>0) {
         log.scale <-  log(sum(object$weights*object$residuals^2)/(G$n-sum(object$edf)))
       } else {
-        log.scale <- log(null.stuff$null.scale/10)
+        if (is.null(in.out)) {
+          log.scale <- log(null.stuff$null.scale/10)
+        } else {
+          log.scale <- log(in.out$scale)
+        }
       }
       lsp <- c(lsp,log.scale) ## append log initial scale estimate to lsp
       ## extend G$L, if present...
@@ -1294,6 +1381,13 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   names(object$coefficients) <- term.names  # note - won't work on matrices!!
   names(object$edf) <- term.names
   names(object$edf1) <- term.names
+
+  if (!is.null(G$P)) {
+    object$coefficients <- G$P %*% object$coefficients
+    object$Vp <- G$P %*% object$Vp %*% t(G$P)
+    object$Ve <- G$P %*% object$Ve %*% t(G$P)
+  }
+
   object
 }
 
@@ -1437,8 +1531,12 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object <- estimate.gam(G,method,optimizer,control,in.out,scale,gamma,...)
 
   
-  if (!is.null(G$L)) object$full.sp <- as.numeric(exp(G$L%*%log(object$sp)+G$lsp0))
+  if (!is.null(G$L)) { 
+    object$full.sp <- as.numeric(exp(G$L%*%log(object$sp)+G$lsp0))
+    names(object$full.sp) <- names(G$lsp0)
+  }
   names(object$sp) <- names(G$sp)
+  object$paraPen <- G$pP
   object$formula<-G$formula
   object$var.summary <- G$var.summary 
   object$cmX <- G$cmX ## column means of model matrix --- useful for CIs
@@ -1461,53 +1559,6 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 }
 
 
-gam.check <- function(b,...)
-# takes a fitted gam object and produces some standard diagnostic plots
-{ if (b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML"))
-  { old.par<-par(mfrow=c(2,2))
-    sc.name<-b$method
-    qqnorm(residuals(b),...)
-    plot(b$linear.predictors,residuals(b),main="Resids vs. linear pred.",
-         xlab="linear predictor",ylab="residuals",...);
-    hist(residuals(b),xlab="Residuals",main="Histogram of residuals",...);
-    plot(fitted(b),b$y,xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values",...)
-    
-    ## now summarize convergence information 
-    cat("\nMethod:",b$method,"  Optimizer:",b$optimizer)
-    if (!is.null(b$outer.info)) { ## summarize convergence information
-      if (b$optimizer[2]%in%c("newton","bfgs"))
-      { boi <- b$outer.info
-        cat("\n",boi$conv," after ",boi$iter," iteration",sep="")
-        if (boi$iter==1) cat(".") else cat("s.")
-        cat("\nGradient range [",min(boi$grad),",",max(boi$grad),"]",sep="")
-        cat("\n(score ",b$gcv.ubre," & scale ",b$sig2,").",sep="")
-        ev <- eigen(boi$hess)$values
-        if (min(ev)>0) cat("\nHessian positive definite, ") else cat("\n")
-        cat("eigenvalue range [",min(ev),",",max(ev),"].\n",sep="")
-      } else { ## just default print of information...
-        cat("\n");print(b$outer.info)
-      }
-    } else { ## no sp, perf iter or AM case
-      if (length(b$sp)==0) ## no sp's estimated  
-        cat("\nModel required no smoothing parameter selection")
-      else { 
-        cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")       
-        if (b$mgcv.conv$iter>1) cat("s")
-         
-        if (!b$mgcv.conv$fully.converged)
-        cat(" by steepest\ndescent step failure.\n") else cat(".\n")
-        cat("The RMS",sc.name,"score gradiant at convergence was",b$mgcv.conv$rms.grad,".\n")
-        if (b$mgcv.conv$hess.pos.def)
-        cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
-        cat("The estimated model rank was ",b$mgcv.conv$rank,
-                   " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
-      }
-    }
-    cat("\n")
-    par(old.par)
-  } else ## probably a `gamm' `gam' object
-  plot(b$linear.predictor,residuals(b),xlab="linear predictor",ylab="residuals",...)
-}
 
 print.gam<-function (x,...) 
 # default print function for gam objects
@@ -1950,6 +2001,8 @@ model.matrix.gam <- function(object,...)
   predict(object,type="lpmatrix",...)
 }
 
+
+
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
                        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...) 
 {
@@ -2219,458 +2272,90 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   H # ... and return
 }
 
-plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
-                     ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,...)
 
-# Create an appropriate plot for each smooth term of a GAM.....
-# x is a gam object
-# rug determines whether a rug plot should be added to each plot
-# se determines whether twice standard error bars are to be added
-# pages is the number of pages over which to split output - 0 implies that 
-# graphic settings should not be changed for plotting
-# scale -1 for same y scale for each plot
-#        0 for different y scales for each plot
-# n - number of x axis points to use for plotting each term
-# n2 is the square root of the number of grid points to use for contouring
-# 2-d terms.
-
-{ sub.edf <- function(lab,edf) {
-    ## local function to substitute edf into brackets of label
-    ## labels are e.g. smooth[[1]]$label
-    pos <- regexpr(":",lab)[1]
-    if (pos<0) { ## there is no by variable stuff
-      pos <- nchar(lab) - 1
-      lab <- paste(substr(lab,start=1,stop=pos),",",round(edf,digits=2),")",sep="")
-    } else {
-      lab1 <- substr(lab,start=1,stop=pos-2)
-      lab2 <- substr(lab,start=pos-1,stop=nchar(lab))
-      lab <- paste(lab1,",",round(edf,digits=2),lab2,sep="")
-    }
-    lab
-  } ## end of sub.edf
-
-
-  sp.contour <- function(x,y,z,zse,xlab="",ylab="",zlab="",titleOnly=FALSE,
-               se.plot=TRUE,se.mult=1,trans=I,shift=0,...)   
-  # internal function for contouring 2-d smooths with 1 s.e. limits
-  { gap<-median(zse,na.rm=TRUE)  
-    zr<-max(trans(z+zse+shift),na.rm=TRUE)-min(trans(z-zse+shift),na.rm=TRUE) # plotting range  
-    n<-10  
-    while (n>1 && zr/n<2.5*gap) n<-n-1    
-    zrange<-c(min(trans(z-zse+shift),na.rm=TRUE),max(trans(z+zse+shift),na.rm=TRUE))  
-    zlev<-pretty(zrange,n)  ## ignore codetools on this one  
-    yrange<-range(y);yr<-yrange[2]-yrange[1]  
-    xrange<-range(x);xr<-xrange[2]-xrange[1]  
-    ypos<-yrange[2]+yr/10
-    args <- as.list(substitute(list(...)))[-1]
-    args$x <- substitute(x);args$y <- substitute(y)
-    args$type="n";args$xlab<-args$ylab<-"";args$axes<-FALSE
-    do.call("plot",args)
-##  plot(x,y,type="n",xlab="",ylab="",axes=FALSE)
-    cs<-(yr/10)/strheight(zlab);if (cs>1) cs<-1 # text scaling based on height  
-##  cw<-par()$cxy[1]  
-    tl<-strwidth(zlab);  
-    if (tl*cs>3*xr/10) cs<-(3*xr/10)/tl  
-    args <- as.list(substitute(list(...)))[-1]
-    n.args <- names(args)
-    zz <- trans(z+shift) ## ignore codetools for this
-    args$x<-substitute(x);args$y<-substitute(y);args$z<-substitute(zz)
-    if (!"levels"%in%n.args) args$levels<-substitute(zlev)
-    if (!"lwd"%in%n.args) args$lwd<-2
-    if (!"labcex"%in%n.args) args$labcex<-cs*.65
-    if (!"axes"%in%n.args) args$axes <- FALSE
-    if (!"add"%in%n.args) args$add <- TRUE
-    do.call("contour",args)
-##  contour(x,y,z,levels=zlev,lwd=2,labcex=cs*0.65,axes=FALSE,add=TRUE)  
-    if (is.null(args$cex.main)) cm <- 1 else cm <- args$cex.main
-    if (titleOnly)  title(zlab,cex.main=cm) else 
-    { xpos<-xrange[1]+3*xr/10  
-      xl<-c(xpos,xpos+xr/10); yl<-c(ypos,ypos)   
-      lines(xl,yl,xpd=TRUE,lwd=args$lwd)  
-      text(xpos+xr/10,ypos,zlab,xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
-    }
-    if  (is.null(args$cex.axis)) cma <- 1 else cma <- args$cex.axis
-    axis(1,cex.axis=cs*cma);axis(2,cex.axis=cs*cma);box();
-    if  (is.null(args$cex.lab)) cma <- 1 else cma <- args$cex.lab  
-    mtext(xlab,1,2.5,cex=cs*cma);mtext(ylab,2,2.5,cex=cs*cma)  
-    if (!"lwd"%in%n.args) args$lwd<-1
-    if (!"lty"%in%n.args) args$lty<-2
-    if (!"col"%in%n.args) args$col<-2
-    if (!"labcex"%in%n.args) args$labcex<-cs*.5
-    zz <- trans(z+zse+shift)
-    args$z<-substitute(zz)
-
-    do.call("contour",args)
-#    contour(x,y,z+zse,levels=zlev,add=TRUE,lty=2,col=2,labcex=cs*0.5)  
-
-    if (!titleOnly) {
-      xpos<-xrange[1]  
-      xl<-c(xpos,xpos+xr/10)#;yl<-c(ypos,ypos)  
-      lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
-      text(xpos+xr/10,ypos,paste("-",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
-    }
-
-    if (!"lty"%in%n.args) args$lty<-3
-    if (!"col"%in%n.args) args$col<-3
-    zz <- trans(z - zse+shift)
-    args$z<-substitute(zz)
-    do.call("contour",args)
-#    contour(x,y,z-zse,levels=zlev,add=TRUE,lty=3,col=3,labcex=cs*0.5)  
-    
-    if (!titleOnly) {
-      xpos<-xrange[2]-xr/5  
-      xl<-c(xpos,xpos+xr/10);  
-      lines(xl,yl,xpd=TRUE,lty=args$lty,col=args$col)  
-      text(xpos+xr/10,ypos,paste("+",round(se.mult),"se",sep=""),xpd=TRUE,pos=4,cex=cs*cm,off=0.5*cs*cm)  
-    }
-  }  ## end of sp.contour
-
-  #########################
-  ## start of main function
-  #########################
-  w.resid<-NULL
-  if (length(residuals)>1) # residuals supplied 
-  { if (length(residuals)==length(x$residuals)) 
-    w.resid <- residuals else
-    warning("residuals argument to plot.gam is wrong length: ignored")
-    partial.resids <- TRUE
-  } else partial.resids <- residuals # use working residuals or none
-  m<-length(x$smooth) # number of smooth terms
-  order <- attr(x$pterms,"order") # array giving order of each parametric term
-  if (all.terms) # plot parametric terms as well
-  n.para <- sum(order==1) # plotable parametric terms   
-  else n.para <- 0 
-  if (m+n.para==0) stop("No terms to plot - nothing for plot.gam() to do.")
-  if (se)
-  { if (is.numeric(se)) se2.mult<-se1.mult<-se else { se1.mult<-2;se2.mult<-1} 
-    if (se1.mult<0) se1.mult<-0;if (se2.mult<0) se2.mult<-0
-  } else se1.mult<-se2.mult<-1
-  
-  if (se && x$Vp[1,1]<=0) 
-  { se<-FALSE
-    warning("No variance estimates available")
+concurvity <- function(b,full=TRUE) {
+## b is a gam object
+## full==TRUE means that dependence of each term on rest of model 
+##            is considered.
+## full==FALSE => pairwise comparison.
+  if (!inherits(b,"gam")) stop("requires an object of class gam")
+  m <- length(b$smooth)
+  if (m<1) stop("nothing to do for this model")
+  X <- model.matrix(b)
+  ## this step speeds up remaining computation...
+  X <- qr.R(qr(X,tol=0,LAPACK=FALSE)) 
+  stop <- start <- rep(1,m)
+  lab <- rep("",m)
+  for (i in 1:m) { ## loop through smooths
+    start[i] <- b$smooth[[i]]$first.para
+    stop[i] <- b$smooth[[i]]$last.para
+    lab[i] <- b$smooth[[i]]$label
   }
-  # plot should ignore all "by" variables
-  
-  # sort out number of pages and plots per page
-  n.plots <- n.para
-  if (m>0) for (i in 1:m) n.plots <- n.plots + as.numeric(x$smooth[[i]]$plot.me) 
-
-  if (pages>n.plots) pages<-n.plots
-  if (pages<0) pages<-0
-  if (pages!=0)    # figure out how to display things
-  { ppp<-n.plots%/%pages
-    if (n.plots%%pages!=0) 
-    { ppp<-ppp+1
-      while (ppp*(pages-1)>=n.plots) pages<-pages-1
- ##     if (n.plots%%pages) last.pages<-0 ##else last.ppp<-n.plots-ppp*pages
-    } 
- ## else last.ppp<-0
-    # now figure out number of rows and columns
-    c<-trunc(sqrt(ppp))
-	if (c<1) c<-1
-    r<-ppp%/%c
-    if (r<1) r<-1
-    while (r*c<ppp) r<-r+1
-    while (r*c-ppp >c && r>1) r<-r-1
-    while (r*c-ppp >r && c>1) c<-c-1 
-    oldpar<-par(mfrow=c(r,c))
-  
-  } else
-  { ppp<-1;oldpar<-par()}
-  
-  if ((pages==0&&prod(par("mfcol"))<n.plots&&dev.interactive())||
-       pages>1&&dev.interactive()) ask <- TRUE else ask <- FALSE 
-
-  ##if (pages==0&&is.null(select)) par(mfrow=par("mfrow")) ## new display
-
-  if (ask) {
-        oask <- devAskNewPage(TRUE)
-        on.exit(devAskNewPage(oask))
-    }
-
-  # work through all smooth terms assembling the plot data list pd with elements
-  # dim, x, fit, se, ylab, xlab for 1-d terms;
-  # dim, xm, ym, fit, se, ylab, xlab, title for 2-d terms;
-  # and dim otherwise
-  if (partial.resids) 
-  { fv.terms <- predict(x,type="terms")
-    if (is.null(w.resid)) w.resid<-x$residuals*sqrt(x$weights) # weighted working residuals
-  }
-  pd<-list();
-  i<-1 # needs a value if no smooths, but parametric terms ...
-
-  ## First the loop to get the data for the plots...
-  if (m>0) for (i in 1:m) # work through smooth terms
-  if (x$smooth[[i]]$plot.me)
-  { if (x$smooth[[i]]$dim==1)
-    { raw<-x$model[x$smooth[[i]]$term]
-      xx<-seq(min(raw),max(raw),length=n)   # generate x sequence for prediction
-      if (x$smooth[[i]]$by!="NA")         # deal with any by variables
-      { by<-rep(1,n);dat<-data.frame(x=xx,by=by)
-        names(dat)<-c(x$smooth[[i]]$term,x$smooth[[i]]$by)
-      } else
-      { dat<-data.frame(x=xx);names(dat)<-x$smooth[[i]]$term}  # prediction data.frame
-      X <- PredictMat(x$smooth[[i]],dat)   # prediction matrix from this term
-      first<-x$smooth[[i]]$first.para;last<-x$smooth[[i]]$last.para
-      p<-x$coefficients[first:last]       # relevent coefficients 
-      offset <- attr(X,"offset")
-      if (is.null(offset)) 
-      fit <- X%*%p else fit<-X%*%p + offset       # fitted values
-      if (se) {
-        ## test whether mean variability to be added to variability (only for centred terms)
-        if (seWithMean && attr(x$smooth[[i]],"nCons")>0) {
-          X1 <- matrix(x$cmX,nrow(X),ncol(x$Vp),byrow=TRUE)
-          meanL1 <- x$smooth[[i]]$meanL1
-          if (!is.null(meanL1)) X1 <- X1 / meanL1
-          X1[,first:last] <- X
-          se.fit <- sqrt(rowSums((X1%*%x$Vp)*X1))
-        } else se.fit <- ## se in centred (or anyway unconstained) space only
-        sqrt(rowSums((X%*%x$Vp[first:last,first:last])*X))
-      }
-      edf<-sum(x$edf[first:last])
-      xterm <- x$smooth[[i]]$term
-      if (is.null(xlab)) xlabel<- xterm else xlabel <- xlab
-      if (is.null(ylab)) ylabel <- sub.edf(x$smooth[[i]]$label,edf) else
-                         ylabel <- ylab
-      pd.item<-list(fit=fit,dim=1,x=xx,ylab=ylabel,xlab=xlabel,raw=raw[[1]])
-      if (partial.resids) {pd.item$p.resid <- fv.terms[,length(order)+i]+w.resid}
-      if (se) pd.item$se=se.fit*se1.mult  # Note multiplier
-      pd[[i]]<-pd.item;rm(pd.item)
-    } else 
-    if (x$smooth[[i]]$dim==2)
-    { xterm <- x$smooth[[i]]$term[1]
-      if (is.null(xlab)) xlabel <- xterm else xlabel <- xlab
-      yterm <- x$smooth[[i]]$term[2]
-      if (is.null(ylab)) ylabel <- yterm else ylabel <- ylab
-      raw<-data.frame(x=as.numeric(x$model[xterm][[1]]),
-                      y=as.numeric(x$model[yterm][[1]]))
-      n2<-max(10,n2)
-      xm<-seq(min(raw$x),max(raw$x),length=n2)
-      ym<-seq(min(raw$y),max(raw$y),length=n2)  
-      xx<-rep(xm,n2)
-      yy<-rep(ym,rep(n2,n2))
-      if (too.far>0)
-      exclude <- exclude.too.far(xx,yy,raw$x,raw$y,dist=too.far) else
-      exclude <- rep(FALSE,n2*n2)
-      if (x$smooth[[i]]$by!="NA")         # deal with any by variables
-      { by<-rep(1,n2^2);dat<-data.frame(x=xx,y=yy,by=by)
-        names(dat)<-c(xterm,yterm,x$smooth[[i]]$by)
-      } else
-      { dat<-data.frame(x=xx,y=yy);names(dat)<-c(xterm,yterm)}  # prediction data.frame
-      X <- PredictMat(x$smooth[[i]],dat)   # prediction matrix for this term
-      first<-x$smooth[[i]]$first.para;last<-x$smooth[[i]]$last.para
-      p<-x$coefficients[first:last]      # relevent coefficients 
-      offset <- attr(X,"offset")
-      if (is.null(offset)) 
-      fit <- X%*%p else fit<-X%*%p + offset       # fitted values
-      fit[exclude] <- NA                 # exclude grid points too far from data
-      if (se) {  
-        if (seWithMean && attr(x$smooth[[i]],"nCons")>0) { ## then se to include uncertainty in overall mean
-          X1 <- matrix(x$cmX,nrow(X),ncol(x$Vp),byrow=TRUE)
-          meanL1 <- x$smooth[[i]]$meanL1
-          if (!is.null(meanL1)) X1 <- X1 / meanL1
-          X1[,first:last] <- X
-          se.fit <- sqrt(rowSums((X1%*%x$Vp)*X1))
-        } else se.fit <- ## se in centred space only
-        sqrt(rowSums((X%*%x$Vp[first:last,first:last])*X))
-
-        se.fit[exclude] <- NA # exclude grid points too distant from data
-      }
-      edf<-sum(x$edf[first:last])
-      if (is.null(main)) 
-      { title <- sub.edf(x$smooth[[i]]$label,edf)
-      }
-      else title <- main
-      pd.item<-list(fit=fit,dim=2,xm=xm,ym=ym,ylab=ylabel,xlab=xlabel,title=title,raw=raw)
-      if (is.null(ylim)) pd.item$ylim <- range(ym) else pd.item$ylim <- ylim
-      if (is.null(xlim)) pd.item$xlim <- range(xm) else pd.item$xlim <- xlim
-      if (se) pd.item$se=se.fit*se2.mult  # Note multiplier
-      pd[[i]]<-pd.item;rm(pd.item)
-    } else
-    { pd[[i]]<-list(dim=x$smooth[[i]]$dim)}
-  } ## end of loop creating plot data
-
-  
-  ## now plot .....
-  if (se)   # pd$fit and pd$se
-  { k<-0
-    if (scale==-1&&is.null(ylim)) # getting common scale for 1-d terms
-    if (m>0) for (i in 1:m)
-    if (x$smooth[[i]]$plot.me)
-    { if (pd[[i]]$dim==1)
-      { ul<-pd[[i]]$fit+pd[[i]]$se
-        ll<-pd[[i]]$fit-pd[[i]]$se
-        if (k==0) 
-        { ylim<-c(min(ll),max(ul));k<-1;
-        } else
-        { if (min(ll)<ylim[1]) ylim[1]<-min(ll)
-	  if (max(ul)>ylim[2]) ylim[2]<-max(ul)
-        }
-        if (partial.resids)
-        { ul <- max(pd[[i]]$p.resid,na.rm=TRUE)
-          if (ul > ylim[2]) ylim[2] <- ul
-          ll <-  min(pd[[i]]$p.resid,na.rm=TRUE)
-          if (ll < ylim[1]) ylim[1] <- ll
-        }
-      }
-    }
-    j<-1
-    if (m>0) for (i in 1:m)
-    if (x$smooth[[i]]$plot.me)
-    { if (is.null(select)||i==select)
-      { ##if (interactive()&& is.null(select) && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) 
-        ##readline("Press return for next page....")
-        if (pd[[i]]$dim==1)
-        { ul<-pd[[i]]$fit+pd[[i]]$se
-          ll<-pd[[i]]$fit-pd[[i]]$se
-          if (scale==0&&is.null(ylim)) 
-          { ylimit<-c(min(ll),max(ul))
-            if (partial.resids)
-            { max.r <- max(pd[[i]]$p.resid,na.rm=TRUE)
-              if ( max.r> ylimit[2]) ylimit[2] <- max.r
-              min.r <-  min(pd[[i]]$p.resid,na.rm=TRUE)
-              if (min.r < ylimit[1]) ylimit[1] <- min.r
-            }
-          }
-          if (!is.null(ylim)) ylimit <- ylim
-          if (shade)
-          { plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="n",xlab=pd[[i]]$xlab,ylim=trans(ylimit+shift),
-                 xlim=xlim,ylab=pd[[i]]$ylab,main=main,...)
-            polygon(c(pd[[i]]$x,pd[[i]]$x[n:1],pd[[i]]$x[1]),
-                     trans(c(ul,ll[n:1],ul[1])+shift),col = shade.col,border = NA)
-            lines(pd[[i]]$x,trans(pd[[i]]$fit+shift))
-          } else
-          { plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="l",xlab=pd[[i]]$xlab,ylim=trans(ylimit+shift),xlim=xlim,
-                 ylab=pd[[i]]$ylab,main=main,...)
-	    if (is.null(list(...)[["lty"]]))
-            { lines(pd[[i]]$x,trans(ul+shift),lty=2,...)
-              lines(pd[[i]]$x,trans(ll+shift),lty=2,...)
-            } else
-            { lines(pd[[i]]$x,trans(ul+shift),...)
-              lines(pd[[i]]$x,trans(ll+shift),...)
-            }
-          } 
-          if (partial.resids&&(by.resids||x$smooth[[i]]$by=="NA"))
-          { if (length(pd[[i]]$raw)==length(pd[[i]]$p.resid)) {
-              if (is.null(list(...)[["pch"]]))
-              points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),pch=".",...) else
-              points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),...) 
-            } else {
-              warning("Partial residuals do not have a natural x-axis location for linear functional terms")
-            }
-          }
-	  if (rug) 
-          { if (jit) rug(jitter(as.numeric(pd[[i]]$raw)),...)
-             else rug(as.numeric(pd[[i]]$raw),...)
-	  }
-        } else if (pd[[i]]$dim==2)
-        { 
-          if (pers) 
-          { if (!is.null(main)) pd[[i]]$title <- main
-            persp(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
-                  zlab=pd[[i]]$title,ylim=pd[[i]]$ylim,xlim=pd[[i]]$xlim,theta=theta,phi=phi,...)
-          } else
-          { sp.contour(pd[[i]]$xm,pd[[i]]$ym,matrix(pd[[i]]$fit,n2,n2),matrix(pd[[i]]$se,n2,n2),
-                     xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,zlab=pd[[i]]$title,titleOnly=!is.null(main),
-                     se.mult=se2.mult,trans=trans,shift=shift,...)
-            if (rug) { 
-              if (is.null(list(...)[["pch"]]))
-              points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
-              points(pd[[i]]$raw$x,pd[[i]]$raw$y,...) 
-            }
-          } 
-        } else
-        { warning("no automatic plotting for smooths of more than two variables")
-        }
-      }  
-      j<-j+pd[[i]]$dim
-    }
-  } else # don't plot confidence limits
-  { k<-0
-    if (scale==-1&&is.null(ylim))
-    if (m>0) for (i in 1:m)
-    { if (pd[[i]]$dim==1)
-      { if (k==0) { 
-          if (partial.resids) ylim <- range(pd[[i]]$p.resid,na.rm=TRUE) else 
-          ylim<-range(pd[[i]]$fit);k<-1 
-        } else
-        { if (partial.resids)
-          { if (min(pd[[i]]$p.resid)<ylim[1]) ylim[1]<-min(pd[[i]]$p.resid,na.rm=TRUE)
-	    if (max(pd[[i]]$p.resid)>ylim[2]) ylim[2]<-max(pd[[i]]$p.resid,na.rm=TRUE)
-          } else
-          { if (min(pd[[i]]$fit)<ylim[1]) ylim[1]<-min(pd[[i]]$fit)
-	    if (max(pd[[i]]$fit)>ylim[2]) ylim[2]<-max(pd[[i]]$fit)
-          }
-	}
-      }
-    }
-    j<-1
-    if (m>0) for (i in 1:m)
-    { if (is.null(select)||i==select)
-      {### if (interactive() && is.null(select) && pd[[i]]$dim<3 && i>1&&(i-1)%%ppp==0) readline("Press return for next page....")
-        if (pd[[i]]$dim==1)
-        { if (scale==0&&is.null(ylim)) 
-          { if (partial.resids) ylimit <- range(pd[[i]]$p.resid,na.rm=TRUE) else ylimit <-range(pd[[i]]$fit)}
-          if (!is.null(ylim)) ylimit <- ylim
-          plot(pd[[i]]$x,trans(pd[[i]]$fit+shift),type="l",,xlab=pd[[i]]$xlab,
-               ylab=pd[[i]]$ylab,ylim=trans(ylimit+shift),xlim=xlim,main=main,...)
-          if (rug) 
-	  { if (jit) rug(jitter(as.numeric(pd[[i]]$raw)),...)
-            else rug(as.numeric(pd[[i]]$raw),...) 
-          }
-          if (partial.resids&&(by.resids||x$smooth[[i]]$by=="NA"))
-          { if (is.null(list(...)[["pch"]]))
-            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),pch=".",...) else
-            points(pd[[i]]$raw,trans(pd[[i]]$p.resid+shift),...)
-          }
-        } else if (pd[[i]]$dim==2)
-        { if (!is.null(main)) pd[[i]]$title <- main
-          if (pers) 
-          { persp(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
-                          zlab=pd[[i]]$title,theta=theta,phi=phi,xlim=pd[[i]]$xlim,ylim=pd[[i]]$ylim,...)
-          }
-          else
-          { contour(pd[[i]]$xm,pd[[i]]$ym,matrix(trans(pd[[i]]$fit+shift),n2,n2),xlab=pd[[i]]$xlab,ylab=pd[[i]]$ylab,
-                    main=pd[[i]]$title,xlim=pd[[i]]$xlim,ylim=pd[[i]]$ylim,...)
-            if (rug) 
-            {  if (is.null(list(...)[["pch"]])) points(pd[[i]]$raw$x,pd[[i]]$raw$y,pch=".",...) else
-               points(pd[[i]]$raw$x,pd[[i]]$raw$y,...)
-            }
-          }  
-
-        } else
-        { warning("no automatic plotting for smooths of more than one variable")}
-      }
-      j<-j+pd[[i]]$dim
-    } 
+  if (min(start)>1) { ## append parametric terms
+    start <- c(1,start)
+    stop <- c(min(start)-1,stop)
+    lab <- c("para",lab)
+    m <- m + 1
   }
 
+  n.measures <- 3
+  measure.names <- c("worst","observed","estimate")
 
-  if (n.para>0) # plot parameteric terms
-  { class(x) <- c("gam","glm","lm") # needed to get termplot to call model.frame.glm 
-    if (is.null(select)) {
-      attr(x,"para.only") <- TRUE
-    #  if (interactive() && m && i%%ppp==0) 
-    #  readline("Press return for next page....")
-      termplot(x,se=se,rug=rug,col.se=1,col.term=1)
-    } else { # figure out which plot is required
-      if (select > m) { 
-        select <- select - m # i.e. which parametric term
-        term.labels <- attr(x$pterms,"term.labels")
-        term.labels <- term.labels[order==1]
-        if (select <= length(term.labels)) {
-        if (interactive() && m &&i%%ppp==0) 
-##        readline("Press return for next page....")
-        termplot(x,terms=term.labels[select],se=se,rug=rug,col.se=1,col.term=1)
-        }  
-      }
+  n <- nrow(X)
+  if (full) { ## get dependence of each smooth on all the rest...
+    conc <- matrix(0,n.measures,m)
+    for (i in 1:m) {
+      Xi <- X[,-(start[i]:stop[i]),drop=FALSE]
+      Xj <- X[,start[i]:stop[i],drop=FALSE]
+      r <- ncol(Xi) 
+      R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
+       
+      ##u worst case...
+      Rt <- qr.R(qr(R)) 
+      conc[1,i] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
+       
+      ## observed...
+      beta <- b$coef[start[i]:stop[i]]
+      conc[2,i] <- sum((R[1:r,,drop=FALSE]%*%beta)^2)/sum((Rt%*%beta)^2)
+
+      ## less pessimistic...
+      conc[3,i] <- sum(R[1:r,]^2)/sum(R^2)
     }
-  }
-  if (pages>0) par(oldpar)
-}
+    colnames(conc) <- lab
+    rownames(conc) <- measure.names
+  } else { ## pairwise measures
+    conc <- list()
+    for (i in 1:n.measures) conc[[i]] <- matrix(1,m,m) ## concurvity matrix
+    for (i in 1:m) { ## concurvity calculation loop
+      Xi <- X[,start[i]:stop[i],drop=FALSE]
+      r <- ncol(Xi)
+      for (j in 1:m) if (i!=j) { 
+        Xj <- X[,start[j]:stop[j],drop=FALSE]
+        R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
+        
+        ## worst case...
+        Rt <- qr.R(qr(R)) 
+        conc[[1]][i,j] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
+       
+        ## observed...
+        beta <- b$coef[start[j]:stop[j]]
+        conc[[2]][i,j] <- sum((R[1:r,,drop=FALSE]%*%beta)^2)/sum((Rt%*%beta)^2)
+
+        ## less pessimistic...
+        conc[[3]][i,j] <- sum(R[1:r,]^2)/sum(R^2)
+        
+        ## Alternative less pessimistic
+       # log.det.R <- sum(log(abs(diag(R[(r+1):nrow(R),,drop=FALSE]))))
+       # log.det.Rt <- sum(log(abs(diag(Rt))))
+       # conc[[4]][i,j] <- 1 - exp(log.det.R-log.det.Rt) 
+        rm(Xj,R,Rt)
+      }
+    } ## end of conc loop
+    for (i in 1:n.measures) rownames(conc[[i]]) <- colnames(conc[[i]]) <- lab
+    names(conc) <- measure.names
+  } ## end of pairwise
+  conc ## 
+} ## end of concurvity
 
 
 residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
@@ -2995,6 +2680,36 @@ print.anova.gam <- function(x, digits = max(3, getOption("digits") - 3), ...)
 ## End of improved anova and summary code. 
 
 
+pen.edf <- function(x) {
+## obtains the edf associated with each penalty. That is the edf 
+## of the group of coefficients penalized by each penalty.
+## hard to interpret for overlapping penalties. brilliant for t2
+## smooths!
+  if (!inherits(x,"gam")) stop("not a gam object")
+  if (length(x$smooth)==0) return(NULL)
+  k <- 0 ## penalty counter
+  edf <- rep(0,0)
+  edf.name <- rep("",0)
+  for (i in 1:length(x$smooth)) { ## work through smooths
+    if (length(x$smooth[[i]]$S)>0) {
+      pind <- x$smooth[[i]]$first.para:x$smooth[[i]]$last.para ## range of coefs relating to this term
+      Snames <- names(x$smooth[[i]]$S)
+      if (is.null(Snames)) Snames <- as.character(1:length(x$smooth[[i]]$S))
+      if (length(Snames)==1) Snames <- ""
+      for (j in 1:length(x$smooth[[i]]$S)) {
+        ind <- rowSums(x$smooth[[i]]$S[[j]]!=0)!=0 ## index of penalized coefs (within pind)
+        k <- k+1
+        edf[k] <- sum(x$edf[pind[ind]]) 
+        edf.name[k] <- paste(x$smooth[[i]]$label,Snames[j],sep="")
+      }    
+    }
+  } ## finished all penalties
+  names(edf) <- edf.name
+  if (k==0) return(NULL)
+  edf
+} ## end of pen.edf
+
+
 
 cooks.distance.gam <- function(model,...)
 { res <- residuals(model,type="pearson")
@@ -3020,20 +2735,44 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
   if (!is.null(x$reml.scale)&&is.finite(x$reml.scale)) scale <- x$reml.scale else scale <- x$sig2
   if (length(x$sp)==0) return
   if (rescale) { ## undo any rescaling of S[[i]] that may have been done
-    k <- 1;m <- length(x$smooth)
-    idx <- rep("",0)
+    m <- length(x$smooth)
+    if (is.null(x$paraPen)) { 
+      k <- 1;
+      if (is.null(x$full.sp)) kf <- -1 else kf <- 1 ## place holder in full sp vector
+    } else { ## don't rescale paraPen related stuff
+      k <- sum(x$paraPen$sp<0)+1 ## count free sp's for paraPen
+      if (is.null(x$full.sp)) kf <- -1 else kf <- length(x$paraPen$full.sp.names)+1
+    }
+    idx <- rep("",0) ## vector of ids used
+    idxi <- rep(0,0) ## indexes ids in smooth list
     if (m>0) for (i in 1:m) { ## loop through all smooths
       if (!is.null(x$smooth[[i]]$id)) { ## smooth has an id
         if (x$smooth[[i]]$id%in%idx) { 
           ok <- FALSE ## id already dealt with --- ignore smooth
         } else {
           idx <- c(idx,x$smooth[[i]]$id) ## add id to id list
+          idxi <- c(idxi,i) ## so smooth[[idxi[k]]] is prototype for idx[k]
           ok <- TRUE
         } 
       } else { ok <- TRUE} ## no id so proceed
       if (ok) for (j in 1:length(x$smooth[[i]]$S.scale)) {
-        x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
-        k <- k + 1
+        if (x$smooth[[i]]$sp[j]<0) { ## sp not supplied
+          x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
+          k <- k + 1
+          if (kf>0) {
+            x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
+            kf <- kf + 1
+          }
+        } else { ## sp supplied
+          x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
+          kf <- kf + 1
+        }
+      } else { ## this id already dealt with, but full.sp not scaled yet 
+        ii <- idxi[idx%in%x$smooth[[i]]$id] ## smooth prototype
+        for (j in 1:length(x$smooth[[ii]]$S.scale)) {
+          x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[ii]]$S.scale[j]
+          kf <- kf + 1
+        }
       }
     } ## finished rescaling
   }
@@ -3041,6 +2780,10 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
   vc <- c(scale/x$sp)
   names(vc) <- names(x$sp)
 
+  if (is.null(x$full.sp)) vc.full <- NULL else { 
+    vc.full <- c(scale/x$full.sp)
+    names(vc.full) <- names(x$full.sp)
+  }
   ## If a Hessian exists, get CI's for variance components...
 
   if (x$method%in%c("ML","P-ML","REML","P-REML")&&!is.null(x$outer.info$hess)) {
@@ -3075,9 +2818,14 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
     cat(paste("Standard deviations and",conf.lev,"confidence intervals:\n\n"))
     print(res)
     cat("\nRank: ");cat(rank);cat("/");cat(ncol(H));cat("\n")
+    if (!is.null(vc.full)) { 
+      cat("\nAll smooth components:\n")
+      print(sqrt(vc.full))
+      res <- list(all=sqrt(vc.full),vc=res)
+    }
     invisible(res)
   } else {
-    return(vc)
+    if (is.null(vc.full)) return(sqrt(vc)) else return(list(vc=sqrt(vc),all=sqrt(vc.full)))
   } 
 } ## end of gam.vcomp
 
@@ -3146,254 +2894,6 @@ exclude.too.far<-function(g1,g2,d1,d2,dist)
   res
 }
 
-strip.offset <- function(x)
-# sole purpose is to take a model frame and rename any "offset(a.name)"
-# columns "a.name"
-{ na <- names(x)
-  for (i in 1:length(na)) {
-    if (substr(na[i],1,7)=="offset(") 
-      na[i] <- substr(na[i],8,nchar(na[i])-1)
-  }
-  names(x) <- na
-  x
-}
-
-
-vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
-           contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,nCol=50,...)
-# takes a gam object and plots 2D views of it, supply ticktype="detailed" to get proper axis anotation
-# (c) Simon N. Wood 23/2/03
-{ fac.seq<-function(fac,n.grid)
-  # generates a sequence of factor variables of length n.grid
-  { fn<-length(levels(fac));gn<-n.grid;
-    if (fn>gn) mf<-factor(levels(fac))[1:gn]
-    else
-    { ln<-floor(gn/fn) # length of runs               
-      mf<-rep(levels(fac)[fn],gn)
-      mf[1:(ln*fn)]<-rep(levels(fac),rep(ln,fn))
-      mf<-factor(mf,levels=levels(fac))
-    }
-    mf
-  }
-  # end of local functions
-
-  dnm <- names(list(...))
-
-  ## basic issues in the following are that not all objects will have a useful `data'
-  ## component, but they all have a `model' frame. Furthermore, `predict.gam' recognises
-  ## when a model fram has been supplied
-
-  v.names  <- names(x$var.summary) ## names of all variables
-
-  ## Note that in what follows matrices in the parametric part of the model
-  ## require special handling. Matrices arguments to smooths are different
-  ## as they follow the summation convention. 
-  if (is.null(view)) # get default view if none supplied
-  { ## need to find first terms that can be plotted against
-    k <- 0;view <- rep("",2) 
-    for (i in 1:length(v.names)) {
-      ok <- TRUE
-      if (is.matrix(x$var.summary[[i]])) ok <- FALSE else
-      if (is.factor(x$var.summary[[i]])) {
-        if (length(levels(x$var.summary[[i]]))<=1) ok <- FALSE 
-      } else {
-        if (length(unique(x$var.summary[[i]]))==1) ok <- FALSE
-      }
-      if (ok) {
-        k <- k + 1;view[k] <- v.names[i]
-      }
-      if (k==2) break;
-    }
-    if (k<2) stop("Model does not seem to have enough terms to do anything useful")
-  } else { 
-    if (sum(view%in%v.names)!=2) stop(
-        paste(c("view variables must be one of",v.names),collapse=", "))
-    for (i in 1:2) 
-    if  (!inherits(x$var.summary[[view[i]]],c("numeric","factor"))) 
-    stop("Don't know what to do with parametric terms that are not simple numeric or factor variables")
-  }
-
-  ok <- TRUE
-  for (i in 1:2) if (is.factor(x$var.summary[[view[i]]])) {
-    if (length(levels(x$var.summary[[view[i]]]))<=1) ok <- FALSE
-  } else {
-    if (length(unique(x$var.summary[[view[i]]]))<=1) ok <- FALSE 
-  }
-  if (!ok) 
-  stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
-
-  # now get the values of the variables which are not the arguments of the plotted surface
-#  marg<-x$model[1,]
-#  m.name<-names(x$model)
-#  for (i in 1:length(marg))
-#  { ma<-cond[[m.name[i]]]
-#    if (is.null(ma)) 
-#    { if (is.factor(x$model[[i]]))
-#      marg[[i]]<-factor(levels(x$model[[i]])[1],levels(x$model[[i]]))
-#      else if (para.term[i]&&is.matrix(x$model[[i]])) marg[[i]] <- t(colMeans(x$model[[i]]))
-#      else marg[[i]]<-mean(x$model[[i]]) 
-#    } else
-#    { if (is.factor(x$model[[i]]))
-#      marg[[i]]<-factor(ma,levels(x$model[[i]]))
-#      else marg[[i]]<-ma
-#    }
-#  }
-#  # marg includes conditioning values for view variables, but these will be ignored
-  
-  # Make dataframe....
-  if (is.factor(x$var.summary[[view[1]]]))
-  m1<-fac.seq(x$var.summary[[view[1]]],n.grid)
-  else { r1<-range(x$var.summary[[view[1]]]);m1<-seq(r1[1],r1[2],length=n.grid)}
-  if (is.factor(x$var.summary[[view[2]]]))
-  m2<-fac.seq(x$var.summary[[view[2]]],n.grid)
-  else { r2<-range(x$var.summary[[view[2]]]);m2<-seq(r2[1],r2[2],length=n.grid)}
-  v1<-rep(m1,n.grid);v2<-rep(m2,rep(n.grid,n.grid))
-  
-  newd <- data.frame(matrix(0,n.grid*n.grid,0)) ## creating prediction data frame full of conditioning values
-  for (i in 1:length(x$var.summary)) { 
-    ma <- cond[[v.names[i]]]
-    if (is.null(ma)) { 
-      ma <- x$var.summary[[i]]
-      if (is.numeric(ma)) ma <- ma[2] ## extract median
-    }
-    if (is.matrix(x$var.summary[[i]])) newd[[i]] <- matrix(ma,n.grid*n.grid,ncol(x$var.summary[[i]]),byrow=TRUE)
-    else newd[[i]]<-rep(ma,n.grid*n.grid)
-  }
-  names(newd) <- v.names
-  #row.names <- attr(newd,"row.names")
-  #attributes(newd) <- attributes(x$model) # done so that handling of offsets etc. works
-  #attr(newd,"row.names") <- row.names
-  newd[[view[1]]]<-v1
-  newd[[view[2]]]<-v2
-  # call predict.gam to get predictions.....
-  if (type=="link") zlab<-paste("linear predictor")
-  else if (type=="response") zlab<-type
-  else stop("type must be \"link\" or \"response\"")
-  ## turn newd into a model frame, so that names and averages are valid
-  #attributes(newd)<-attributes(x$model)
-  #attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
-  fv<-predict.gam(x,newdata=newd,se=TRUE,type=type)
-  z<-fv$fit # store NA free copy now
-  if (too.far>0) # exclude predictions too far from data
-  { ex.tf<-exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
-    fv$se.fit[ex.tf]<-fv$fit[ex.tf]<-NA
-  }
-  # produce a continuous scale in place of any factors
-  if (is.factor(m1)) 
-  { m1<-as.numeric(m1);m1<-seq(min(m1)-0.5,max(m1)+0.5,length=n.grid) }
-  if (is.factor(m2)) 
-  { m2<-as.numeric(m2);m2<-seq(min(m1)-0.5,max(m2)+0.5,length=n.grid) }
-  if (se<=0)
-  { old.warn<-options(warn=-1)
-    av<-matrix(c(0.5,0.5,rep(0,n.grid-1)),n.grid,n.grid-1)
-    options(old.warn)
-    # z is without any exclusion of gridpoints, so that averaging works nicely
-    max.z <- max(z,na.rm=TRUE)
-    z[is.na(z)] <- max.z*10000 # make sure NA's don't mess it up
-    z<-matrix(z,n.grid,n.grid) # convert to matrix
-    surf.col<-t(av)%*%z%*%av   # average over tiles  
-    surf.col[surf.col>max.z*2] <- NA # restore NA's
-    # use only non-NA data to set colour limits
-    if (!is.null(zlim))
-    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
-      min.z<-zlim[1]
-      max.z<-zlim[2]
-    } else
-    { min.z<-min(fv$fit,na.rm=TRUE)
-      max.z<-max(fv$fit,na.rm=TRUE)
-    }
-    surf.col<-surf.col-min.z
-    surf.col<-surf.col/(max.z-min.z)  
-    surf.col<-round(surf.col*nCol)
-    con.col <-1
-    if (color=="heat") { pal<-heat.colors(nCol);con.col<-3;}
-    else if (color=="topo") { pal<-topo.colors(nCol);con.col<-2;}
-    else if (color=="cm") { pal<-cm.colors(nCol);con.col<-1;}
-    else if (color=="terrain") { pal<-terrain.colors(nCol);con.col<-2;}
-    else if (color=="gray"||color=="bw") {pal <- gray(seq(0.1,0.9,length=nCol));con.col<-1}
-    else stop("color scheme not recognised")
-    if (is.null(contour.col)) contour.col<-con.col   # default colour scheme
-    surf.col[surf.col<1]<-1;surf.col[surf.col>nCol]<-nCol # otherwise NA tiles can get e.g. -ve index
-    if (is.na(col)) col<-pal[as.array(surf.col)]
-    z<-matrix(fv$fit,n.grid,n.grid)
-    if (plot.type=="contour")
-    { stub <- paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
-                    ifelse("ylab" %in% dnm, "" , ",ylab=view[2]"),
-                    ifelse("main" %in% dnm, "" , ",main=zlab"),",...)",sep="")
-      if (color!="bw")
-      { txt <- paste("image(m1,m2,z,col=pal,zlim=c(min.z,max.z)",stub,sep="") # assemble image() call
-        eval(parse(text=txt))
-        txt <- paste("contour(m1,m2,z,col=contour.col,zlim=c(min.z,max.z)",
-               ifelse("add" %in% dnm, "" , ",add=TRUE"),",...)" , sep="") # assemble contour() call
-         eval(parse(text=txt))       
-      } else
-      { txt <- paste("contour(m1,m2,z,col=1,zlim=c(min.z,max.z)",stub,sep="")  # assemble contour() call
-        eval(parse(text=txt))
-      }
-    } else
-    { stub <- paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
-                    ifelse("ylab" %in% dnm, "" , ",ylab=view[2]"),
-                    ifelse("main" %in% dnm, "" , ",zlab=zlab"),",...)",sep="")
-      if (color=="bw")
-      { op <- par(bg="white")
-        txt <- paste("persp(m1,m2,z,col=\"white\",zlim=c(min.z,max.z) ",stub,sep="") # assemble persp() call
-        eval(parse(text=txt))
-        par(op)
-      } else
-      { txt <- paste("persp(m1,m2,z,col=col,zlim=c(min.z,max.z)",stub,sep="")  # assemble persp() call
-        eval(parse(text=txt))
-      }
-    }
-  } else # add standard error surfaces
-  { if (color=="bw"||color=="gray") 
-    { subs <- paste("grey are +/-",se,"s.e.") 
-      lo.col <- "gray" ## ignore codetools claims about this
-      hi.col <- "gray" ## ignore codetools 
-    } else
-    { subs<-paste("red/green are +/-",se,"s.e.")
-      lo.col <- "green"
-      hi.col <- "red"
-    }
-    if (!is.null(zlim))
-    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
-      min.z<-zlim[1]
-      max.z<-zlim[2]
-    } else
-    { z.max<-max(fv$fit+fv$se.fit*se,na.rm=TRUE)
-      z.min<-min(fv$fit-fv$se.fit*se,na.rm=TRUE)
-    }
-    zlim<-c(z.min,z.max)
-    z<-fv$fit-fv$se.fit*se;z<-matrix(z,n.grid,n.grid)
-    if (plot.type=="contour") warning("sorry no option for contouring with errors: try plot.gam")
-
-    stub <-  paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
-                   ifelse("ylab" %in% dnm, "" , ",ylab=view[2]"),
-                   ifelse("zlab" %in% dnm, "" , ",zlab=zlab"),
-                   ifelse("sub" %in% dnm, "" , ",sub=subs"),
-                   ",...)",sep="")
-    txt <- paste("persp(m1,m2,z,col=col,zlim=zlim",
-                 ifelse("border" %in% dnm, "" ,",border=lo.col"),
-                 stub,sep="") # assemble persp() call
-    eval(parse(text=txt))
-
-    par(new=TRUE) # don't clean device
-    z<-fv$fit;z<-matrix(z,n.grid,n.grid)
-
-    txt <- paste("persp(m1,m2,z,col=col,zlim=zlim",
-                 ifelse("border" %in% dnm, "" ,",border=\"black\""),
-                 stub,sep="")
-    eval(parse(text=txt))
-
-    par(new=TRUE) # don't clean device
-    z<-fv$fit+se*fv$se.fit;z<-matrix(z,n.grid,n.grid)
-    
-    txt <- paste("persp(m1,m2,z,col=col,zlim=zlim",
-                 ifelse("border" %in% dnm, "" ,",border=hi.col"),
-                 stub,sep="")
-    eval(parse(text=txt))
-
-  }
-}
 
 # From here on is the code for magic.....
 

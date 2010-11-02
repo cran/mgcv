@@ -1806,7 +1806,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
      and b'Sb will be returned in conv_tol  
    * trA1 and trA2 are an M-vector and M by M matrix for returning the first 
      and second derivatives of tr(A) wrt the log smoothing parameters.
-     If *REML is non zero then the derivatives of the REML penalty are 
+     If *REML is non zero then the derivatives of the REML penalty, K, are 
      returned instead (with the REML penalty returned in `rank_tol', hack, hack).
    * P0,P1,P2 are for returning the Pearson statistic and its derivatives, or 
      the Pearson scale estimate and derivatives if *REML is non - zero. 
@@ -1818,7 +1818,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
        deriv==2 for gradient and Hessian
      -- on exit contains the number of iteration steps required.   
 
-    * If REML is +ve non-zero, then the REML penalty returned in rank_tol, with it's 
+    * If REML is +ve non-zero, then the REML penalty is returned in rank_tol, with its 
       derivatives in trA1, trA2: it is to be added to the *deviance* to get D_r.
     * If REML is -ve non-zero, then the ML penalty is returned in place of the REML one.
     * non-zero `fisher' indicates that Fisher scoring, rather than full Newton,
@@ -2281,7 +2281,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
 
   /* REML NOTE: \beta'S\beta stuff has to be done here on pivoted versions.
-     Store bSb in P0, bSb1 in P1 and bSb2 in P2.
+     Store bSb in bSb, bSb1 in trA1 and bSb2 in trA2.
   */
   if (*REML) {
     get_bSb(&bSb,trA1,trA2,sp,E,rS,rSncol,Enrow,&rank,M,PKtz,b1,b2,deriv);
@@ -2290,7 +2290,25 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
         if (deriv2) for (j=0;j<*M;j++,p1++,p2++) *p2 += *p1;   
     } 
   }
-  /* PKtz into beta */
+
+  pearson2(P0,P1,P2,y,mu,V0,V1,V2,g1,g2,p_weights,eta1,eta2,*n,*M,*deriv,deriv2);
+  
+  if (*REML) { /* really want scale estimate and derivatives in P0-P2, so rescale */
+    j = *n - *Mp;
+    i = 0; /* set to 1 to use penalized pearson statistic as basis for scale estimate */
+    if (i) {
+      *P0 += bSb;   /* penalized pearson statistic */
+       if (*deriv) for (p0=trA1,p1 = P1,p2 = P1 + *M;p1<p2;p1++,p0++) *p1 += *p0;
+       if (*deriv>1) for (p0=trA2,p1 = P2,p2 = P2 + *M * *M;p1<p2;p1++,p0++) *p1 += *p0;
+    }
+    *P0 /= j;     /* REML type scale estimate */
+    /* derivatives also need penalized part added, before rescaling to get variance estimate...  */
+    if (*deriv) for (p1 = P1,p2 = P1 + *M;p1<p2;p1++) *p1 /= j;
+    if (*deriv>1) for (p1 = P2,p2 = P2 + *M * *M;p1<p2;p1++) *p1 /= j;
+  }
+
+
+  /* PKtz into beta... */
 
   for (i=0;i< rank;i++) beta[pivot1[i]] = PKtz[i];
 
@@ -2302,12 +2320,12 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   if (*REML>0) { /* It's REML */
     /* Now deal with log|X'WX+S| */   
     reml_penalty = ldetXWXS;
-    get_ddetXWXpS(trA1,trA2,P,K,sp,rS,rSncol,Tk,Tkm,n,&rank,&rank,M,deriv); /* P1/2 really contain det derivs */
+    get_ddetXWXpS(trA1,trA2,P,K,sp,rS,rSncol,Tk,Tkm,n,&rank,&rank,M,deriv); /* trA1/2 really contain det derivs */
   } /* So trA1 and trA2 actually contain the derivatives for reml_penalty */
 
   if (*REML<0) { /* it's ML, and more complicated */
     
-    /* get derivs of ML log det in P1 and P2... */
+    /* get derivs of ML log det in trA1 and trA2... */
 
     reml_penalty =  MLpenalty1(trA1,trA2,Tk,Tkm,nulli,R,Q1,nind,sp,rS,rSncol,
                            &rank,n,Mp,M,&neg_w,rank_tol,deriv);
@@ -2316,14 +2334,18 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   } /* note that rS scrambled from here on... */
 
 
-  pearson2(P0,P1,P2,y,mu,V0,V1,V2,g1,g2,p_weights,eta1,eta2,*n,*M,*deriv,deriv2);
+    /* DEBUG NOTE: pearson2 and subsequent rescaling of P0-P2 were here... */
+
+  /*  pearson2(P0,P1,P2,y,mu,V0,V1,V2,g1,g2,p_weights,eta1,eta2,*n,*M,*deriv,deriv2);
   
-  if (*REML) { /* really want scale estimate and derivatives in P0-P2, so rescale */
-    j = *n - *Mp;
+  if (*REML) {*/ /* really want scale estimate and derivatives in P0-P2, so rescale */
+  /*  j = *n - *Mp;
     *P0 /= j;
     if (*deriv) for (p1 = P1,p2 = P1 + *M;p1<p2;p1++) *p1 /= j;
     if (*deriv>1) for (p1 = P2,p2 = P2 + *M * *M;p1<p2;p1++) *p1 /= j; 
-  }
+    }*/
+
+
 
   /* clean up memory, except what's needed to get tr(A) and derivatives 
   */ 

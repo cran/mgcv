@@ -36,19 +36,23 @@ For details see \code{\link{cubic.regression.spline}} and e.g. Wood (2006a).
 
 \code{bs="cs"} specifies a shrinkage version of \code{"cr"}.
 
-\code{bs="cc"} specifies a cyclic cubic regression splines. i.e. a penalized cubic regression splines whose ends match, up to second 
+\code{bs="cc"} specifies a cyclic cubic regression splines (see \link{cyclic.cubic.spline}). i.e. a penalized cubic regression splines whose ends match, up to second 
 derivative.}
 
 \item{P-splines}{\code{bs="ps"}. 
 These are P-splines as proposed by Eilers and Marx (1996). They combine a B-spline basis, with a discrete penalty
 on the basis coefficients, and any sane combination of penalty and basis order is allowed. Although this penalty has no exact interpretation in terms of function shape, in the way that the derivative penalties do, P-splines perform almost as well as conventional splines in many standard applications, and can perform better in particular cases where it is advantageous to mix different orders of basis and penalty.
 
-\code{bs="cs"} gives a cyclic version of a P-spline.}
+\code{bs="cp"} gives a cyclic version of a P-spline (see \link{cyclic.p.spline}). }
 
 \item{Random effects}{\code{bs="re"}. These are parametric terms penalized by a ridge penalty (i.e. the identity matrix). When such a smooth has multiple arguments 
 then it represents the parametric interaction of these arguments, with the coefficients penalized by a ridge penalty. The ridge penalty is equivalent to an 
 assumption that the coefficients are i.i.d. normal random effects. See \code{\link{smooth.construct.re.smooth.spec}}. Note that random effect terms are not suitable 
 for use in tensor product smooths.}
+
+\item{Markov Random Fields}{\code{bs="mrf"}. These are popular when space is split up into disctrete contiguous 
+geographic units (districts of a town, for example). In this case a simple smoothing penalty is constructed
+based on the neighbourhood structure of the geographic units. See \code{\link{mrf}} for details and an example.}
 
 }
 
@@ -58,7 +62,8 @@ but they are a little slower to set up than the other bases. The knot based pena
 just a little worse. However the P-splines are useful in non-standard situations.
 
 All the preceding classes (and any user defined smooths with single penalties) may be used as marginal 
-bases for tensor product smooths specified via \code{\link{te}} terms, except for \code{"re"} terms. Tensor product smooths are smooth functions 
+bases for tensor product smooths specified via \code{\link{te}} terms, except for \code{"re"} terms. Tensor 
+product smooths are smooth functions 
 of several variables where the basis is built up from tensor products of bases for smooths of fewer (usually one) 
 variable(s) (marginal bases). The multiple penalties for these smooths are produced automatically from the
 penalties of the marginal smooths. Wood (2006b) give the general recipe for this construction.

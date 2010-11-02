@@ -161,8 +161,12 @@ var.sum <- Xs \%*\% b$Vp \%*\% t(Xs)
 ## by simulation from posterior distribution of the params
 #############################################################
 
-library(MASS)
-br<-mvrnorm(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
+rmvn <- function(n,mu,sig) { ## MVN random deviates
+  L <- mroot(sig);m <- ncol(L);
+  t(mu + L\%*\%matrix(rnorm(m*n),m,n)) 
+}
+
+br <- rmvn(1000,coef(b),b$Vp) ## 1000 replicate param. vectors
 res <- rep(0,1000)
 for (i in 1:1000)
 { pr <- Xp \%*\% br[i,] ## replicate predictions

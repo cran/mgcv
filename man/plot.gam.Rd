@@ -11,7 +11,8 @@
          n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade=FALSE,shade.col="gray80",
-         shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,...)
+         shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,
+         scheme="grey",...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -104,12 +105,20 @@ and this is also suggested by simulation.}
 \item{by.resids}{Should partial residuals be plotted for terms with \code{by} variables? 
 Usually the answer is no, they would be meaningless.}
 
+\item{scheme}{\code{"grey"} yields greyscale, and \code{"heat"} heatmap colors, for plot methods 
+              that take any notice of this (e.g. \code{\link{mrf}} smooths).}
+
 \item{...}{ other graphics parameters to pass on to plotting commands.}
 
 }
 \details{ Produces default plot showing the smooth components of a
   fitted GAM, and optionally parametric terms as well, when these can be
   handled by \code{\link{termplot}}.
+
+For smooth  terms \code{plot.gam} actually calls plot method functions depending on the 
+class of the smooth. Currently random effect and Markov random field smooths have special methods,
+the rest use the defaults described below. 
+
 
   For plots of 1-d smooths, the x axis of each plot is labelled 
    with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
@@ -127,8 +136,7 @@ separation of the contours of the different plots, but this is not
 always easy to achieve. Note that these plots can not be modified to the same extent as the other plot. 
    
 
-   Smooths of more than 2 variables are not currently dealt with, but
-   simply generate a warning, but see \code{\link{vis.gam}}.
+Smooths of more than 2 variables are not plotted, but see \code{\link{vis.gam}}.
 
 Fine control of plots for parametric terms can be obtained by calling
 \code{\link{termplot}} directly, taking care to use its \code{terms} argument.
@@ -137,7 +145,8 @@ Note that, if \code{seWithMean=TRUE}, the confidence bands include the uncertain
 although each smooth is shown centred, the confidence bands are obtained as if every other term in the model was 
 constrained to have average 0, (average taken over the covariate values), except for the smooth concerned. This seems to correspond more closely to how most users interpret componentwise intervals in practice, and also results in intervals with
 close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results.
-   }
+
+}
 
 \value{ The function simply generates plots.
 }

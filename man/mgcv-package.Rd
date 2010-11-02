@@ -69,7 +69,7 @@ that can not be more conventiently accessed via \code{\link{gam}} .
 Penalized weighted least squares with linear equality and inequality constraints is provided by 
 \code{\link{pcls}}.
 
-For a complete list of functions type \code{library(help=mgcv)}.
+For a complete list of functions type \code{library(help=mgcv)}. See also \code{\link{mgcv-FAQ}}.
 
 }
 \author{
