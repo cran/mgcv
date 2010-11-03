@@ -118,6 +118,9 @@ additive model.}
 \code{\link{gam}} argument \code{optimizer}) then this is present and contains whatever was
 returned by the optimization routine used (currently \code{\link{nlm}} or \code{\link{optim}}). }
 
+\item{paraPen}{If the \code{paraPen} argument to \code{\link{gam}} was used then this provides
+information on the parametric penalties. \code{NULL} otherwise.}
+
 \item{prior.weights}{prior weights on observations.} 
 
 \item{pterms}{\code{terms} object for strictly parametric part of model.}

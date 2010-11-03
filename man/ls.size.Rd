@@ -16,16 +16,9 @@ ls.size(x)
 } 
 
 
-\value{ 
-An object of class \code{"gam"} as described in \code{\link{gamObject}}.
-}
-
-
-\details{ A numeric vector giving the size in bytes of each element of the list \code{x}. The elements of the array have the 
+\value{ A numeric vector giving the size in bytes of each element of the list \code{x}. The elements of the array have the 
 same names as the elements of the list. If \code{x} is not a list then its size in bytes is returned, un-named.
-
 }
-
 
 \references{
 

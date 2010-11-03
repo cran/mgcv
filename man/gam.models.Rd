@@ -205,7 +205,7 @@ Suppose that you have set up a model matrix \eqn{\bf X}{X}, and want to penalize
 with two penalties \eqn{\beta^T {\bf S}_1 \beta}{b'S1 b} and \eqn{\beta^T {\bf S}_2 \beta}{b'S2 b}. 
 Then something like the 
 following would be appropriate:\cr
-\code{gam(y ~ X - 1,paraPen=list(X=list(S1,S1)))}\cr
+\code{gam(y ~ X - 1,paraPen=list(X=list(S1,S2)))}\cr
 The \code{paraPen} argument should be a list with elements having  names corresponding to the terms being penalized. 
 Each element of \code{paraPen} is itself a list, with optional elements \code{L}, \code{rank} and \code{sp}: all other elements 
 must be penalty matrices. If present, \code{rank} is a vector giving the rank of each penalty matrix 

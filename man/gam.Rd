@@ -150,7 +150,8 @@ then this must contain two elements: \code{sp} should be an array of
 initialization values for all smoothing parameters (there must be a value for
 all smoothing parameters, whether fixed or to be estimated, but those for
 fixed s.p.s are not used); \code{scale} is the typical scale of the GCV/UBRE function,
-for passing to the outer optimizer.}
+for passing to the outer optimizer, or the the initial value of the scale parameter, if this is to
+be estimated by RE/ML.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }

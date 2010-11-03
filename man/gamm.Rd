@@ -242,6 +242,7 @@ plot(b$gam,pages=1)
 summary(b$lme) # details of underlying lme fit
 summary(b$gam) # gam style summary of fitted model
 anova(b$gam) 
+gam.check(b$gam) # simple checking plots
 
 b <- gamm(y~te(x0,x1)+s(x2)+s(x3),data=dat) 
 op <- par(mfrow=c(2,2))

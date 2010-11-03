@@ -11,7 +11,6 @@
 \method{residuals}{gam}(object, type = c("deviance", "pearson","scaled.pearson", 
                                          "working", "response"),...)
 }
-%- maybe also `usage' for other objects documented here.
 \arguments{
   \item{object}{ a \code{gam} fitted model object. }
   \item{type}{the type of residuals wanted. }

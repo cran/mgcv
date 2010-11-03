@@ -2038,13 +2038,25 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
         n <- rep(1, nobs)
         mustart <- y + (y == 0)/6
     })
-    environment(dvar) <- environment(d2var) <- environment(variance) <- environment(validmu) <- 
+
+    rd <- function(mu,wt,scale) {
+      Theta <- get(".Theta")
+      rnbinom(mu,size=Theta,mu=mu)
+    }
+
+    qf <- function(p,mu,wt,scale) {
+      Theta <- get(".Theta")
+      qnbinom(p,size=Theta,mu=mu)
+    }
+ 
+    environment(qf) <- environment(rd) <- environment(dvar) <- environment(d2var) <- 
+    environment(variance) <- environment(validmu) <- 
     environment(ls) <- environment(dev.resids) <- environment(aic) <- environment(getTheta) <- env
     famname <- paste("Negative Binomial(", format(round(theta,3)), ")", sep = "")
     structure(list(family = famname, link = linktemp, linkfun = stats$linkfun,
         linkinv = stats$linkinv, variance = variance,dvar=dvar,d2var=d2var,d3var=d3var, dev.resids = dev.resids,
         aic = aic, mu.eta = stats$mu.eta, initialize = initialize,ls=ls,
-        validmu = validmu, valideta = stats$valideta,getTheta = getTheta,canonical="log"), class = "family")
+        validmu = validmu, valideta = stats$valideta,getTheta = getTheta,qf=qf,rd=rd,canonical="log"), class = "family")
 }
 
 
@@ -2228,10 +2240,59 @@ Tweedie <- function(p=1,link=power(0)) {
       scale <- dev/sum(wt)
       -2*sum(ldTweedie(y,mu,p=power,phi=scale)[,1]*wt) + 2
     }
+
+    if (p==2) {
+      rd <- function(mu,wt,scale) {
+        rgamma(mu,shape=1/scale,scale=mu*scale)
+      }   
+    } else {
+      rd <- function(mu,wt,scale) {
+        rTweedie(mu,p=p,phi=scale)
+      }
+    }
+
     structure(list(family = paste("Tweedie(",p,")",sep=""), variance = variance, 
               dev.resids = dev.resids,aic = aic, link = linktemp, linkfun = stats$linkfun, linkinv = stats$linkinv,
         mu.eta = stats$mu.eta, initialize = initialize, validmu = validmu,
-        valideta = stats$valideta,dvar=dvar,d2var=d2var,d3var=d3var,ls=ls,canonical="none"), class = "family")
+        valideta = stats$valideta,dvar=dvar,d2var=d2var,d3var=d3var,ls=ls,rd=rd,canonical="none"), class = "family")
 
 
+}
+
+
+
+rTweedie <- function(mu,p=1.5,phi=1) {
+## generate Tweedie random variables, with 1<p<2, 
+## adapted from rtweedie in the tweedie package
+  if (p<=1||p>=2) stop("p must be in (1,2)")
+  if (sum(mu<0)) stop("mean, mu, must be non negative")
+  if (phi<=0) stop("scale parameter must be positive")
+  
+  lambda <- mu^(2-p)/((2-p)*phi)
+  shape <- (2-p)/(p-1)
+  scale <- phi*(p-1)*mu^(p-1)
+
+  n.sim <- length(mu)
+
+  ## how many Gamma r.v.s to sum up to get Tweedie
+  ## 0 => none, and a zero value
+
+  N <- rpois(length(lambda),lambda)
+
+  ## following is a vector of N[i] copies of each gamma.scale[i]
+  ## concatonated one after the other
+
+  gs <- rep(scale,N)
+
+  ## simulate gamma deviates to sum to get tweedie deviates
+
+  y <- rgamma(gs*0+1,shape=shape,scale=gs)
+
+  ## create summation index...
+
+  lab <- rep(1:length(N),N)
+
+  ## sum up each gamma sharing a label. 0 deviate if label does not occur
+  o <- .C(C_psum,y=as.double(rep(0,n.sim)),as.double(y),as.integer(lab),as.integer(length(lab)))  
+  o$y
 }

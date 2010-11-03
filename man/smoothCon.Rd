@@ -83,7 +83,7 @@ use centering constraint that generate no, or limited infil, if the smoother has
 \code{smoothCon} returns a list of smooths because factor \code{by} variables result in multiple copies 
 of a smooth, each multiplied by the dummy variable associated with one factor level. \code{smoothCon} modifies 
 the smooth object labels in the presence of \code{by} variables, to ensure that they are unique, it also stores 
-the level of a by variable factor associated with a smooth, for later use by \code{PredMat}.
+the level of a by variable factor associated with a smooth, for later use by \code{PredictMat}.
 
 The parameterization used by \code{\link{gam}} can be controlled via
 \code{\link{gam.control}}.

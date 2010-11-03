@@ -16,7 +16,7 @@ gam.vcomp(x,rescale=TRUE,conf.lev=.95)
 stability reasons, if \code{resale} this rescaling is reversed, so that the variance components
 are on the original scale.}
 
-\item{conf.lev}{ when the smotohing parameters are estimated by REML or ML, then confidence intervals 
+\item{conf.lev}{ when the smoothing parameters are estimated by REML or ML, then confidence intervals 
 for the variance components can be obtained from large sample likelihood results. This gives the 
 confidence level to work at.}
 }
@@ -33,8 +33,10 @@ The routine is particularly useful for model fitted by \code{\link{gam}} in whic
 been incorporated.
 }
 
-\value{Either a vector of variance components for each smooth term (as standard deviations), or a matrix. The first column of the 
+\value{ Either a vector of variance components for each smooth term (as standard deviations), or a matrix. The first column of the 
 matrix gives standard deviations for each term, while the subsequent columns give lower and upper confidence bounds, on the same scale.
+
+For models in which there are more smoothing parameters than actually estimated (e.g. if some were fixed, or smoothing parameters are linked) then a list is returned. The \code{vc} element is as above, the \code{all} element is a vector of variance components for all the smoothing parameters (estimated + fixed or replicated).
 
 The routine prints a table of estimated standard deviations and confidence limits, if these can be 
 computed, and reports the numerical rank of the covariance matrix.
