@@ -334,7 +334,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (!x$plot.me||is.null(x$xt$polys)) return(NULL) ## shouldn't or can't plot
     ## get basic plot data 
     raw <- data[x$term][[1]]
-    dat<-data.frame(x=x$knots);names(dat) <- x$term
+    dat<-data.frame(x=factor(names(x$xt$polys),levels=levels(x$knots)));names(dat) <- x$term
     X <- PredictMat(x,dat)   # prediction matrix for this term
     if (is.null(xlab)) xlabel<- "" else xlabel <- xlab
     if (is.null(ylab)) ylabel <- "" else ylabel <- ylab

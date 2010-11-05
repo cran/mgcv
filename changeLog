@@ -2,6 +2,20 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-1
+
+* post fitting constraint modification would fail if model matrix was 
+  rank deficient until penalized. This was an issue when mixing new t2 
+  terms with "re" type random effects. Fixed.
+
+* plot.mrf.smooth bug fix. There was an implicit assumption that the
+  `polys' list was ordered in the same way as the levels of the covariate
+  of the smooth. fixed. 
+
+* gam.side intercept detection could occasionally fail. Improved.
+
+* concurvity would fail if model matrix contained NA's. Fixed.
+
 1.7-0
 
 ** `t2' alternative tensor product smooths added. These can be used with 
