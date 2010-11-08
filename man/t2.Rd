@@ -162,7 +162,7 @@ generalized additive mixed models. Biometrics 62(4):1025-1036
 
 \examples{
 
-# following shows how tensor pruduct deals nicely with 
+# following shows how tensor product deals nicely with 
 # badly scaled covariates (range of x 5\% of range of z )
 test1<-function(x,z,sx=0.3,sz=0.4)  
 { x<-x*20
