@@ -253,12 +253,12 @@ poly2 <- function(x,col) {
     xf <- x
     xf[ind,1] <- base[1]
     xf[ind,2] <- base[2]
-    polygon(xf,col=col,border=NA,fillOddEven=TRUE)
+    if (!is.na(col)) polygon(xf,col=col,border=NA,fillOddEven=TRUE)
     polygon(x,border="black")
   }
 }
 
-polys.plot <- function(pc,z,scheme="heat",lab="") { 
+polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) { 
 ## pc is a list of polygons defining area boundaries
 ## pc[[i]] is the 2 col matrix of vertex co-ords for polygons defining 
 ## boundary of area i
@@ -281,45 +281,61 @@ polys.plot <- function(pc,z,scheme="heat",lab="") {
     }
   } ## end of axes range loop
 
-  xmin <- xlim[1]
-  xlim[1] <- xlim[1] - .1 * (xlim[2]-xlim[1]) ## allow space for scale
-
-  n.col <- 100
-  if (scheme=="heat") scheme <- heat.colors(n.col) else 
-  scheme <- gray(0:n.col/n.col)
   mar <- par("mar");
   oldpar <- par(mar=c(2,mar[2],2,1)) 
-  zlim <- range(pretty(z))
 
-  ## Now want a grey or color scale up the lhs of plot
-  ## first scale the y range into the z range for plotting 
+  if (is.null(z)) { ## no z value, no shading, no scale, just outlines...
+     plot(0,0,ylim=ylim,xlim=xlim,xaxt="n",yaxt="n",type="n",bty="n",ylab=lab,xlab="",...)
+     for (i in 1:length(pc)) { 
+       poly2(pc[[i]],col=NA)
+     }
+  } else {
+    
+    nz <- names(z)
+    npc <- names(pc)
+    if (!is.null(nz)&&!is.null(npc)) { ## may have to re-order z into pc order.
+      if (all.equal(sort(nz),sort(npc))!=TRUE) stop("names of z and pc must match")
+      z <- z[npc]
+    } 
 
-  for (i in 1:length(pc)) pc[[i]][,2] <- zlim[1] + 
-       (zlim[2]-zlim[1])*(pc[[i]][,2]-ylim[1])/(ylim[2]-ylim[1])
+    xmin <- xlim[1]
+    xlim[1] <- xlim[1] - .1 * (xlim[2]-xlim[1]) ## allow space for scale
+
+    n.col <- 100
+    if (scheme=="heat") scheme <- heat.colors(n.col) else 
+    scheme <- gray(0:n.col/n.col)
+   
+    zlim <- range(pretty(z))
+
+    ## Now want a grey or color scale up the lhs of plot
+    ## first scale the y range into the z range for plotting 
+
+    for (i in 1:length(pc)) pc[[i]][,2] <- zlim[1] + 
+         (zlim[2]-zlim[1])*(pc[[i]][,2]-ylim[1])/(ylim[2]-ylim[1])
   
-  ylim <- zlim
-  plot(0,0,ylim=ylim,xlim=xlim,type="n",xaxt="n",bty="n",xlab="",ylab=lab)
-  for (i in 1:length(pc)) {
-    coli <- round((z[i] - zlim[1])/(zlim[2]-zlim[1])*100)    
-    poly2(pc[[i]],col=scheme[coli])
-  }
+    ylim <- zlim
+    plot(0,0,ylim=ylim,xlim=xlim,type="n",xaxt="n",bty="n",xlab="",ylab=lab)
+    for (i in 1:length(pc)) {
+      coli <- round((z[i] - zlim[1])/(zlim[2]-zlim[1])*100)    
+      poly2(pc[[i]],col=scheme[coli])
+    }
   
-  ## now plot the scale bar...
-  #ylim <- range(axTicks(2))
-  xmin <- min(c(axTicks(1),xlim[1]))
-  dx <- (xlim[2]-xlim[1])*.05
-  x0 <- xmin-2*dx
-  x1 <- xmin+dx
+    ## now plot the scale bar...
 
-  dy <- (ylim[2]-ylim[1])/n.col 
-  poly <- matrix(c(x0,x0,x1,x1,ylim[1],ylim[1]+dy,ylim[1]+dy,ylim[1]),4,2)
-  for (i in 1:n.col) {
-    polygon(poly,col=scheme[i],border=NA)
-    poly[,2] <- poly[,2] + dy
+    xmin <- min(c(axTicks(1),xlim[1]))
+    dx <- (xlim[2]-xlim[1])*.05
+    x0 <- xmin-2*dx
+    x1 <- xmin+dx
+
+    dy <- (ylim[2]-ylim[1])/n.col 
+    poly <- matrix(c(x0,x0,x1,x1,ylim[1],ylim[1]+dy,ylim[1]+dy,ylim[1]),4,2)
+    for (i in 1:n.col) {
+      polygon(poly,col=scheme[i],border=NA)
+      poly[,2] <- poly[,2] + dy
+    }
+    poly <- matrix(c(x0,x0,x1,x1,ylim[1],ylim[2],ylim[2],ylim[1]),4,2)
+    polygon(poly,border="black")
   }
-  poly <- matrix(c(x0,x0,x1,x1,ylim[1],ylim[2],ylim[2],ylim[1]),4,2)
-  polygon(poly,border="black")
-
   par(oldpar)
 }
 
@@ -496,7 +512,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       if (is.null(ylim)) ylim <- range(ym) 
       if (is.null(xlim)) xlim <- range(xm) 
       return(list(X=X,x=xm,y=ym,scale=FALSE,se=TRUE,raw=raw,xlab=xlabel,ylab=ylabel,
-             main=main,se.mult=se2.mult,ylim=ylim,xlim=xlim))
+             main=main,se.mult=se2.mult,ylim=ylim,xlim=xlim,exclude=exclude))
     } ## end of 2D basic plot data production 
   } else { ## produce plot
     if (se) { ## produce CI's
@@ -549,6 +565,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 	} ## rug plot done
 
       } else if (x$dim==2) { 
+        P$fit[P$exclude] <- NA
         if (pers) { ## perspective plot 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
@@ -583,6 +600,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
           points(P$raw,trans(P$p.resid+shift),...)
         }
       } else if (x$dim==2) { 
+        P$fit[P$exclude] <- NA
         if (!is.null(main)) P$title <- main
         if (pers) { 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,

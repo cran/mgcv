@@ -30,7 +30,7 @@ within a \code{gam} model formula, isotropic smooths of any number of predictors
 \code{\link{s}} terms, while scale invariant smooths of any number of
 predictors can be specified using \code{\link{te}} terms. \code{\link{smooth.terms}} provides an 
 overview of the built in smooth classes, and \code{\link{random.effects}} should be refered to for an overview 
-of random effects terms. Estimation is by
+of random effects terms (see also \code{\link{mrf}} for Markov random fields). Estimation is by
 penalized likelihood or quasi-likelihood maximization, with smoothness
 selection by GCV, GACV, gAIC/UBRE or (RE)ML. See \code{\link{gam}}, \code{\link{gam.models}}, 
 \code{\link{linear.functional.terms}} and \code{\link{gam.selection}} for some discussion of model specification and
@@ -75,7 +75,7 @@ For a complete list of functions type \code{library(help=mgcv)}. See also \code{
 \author{
 Simon Wood <simon.wood@r-project.org>
 
-with contributions and/or help from Kurt Hornik, Mike Lonergan, Henric Nilsson
+with contributions and/or help from Thomas Kneib, Kurt Hornik, Mike Lonergan, Henric Nilsson
 and Brian Ripley. 
 
 Maintainer: Simon Wood <simon.wood@r-project.org>

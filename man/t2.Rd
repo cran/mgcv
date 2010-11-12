@@ -6,8 +6,8 @@
 in a \code{\link{gam}} formula. Results in a construction in which the penalties are 
 non-overlapping multiples of identity matrices (with some rows and columns zeroed). 
 The construction is analogous to Chong Gu's (2002) Smoothing Spline ANOVA, but using 
-low rank penalized regression spline marginals.  
-
+low rank penalized regression spline marginals. The main advantage of this construction 
+is that it is useable with \code{gamm4} from package \code{gamm4}.
 }
 
 \usage{t2(..., k=NA,bs="cr",m=NA,d=NA,by=NA,
@@ -79,7 +79,8 @@ achieved by an arbitrary rescaling of null space basis vectors.}
 used to represent smooths of one (or sometimes more) of the covariates. To do this `marginal' bases
 are produced with associated model matrices and penalty matrices. These are reparameterized so that the 
 penalty is zero everywhere, except for some elements on the leading diagonal, which all have the same non-zero value. 
-This reparameterization results in an unpenalized and a penalized subset of parameters, for each marginal basis.
+This reparameterization results in an unpenalized and a penalized subset of parameters, for each marginal basis (see 
+e.g. appendix of Wood, 2004, for details).
 
 The re-parameterized marginal bases are then combined to produce a basis for a single function of all the covariates 
 (dimension given by the product of the dimensions of the marginal bases). In this set up there are multiple 
@@ -87,11 +88,13 @@ penalty matrices --- all zero, but for a mixture of a constant and zeros on the 
 a non-zero entry in the same place. 
 
 Essentially the basis for the tensor product can be thought of as being constructed from a set of
-products of the penalized (range) or unpenalized (null) space bases of the marginal smooths. To construct one of the set, choose either the 
+products of the penalized (range) or unpenalized (null) space bases of the marginal smooths  (see Gu, 2002, section 2.4). 
+To construct one of the set, choose either the 
 null space or the range space from each marginal, and from these bases construct a product basis. The result is subject to a ridge 
 penalty (unless it happens to be a product entirely of marginal null spaces). The whole basis for the smooth is constructed from 
 all the different product bases that can be constructed in this way. The separately penalized components of the smooth basis each
-have an interpretation in terms of the ANOVA - decomposition of the term. See \code{\link{pen.edf}} for some further information.
+have an interpretation in terms of the ANOVA - decomposition of the term. 
+See \code{\link{pen.edf}} for some further information.
 
 Note that there are two ways to construct the product. When \code{full=FALSE} then the null space bases are treated as a whole in each product,
 but when \code{full=TRUE} each null space column is treated as a separate null space. The latter results in more penalties, but is the strict 
@@ -146,14 +149,24 @@ values (defualt).}
 }
 
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} and Fabian Scheipl}
 \references{
 
-Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
-generalized additive mixed models. Biometrics 62(4):1025-1036
+Gu, C. (2002) Smoothing Spline ANOVA, Springer.
 
+Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
+generalized additive models. J. Amer. Statist. Ass. 99:673-686. 
 
 \url{http://people.bath.ac.uk/sw283/}
+
+Alternative approaches to functional ANOVA decompositions, 
+*not* implemented by t2 terms, are discussed in:
+
+Belitz and Lang (2008) Simultaneous selection of variables and smoothing parameters in structured additive regression models. Computational Statistics & Data Analysis, 53(1):61-81
+
+Lee, D-J and M. Durban (2011) P-spline ANOVA type interaction models for spatio-temporal smoothing. Statistical Modelling
+ 
+Wood, S.N. (2006) Low-Rank Scale-Invariant Tensor Product Smooths for Generalized Additive Mixed Models. Biometrics 62(4): 1025-1036.
 
 }
 

@@ -89,7 +89,7 @@ Wood S.N. (2006) Generalized additive models: an intriduction with R CRC.
 \author{ Simon N. Wood \email{simon.wood@r-project.org} and Thomas Kneib
 (Fabian Scheipl prorotyped the low rank MRF idea) } 
 
-\seealso{\code{\link{gam.vcomp}}, \code{\link{gamm}}, \code{\link{in.out}}}
+\seealso{\code{\link{in.out}}, code{\link{polys.plot}}}
 
 \examples{
 library(mgcv)
@@ -108,6 +108,12 @@ plot(b)
 b <- gam(crime ~ s(district,bs="mrf",k=20,xt=xt)+s(income),
          data=columb,method="REML")
 plot(b,shade=TRUE,scheme="heat")
+
+## plot fitted values by district
+par(mfrow=c(1,1))
+fv <- fitted(b)
+names(fv) <- as.character(columb$district)
+polys.plot(columb.polys,fv)
 
 }
 \keyword{models} \keyword{regression}%-- one or more ..
