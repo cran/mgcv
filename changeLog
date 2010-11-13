@@ -2,6 +2,13 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-2
+
+* `polys.plot' now exported, to facilitate plotting of results for
+  models involving mrf terms.
+
+* bug fix in plot.gam --- too.far had stopped working in 1.7-0.
+
 1.7-1
 
 * post fitting constraint modification would fail if model matrix was 

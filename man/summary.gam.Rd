@@ -111,10 +111,11 @@ smooth term is zero. Be warned, these are only approximate.}
 
 \item{r.sq}{The adjusted r-squared for the model. Defined as the proportion of variance explained, where original variance and 
 residual variance are both estimated using unbiased estimators. This quantity can be negative if your model is worse than a one 
-parameter constant model, and can be higher for the smaller of two nested models! Note that proportion null deviance 
-explained is probably more appropriate for non-normal errors.}
+parameter constant model, and can be higher for the smaller of two nested models! The proportion null deviance 
+explained is probably more appropriate for non-normal errors. Note that \code{r.sq} does not include any offset in the one parameter model.}
 
-\item{dev.expl}{The proportion of the null deviance explained by the model.}
+\item{dev.expl}{The proportion of the null deviance explained by the model. The null deviance is computed taking acount of any offset, so 
+\code{dev.expl} can be substantially lower than \code{r.sq} when an offset is present.}
 
 \item{edf}{array of estimated degrees of freedom for the model terms.}
 
