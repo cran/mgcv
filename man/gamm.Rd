@@ -32,7 +32,7 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
+control=list(niterEM=0,optimMethod="L-BFGS-B"),
 niterPQL=20,verbosePQL=TRUE,method="ML",...)
 }
 
@@ -53,7 +53,8 @@ with smooth terms. See example below.}
 structures in \code{\link[nlme]{lme}}. Any grouping factors in the formula for
 this object are assumed to be nested within any random effect grouping
 factors, without the need to make this explicit in the formula (this is 
-slightly different to the behaviour of \code{lme}). See examples below.}
+slightly different to the behaviour of \code{lme}). This 
+is a GEE approach to correlation in the generalized case. See examples below.}
 
 \item{family}{A \code{family} as used in a call to \code{\link{glm}} or \code{\link{gam}}.
 The default \code{gaussian} with identity link causes \code{gamm} to fit by a direct call to
@@ -84,11 +85,12 @@ for details of how to use such an argument).}
 Different terms can use different numbers of knots, unless they share a covariate.
 }
 
-\item{control}{A list of fit control parameters for \code{\link[nlme]{lme}} returned by 
-\code{\link[nlme]{lmeControl}}. Note the default setting for the number of EM iterations 
-used by \code{lme}: smooths are set up using custom \code{pdMat} classes,
-which are currently not supported by the EM iteration code. Only increase this
-number if you want to perturb the starting values used in model fitting
+\item{control}{A list of fit control parameters for \code{\link[nlme]{lme}} to replace the 
+defaults returned by \code{\link[nlme]{lmeControl}}. Note the setting 
+for the number of EM iterations used by \code{lme}: smooths are set up using custom \code{pdMat} classes,
+which are currently not supported by the EM iteration code. If you supply a list of control values,
+it is advisable to include \code{niterEM=0}, as well, and only increase from 0
+if you want to perturb the starting values used in model fitting
 (usually to worse values!). The \code{optimMethod} option is only used if your
 version of R does not have the \code{nlminb} optimizer function.}
 
@@ -113,7 +115,8 @@ be performed using general linear mixed effects modelling software such as \code
 approximate inference is so far available, for example using the Penalized Quasi-Likelihood approach of Breslow 
 and Clayton (1993) as implemented in \code{glmmPQL} by Venables and Ripley (2002). 
 One advantage of this approach is that it allows correlated errors to be dealt with via random effects 
-or the correlation structures available in the \code{nlme} library. 
+or the correlation structures available in the \code{nlme} library (using correlation structures beyond the 
+strictly additive case amounts to using a GEE approach to fitting). 
 
 
 Some details of how GAMs are represented as mixed models and estimated using

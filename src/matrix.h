@@ -88,4 +88,6 @@ void eigenvv_tri(double *d,double *g,double **v, int n);
 void eigen_tri(double *d,double *g,double **v,int n,int getvec);
 void lu_tri(double *d,double *g,double *u,int n);
 void msort(matrix a);
+void RArrayFromMatrix(double *a,long r,matrix *M);
+matrix Rmatrix(double *A,long r,long c);
 #endif

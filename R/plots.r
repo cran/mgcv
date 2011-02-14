@@ -1454,11 +1454,11 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
   ## turn newd into a model frame, so that names and averages are valid
   #attributes(newd)<-attributes(x$model)
   #attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
-  fv<-predict.gam(x,newdata=newd,se=TRUE,type=type)
-  z<-fv$fit # store NA free copy now
+  fv <- predict.gam(x,newdata=newd,se.fit=TRUE,type=type)
+  z <- fv$fit # store NA free copy now
   if (too.far>0) # exclude predictions too far from data
-  { ex.tf<-exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
-    fv$se.fit[ex.tf]<-fv$fit[ex.tf]<-NA
+  { ex.tf <- exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
+    fv$se.fit[ex.tf] <- fv$fit[ex.tf]<-NA
   }
   # produce a continuous scale in place of any factors
   if (is.factor(m1)) 

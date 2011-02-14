@@ -887,7 +887,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
+      subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B"),   ## nlme::lmeControl(niterEM=0,optimMethod="L-BFGS-B"),
       niterPQL=20,verbosePQL=TRUE,method="ML",...)
 ## NOTE: niterEM modified after changed notLog parameterization - old version
 ##       needed niterEM=3. 10/8/05.
@@ -896,8 +896,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # random terms. correlation describes the correlation structure. This routine is basically an interface
 # between the bases constructors provided in mgcv and the glmmPQL routine used to estimate the model.
 # NOTE: need to fill out the gam object properly
-
-{   if (!require("nlme")) stop("gamm() requires package nlme to be installed")
+{
+  if (!require("nlme")) stop("gamm() requires package nlme to be installed")
+  control <- do.call("lmeControl",control) 
   #  if (!require("MASS")) stop("gamm() requires package MASS to be installed")
     # check that random is a named list
     if (!is.null(random))
@@ -1181,6 +1182,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     object$weights<-object$prior.weights   
 
+    if (!is.null(G$Xcentre)) object$Xcentre <- G$Xcentre ## column centering values
 
     ret$gam<-object
     ret

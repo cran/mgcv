@@ -2,6 +2,29 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-3
+
+** "ds" (Duchon splines) smooth class added. See ?Duchon.spline
+
+** "sos" (spline on the sphere) smooth class added. See ?Spherical.Spline.
+
+* Extended quasi-likelihood used with RE/ML smoothness selection and 
+  quasi families. 
+
+* random subsampling code in bam, sos and tp smooths modified a little, so 
+  that .Random.seed is set if it doesn't exist. 
+
+* `control' argument changed for gam/bam/gamm to a simple list, which is 
+  then passed to gam.control (or lmeControl), to match `glm'.
+
+* Efficiency of Lanczos iteration code improved, by restructuring, and 
+  calling LAPACK for the eigen decompostion of the working tri-diagonal
+  matrix.
+
+* Slight modification to `t2' marginal reparameterization, so that `main 
+  effects' can be extracted more easily, if required.
+
+
 1.7-2
 
 * `polys.plot' now exported, to facilitate plotting of results for

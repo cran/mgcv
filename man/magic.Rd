@@ -1,8 +1,7 @@
 \name{magic}
 \alias{magic}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{ Stable Multiple Smoothing Parameter Estimation by GCV or UBRE, 
-with optional fixed penalty}
+\title{ Stable Multiple Smoothing Parameter Estimation by GCV or UBRE}
 \description{
 Function to efficiently estimate smoothing parameters in generalized
 ridge regression problems with multiple (quadratic) penalties, by GCV 

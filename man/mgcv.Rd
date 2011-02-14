@@ -9,7 +9,7 @@ or UBRE. The function uses Newton's method in multi-dimensions, backed up by ste
 adjust a set of relative smoothing parameters for each penalty. To ensure that the overall level of smoothing
 is optimal, and to guard against trapping by local minima, a highly efficient global minimisation with respect to 
 one overall smoothing parameter is also made at each iteration. This is the original Wood (2000) method. It has now 
-been superceded by the methods in \code{\link{magic}} (Wood, 2004) and \code{\link{gam.fit3}} (Wood, 2008).
+been superceded by the methods in \code{\link{magic}} (Wood, 2004) and \code{\link{gam.fit3}} (Wood, 2011).
 
 For a listing of all routines in the \code{mgcv} package type:\cr
 \code{library(help="mgcv")}. For an overview of the \code{mgcv} package see \code{\link{mgcv-package}}.
@@ -142,8 +142,10 @@ with Multiple  Quadratic Penalties. J.R.Statist.Soc.B 62(2):413-428
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:673-686
 
-Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
-additive models. J.R.Statist.Soc.B 70(3):495-518
+Wood, S.N. (2011) Fast stable restricted maximum likelihood 
+and marginal likelihood estimation of semiparametric generalized linear 
+models. Journal of the Royal Statistical Society (B) 73(1):3-36
+
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 }

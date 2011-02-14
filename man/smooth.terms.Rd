@@ -28,6 +28,11 @@ basis dimension/rank (Wood, 2003). Thin plate regression splines do not have `kn
 \code{bs="ts"} is as \code{"tp"} but with a small ridge penalty added to the smoothing penalty, so that the whole term can be 
 shrunk to zero.}
 
+\item{Duchon splines}{\code{bs="ds"}. These generalize thin plate splines. In particular, for any given number of covariates they 
+allow lower orders of derivative in the penalty than thin plate splines (and hence a smaller null space).
+See \code{\link{Duchon.spline}} for further details. 
+}
+
 \item{Cubic regression splines}{\code{bs="cr"}. 
 These have a cubic spline basis defined by a modest sized 
 set of knots spread evenly through the 
@@ -38,6 +43,11 @@ For details see \code{\link{cubic.regression.spline}} and e.g. Wood (2006a).
 
 \code{bs="cc"} specifies a cyclic cubic regression splines (see \link{cyclic.cubic.spline}). i.e. a penalized cubic regression splines whose ends match, up to second 
 derivative.}
+
+\item{Splines on the sphere}{\code{bs="sos"}.
+These are two dimensional splines on a sphere. Arguments are latitude and longitude, and they are 
+the analogue of thin plate splines for the sphere. Useful for data sampled over a large portion of the globe, 
+when isotropy is appropriate. See \code{\link{Spherical.Spline}} for details.}
 
 \item{P-splines}{\code{bs="ps"}. 
 These are P-splines as proposed by Eilers and Marx (1996). They combine a B-spline basis, with a discrete penalty

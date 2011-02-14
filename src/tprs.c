@@ -19,6 +19,7 @@ USA.*/
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include "mgcv.h"
 #include "matrix.h"
 #include "general.h"
 /* Code for thin plate regression splines */
@@ -84,33 +85,32 @@ void tpsE(matrix *E,matrix *X,int m,int d)
 }
 
 
-void gen_tps_poly_powers(int **pi,int M,int m, int d)
+void gen_tps_poly_powers(int *pi /* **pi */,int *M,int *m, int *d)
 
 /* generates the sequence of powers required to specify the M polynomials spanning the 
-   null space of the penalty of a d-dimensional tps with wiggliness penalty order d 
+   null space of the penalty of a d-dimensional tps with wiggliness penalty order m 
    So, if x_i are the co-ordinates the kth polynomial is x_1^pi[k][1]*x_2^pi[k][2] ....
-   WARNING: the term ordering algorithm used here is also used in mgcv.r... if it is 
-   altered then so must R routines null.space.basis.labels() and null.space.basis.powers(). 
-   The exact sequence matters for putting appropriate side conditions on GAMs like:
-   y~s(x1,x2)+s(x2,x3)....
+ 
+   pi[k][j] actually stored as pi[k + M * j] 
 */
 
 { int *index,i,j,sum;
-  if (2*m<=d) ErrorMessage(_("You must have 2m > d"),1);
-  index=(int *)calloc((size_t)d,sizeof(int));
-  for (i=0;i<M;i++)
+  /*  if (2*m<=d) ErrorMessage(_("You must have 2m > d"),1); caught in R */
+  index=(int *)calloc((size_t) *d,sizeof(int));
+  for (i=0;i < *M;i++)
   { /* copy index to pi */
-    for (j=0;j<d;j++) pi[i][j]=index[j];
+    /* for (j=0;j<d;j++) pi[i][j]=index[j];*/
+    for (j=0;j< *d;j++) pi[i + *M * j]=index[j];
     /* update index.... */
-    sum=0;for (j=0;j<d;j++) sum+=index[j];
-    if (sum<m-1) /* then increase lowest index */
+    sum=0;for (j=0;j< *d;j++) sum += index[j];
+    if (sum< *m-1) /* then increase lowest index */
     index[0]++;
     else         /* pass the problem up */
-    { sum-=index[0];
+    { sum -= index[0];
       index[0]=0;
-      for (j=1;j<d;j++)
+      for (j=1;j< *d;j++)
       { index[j]++;sum++;
-        if (sum==m) { sum-=index[j];index[j]=0;}
+        if (sum== *m) { sum-=index[j];index[j]=0;}
         else break; /* problem resolved! */
       } 
     }
@@ -126,23 +126,28 @@ void tpsT(matrix *T,matrix *X,int m,int d)
    ith row of X is location of ith datum. 
 */
 
-{ int M,i,j,k,**pin,z;
+{ int M,i,j,k,*pin,z;
   double x;
   M=1;
   for (i=0;i<d;i++) M*=d+m-1-i;
   for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
-  pin=(int **)calloc((size_t)M,sizeof(int *)); 
-  for (i=0;i<M;i++) pin[i]=(int *)calloc((size_t)d,sizeof(int));
-  gen_tps_poly_powers(pin, M, m, d); /* pin[][] contains powers of polynomials in unpenalized basis */
+
+  /* pin=(int **)calloc((size_t)M,sizeof(int *)); 
+     for (i=0;i<M;i++) pin[i]=(int *)calloc((size_t)d,sizeof(int));*/
+
+  pin = (int *)calloc((size_t) M * d,sizeof(int));
+  gen_tps_poly_powers(pin, &M, &m, &d); /* pin[][] contains powers of polynomials in unpenalized basis */
   
   (*T)=initmat(X->r,(long)M);
   for (i=0;i<T->r;i++)
   for (j=0;j<M;j++)
-  { x=1.0;for (k=0;k<d;k++) for (z=0;z<pin[j][k];z++) x*=X->M[i][k];
+  { x=1.0;/* for (k=0;k<d;k++) for (z=0;z<pin[j][k];z++) x *= X->M[i][k]; */
+    for (k=0;k<d;k++) for (z=0;z<pin[j + M * k];z++) x *= X->M[i][k];
     T->M[i][j]=x;
   }
   
-  for (i=0;i<M;i++) free(pin[i]);free(pin);
+  /*for (i=0;i<M;i++) free(pin[i]);*/
+  free(pin);
 }
 
 
@@ -183,22 +188,23 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
   - if p.r==0 then the value of the spline is not returned - only b
 */
 
-{ static int sd=0,sm=0,**pin,M;
+{ static int sd=0,sm=0,*pin,M;
   double r,g,z,**XM,*dum,*XMi;
   int i,j,k,off;
   if (sd==0&&d==0) return(0.0); /* There is nothing to clear up and nothing to calculate */
   if (2*m<=d&&d>0) { m=0;while (2*m<d+2) m++;} 
   if (sd!=d||sm!=m) /* then re-calculate the penalty null space basis */
   { if (sd>0&&sm>0) 
-    { for (i=0;i<M;i++) free(pin[i]);free(pin);}
+    { /*for (i=0;i<M;i++) free(pin[i]);*/ free(pin);}
     sd=d;sm=m;
     if (d>0) /* get a new basis for the null space of the penalty */
     { M=1;     /* dimension of penalty null space */
       for (i=0;i<d;i++) M*=d+m-1-i;
       for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
-      pin=(int **)calloc((size_t)M,sizeof(int *)); 
-      for (i=0;i<M;i++) pin[i]=(int *)calloc((size_t)d,sizeof(int));
-      gen_tps_poly_powers(pin, M, m, d);
+      /* pin=(int **)calloc((size_t)M,sizeof(int *)); 
+         for (i=0;i<M;i++) pin[i]=(int *)calloc((size_t)d,sizeof(int));*/
+      pin=(int *)calloc((size_t)M*d,sizeof(int)); 
+      gen_tps_poly_powers(pin, &M, &m, &d);
     } else return(0.0);
   }
   g=0.0;XM=X->M;
@@ -213,7 +219,10 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,matrix *b,int constant)
   off=1-constant;
   for (i=off;i<M;i++) /* work through null space */
   { r=1.0;
-    for (j=0;j<d;j++) for (k=0;k<pin[i][j];k++) r*=x[j];
+    /* for (j=0;j<d;j++) for (k=0;k<pin[i][j];k++) r*=x[j];*/
+    
+    for (j=0;j<d;j++) for (k=0;k<pin[i+M*j];k++)  r*=x[j];
+    
     b->V[i+X->r-off]=r;
     if (p->r) g+=p->V[i+X->r-off]*r;
   } 
@@ -338,8 +347,8 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
 
 { matrix X1,E,U,v,TU,T,Z,p;
  
-  int l,i,j,M,*yxindex,pure_knot=0;
-  double w,*xc,*XMi,**UZM,*X1V;
+  int l,i,j,M,*yxindex,pure_knot=0,nk,minus=-1,kk;
+  double w,*xc,*XMi,**UZM,*X1V,*Ea,*Ua;
   if (n_knots<k) /* then use the covariate points as knots */
   { *Xu=initmat((long)n,(long)d+1);
     for (i=0;i<n;i++) { for (j=0;j<d;j++) Xu->M[i][j]=x[j][i];Xu->M[i][d]=(double)i;}
@@ -378,11 +387,25 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     Z=initmat((long)M,T.r);
     QT(Z,TU,0);  /* Still need Z as HH's for later */
   } else
-  { U=initmat(E.r,(long)k); /* eigen-vector matrix for E */
-    v=initmat((long)k,1L);      /* eigen-value matrix for E */
+  { v=initmat((long)k,1L);    /* eigen-value matrix for E */
 
-    i=lanczos_spd(&E,&U,&v,k,-1);      /* get k largest magnitude  eigen-values/vectors of E */
+    /* code to enable use of Rlanczos, in place of lanczos_spd */ 
+    if (1) { /* use newer Lanczos routine */
+      nk = E.r;
+      Ea = (double *) calloc((size_t) nk*nk,sizeof(double));
+      Ua = (double *) calloc((size_t) nk*k,sizeof(double));
+      RArrayFromMatrix(Ea,nk,&E);
+      minus = -1;kk=k; 
+  
+      Rlanczos(Ea,Ua,v.M[0],&nk, &kk, &minus);
+
+      U = Rmatrix(Ua,E.r,k);free(Ea);free(Ua);
     
+      } else { /* older Lanczos routine */
+
+      U=initmat(E.r,(long)k);   /* eigen-vector matrix for E */
+      i=lanczos_spd(&E,&U,&v,k,-1);      /* get k largest magnitude  eigen-values/vectors of E */
+    }
     /* Now form the constraint matrix for the truncated problem T'U */
     TU=initmat((long)M,k);
     matmult(TU,T,U,1,0);

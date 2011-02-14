@@ -27,6 +27,7 @@ USA.*/
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include "mgcv.h"
 #include "matrix.h"
 #include "general.h"
 #define RANGECHECK
@@ -2488,7 +2489,7 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
 /* Routine to find the eigenvalues of a symmetric tri-diagonal matrix, A, using the
    implicit QR algorithm with Wilkinson shifts. Eigen-vectors can be found by
    
-   a) setting getvec==1 and initializing v to an n by b array (contents ignored)
+   a) setting getvec==1 and initializing v to an n by n array (contents ignored)
 
    or,   
  
@@ -2498,7 +2499,7 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
  
    d contains the leading diagonal of the matrix. 
    g contains the leading sub(=super) diagonal
-   v is storage for eighen vectors
+   v is storage for eigen vectors
    n is the length of d.
    getvec specifies whether or not to accumulate eigen-vectors
 
@@ -2509,7 +2510,7 @@ void eigen_tri(double *d,double *g,double **v,int n,int getvec)
 
    A assumed full rank at present.
 
-   Note that eigenvaluse are O(n^2), but eigenvectors O(n^3)
+   Note that eigenvalues are O(n^2), but eigenvectors O(n^3)
 
 */
 
@@ -2766,10 +2767,11 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
 
 { double **v,*d,*b,*g,*a,bt,**q,**AM,*zz,*AMi,*qj,*qj1,xx,yy,
          *z,*zd,*err,normTj,*dum,eps_stop=DOUBLE_EPS,max_err;
-  int i,j,k,n,ok,l,kk,vlength=0,biggest=0,low_conv,high_conv,use_low,conv;
+  int i,j,k,n,ok,l,kk,vlength=0,biggest=0,low_conv,high_conv,use_low,conv,f_check;
   unsigned long jran=1,ia=106,ic=1283,im=6075;
   
   if (lm<0) { biggest=1;lm=0;} /* get m largest magnitude eigen-values */
+  f_check = (m + lm)/2; /* how often to get eigen_decomp */
   AM=A->M;
   v=AM; /* purely to avoid spurious compiler warning */
   n=(int)A->r;
@@ -2838,19 +2840,24 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
       zz=q[j+1];xx=b[j];for (i=0;i<n;i++) zz[i]=z[i]/xx; /* forming q[j+1] */
     }
     /* Now get the spectral decomposition of T_j.  */
-    if (((j>=m+lm-1)&&(j%5==0))||(j==n-1))   /* no  point doing this too early or too often */
+    if (((j>=m+lm-1)&&(j%f_check==0))||(j==n-1))   /* no  point doing this too early or too often */
     { for (i=0;i<j+1;i++) d[i]=a[i]; /* copy leading diagonal of T_j */
       for (i=0;i<j;i++) g[i]=b[i]; /* copy sub/super diagonal of T_j */   
       /* set up storage for eigen vectors */
       if (vlength) /* free up first */
-      { for (i=0;i<vlength;i++) free(v[i]);free(v); 
+	{/* for (i=0;i<vlength;i++) free(v[i]);*/free(v[0]);free(v); 
       } 
       v=(double **)calloc((size_t)(j+1),sizeof(double *));
       vlength=j+1;
-      for (i=0;i<j+1;i++) v[i]=(double *)calloc((size_t)(j+1),sizeof(double));
+      v[0] = (double *)calloc((size_t)(j+1)*(j+1),sizeof(double));
+      for (i=1;i<j+1;i++) v[i] = v[i-1] + j+1;
+      /* for (i=0;i<j+1;i++) v[i]=(double *)calloc((size_t)(j+1),sizeof(double)); */ 
+ 
       /* obtain eigen values/vectors of T_j in O(j^3) flops */
       /*eigenvv_tri(d,b,v,j+1); this was O(j^2), but not stable enough */   
-      eigen_tri(d,g,v,j+1,1);
+      /* eigen_tri(d,g,v,j+1,1);*/ 
+       kk = j+1;
+       mgcv_trisymeig(d,g,v[0],&kk,1,1);
       /* debug code to check eigenvv_tri() results */     
       /* v[i] is ith  eigenvector, d[i] corresponding eigenvalue */
       /* Evaluate ||Tj|| .... */
@@ -2912,10 +2919,202 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
   free(zd);
   free(err);
   if (vlength) /* free up first */
-  { for (i=0;i<vlength;i++) free(v[i]);free(v);}
+    { /*for (i=0;i<vlength;i++) free(v[i]);*/ free(v[0]);free(v);}
   for (i=0;i<n+1;i++) if (q[i]) free(q[i]);free(q);  
   return(j);
-}
+} /* end of lanczos_spd */
+
+
+void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm) {
+/* Prototype faster lanczos_spd for calling from R.
+   A is n by n symmetric matrix. Let k = m + max(0,lm).
+   U is n by k and D is a k-vector.
+   m is the number of upper eigenvalues required and lm the number of lower.
+   If lm<0 then the m largest magnitude eigenvalues (and their eigenvectors)
+   are returned 
+
+   Matrices are stored in R (and LAPACK) format (1 column after another).
+
+   ISSUE: 1. eps_stop tolerance is set *very* tight.
+          2. Currently all eigenvectors of Tj are found, although only the next unconverged one
+             is really needed. Might be better to be more selective using dstein from LAPACK. 
+          3. Basing whole thing on dstevx might be faster
+          4. Is random start vector really best? convergence seems very slow. Might be better to 
+             use e.g. a sine wave, and simply change its frequency if it seems to be in null space.
+             Demmel (1997) suggests using a random vector, to avoid any chance of orthogonality with
+             an eigenvector!
+        
+*/
+  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,low_conv,high_conv,use_low,conv;
+  double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*Ap,*zp,*qp,normTj,eps_stop=DOUBLE_EPS*10,max_err;
+  unsigned long jran=1,ia=106,ic=1283,im=6075; /* simple RNG constants */
+  
+  if (*lm<0) { biggest=1;*lm=0;} /* get m largest magnitude eigen-values */
+  f_check = (*m + *lm)/2; /* how often to get eigen_decomp */
+  if (f_check<1) f_check ++;
+  kk = (int) floor(*n/10); if (kk<1) k=1;  
+  if (kk<f_check) f_check = kk;
+
+  q=(double **)calloc((size_t)(*n+1),sizeof(double *));
+
+  /* "randomly" initialize first q vector */
+  q[0]=(double *)calloc((size_t)*n,sizeof(double));
+  b=q[0];bt=0.0;
+  for (i=0;i < *n;i++)   /* somewhat randomized start vector!  */
+  { jran=(jran*ia+ic) % im;   /* quick and dirty generator to avoid too regular a starting vector */
+    xx=(double) jran / (double) im -0.5; 
+    b[i]=xx;xx=-xx;bt+=b[i]*b[i];
+  } 
+  bt=sqrt(bt); 
+  for (i=0;i < *n;i++) b[i]/=bt;
+
+  /* initialise vectors a and b - a is leading diagonal of T, b is sub/super diagonal */
+  a=(double *)calloc((size_t) *n,sizeof(double));
+  b=(double *)calloc((size_t) *n,sizeof(double));
+  g=(double *)calloc((size_t) *n,sizeof(double));
+  d=(double *)calloc((size_t) *n,sizeof(double)); 
+  z=(double *)calloc((size_t) *n,sizeof(double));
+  err=(double *)calloc((size_t) *n,sizeof(double));
+  for (i=0;i< *n;i++) err[i]=1e300;
+  /* The main loop. Will break out on convergence. */
+  for (j=0;j< *n;j++) 
+  { /* form z=Aq[j]=A'q[j], the O(n^2) step ...  */
+    for (Ap=A,zp=z,p0=zp+*n;zp<p0;zp++) 
+      for (*zp=0.0,qp=q[j],p1=qp+*n;qp<p1;qp++,Ap++) *zp += *Ap * *qp;
+
+    /* Now form a[j] = q[j]'z.... */
+    for (xx=0.0,qp=q[j],p0=qp+*n,zp=z;qp<p0;qp++,zp++) xx += *qp * *zp;
+    a[j] = xx;
+ 
+    /* Update z..... */
+    if (!j)
+    { /* z <- z - a[j]*q[j] */
+      for (zp=z,p0=zp+*n,qp=q[j];zp<p0;qp++,zp++) *zp -= xx * *qp;
+    } else
+    { /* z <- z - a[j]*q[j] - b[j-1]*q[j-1] */
+      yy=b[j-1];      
+      for (zp=z,p0=zp + *n,qp=q[j],p1=q[j-1];zp<p0;zp++,qp++,p1++) *zp -= xx * *qp + yy * *p1;    
+  
+      /* Now stabilize by full re-orthogonalization.... */
+      
+      for (i=0;i<=j;i++) 
+      { /* form xx= z'q[i] */
+        for (xx=0.0,qp=q[i],p0=qp + *n,zp=z;qp<p0;zp++,qp++) xx += *zp * *qp;
+        /* z <- z - xx*q[i] */
+        for (qp=q[i],zp=z;qp<p0;qp++,zp++) *zp -= xx * *qp;
+      } 
+      
+      /* exact repeat... */
+      for (i=0;i<=j;i++) 
+      { /* form xx= z'q[i] */
+        for (xx=0.0,qp=q[i],p0=qp + *n,zp=z;qp<p0;zp++,qp++) xx += *zp * *qp;
+        /* z <- z - xx*q[i] */
+        for (qp=q[i],zp=z;qp<p0;qp++,zp++) *zp -= xx * *qp;
+      } 
+      /* ... stabilized!! */
+    } /* z update complete */
+    
+
+    /* calculate b[j]=||z||.... */
+    for (xx=0.0,zp=z,p0=zp+*n;zp<p0;zp++) xx += *zp * *zp;b[j]=sqrt(xx); 
+  
+    if (b[j]==0.0&&j< *n-1) ErrorMessage(_("Lanczos failed"),1); /* Actually this isn't really a failure => rank(A)<l+lm */
+    /* get q[j+1]      */
+    if (j < *n-1)
+    { q[j+1]=(double *)calloc((size_t) *n,sizeof(double));
+      for (xx=b[j],qp=q[j+1],p0=qp + *n,zp=z;qp<p0;qp++,zp++) *qp = *zp/xx; /* forming q[j+1]=z/b[j] */
+    }
+
+    /* Now get the spectral decomposition of T_j.  */
+
+    if (((j>= *m + *lm)&&(j%f_check==0))||(j == *n-1))   /* no  point doing this too early or too often */
+    { for (i=0;i<j+1;i++) d[i]=a[i]; /* copy leading diagonal of T_j */
+      for (i=0;i<j;i++) g[i]=b[i]; /* copy sub/super diagonal of T_j */   
+      /* set up storage for eigen vectors */
+      if (vlength) free(v); /* free up first */
+      vlength=j+1; 
+      v = (double *)calloc((size_t)vlength*vlength,sizeof(double));
+ 
+      /* obtain eigen values/vectors of T_j in O(j^2) flops */
+    
+      kk = j + 1;
+      mgcv_trisymeig(d,g,v,&kk,1,1);
+      /* ... eigenvectors stored one after another in v, d[i] are eigenvalues */
+
+      /* Evaluate ||Tj|| .... */
+      normTj=fabs(d[0]);if (fabs(d[j])>normTj) normTj=fabs(d[j]);
+
+      for (k=0;k<j+1;k++) /* calculate error in each eigenvalue d[i] */
+      { err[k]=b[j]*v[k * vlength + j]; /* bound on kth e.v. is b[j]* (jth element of kth eigenvector) */
+        err[k]=fabs(err[k]);
+      }
+      /* and check for termination ..... */
+      if (j >= *m + *lm)
+      { max_err=normTj*eps_stop;
+        if (biggest) 
+	{ low_conv=0;i=j; while (i>=0&&err[i]<max_err&&d[i]<0.0) { low_conv++;i--;}
+	  high_conv=0;i=0; while (i<=j&&err[i]<max_err&&d[i]>=0.0) { i++;high_conv++;}
+          conv=high_conv;use_low=0;
+          for (i=0;i<low_conv;i++) /* test each of the negatives to see if it should be in the set of largest */
+	  { if (-d[j-i]>=d[high_conv-1]) { conv++;use_low++;}
+          } 
+          if (conv >= *m) /* then have enough - need to reset lm and m appropriately and break */
+	  { while (conv > *m) /* drop smallest magnitude terms */ 
+	    { if (use_low==0) {high_conv--;conv--;} else
+	      if (high_conv==0) {use_low--;conv--;} else
+              if (-d[j-use_low+1]>d[high_conv-1]) {high_conv--;conv--;} else { use_low--;conv--;}
+            } 
+            *lm = use_low; *m = high_conv;
+            j++;break;
+	  }
+        } else
+        { ok=1;
+          for (i=0;i < *m;i++) if (err[i]>max_err) ok=0;
+          for (i=j;i > j - *lm;i--) if (err[i]>max_err) ok=0;
+          if (ok) 
+          { j++;break;}
+        }
+      }
+    }
+  }
+  /* At this stage, complete construction of the eigen vectors etc. */
+  
+  /* Do final polishing of Ritz vectors and load va and V..... */
+  /*  for (k=0;k < *m;k++) // create any necessary new Ritz vectors 
+  { va->V[k]=d[k];
+    for (i=0;i<n;i++) 
+    { V->M[i][k]=0.0; for (l=0;l<j;l++) V->M[i][k]+=q[l][i]*v[k][l];}
+  }*/
+
+  /* assumption that U is zero on entry! */
+
+  for (k=0;k < *m;k++) /* create any necessary new Ritz vectors */
+  { D[k]=d[k];
+    for (l=0;l<j;l++)
+    for (xx=v[l + k * vlength],p0=U + k * *n,p1 = p0 + *n,qp=q[l];p0<p1;p0++,qp++) *p0 += *qp * xx;
+  }
+
+  for (k= *m;k < *lm + *m;k++) /* create any necessary new Ritz vectors */
+  { kk=j-(*lm + *m - k); /* index for d and v */
+    D[k]=d[kk];
+    for (l=0;l<j;l++)
+    for (xx=v[l + kk * vlength],p0=U + k * *n,p1 = p0 + *n,qp=q[l];p0<p1;p0++,qp++) *p0 += *qp * xx;
+  }
+ 
+  /* clean up..... */
+  free(a);
+  free(b);
+  free(g);
+  free(d);
+  free(z);
+  free(err);
+  if (vlength) free(v);
+  for (i=0;i< *n+1;i++) if (q[i]) free(q[i]);free(q);  
+  *n = j; /* number of iterations taken */
+} /* end of Rlanczos */
+
+
+
 
 void printmat(matrix A,char *fmt)
 
@@ -2946,6 +3145,30 @@ void fprintmat(matrix A,char *fname,char *fmt)
   }
   fclose(f);
 }
+
+void RArrayFromMatrix(double *a,long r,matrix *M)
+
+/* copies matrix *M into R array a where r is the number of rows of A treated as
+  a matrix by R */
+
+{ int i,j;
+  for (i=0;i<M->r;i++) for (j=0;j<M->c;j++) a[i+r*j]=M->M[i][j];
+}
+
+
+matrix Rmatrix(double *A,long r,long c)
+
+/* produces a matrix from the array containing a (default) R matrix stored:
+   A[0,0], A[1,0], A[2,0] .... etc */
+
+{ int i,j;
+  matrix M;
+  M=initmat(r,c);
+  for (i=0;i<r;i++) for (j=0;j<c;j++) M.M[i][j]=A[i+j*r];
+  return(M);
+}
+
+
 
 /*********************************************************************************/
 /* Update Log (started Jan 2000)                                                 */
