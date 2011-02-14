@@ -34,8 +34,11 @@ effectively this modified AIC.
 
 \references{Hastie and Tibshirani, 1990, Generalized Additive Models.
 
-Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
-additive models. J.R.Statist.Soc.B 70(3):495-518
+Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for
+generalized additive models. J.R.Statist. Soc. B 70(3):495-518
+
+
+
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} based directly on \code{logLik.glm}}

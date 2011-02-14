@@ -49,6 +49,12 @@ computed, and reports the numerical rank of the covariance matrix.
 Wood, S.N. (2008) Fast stable direct fitting and smoothness
  selection for generalized additive models. Journal of the Royal
  Statistical Society (B) 70(3):495-518
+
+Wood, S.N. (2011) Fast stable restricted maximum likelihood 
+and marginal likelihood estimation of semiparametric generalized linear 
+models. Journal of the Royal Statistical Society (B) 73(1):3-36
+
+
 }
 
 

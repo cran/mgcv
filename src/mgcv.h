@@ -41,14 +41,17 @@ void  tweedious(double *w,double *w1,double *w2,double *y,double *phi,double *p,
 void psum(double *y, double *x,int *index,int *n);
 void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
-
+void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm);
 void RQT(double *A,int *r,int *c);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
 void mgcv_AtA(double *AA,double *A,int *q,int *n);
 void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);
-/* Test routines for direct access to linpack and lapack */
+void rksos(double *x,int *n,double *eps);
+
+/* Routines for direct access to linpack and lapack */
+
 void mgcv_chol(double *a,int *pivot,int *n,int *rank);
 void mgcv_svd(double *x,double *u, double *d,int *r,int *c);
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
@@ -63,6 +66,7 @@ void mroot(double *A,int *rank,int *n);
 void R_cond(double *R,int *r,int *c,double *work,double *Rcondition);
 void mgcv_td_qy(double *S,double *tau,int *m,int *n, double *B,int *left,int *transpose);
 void mgcv_tri_diag(double *S,int *n,double *tau);
+void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending); 
 
 /* basis constructor/prediction routines*/
 
@@ -71,3 +75,4 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
                   double *UZ,double *by,int *by_exists,double *X);
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
                     double *UZ,double *Xu,int *nXu,double *C);
+void gen_tps_poly_powers(int *pi,int *M,int *m, int *d);

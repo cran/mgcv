@@ -114,28 +114,6 @@ void RPackSarray(int m,matrix *S,double *RS)
 
 
 
-void RArrayFromMatrix(double *a,long r,matrix *M)
-
-/* copies matrix *M into R array a where r is the number of rows of A treated as
-  a matrix by R */
-
-{ int i,j;
-  for (i=0;i<M->r;i++) for (j=0;j<M->c;j++) a[i+r*j]=M->M[i][j];
-}
-
-
-matrix Rmatrix(double *A,long r,long c)
-
-/* produces a matrix from the array containing a (default) R matrix stored:
-   A[0,0], A[1,0], A[2,0] .... etc */
-
-{ int i,j;
-  matrix M;
-  M=initmat(r,c);
-  for (i=0;i<r;i++) for (j=0;j<c;j++) M.M[i][j]=A[i+j*r];
-  return(M);
-}
-
 
 /********** The following are from spline.c (rather plodding coding) ***********/
 
@@ -1054,6 +1032,29 @@ void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double
   dmalloc_log_unfreed();  dmalloc_verify(NULL);
 #endif 
 }
+
+
+void Rlanczos1(double *A,double *U,double *D,int *n, int *m, int *lm) {
+/* interface to lanczos_spd for calling from R.
+   A is n by n symmetric matrix. Let k = m + max(0,lm).
+   U is n by k and D is a k-vector.
+   m is the number of upper eigenvalues required and lm the number of lower.
+   If lm<0 then the m largest magnitude eigenvalues (and their eigenvectors)
+   are returned. Superceded. See Rlanczos in matrix.c. 
+*/
+  matrix Am,V,va;  
+  int k;
+  Am = Rmatrix(A,*n,*n);
+  k = *m;if (*lm>0) k += *lm;
+  V = initmat(*n,k);
+  va = initmat(k,1);
+  k = lanczos_spd(&Am,&V,&va,*m,*lm);
+  RArrayFromMatrix(U,*n,&V);
+  RArrayFromMatrix(D,k,&va);
+  freemat(va);freemat(V);freemat(Am);
+  *n = k; /* number of iterations taken */
+}
+
 
 
 void RQT(double *A,int *r,int*c)

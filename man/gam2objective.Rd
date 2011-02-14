@@ -37,6 +37,10 @@ was first proposed in O'Sullivan et al. (1986).
 
 \references{
 
+Wood, S.N. (2011) Fast stable restricted maximum likelihood 
+and marginal likelihood estimation of semiparametric generalized linear 
+models. Journal of the Royal Statistical Society (B) 73(1):3-36
+
 O 'Sullivan, Yandall & Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models. J. Amer. Statist. Assoc. 81:96-103.
 

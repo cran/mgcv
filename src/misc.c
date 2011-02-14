@@ -23,6 +23,46 @@ USA. */
 #include "matrix.h"
 #include "mgcv.h"
 
+/* Compute reproducing kernel for spline on the sphere */
+
+void rksos(double *x,int *n,double *eps) {
+/* Function to compute reproducing kernel for spline on the sphere,
+   based on Jim Wendelberger's (1981) thesis. 
+   Returns evaluated kernel rk(x) in n vector x.  
+*/
+  double dl1,xi,rk,xk,xx;
+  int i,k;
+  dl1 = acos(0)*2;
+  dl1 = dl1*dl1/6; /* dilog(1) = pi^2/6, dilog(0)=0 */
+  for (i=0;i< *n;i++) {
+    xi = x[i];
+    if (xi <= 0) {
+      if (xi < -1) xi = -1;
+      rk = 1.0 - dl1;
+      xk = xi = xi/2 + 0.5;
+      for (k=1;k<1000;k++) {
+        xx = xk/(k*k);
+        rk += xx;
+        xk *= xi;
+	if (xx < *eps) break;
+      }
+    } else {
+      if (xi>1) xi=1;
+      if (xi/2>=.5) rk=1.0; else
+      rk = 1 - log(.5+xi/2)*log(.5-xi/2);
+      xk = xi = .5 - xi/2;
+      for (k=1;k<1000;k++) {
+        xx = xk/(k*k);
+        rk += -xx;
+        xk *= xi;
+	if (xk < *eps) break;
+      } 
+    }
+    x[i] = rk;
+  }
+}
+
+
 /* inside polygon tester.... */
 
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n)

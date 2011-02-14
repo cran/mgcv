@@ -2,8 +2,10 @@
    Lapack and Linpack. In particular the aim is to check that I can reproduce
    R routines such as chol and La.svd by direct calls to Lapack and Linpack.
 
-   They have been tested against R routines, but R's qr() routine is buggy, so only
-   unpivoted case is testable.
+   They have been tested against R routines, (but R's qr() routine was buggy, so only
+   unpivoted case was testable).
+
+   See R-x/include/R_ext/Lapack.h...
 */
 #include "mgcv.h"
 #include <stdlib.h>
@@ -427,3 +429,56 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
 
  }
 
+void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending) 
+/* Find eigen-values and vectors of n by n symmetric tridiagonal matrix 
+   with leading diagonal d and sub/super diagonals g. 
+   eigenvalues returned in d, and eigenvectors in columns of v, if
+   getvec!=0. If *descending!=0 then eigenvalues returned in descending order,
+   otherwise ascending. eigen-vector order corresponds.  
+
+   Routine is divide and conquer followed by inverse iteration. 
+
+   dstevd could be used instead, with just a name change.
+   dstevx may be faster, but needs argument changes.
+*/ 
+		    
+{ char compz;
+  double *work,work1,x,*dum1,*dum2;
+  int ldz=0,info,lwork=-1,liwork=-1,*iwork,iwork1,i,j;
+
+  if (getvec) { compz='I';ldz = *n;} else { compz='N';ldz=0;}
+
+  /* workspace query first .... */
+  F77_NAME(dstedc)(&compz,n,
+		   d, g, /* lead and su-diag */
+		   v, /* eigenvectors on exit */  
+                   &ldz, /* dimension of v */
+		   &work1, &lwork,
+		   &iwork1, &liwork, &info);
+
+   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
+   work=(double *)calloc((size_t)lwork,sizeof(double));
+   liwork = iwork1;
+   iwork= (int *)calloc((size_t)liwork,sizeof(int));
+
+   /* and the actual call... */
+   F77_NAME(dstedc)(&compz,n,
+		   d, g, /* lead and su-diag */
+		   v, /* eigenvectors on exit */  
+                   &ldz, /* dimension of v */
+		   work, &lwork,
+		   iwork, &liwork, &info);
+
+   if (descending) { /* need to reverse eigenvalues/vectors */
+     for (i=0;i<*n/2;i++) { /* reverse the eigenvalues */
+       x = d[i]; d[i] = d[*n-i-1];d[*n-i-1] = x;
+       dum1 = v + *n * i;dum2 = v + *n * (*n-i-1); /* pointers to heads of cols to exchange */
+       for (j=0;j<*n;j++,dum1++,dum2++) { /* work down columns */
+         x = *dum1;*dum1 = *dum2;*dum2 = x;
+       }
+     }
+   }
+
+   free(work);free(iwork);
+   *n=info; /* zero is success */
+}

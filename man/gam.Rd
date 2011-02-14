@@ -40,7 +40,7 @@ For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gam
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,offset=NULL,method="GCV.Cp",
-    optimizer=c("outer","newton"),control=gam.control(),scale=0,
+    optimizer=c("outer","newton"),control=list(...),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
     fit=TRUE,paraPen=NULL,G=NULL,in.out,...)
 }
@@ -56,7 +56,9 @@ to the right hand side to specify that the linear predictor depends on smooth fu
 \item{family}{
 This is a family object specifying the distribution and link to use in
 fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
-details. A negative binomial family is provided: see \code{\link{negbin}}.
+details. A negative binomial family is provided: see \code{\link{negbin}}. 
+\code{quasi} families actually result in the use of extended quasi-likelihood 
+if \code{method} is set to a RE/ML method (McCullagh and Nelder, 1989, 9.6).
 } 
 
 \item{data}{ A data frame or list containing the model response variable and 
@@ -79,8 +81,8 @@ that this offset will always be completely ignored when predicting, unlike an of
 included in \code{formula}: this conforms to the behaviour of
 \code{lm} and \code{glm}.}
 
-\item{control}{A list of fit control parameters returned by 
-\code{\link{gam.control}}.}
+\item{control}{A list of fit control parameters to replace defaults returned by 
+\code{\link{gam.control}}. Values not set assume default values. }
 
 \item{method}{The smoothing parameter estimation method. \code{"GCV.Cp"} to use GCV for unknown scale parameter and
 Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using GACV in place of GCV. \code{"REML"} 
@@ -251,8 +253,8 @@ components to be penalized via argument \code{paraPen} and allows the linear pre
 general linear functionals of smooths, via the summation convention mechanism described in 
 \code{\link{linear.functional.terms}}.
      
-Details of the default underlying fitting methods are given in Wood (2004
-and 2008). Some alternative methods are discussed in Wood (2000 and 2006). 
+Details of the default underlying fitting methods are given in Wood (2011
+and 2004). Some alternative methods are discussed in Wood (2000 and 2006). 
 
  }
 
@@ -261,12 +263,13 @@ and 2008). Some alternative methods are discussed in Wood (2000 and 2006).
 
 Key References on this implementation:
 
+Wood, S.N. (2011) Fast stable restricted maximum likelihood 
+and marginal likelihood estimation of semiparametric generalized linear 
+models. Journal of the Royal Statistical Society (B) 73(1):3-36
+
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:673-686. [Default
-method for additive case (but no longer for generalized)]
-
-Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for generalized
-additive models. J.R.Statist.Soc.B 70(3):495-518. [Generalized additive model methods]
+method for additive case by GCV (but no longer for generalized)]
 
 Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 
@@ -300,6 +303,8 @@ Gu and Wahba (1991) Minimizing GCV/GML scores with multiple smoothing parameters
 the Newton method. SIAM J. Sci. Statist. Comput. 12:383-398
 
 Gu (2002) Smoothing Spline ANOVA Models, Springer.
+
+McCullagh and Nelder (1989) Generalized Linear Models 2nd ed. Chapman & Hall.
 
 O'Sullivan, Yandall and Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models.

@@ -10,9 +10,10 @@ gam.reparam <- function(rS,lsp,deriv)
 ## Finds an orthogonal reparameterization which avoids `dominant machine zero leakage' between 
 ## components of the square root penalty.
 ## rS is the list of the square root penalties: last entry is root of fixed. 
-##    penalty, if fixed.penalty=TRUE.
+##    penalty, if fixed.penalty=TRUE (i.e. length(rS)>length(sp))
 ## lsp is the vector of log smoothing parameters.
-## *Assumption* here is that rS[[i]] are in a null space of total penalty already
+## *Assumption* here is that rS[[i]] are in a null space of total penalty already;
+## see e.g. totalPenaltySpace & mini.roots
 ## Ouputs:
 ## S -- the total penalty matrix similarity transformed for stability
 ## rS -- the component square roots, transformed in the same way
@@ -1971,7 +1972,9 @@ fix.family.ls<-function(fam)
     return(fam)
   }
   if (family=="quasi"||family=="quasipoisson"||family=="quasibinomial") {
-    fam$ls <- function(y,w,n,scale) rep(0,3)
+    ## fam$ls <- function(y,w,n,scale) rep(0,3)
+    ## Uses extended quasi-likelihood form...
+    fam$ls <- function(y,w,n,scale) c(-sum(w)*log(scale)/2,-sum(w)/(2*scale),sum(w)/(2*scale*scale))
     return(fam)
   }
   if (family=="inverse.gaussian") {

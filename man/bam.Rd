@@ -15,7 +15,7 @@ for large datasets.
 }
 \usage{
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action=na.omit, offset=NULL,method="REML",control=gam.control(),
+    na.action=na.omit, offset=NULL,method="REML",control=list(...),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
     chunk.size=10000,rho=0,...)
 }
@@ -62,8 +62,8 @@ Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using 
 for REML estimation, including of unknown scale, \code{"P-REML"} for REML estimation, but using a Pearson estimate 
 of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likelihood in place of REML. }
 
-\item{control}{A list of fit control parameters returned by 
-\code{\link{gam.control}}.}
+\item{control}{A list of fit control parameters to replace defaults returned by 
+\code{\link{gam.control}}. Any control parameters not supplied stay at their default values.}
 
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 

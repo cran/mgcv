@@ -51,7 +51,11 @@ mini.mf <-function(mf,chunk.size) {
 ## basis setup.
   n <- nrow(mf)
   if (n<=chunk.size) return(mf)
-  seed <- get(".Random.seed", envir = .GlobalEnv)
+  seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+  if (inherits(seed,"try-error")) {
+     runif(1)
+     seed <- get(".Random.seed",envir=.GlobalEnv)
+  }
   kind <- RNGkind(NULL)
   RNGkind("default", "default")
   set.seed(66)
@@ -163,7 +167,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
          w <- sqrt(w)
          if (b == 1) qrx <- qr.update(w*X[good,],w*z) 
          else qrx <- qr.update(w*X[good,],w*z,qrx$R,qrx$f,qrx$y.norm2)
-         gc()
+         rm(X);gc() ## X can be large: remove and reclaim
       }
    
       G$n <- nobs
@@ -202,6 +206,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
         object <- gam(G=G,method=method,gamma=gamma,scale=scale)
         y -> G$y; w -> G$w; n -> G$n;offset -> G$offset
       }
+      gc()
 
       if (method=="GCV.Cp") { 
         object <- list()
@@ -251,6 +256,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
   #  else linkinv(offset)
   #  nulldev <- sum(dev.resids(y, wtdmu, weights))
   object$wt <- wt
+  rm(G);gc()
   object
 } ## end bgam.fit
 
@@ -320,7 +326,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
       }      
 
       qrx <- qr.update(X,y,qrx$R,qrx$f,qrx$y.norm2)
-      gc()
+      rm(X);gc() ## X can be large: remove and reclaim
     }
     G$n <- n
     G$y <- mf[[gp$response]]
@@ -338,6 +344,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
        y <- rwMatrix(stop,row,weight,sqrt(G$w)*G$y)
        qrx <- qr.update(X,y)
     }
+    rm(X);gc() ## X can be large: remove and reclaim
   }
 
   rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
@@ -364,7 +371,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
       object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
     }
   }
-
+  gc()
   if (method=="GCV.Cp") { 
     object <- list()
     object$coefficients <- fit$b
@@ -398,7 +405,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
 
 
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
-                offset=NULL,method="REML",control=gam.control(),scale=0,gamma=1,knots=NULL,
+                offset=NULL,method="REML",control=list(...),scale=0,gamma=1,knots=NULL,
                 sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
@@ -406,7 +413,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 ## parametric terms.
 ## This is a modification of `gam' designed to build the QR decompostion of the model matrix 
 ## up in chunks, to keep memory costs down.
-{ require(mgcv)
+{ control <- do.call("gam.control",control)
   if (is.character(family))
             family <- eval(parse(text = family))
   if (is.function(family))
@@ -487,16 +494,22 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
 
   ## now build up proper model matrix, and deal with y, w, and offset...
-  
+
   if (control$trace) cat("Setup complete. Calling fit\n")
+  
+  colnamesX <- colnames(G$X)  
 
   if (am) {
+    if (nrow(mf)>chunk.size) G$X <- matrix(0,0,ncol(G$X)); gc() 
     object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho)
   } else {
+    G$X  <- matrix(0,0,ncol(G$X)); gc()
     if (rho!=0) warning("AR1 parameter rho unused with generalized model")
     object <- bgam.fit(G, mf, chunk.size, gp ,scale ,gamma,method=method,
                        control = control,...)
   }
+
+  gc()
 
   if (control$trace) cat("Fit complete. Finishing gam object.\n")
 
@@ -530,7 +543,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$model <- mf;rm(mf);gc()
   object$na.action <- attr(object$model,"na.action") # how to deal with NA's
   object$nsdf <- G$nsdf
-  names(object$coefficients)[1:G$nsdf] <- colnames(G$X)[1:G$nsdf]
+  names(object$coefficients)[1:G$nsdf] <- colnamesX[1:G$nsdf]
   object$offset <- G$offset
   object$prior.weights <- G$w
   object$pterms <- G$pterms
@@ -545,7 +558,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$y <- object$model[[gp$response]]
   object$NA.action <- na.action ## version to use in bam.update
 
-  gc()
+  rm(G);gc()
+
   ## note that predict.gam assumes that it must be ok not to split the 
   ## model frame, if no new data supplied, so need to supply explicitly
   object$linear.predictors <- as.numeric(predict.gam(object,newdata=object$model,block.size=chunk.size))

@@ -118,13 +118,12 @@ of the families as described in \code{\link{fix.family.link}}.
 
 \references{
 
+Wood, S.N. (2011) Fast stable restricted maximum likelihood 
+and marginal likelihood estimation of semiparametric generalized linear 
+models. Journal of the Royal Statistical Society (B) 73(1):3-36
 
 O 'Sullivan, Yandall & Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models. J. Amer. Statist. Assoc. 81:96-103.
-
-Wood, S.N. (2008) Fast stable direct fitting and smoothness selection for
-generalized additive models. J.R.Statist. Soc. B 70(3):495-518
-
 
 \url{http://www.maths.bath.ac.uk/~sw283/}
 
