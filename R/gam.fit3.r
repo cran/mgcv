@@ -2084,6 +2084,9 @@ totalPenaltySpace <- function(S,H,off,p)
   ## range space of the penalty, and obtain actual null space dimension
   ## components are roughly rescaled to avoid any dominating
 
+  Hscale <- sqrt(sum(H*H));
+  if (Hscale==0) H <- NULL ## H was all zeroes anyway!
+
   if (is.null(H)) St <- matrix(0,p,p)
   else { St <- H/sqrt(sum(H*H)); 
     if (ncol(H)!=p||nrow(H)!=p) stop("H has wrong dimension")
