@@ -12,7 +12,7 @@ The first is taken to be latitude (in degrees) and the second longitude (in degr
 For \code{m>0}, \code{(m+2)/2} is the penalty order, so \code{m=2} is the equivalent to the usual second 
 derivative penalty. \code{m=0} signals to use the 2nd order spline on the sphere, computed by 
 Wendelberger's (1981) method. \code{m = -1} results in a \code{\link{Duchon.spline}} being 
-used (with m=2 and s=1/2).
+used (with m=2 and s=1/2), following an unpublished suggestion of Jean Duchon.
 
 \code{k} (default 50) is the basis dimension.
  
@@ -40,14 +40,18 @@ used (with m=2 and s=1/2).
 smooth class documented under \code{\link{smooth.construct}}, this object will contain:
 \item{Xu}{A matrix of the unique covariate combinations for this smooth (the basis is constructed by first stripping 
 out duplicate locations).}
-\item{UZ}{The matrix mapping the t.p.r.s. parameters back to the parameters of a full thin plate spline.}
+\item{UZ}{The matrix mapping the parameters of the reduced rank spline back to the parameters of a full spline.}
 }
 
 \details{ For \code{m>0}, the smooths implemented here are based on the pseudosplines on the sphere of Wahba (1981) 
 (there is a correction of table 1 in 1982, but the correction has a misprint in the definition of A --- the A
 given in the 1981 paper is correct). For \code{m=0} then a second order spline on the sphere is used which is the analogue of 
 a second order thin plate spline in 2D: the computation is based on Chapter 4 of Wendelberger, 1981. 
-Optimal low rank approximations are obtained using exactly the approach given in Wood (2003). 
+Optimal low rank approximations are obtained using exactly the approach given in Wood (2003). For \code{m = -1} a smooth of the 
+general type discussed in Duchon (1977) is used: the sphere is embedded in a 3D Euclidean space, but 
+smoothing employs a penalty based on second derivatives (so that locally as the smoothing parameter tends 
+to zero we recover a "normal" thin plate spline on the tangent space). This is an unpublished suggestion of Jean
+Duchon.
 
 Note that the null space of the penalty is always the space of constant functions on the sphere, whatever the order of penalty. 
 

@@ -2,6 +2,17 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-4
+
+* Fix for single letter typo bug in C code called by slanczos, could 
+  actually segfault on matrices of less than 10 by 10.
+
+* matrix.c:Rlanczos memory error fix in convergence testing of -ve 
+  eigenvalues.
+
+* Catch for min.sp vector all zeroes, which could cause an ungraceful 
+  failure. 
+
 1.7-3
 
 ** "ds" (Duchon splines) smooth class added. See ?Duchon.spline

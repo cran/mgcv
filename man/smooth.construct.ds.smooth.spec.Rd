@@ -13,7 +13,7 @@ Duchon's (1977) construction generalizes the usual thin plate spline penalty as 
 of the squared Euclidian norm of a vector of mixed partial derivatives of the function w.r.t. its arguments. Duchon re-expresses 
 this penalty in the Fourier domain, and then weights the squared norm in the integral by the Euclidean norm of the fourier frequencies, 
 raised to the power 2s. s is a user selected constant taking integer values divided by 2. If d is the numberof arguments of the smooth, 
-then it is required that -d/2 < m < d/2. To obtain smooth functions we further require that m + s > n/2. If s=0 then the usual thin plate 
+then it is required that -d/2 < m < d/2. To obtain smooth functions we further require that m + s > d/2. If s=0 then the usual thin plate 
 spline is recovered.
 
 The construction is amenable to exactly the low rank approximation method given in Wood (2003) to thin plate splines, with similar 
