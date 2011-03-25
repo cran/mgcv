@@ -251,15 +251,16 @@ void dumpmat(M,filename) matrix M;char *filename;
 void readmat(M,filename) matrix *M;char *filename;
 
 { FILE *in;long i,j,k;char str[200];
+  size_t kr;
   in=fopen(filename,"rb");
   if (in==NULL)
   { sprintf(str,_("\n%s not found, nothing read!"),filename);
     ErrorMessage(str,1);}
-  fread(&i,sizeof(long),1,in);
-  fread(&j,sizeof(long),1,in);
+  kr = fread(&i,sizeof(long),1,in);
+  kr = fread(&j,sizeof(long),1,in);
   (*M)=initmat(i,j);
   for (k=0L;k<M->r;k++)
-  { fread((*M).M[k],sizeof(double),(size_t)M->c,in);
+  { kr = fread((*M).M[k],sizeof(double),(size_t)M->c,in);
   }
   fclose(in);
 }
@@ -1962,7 +1963,7 @@ void gettextmatrix(M,name) matrix M;char *name;
 /* reads a text file with M.r rows and M.c columns into matrix M */
 
 { FILE *f;
-  long i,j;
+  long i,j,k;
   char c,str[200];
   f=fopen(name,"rt");
   if (!f)
@@ -1970,7 +1971,7 @@ void gettextmatrix(M,name) matrix M;char *name;
     ErrorMessage(str,1);}
   for (i=0;i<M.r;i++)
   { for (j=0;j<M.c;j++)
-    { fscanf(f,"%lf",M.M[i]+j);
+    { k = fscanf(f,"%lf",M.M[i]+j);
     }
     c=' ';while ((c!='\n')&&(!feof(f))) c=(char)fgetc(f);
   }

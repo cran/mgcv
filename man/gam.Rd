@@ -40,7 +40,7 @@ For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gam
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,offset=NULL,method="GCV.Cp",
-    optimizer=c("outer","newton"),control=list(...),scale=0,
+    optimizer=c("outer","newton"),control=list(),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
     fit=TRUE,paraPen=NULL,G=NULL,in.out,...)
 }

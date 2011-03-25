@@ -48,7 +48,7 @@ smooth class documented under \code{\link{smooth.construct}}, this object will c
 avoid any co-linearity problems that might otehrwise occur in the penalty null space basis of the term. }
 \item{Xu}{A matrix of the unique covariate combinations for this smooth (the basis is constructed by first stripping 
 out duplicate locations).}
-\item{UZ}{The matrix mapping the t.p.r.s. parameters back to the parameters of a full thin plate spline.}
+\item{UZ}{The matrix mapping the smoother parameters back to the parameters of a full Duchon spline.}
 \item{null.space.dimension}{The dimension of the space of functions that have zero wiggliness according to the 
 wiggliness penalty for this term.}
 }
@@ -74,7 +74,7 @@ approach by supplying  a reduced set of covariate values from which to obtain th
 typically the number of covariate values used will be substantially 
 smaller than the number of data, and substantially larger than the basis dimension, \code{k}. This approach is 
 the one taken automatically if the number of unique covariate values (combinations) exceeds \code{max.knots}.
-The second possibility is to avoid the eigen-decomposition used to find the t.p.r.s. basis altogether and simply use 
+The second possibility is to avoid the eigen-decomposition used to find the spline basis altogether and simply use 
 the basis implied by the chosen knots: this will happen if the number of knots supplied matches the 
 basis dimension, \code{k}. For a given basis dimension the second option is 
 faster, but gives poorer results (and the user must be quite careful in choosing knot locations).

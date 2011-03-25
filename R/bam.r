@@ -405,7 +405,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
 
 
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
-                offset=NULL,method="REML",control=list(...),scale=0,gamma=1,knots=NULL,
+                offset=NULL,method="REML",control=list(),scale=0,gamma=1,knots=NULL,
                 sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 

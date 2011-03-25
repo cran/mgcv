@@ -2,6 +2,31 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-5
+
+* gam.fit3 modified to converge more reliably with links that don't guarantee
+  feasible mu (e.g poisson(link="identity")). One vulnerability removed + a
+  new approach taken, which restarts the iteration from null model 
+  coefficients if the original start values lead to an infinite deviance.
+
+* Duchon spline bug fix (could fail to create model matrix if 
+  number of data was one greateer than number of unique data).
+    
+* fix so that 'main' is not ignored by plot.gam (got broken in 1.7-0 
+  object orientation of smooth plotting)
+
+* Duchon spline constructor now catches k > number of data errors.
+
+* fix of a gamm bug whereby a model with no smooths would fail after 
+  fitting because of a missing smoothing parameter vector.
+
+* fix to bug introduced to gam/bam in 1.7-3, whereby '...' were passed to 
+  gam.control, instead of passing on to fitting routines. 
+
+* fix of some compiler warnings in matrix.c 
+
+* fix to indexing bug in monotonic additive model example in ?pcls.
+
 1.7-4
 
 * Fix for single letter typo bug in C code called by slanczos, could 

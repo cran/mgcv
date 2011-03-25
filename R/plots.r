@@ -589,7 +589,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
         }
         if (!is.null(ylim)) ylimit <- ylim
         plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,
-             ylab=P$ylab,ylim=trans(ylimit+shift),xlim=P$xlim,main=main,...)
+             ylab=P$ylab,ylim=trans(ylimit+shift),xlim=P$xlim,main=P$main,...)
         if (rug) { 
           if (jit) rug(jitter(as.numeric(P$raw)),...)
           else rug(as.numeric(P$raw),...) 
@@ -707,7 +707,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     edf <- sum(x$edf[first:last]) ## Effective DoF for this term
     term.lab <- sub.edf(x$smooth[[i]]$label,edf)
     P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
-              se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,...)
+              se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,...)
     if (is.null(P)) pd[[i]] <- list(plot.me=FALSE) else {
       p <- x$coefficients[first:last]   ## relevent coefficients 
       offset <- attr(P$X,"offset")      ## any term specific offset
