@@ -15,7 +15,7 @@ for large datasets.
 }
 \usage{
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action=na.omit, offset=NULL,method="REML",control=list(...),
+    na.action=na.omit, offset=NULL,method="REML",control=list(),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
     chunk.size=10000,rho=0,...)
 }

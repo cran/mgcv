@@ -103,7 +103,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 ## dev.extra is an extra component to add to the deviance in the REML and ML cases only.
 ## Similarly, n.true is to be used in place of the length(y) in ML/REML calculations,
 ## and the scale.est only.
-{   if (family$link==family$canonical) fisher <- TRUE else fisher=FALSE ##if canonical Newton = Fisher, but Fisher cheaper!
+{   if (family$link==family$canonical) fisher <- TRUE else fisher=FALSE 
+    ## ... if canonical Newton = Fisher, but Fisher cheaper!
     if (scale>0) scale.known <- TRUE else scale.known <- FALSE
     if (!scale.known&&scoreType%in%c("REML","ML")) { ## the final element of sp is actually log(scale)
       nsp <- length(sp)
@@ -155,7 +156,6 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
         rS[[i]] <- rbind(rp$rS[[i]],matrix(0,Mp,ncol(rp$rS[[i]])))
       } ## square roots of penalty matrices in current parameterization
       Eb <- Eb%*%T ## balanced penalty matrix
-     ## Eb <- get.Eb(rS,rank=q-Mp) ## balanced penalty matrix -- temporary code, should really pass in Eb and transform
       rows.E <- q-Mp
       Sr <- cbind(rp$E,matrix(0,nrow(rp$E),Mp))
       St <- rbind(cbind(rp$S,matrix(0,nrow(rp$S),Mp)),matrix(0,Mp,q))
@@ -260,7 +260,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
         null.eta <- x%*%null.coef + as.numeric(offset)
         old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights)) + t(null.coef)%*%St%*%null.coef 
         ## ... if the deviance exceeds this then there is an immediate problem
-            
+    
         for (iter in 1:control$maxit) { ## start of main fitting iteration
             good <- weights > 0
             var.val <- variance(mu)
@@ -289,7 +289,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
               c = yg - mug
               alpha <- 1 + c*(family$dvar(mug)/var.mug + family$d2link(mug)*mevg)
               alpha[alpha==0] <- .Machine$double.eps
-              z <- (eta - offset)[good] + (yg-mug)/(mevg*alpha) ## offset subtracted as eta = X%*%beta + offset
+              z <- (eta - offset)[good] + (yg-mug)/(mevg*alpha) 
+              ## ... offset subtracted as eta = X%*%beta + offset
               w <- weg*alpha*mevg^2/var.mug
             }
 
@@ -297,17 +298,18 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
            
-            oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),E=as.double(Sr),Es=as.double(Eb),
-                      n=as.integer(sum(good)),q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),penalty=as.double(1),
-                      rank.tol=as.double(.Machine$double.eps*100))
+            oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
+                     E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
+                     q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
+                     penalty=as.double(1),rank.tol=as.double(.Machine$double.eps*100))
 
             if (!fisher&&oo$n<0) { ## likelihood indefinite - switch to Fisher for this step
               z <- (eta - offset)[good] + (yg - mug)/mevg
               w <- (weg * mevg^2)/var.mug
-              oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),E=as.double(Sr),Es=as.double(Eb),
-                      n=as.integer(sum(good)),q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),penalty=as.double(1),
-                      rank.tol=as.double(.Machine$double.eps*100))
-            
+              oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
+                       E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
+                       q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
+                       penalty=as.double(1),rank.tol=as.double(.Machine$double.eps*100))
             }
 
             start <- oo$y[1:ncol(x)];
@@ -330,9 +332,14 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             boundary <- FALSE
             
             if (!is.finite(dev)) {
-                if (is.null(coefold)) 
+                if (is.null(coefold)) {
+                  if (is.null(null.coef)) 
                   stop("no valid set of coefficients has been found:please supply starting values", 
                     call. = FALSE)
+                  ## Try to find feasible coefficients from the null.coef and null.eta
+                  coefold <- null.coef
+                  etaold <- null.eta
+                }
                 warning("Step size truncated due to divergence", 
                   call. = FALSE)
                 ii <- 1
@@ -440,18 +447,19 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
          if (any(is.na(mu.eta.val[good]))) 
                 stop("NAs in d(mu)/d(eta)")
    
-         if (fisher) {
-              good <- (weights > 0) & (mu.eta.val != 0)
-         } else { ## full Newton
-              c <- y - mu
-              alpha <- 1 + c*(family$dvar(mu)/var.val + family$d2link(mu)*mu.eta.val)
-              ### can't just drop obs when alpha==0, as they are informative, but
-              ### happily using an `effective zero' is stable here, and there is 
-              ### a natural effective zero, since E(alpha) = 1.
-              alpha[alpha==0] <- .Machine$double.eps 
-              good <-  (weights > 0) & (mu.eta.val != 0)
-         }
+#         if (fisher) {
+#              good <- (weights > 0) & (mu.eta.val != 0)
+#         } else { ## full Newton
+#              c <- y - mu
+#              alpha <- 1 + c*(family$dvar(mu)/var.val + family$d2link(mu)*mu.eta.val)
+#              ### can't just drop obs when alpha==0, as they are informative, but
+#              ### happily using an `effective zero' is stable here, and there is 
+#              ### a natural effective zero, since E(alpha) = 1.
+#              alpha[alpha==0] <- .Machine$double.eps 
+#              good <-  (weights > 0) & (mu.eta.val != 0)
+#         }
 
+         good <- (weights > 0) & (mu.eta.val != 0)
          mevg <- mu.eta.val[good];mug <- mu[good];yg <- y[good]
          weg <- weights[good];etag <- eta[good]
          var.mug<-var.val[good]
@@ -463,7 +471,12 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
          } else { ## full Newton
               c <- yg - mug
               alpha <- 1 + c*(family$dvar(mug)/var.mug + family$d2link(mug)*mevg)
-              z <- (eta - offset)[good] + (yg-mug)/(mevg*alpha) ## offset subtracted as eta = X%*%beta + offset
+              ### can't just drop obs when alpha==0, as they are informative, but
+              ### happily using an `effective zero' is stable here, and there is 
+              ### a natural effective zero, since E(alpha) = 1.
+              alpha[alpha==0] <- .Machine$double.eps 
+              z <- (eta - offset)[good] + (yg-mug)/(mevg*alpha) 
+              ## ... offset subtracted as eta = X%*%beta + offset
               wf <- weg*mevg^2/var.mug ## Fisher weights for EDF calculation
               w <- wf * alpha   ## Full Newton weights
          }
@@ -500,17 +513,21 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
        if (REML==0) rSncol <- unlist(lapply(rS,ncol)) else rSncol <- unlist(lapply(UrS,ncol))
 
-       oo <- .C(C_gdi1,X=as.double(x[good,]),E=as.double(Sr),Eb = as.double(Eb), rS = as.double(unlist(rS)),U1=as.double(U1),
-           sp=as.double(exp(sp)),z=as.double(z),w=as.double(w),wf=as.double(wf),alpha=as.double(alpha),
-           mu=as.double(mug),eta=as.double(etag),y=as.double(yg),
-           p.weights=as.double(weg),g1=as.double(g1),g2=as.double(g2),g3=as.double(g3),g4=as.double(g4),V0=as.double(V),
-           V1=as.double(V1),V2=as.double(V2),V3=as.double(V3),beta=as.double(coef),D1=as.double(D1),D2=as.double(D2),
-           P=as.double(dum),P1=as.double(P1),P2=as.double(P2),trA=as.double(dum),
-           trA1=as.double(trA1),trA2=as.double(trA2),rV=as.double(rV),rank.tol=as.double(.Machine$double.eps*100),
-           conv.tol=as.double(control$epsilon),rank.est=as.integer(1),n=as.integer(length(z)),
-           p=as.integer(ncol(x)),M=as.integer(nSp),Mp=as.integer(Mp),Enrow = as.integer(rows.E),
-           rSncol=as.integer(rSncol),deriv=as.integer(deriv.sp),
-           REML = as.integer(REML),fisher=as.integer(fisher),fixed.penalty = as.integer(rp$fixed.penalty))      
+       oo <- .C(C_gdi1,X=as.double(x[good,]),E=as.double(Sr),Eb = as.double(Eb), 
+                rS = as.double(unlist(rS)),U1=as.double(U1),sp=as.double(exp(sp)),
+                z=as.double(z),w=as.double(w),wf=as.double(wf),alpha=as.double(alpha),
+                mu=as.double(mug),eta=as.double(etag),y=as.double(yg),
+                p.weights=as.double(weg),g1=as.double(g1),g2=as.double(g2),
+                g3=as.double(g3),g4=as.double(g4),V0=as.double(V),V1=as.double(V1),
+                V2=as.double(V2),V3=as.double(V3),beta=as.double(coef),D1=as.double(D1),
+                D2=as.double(D2),P=as.double(dum),P1=as.double(P1),P2=as.double(P2),
+                trA=as.double(dum),trA1=as.double(trA1),trA2=as.double(trA2),
+                rV=as.double(rV),rank.tol=as.double(.Machine$double.eps*100),
+                conv.tol=as.double(control$epsilon),rank.est=as.integer(1),n=as.integer(length(z)),
+                p=as.integer(ncol(x)),M=as.integer(nSp),Mp=as.integer(Mp),Enrow = as.integer(rows.E),
+                rSncol=as.integer(rSncol),deriv=as.integer(deriv.sp),
+                REML = as.integer(REML),fisher=as.integer(fisher),
+                fixed.penalty = as.integer(rp$fixed.penalty))      
        
          if (control$trace) cat("done!\n")
  
@@ -594,7 +611,9 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
              P1 <- oo$P1
           
              if (sum(!is.finite(D1))||sum(!is.finite(P1))||sum(!is.finite(trA1))) { 
-                 stop("Non-finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")}
+                 stop(
+               "Non-finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")
+             }
          
              delta.3 <- delta*delta.2
   
@@ -608,7 +627,9 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
                P2 <- matrix(oo$P2,nSp,nSp)
               
                if (sum(!is.finite(D2))||sum(!is.finite(P2))||sum(!is.finite(trA2))) { 
-                 stop("Non-finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")}
+                 stop(
+                 "Non-finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")
+               }
              
                GCV2 <- outer(trA1,D1)
                GCV2 <- (GCV2 + t(GCV2))*gamma*2*nobs/delta.3 +

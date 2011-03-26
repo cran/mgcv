@@ -187,6 +187,7 @@ G$Ain <- rbind(Xx,Xz) ## inequality constraint matrix
 G$bin <- rep(0,nrow(G$Ain))
 G$sp <- b$sp
 G$p <- coef(b)
+G$off <- G$off-1 ## to match what pcls is expecting
 ## force inital parameters to meet constraint
 G$p[11:18] <- G$p[2:9]<- 0
 p <- pcls(G) ## constrained fit

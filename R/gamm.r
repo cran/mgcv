@@ -1163,17 +1163,19 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     if (G$nsdf>0) term.names<-colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
     n.smooth<-length(G$smooth) 
-    if (n.smooth)
-    for (i in 1:n.smooth)
-    { k<-1
-      for (j in object$smooth[[i]]$first.para:object$smooth[[i]]$last.para)
-      { term.names[j]<-paste(object$smooth[[i]]$label,".",as.character(k),sep="")
-        k<-k+1
+    if (n.smooth) {
+      for (i in 1:n.smooth)
+      { k<-1
+        for (j in object$smooth[[i]]$first.para:object$smooth[[i]]$last.para)
+        { term.names[j]<-paste(object$smooth[[i]]$label,".",as.character(k),sep="")
+          k<-k+1
+        }
       }
+      names(object$sp) <- names(G$sp)
     }
+
     names(object$coefficients) <- term.names  # note - won't work on matrices!!
     names(object$edf) <- term.names
-    names(object$sp) <- names(G$sp)
     if (is.null(weights))
     object$prior.weights <- object$y*0+1
     else if (inherits(weights,"varFunc")) 

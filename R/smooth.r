@@ -2220,11 +2220,15 @@ smooth.construct.ds.smooth.spec<-function(object,data,knots)
   }
   if (nk>n) { ## more knots than data - silly.
     nk <- 0
-    warning("more knots than data in an sos term: knots ignored.")
+    warning("more knots than data in a ds term: knots ignored.")
   }
+
+  xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
+  if (nrow(xu)<object$bs.dim) stop(
+   "A term has fewer unique covariate combinations than specified maximum degrees of freedom")
   ## deal with possibility of large data set
   if (nk==0) { ## need to create knots
-    xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
+    ## xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu>xtra$max.knots) { ## then there is really a problem 
@@ -2246,6 +2250,8 @@ smooth.construct.ds.smooth.spec<-function(object,data,knots)
       } ## end of large data set handling
     } else { knt <- xu;nk <- nu } ## just set knots to data
   } 
+
+ 
 
   if (object$bs.dim[1]<0) object$bs.dim <-  10*3^(object$dim[1]-1) # auto-initialize basis dimension
 
@@ -2356,8 +2362,8 @@ Predict.matrix.duchon.spline <- function(object,data)
 
     if (n > ind[nk]) { ## still some left over
       ind <- (ind[nk]+1):n ## last chunk
-      Xc <- DuchonE(x=x[ind,],xk=object$knt,m=object$p.order[1],s=object$p.order[2],n=object$dim)
-      Xc <- cbind(Xc%*%object$UZ,DuchonT(x=x[ind,],m=object$p.order[1],n=object$dim))
+      Xc <- DuchonE(x=x[ind,,drop=FALSE],xk=object$knt,m=object$p.order[1],s=object$p.order[2],n=object$dim)
+      Xc <- cbind(Xc%*%object$UZ,DuchonT(x=x[ind,,drop=FALSE],m=object$p.order[1],n=object$dim))
       X <- rbind(X,Xc);rm(Xc)
     }
   } else {

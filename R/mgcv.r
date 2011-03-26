@@ -1528,8 +1528,11 @@ variable.summary <- function(pf,dl,n) {
    vs
 }
 
+
+## don't be tempted to change to control=list(...) --- messes up passing on other stuff via ...
+
 gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
-                method="GCV.Cp",optimizer=c("outer","newton"),control=list(...),#gam.control(),
+                method="GCV.Cp",optimizer=c("outer","newton"),control=list(),#gam.control(),
                 scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,
                 paraPen=NULL,G=NULL,in.out=NULL,...)
 
