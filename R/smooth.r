@@ -2598,6 +2598,10 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       if (matrixArg) stop("factor `by' variables can not be used with matrix arguments.")
       sml <- list()
       lev <- levels(by)
+      ## if by variable is an ordered factor then first level is taken as a 
+      ## reference level, and smooths are only generated for the other levels
+      ## this can help to ensure identifiability in complex models. 
+      if (is.ordered(by)&&length(lev)>1) lev <- lev[-1] 
       for (j in 1:length(lev)) {
         sml[[j]] <- sm  ## replicate smooth for each factor level
         by.dum <- as.numeric(lev[j]==by)

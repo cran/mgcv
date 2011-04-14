@@ -343,8 +343,9 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
        X <- rwMatrix(stop,row,weight,sqrt(G$w)*G$X)
        y <- rwMatrix(stop,row,weight,sqrt(G$w)*G$y)
        qrx <- qr.update(X,y)
+   
+       rm(X);gc() ## X can be large: remove and reclaim
     }
-    rm(X);gc() ## X can be large: remove and reclaim
   }
 
   rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
@@ -568,7 +569,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$residuals <- sqrt(family$dev.resids(object$y,object$fitted.values,object$weights)) * 
                       sign(object$y-object$fitted.values)
   object$deviance <- sum(object$residuals^2)
-  object$aic <- family$aic(object$y,1,object$fitted.values,object$weights,object$deviance)
+  object$aic <- family$aic(object$y,1,object$fitted.values,object$weights,object$deviance) +
+                2*sum(object$edf)
   object$null.deviance <- sum(family$dev.resids(object$y,mean(object$y),object$weights))
   class(object) <- c("gam","glm","lm")
   object
@@ -713,7 +715,7 @@ bam.update <- function(b,data,chunk.size=10000) {
   b$residuals <- sqrt(b$family$dev.resids(b$y,b$fitted.values,b$weights)) * 
                       sign(b$y-b$fitted.values)
   b$deviance <- sum(b$residuals^2)
-  b$aic <- b$family$aic(b$y,1,b$fitted.values,b$weights,b$deviance)
+  b$aic <- b$family$aic(b$y,1,b$fitted.values,b$weights,b$deviance) + 2 * sum(b$edf)
   b$null.deviance <- sum(b$family$dev.resids(b$y,mean(b$y),b$weights))
   names(b$coefficients) <- names(b$edf) <- cnames
   b

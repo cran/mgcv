@@ -2,6 +2,16 @@
 *** denotes really big changes 
 ISSUES:
 
+1.7-6
+
+** factor `by' variable handling extended: if a by variable is an
+   ordered factor then the first level is treated as a reference level
+   and smooths are only generated for the other levels. This is useful 
+   for avoiding identifiability issues in complex models with factor by 
+   variables. 
+
+* bam bug fix. aic was reported incorrectly (too low). 
+
 1.7-5
 
 * gam.fit3 modified to converge more reliably with links that don't guarantee
