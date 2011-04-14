@@ -13,7 +13,7 @@ gam.vcomp(x,rescale=TRUE,conf.lev=.95)
 \item{x}{ a fitted model object of class \code{gam} as produced by \code{gam()}.}
 
 \item{rescale}{ the penalty matrices for smooths are rescaled before fitting, for numerical 
-stability reasons, if \code{resale} this rescaling is reversed, so that the variance components
+stability reasons, if \code{TRUE} this rescaling is reversed, so that the variance components
 are on the original scale.}
 
 \item{conf.lev}{ when the smoothing parameters are estimated by REML or ML, then confidence intervals 

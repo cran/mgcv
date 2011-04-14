@@ -111,13 +111,19 @@ functionals of smooths.
 The \code{\link{s}} and \code{\link{te}} terms used to specify smooths accept an argument \code{by}, 
 which is a numeric or factor variable of the same dimension as the covariates of the smooth. 
 If a \code{by} variable is numeric, then its \eqn{i^{th}}{ith} element multiples the  \eqn{i^{th}}{ith}
-row of the model matrix corresponding to the smooth term concerned. If a \code{by} variable is a factor then it generates 
-an indicator vector for each level of the factor. The model matrix for the smooth term is then replicated for each factor level,
+row of the model matrix corresponding to the smooth term concerned. 
+
+If a \code{by} variable is a \code{\link{factor}} then it generates an indicator vector for each level 
+of the factor, unless it is an \code{\link{ordered}} factor.
+In the non-ordered case, the model matrix for the smooth term is then replicated for each factor level,
 and each copy has its rows multiplied by the corresponding rows of its
 indicator variable. The smoothness penalties are also duplicated for each
 factor level.  In short a different smooth is generated
 for each factor level (the \code{id} argument to \code{\link{s}} and \code{\link{te}} can be used to force all 
-such smooths to have the same smoothing parameter). 
+such smooths to have the same smoothing parameter). \code{\link{ordered}} \code{by} variables are handled in the same 
+way, except that no smooth is generated for the first level of the ordered factor (see \code{b3} example below). 
+This is useful for setting up 
+identifiable models when the same smooth occurs more than once in a model, with different factor \code{by} variables.
 
  
 As an example, consider the model
@@ -269,6 +275,14 @@ summary(b1)
 b2 <- gam(y ~ fac+s(x2,by=fac,id=1)+s(x0),data=dat)
 plot(b2,pages=1)
 summary(b2)
+
+## now repeat with a single reference level smooth, and 
+## two `difference' smooths...
+dat$fac <- ordered(dat$fac)
+b3 <- gam(y ~ fac+s(x2)+s(x2,by=fac)+s(x0),data=dat,method="REML")
+plot(b3,pages=1)
+summary(b3)
+
 
 rm(dat)
 
