@@ -251,16 +251,15 @@ void dumpmat(M,filename) matrix M;char *filename;
 void readmat(M,filename) matrix *M;char *filename;
 
 { FILE *in;long i,j,k;char str[200];
-  size_t kr;
   in=fopen(filename,"rb");
   if (in==NULL)
   { sprintf(str,_("\n%s not found, nothing read!"),filename);
     ErrorMessage(str,1);}
-  kr = fread(&i,sizeof(long),1,in);
-  kr = fread(&j,sizeof(long),1,in);
+    k=fread(&i,sizeof(long),1,in);
+    k=fread(&j,sizeof(long),1,in);
   (*M)=initmat(i,j);
   for (k=0L;k<M->r;k++)
-  { kr = fread((*M).M[k],sizeof(double),(size_t)M->c,in);
+  { i=fread((*M).M[k],sizeof(double),(size_t)M->c,in);
   }
   fclose(in);
 }
@@ -637,9 +636,9 @@ void tricholeski(matrix *T,matrix *l0,matrix *l1)
  */
 
 { double **TM,*l1V,*l0V,z=1.0;
-  long k1,k,tr1;
+  long k1,k;
   TM=T->M;l0V=l0->V;l1V=l1->V;
-  l0V[0]=sqrt(TM[0][0]);tr1=T->r-1;
+  l0V[0]=sqrt(TM[0][0]);
   for (k=1;k<T->r;k++)
   { k1=k-1;
     if (z>0.0) l1V[k1]=TM[k][k1]/l0V[k1];   /* no problem */
@@ -1963,12 +1962,13 @@ void gettextmatrix(M,name) matrix M;char *name;
 /* reads a text file with M.r rows and M.c columns into matrix M */
 
 { FILE *f;
-  long i,j,k;
+  long i,j;
+  int k=1;
   char c,str[200];
   f=fopen(name,"rt");
   if (!f)
   { sprintf(str,_("%s not found by routine gettextmatrix().\n"),name);
-    ErrorMessage(str,1);}
+    ErrorMessage(str,k);}
   for (i=0;i<M.r;i++)
   { for (j=0;j<M.c;j++)
     { k = fscanf(f,"%lf",M.M[i]+j);
@@ -2355,10 +2355,9 @@ matrix A,B,U,W;
    NOTE: B must be +ve definite.
 */
 
-{ matrix L,M,MA,MAM,T;
+{ matrix L,M,MA,MAM;
   long i,j,k;
   double *p,temp,*p1,**MM,**LM;
-  T=initmat(A.r,A.r);
 /* first get choleski factor of B */
   L=initmat(B.r,B.r);
   choleski(B,L,0,0); /* L contains choleski factor */
@@ -2926,7 +2925,7 @@ int lanczos_spd(matrix *A, matrix *V, matrix *va,int m,int lm)
 } /* end of lanczos_spd */
 
 
-void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm) {
+void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol) {
 /* Prototype faster lanczos_spd for calling from R.
    A is n by n symmetric matrix. Let k = m + max(0,lm).
    U is n by k and D is a k-vector.
@@ -2946,13 +2945,15 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm) {
              an eigenvector!
         
 */
-  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,low_conv,high_conv,use_low,conv;
-  double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*Ap,*zp,*qp,normTj,eps_stop=DOUBLE_EPS*10,max_err;
+  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,neg_conv,pos_conv,ni,pi,neg_closed,pos_closed,converged;
+  double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*Ap,*zp,*qp,normTj,eps_stop=DOUBLE_EPS,max_err;
   unsigned long jran=1,ia=106,ic=1283,im=6075; /* simple RNG constants */
   
+  eps_stop = *tol; 
+
   if (*lm<0) { biggest=1;*lm=0;} /* get m largest magnitude eigen-values */
   f_check = (*m + *lm)/2; /* how often to get eigen_decomp */
-  if (f_check<1) f_check ++;
+  if (f_check<10) f_check =10;
   kk = (int) floor(*n/10); if (kk<1) kk=1;  
   if (kk<f_check) f_check = kk;
 
@@ -3052,23 +3053,34 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm) {
       /* and check for termination ..... */
       if (j >= *m + *lm)
       { max_err=normTj*eps_stop;
-        if (biggest) 
-	{ low_conv=0;i=j; while (i>=0&&err[i]<max_err&&d[i]<0.0) { low_conv++;i--;}
-	  high_conv=0;i=0; while (i<=j&&err[i]<max_err&&d[i]>=0.0) { i++;high_conv++;}
-          conv=high_conv;use_low=0;
-          for (i=0;i<low_conv;i++) /* test each of the negatives to see if it should be in the set of largest */
-	  { if (high_conv==0) {conv++;use_low++;} else
-            if (-d[j-i]>=d[high_conv-1]) { conv++;use_low++;}
-          } 
-          if (conv >= *m) /* then have enough - need to reset lm and m appropriately and break */
-	  { while (conv > *m) /* drop smallest magnitude terms */ 
-	    { if (use_low==0) {high_conv--;conv--;} else
-	      if (high_conv==0) {use_low--;conv--;} else
-              if (-d[j-use_low+1]>d[high_conv-1]) {high_conv--;conv--;} else { use_low--;conv--;}
-            } 
-            *lm = use_low; *m = high_conv;
+        if (biggest) { /* getting m largest magnitude eigen values */
+          /* Finished only when the smallest element of the positive converged set and the 
+             smallest element of the negative converged set are both not in the largest magnitude 
+             set, or these sets are finished, and the largest magnitude set is of size *m, or when the total number 
+             converged equals the matrix dimension */
+	  pos_closed=neg_closed=0;
+          neg_conv=0;i=j; while (i>=0&&err[i]<max_err&&d[i]<0.0) { neg_conv++;i--;}
+          if (i>=0&&err[i]<max_err) neg_closed=1; /* all negatives found */
+	  pos_conv=0;i=0; while (i<=j&&err[i]<max_err&&d[i]>=0.0) { i++;pos_conv++;}
+          if (i<=j&&err[i]<max_err) pos_closed=1; /* all positives found */
+ 
+          if (neg_conv+pos_conv >= *m) { /* some chance of having finished */
+            pi=0;ni=0; /* counters for how many of neg and pos converged to include in largest set */
+            while (pi+ni < *m) {
+              if ((d[pi] > -d[j-ni]&&pi<pos_conv)||ni>=neg_conv) pi++; else ni++;
+            }
+            /* now pi and ni are the number of terms to include in the largest m 
+               from the +ve and -ve converged sets */
+            converged=1;
+            if (!pos_closed&&pi==pos_conv) converged=0; /* don't know that there is not a larger value to come */            
+            if (!neg_closed&&ni==neg_conv) converged=0; /* ditto */
+          } else converged = 0;
+ 
+          if (converged) {
+            *m = pi;
+            *lm = ni;
             j++;break;
-	  }
+          }
         } else
         { ok=1;
           for (i=0;i < *m;i++) if (err[i]>max_err) ok=0;
@@ -3124,12 +3136,12 @@ void printmat(matrix A,char *fmt)
   double n;
   n=matrixnorm(A);
   for (i=0;i<A.r;i++)
-  { printf("\n");
+  { Rprintf("\n");
     for (j=0;j<A.c;j++) 
-    if (fabs(A.M[i][j])>1e-14*n) printf(fmt,A.M[i][j]);
-    else printf(fmt,0.0);
+    if (fabs(A.M[i][j])>1e-14*n) Rprintf(fmt,A.M[i][j]);
+    else Rprintf(fmt,0.0);
   }
-  printf("\n");
+  Rprintf("\n");
 }
 
 void fprintmat(matrix A,char *fname,char *fmt)

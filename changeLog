@@ -1,7 +1,57 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
-ISSUES:
 
+1.7-7
+
+* "fs" smooth factor interaction class introduced, for smooth factor 
+  interactions where smoothing parameters are same at each factor level.
+  Very efficient with gamm, so good for e.g. individual subject smooths.
+
+* qq.gam default method modified for increased power.
+
+* "re" terms now allowed as tensor product marginals.
+
+* log saturated likelihoods modified w.r.t. weight handling, so that weights
+  are treated as modifying the scale parameter, when scale parameter is free.
+  i.e. obs specific scale parameter is overall scale parameter divided by 
+  obs weight. This ensures that when the scale parameter is free, RE/ML based
+  inference is invariant to multiplicative rescaling of weights. 
+
+* te and t2 now accept lists for 'm'. This allows more flexibility with 
+  marginals that can have vector 'm' arguments (Duchon splines, P splines).   
+
+* minor mroot fix/gam.reparam fix. Could declare symmetric matrix 
+  not symmetric and halt gam fit.
+
+* argument sparse added to bam to allow exploitation of sparsity in fitting,
+  but results disappointing.
+
+* "mrf" now evaluates rank of penalty null space numerically (previously 
+   assumed it was always one, which it need not be with e.g. a supplied 
+   penalty).
+
+* gam.side now corrects the penalty rank in smooth objects that have 
+  been constrained, to account for the constraint. Avoids some nested 
+  model failures.
+
+* gamm and gamm.setup code restructured to allow smooths nested in factors
+  and for cleaner object oriented converion of smooths to random effects.
+
+* gam.fit3 bug. Could fail on immediate divergence as null.eta was matrix.
+
+* slanczos bug fixes --- could segfault if k negative. Could also fail to 
+  return correct values when k small and kl < 0 (due to a convergence 
+  testing bug, now fixed)
+
+* gamm bug --- could fail if only smooth was a fixed one, by looking for
+  non-existent sp vector. fixed.
+
+* 'cc' Predict.matrix bug fix - prediction failed for single points.
+
+* summary.gam failed for single coefficient random effects. fixed.
+
+* gam returns rV, where t(rV)%*%rV*scale is Bayesian cov matrix.
+ 
 1.7-6
 
 ** factor `by' variable handling extended: if a by variable is an

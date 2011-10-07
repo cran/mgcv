@@ -41,7 +41,7 @@ void  tweedious(double *w,double *w1,double *w2,double *y,double *phi,double *p,
 void psum(double *y, double *x,int *index,int *n);
 void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
-void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm);
+void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol);
 void RQT(double *A,int *r,int *c);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
@@ -76,3 +76,18 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
                     double *UZ,double *Xu,int *nXu,double *C);
 void gen_tps_poly_powers(int *pi,int *M,int *m, int *d);
+
+/* sparse smooth related routines */
+void sparse_penalty(double *X,int *n,int *d,double *D,int *ni,int *k,int *m,int *a_weight,double *kappa);
+void k_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,int *get_a);
+void kba_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,
+            int *get_a,double *cut_off);
+void Rkdtree(double *X,int *n, int *d,double *lo,double *hi,int *ind, int *rind);
+void tri2nei(int *t,int *nt,int *n,int *d,int *off);
+void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
+		 int *m,int *a_weight,double *kappa);
+void sspl_construct(double *lambda,double *x,double *w,double *U,double *V,
+             double *diagA,double *lb,int *n,double *tol);
+void sspl_mapply(double *y,double *x,double *w,double *U,double *V,int *n,int *nf,double *tol,int *m);
+
+

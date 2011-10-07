@@ -40,10 +40,13 @@ gam.reparam <- function(rS,lsp,deriv)
                   r.tol = as.double(r.tol),
                   fixed_penalty = as.integer(fixed.penalty))
   S <- matrix(oo$S,q,q)
+  S <- (S+t(S))*.5
   p <- abs(diag(S))^.5            ## by Choleski, p can not be zero if S +ve def
   p[p==0] <- 1                    ## but it's possible to make a mistake!!
   ##E <-  t(t(chol(t(t(S/p)/p)))*p) 
-  E <- t(mroot(t(t(S/p)/p),rank=q)*p) ## the square root S, with column separation
+  St <- t(t(S/p)/p)
+  St <- (St + t(St))*.5 ## force exact symmetry -- avoids very rare mroot fails 
+  E <- t(mroot(St,rank=q)*p) ## the square root S, with column separation
   Qs <- matrix(oo$Qs,q,q)         ## the reparameterization matrix t(Qs)%*%S%*%Qs -> S
   k0 <- 1
   for (i in 1:length(rS)) { ## unpack the rS in the new space
@@ -257,7 +260,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
         ## need an initial `null deviance' to test for initial divergence... 
         ## null.coef <- qr.coef(qr(x),family$linkfun(mean(y)+0*y))
         ## null.coef[is.na(null.coef)] <- 0 
-        null.eta <- x%*%null.coef + as.numeric(offset)
+        null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
         old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights)) + t(null.coef)%*%St%*%null.coef 
         ## ... if the deviance exceeds this then there is an immediate problem
     
@@ -1962,7 +1965,10 @@ fix.family.ls<-function(fam)
   if (!is.null(fam$ls)) return(fam) 
   family <- fam$family
   if (family=="gaussian") {
-    fam$ls <- function(y,w,n,scale) c(-sum(w)*log(2*pi*scale)/2,-sum(w)/(2*scale),sum(w)/(2*scale*scale))
+    fam$ls <- function(y,w,n,scale) { 
+      nobs <- sum(w>0)
+      c(-nobs*log(2*pi*scale)/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
+    }
     return(fam)
   } 
   if (family=="poisson") {
@@ -1982,12 +1988,20 @@ fix.family.ls<-function(fam)
   if (family=="Gamma") {
     fam$ls <- function(y,w,n,scale) {
       res <- rep(0,3)
-      k <- -lgamma(1/scale) - log(scale)/scale - 1/scale
-      res[1] <- sum(w*(k-log(y)))
+      y <- y[w>0];w <- w[w>0]
+      scale <- scale/w
+      k <- -lgamma(1/scale) - log(scale)/scale - 1/scale 
+      res[1] <- sum(k-log(y))
       k <- (digamma(1/scale)+log(scale))/(scale*scale)
-      res[2] <- sum(w*k)  
+      res[2] <- sum(k/w)
       k <- (-trigamma(1/scale)/(scale) + (1-2*log(scale)-2*digamma(1/scale)))/(scale^3)
-      res[3] <- sum(w*k) 
+      res[3] <- sum(k/w^2) 
+    #  k <- -lgamma(1/scale) - log(scale)/scale - 1/scale
+    #  res[1] <- sum(w*(k-log(y)))
+    #  k <- (digamma(1/scale)+log(scale))/(scale*scale)
+    #  res[2] <- sum(w*k)  
+    #  k <- (-trigamma(1/scale)/(scale) + (1-2*log(scale)-2*digamma(1/scale)))/(scale^3)
+    #  res[3] <- sum(w*k) 
       res
     }
     return(fam)
@@ -1995,12 +2009,18 @@ fix.family.ls<-function(fam)
   if (family=="quasi"||family=="quasipoisson"||family=="quasibinomial") {
     ## fam$ls <- function(y,w,n,scale) rep(0,3)
     ## Uses extended quasi-likelihood form...
-    fam$ls <- function(y,w,n,scale) c(-sum(w)*log(scale)/2,-sum(w)/(2*scale),sum(w)/(2*scale*scale))
+    fam$ls <- function(y,w,n,scale) { 
+      nobs <- sum(w>0)
+      c(-nobs*log(scale)/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
+    }
     return(fam)
   }
   if (family=="inverse.gaussian") {
-    fam$ls <- function(y,w,n,scale) c(-sum(w*log(2*pi*scale*y^3))/2,
-     -sum(w)/(2*scale),sum(w)/(2*scale*scale))
+    fam$ls <- function(y,w,n,scale) {
+      nobs <- sum(w>0)
+      c(-sum(log(2*pi*scale*y^3))/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
+      ## c(-sum(w*log(2*pi*scale*y^3))/2,-sum(w)/(2*scale),sum(w)/(2*scale*scale))
+    }
     return(fam)
   }
   stop("family not recognised")

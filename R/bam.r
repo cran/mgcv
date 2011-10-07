@@ -1,5 +1,5 @@
 ## routines for very large dataset generalized additive modelling.
-## (c) Simon N. Wood 2009 
+## (c) Simon N. Wood 2009-2011
 
 
 ls.size <- function(x) {
@@ -141,8 +141,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
     }
  
     G$coefficients <- rep(0,ncol(G$X))
-    class(G) <- "gam"
-    
+    class(G) <- "gam"  
+
     conv <- FALSE
     for (iter in 1L:control$maxit) { ## main fitting loop
        ## accumulate the QR decomposition of the weighted model matrix
@@ -262,6 +262,165 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NUL
 
 
 
+bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NULL,
+    mustart = NULL, offset = rep(0, nobs),
+    control = gam.control(), intercept = TRUE)
+## version using sparse full model matrix in place of QR update...
+{   G$y <- y <- mf[[gp$response]]
+    weights <- G$w
+    conv <- FALSE
+    nobs <- nrow(mf)
+    nvars <- ncol(G$X)
+    offset <- G$offset
+    family <- G$family
+    G$family <- gaussian() ## needed if REML/ML used
+    variance <- family$variance
+    dev.resids <- family$dev.resids
+    aic <- family$aic
+    linkinv <- family$linkinv
+    mu.eta <- family$mu.eta
+    if (!is.function(variance) || !is.function(linkinv))
+        stop("'family' argument seems not to be a valid family object")
+    valideta <- family$valideta
+    if (is.null(valideta))
+        valideta <- function(eta) TRUE
+    validmu <- family$validmu
+    if (is.null(validmu))
+        validmu <- function(mu) TRUE
+    if (is.null(mustart)) {
+        eval(family$initialize)
+    }
+    else {
+        mukeep <- mustart
+        eval(family$initialize)
+        mustart <- mukeep
+    }
+ 
+    coefold <- NULL
+    eta <- if (!is.null(etastart))
+         etastart
+    else family$linkfun(mustart)
+    
+    mu <- linkinv(eta)
+    if (!(validmu(mu) && valideta(eta)))
+       stop("cannot find valid starting values: please specify some")
+    dev <- sum(dev.resids(y, mu, weights))*2 ## just to avoid converging at iter 1
+    boundary <- conv <- FALSE
+
+    G$n <- nobs
+    X <- G$X 
+
+    conv <- FALSE
+    for (iter in 1L:control$maxit) { ## main fitting loop
+      devold <- dev
+      if (iter>1) eta <- as.numeric(X%*%coef) + offset
+      mu <- linkinv(eta)
+      mu.eta.val <- mu.eta(eta)
+      good <- (G$w > 0) & (mu.eta.val != 0)
+      z <- (eta - offset)[good] + (y - mu)/mu.eta.val
+      w <- (G$w[good] * mu.eta.val[good]^2)/variance(mu)[good]
+      dev <- sum(dev.resids(y,mu,G$w))
+      W <- Diagonal(length(w),sqrt(w))
+      if (sum(good)<nobs) {
+        XWX <- as(Matrix:::crossprod(W%*%X[good,]),"matrix")
+      } else {
+        XWX <- as(Matrix:::crossprod(W%*%X),"matrix")
+      }      
+      qrx <- list(R = chol(XWX))
+      Wz <- W%*%z
+
+      ## in following note that Q = WXR^{-1} 
+      if (sum(good)<nobs) {
+        qrx$f <- forwardsolve(t(qrx$R),as.numeric(t(X[good,])%*%(W%*%Wz)))
+      } else {
+        qrx$f <- forwardsolve(t(qrx$R),as.numeric(t(X)%*%(W%*%Wz)))
+      }
+      qrx$y.norm2 <- sum(Wz^2)
+   
+      rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
+      
+      if (control$trace)
+         cat("Deviance =", dev, "Iterations -", iter,"\n")
+
+      if (!is.finite(dev)) stop("Non-finite deviance")
+
+      ## preparation for working model fit is ready, but need to test for convergence first
+      if (iter>2 && abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon) {
+          conv <- TRUE
+          coef <- start
+          break
+      }
+
+      if (method=="GCV.Cp") {
+         fit <- magic(qrx$f,qrx$R,G$sp,G$S,G$off,L=G$L,lsp0=G$lsp0,rank=G$rank,
+                      H=G$H,C=G$C,gamma=gamma,scale=scale,gcv=(scale<=0),
+                      extra.rss=rss.extra,n.score=G$n)
+ 
+         post <- magic.post.proc(qrx$R,fit,qrx$f*0+1) 
+      } else { ## method is "REML" or "ML"
+        y <- G$y; w <- G$w; n <- G$n;offset <- G$offset
+        G$y <- qrx$f
+        G$w <- G$y*0+1
+        G$X <- qrx$R
+        G$n <- length(G$y)
+        G$offset <- G$y*0
+        G$dev.extra <- rss.extra
+        G$pearson.extra <- rss.extra
+        G$n.true <- n
+        object <- gam(G=G,method=method,gamma=gamma,scale=scale)
+        y -> G$y; w -> G$w; n -> G$n;offset -> G$offset
+      }
+      gc()
+
+      if (method=="GCV.Cp") { 
+        object <- list()
+        object$coefficients <- fit$b
+        object$edf <- post$edf
+        object$full.sp <- fit$sp.full
+        object$gcv.ubre <- fit$score
+        object$hat <- post$hat
+        object$mgcv.conv <- fit$gcv.info 
+        object$optimizer="magic"
+        object$rank <- fit$gcv.info$rank
+        object$Ve <- post$Ve
+        object$Vp <- post$Vb
+        object$sig2 <- object$scale <- fit$scale
+        object$sp <- fit$sp
+        names(object$sp) <- names(G$sp)
+        class(object)<-c("gam")
+      }
+
+      coef <- object$coefficients
+        
+      if (any(!is.finite(coef))) {
+          conv <- FALSE
+          warning("non-finite coefficients at iteration ",
+                  iter)
+          break
+      }
+    } ## fitting iteration
+
+    if (!conv)
+       warning("algorithm did not converge")
+   
+    eps <- 10 * .Machine$double.eps
+    if (family$family == "binomial") {
+         if (any(mu > 1 - eps) || any(mu < eps))
+                warning("fitted probabilities numerically 0 or 1 occurred")
+    }
+    if (family$family == "poisson") {
+            if (any(mu < eps))
+                warning("fitted rates numerically 0 occurred")
+    }
+      
+  
+  object$wt <- w
+  rm(G);gc()
+  object
+} ## end bgam.fit2
+
+
+
 bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0) 
 ## function that does big additive model fit in strictly additive case
 {  ## first perform the QR decomposition, blockwise....
@@ -276,11 +435,6 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
     n.block <- n%/%chunk.size ## number of full sized blocks
     stub <- n%%chunk.size ## size of end block
     if (stub>0) n.block <- n.block + 1
-#    start <- 0:(n.block-1)*chunk.size + 1 ## block starts
-#    end <- start + chunk.size;           ## block ends
-#    if (rho==0) end <- end - 1  ## otherwise most blocks go to 1 beyond block end
-#    end[n.block] <- n           ## block ends
-
     start <- 0:(n.block-1)*chunk.size    ## block starts
     end <- start + chunk.size;           ## block ends
     end[n.block] <- n
@@ -292,11 +446,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
       ind <- start[i]:end[i] 
       if (rho!=0) {
         N <- end[i]-start[i]+1
-        ## following are alternative form (harder to update)...       
-        #row <- rep(1:N,rep(2,N))[-1]
-        #weight <- c(rep(c(ld,sd),N-1),ld)
-        #if (end[i]==n) weight[2*N-1] <- 1
-        #stop <- c(1:(N-1)*2,2*N-1)
+
         row <- c(1,rep(1:N,rep(2,N))[-c(1,2*N)])
         weight <- c(1,rep(c(sd,ld),N-1))
         stop <- c(1,1:(N-1)*2+1)
@@ -308,13 +458,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
       y <- w*(G$model[[gp$response]] - G$offset[ind])
       if (rho!=0) {
         ## Apply transform...
-     #   if (end[i]==n) {
-     #     X <- rwMatrix(stop,row,weight,X)
-     #     y <- rwMatrix(stop,row,weight,y)
-     #   } else {
-     #     X <- rwMatrix(stop,row,weight,X)[-N,]
-     #     y <- rwMatrix(stop,row,weight,y)[-N]
-     #   }
+ 
         if (end[i]==n) yX.last <- c(y[nrow(X)],X[nrow(X),]) ## store final row, in case of update
         if (i==1) {
            X <- rwMatrix(stop,row,weight,X)
@@ -402,12 +546,42 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0)
   object
 }
 
+sparse.model.matrix <- function(G,mf,chunk.size) {
+## create a whole sparse model matrix
+  nobs = nrow(mf)
+  n.block <- nobs%/%chunk.size ## number of full sized blocks
+  stub <- nobs%%chunk.size ## size of end block
+  if (n.block>0) {
+    start <- (0:(n.block-1))*chunk.size+1
+      stop <- (1:n.block)*chunk.size
+      if (stub>0) {
+        start[n.block+1] <- stop[n.block]+1
+        stop[n.block+1] <- nobs
+        n.block <- n.block+1
+      } 
+  } else {
+    n.block <- 1
+    start <- 1
+    stop <- nobs
+  }
+  G$coefficients <- rep(0,ncol(G$X))
+  class(G) <- "gam"
+
+  X <- Matrix(0,nobs,ncol(G$X))   
+  for (b in 1:n.block) {    
+    ind <- start[b]:stop[b]
+    G$model <- mf[ind,]
+    X[ind,] <- as(predict(G,type="lpmatrix"),"dgCMatrix")
+    gc()
+  }
+  X
+}
 
 
 
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="REML",control=list(),scale=0,gamma=1,knots=NULL,
-                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,...)
+                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,sparse=FALSE,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -430,7 +604,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   mf<-match.call(expand.dots=FALSE)
   mf$formula<-gp$fake.formula 
   mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <-
-  mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$...<-NULL
+  mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$sparse <- mf$...<-NULL
   mf$drop.unused.levels<-TRUE
   mf[[1]]<-as.name("model.frame")
   pmf <- mf
@@ -462,8 +636,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   ## need mini.mf for basis setup, then accumulate full X, y, w and offset
   mf0 <- mini.mf(mf,chunk.size)
     
-  G<-mgcv:::gam.setup(gp,pterms=pterms,data=mf0,knots=knots,sp=sp,min.sp=min.sp,
-                 H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,
+  G <- mgcv:::gam.setup(gp,pterms=pterms,data=mf0,knots=knots,sp=sp,min.sp=min.sp,
+                 H=NULL,absorb.cons=TRUE,sparse.cons=as.numeric(sparse)*2,select=FALSE,
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
 
@@ -500,7 +674,15 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   
   colnamesX <- colnames(G$X)  
 
-  if (am) {
+  if (sparse) { ## Form a sparse model matrix...
+    require(Matrix)
+    if (sum(G$X==0)/prod(dim(G$X))<.5) warning("model matrix too dense for any possible benefit from sparse")
+    if (nrow(mf)<=chunk.size) G$X <- as(G$X,"dgCMatrix") else 
+      G$X <- sparse.model.matrix(G,mf,chunk.size)
+    if (rho!=0) warning("AR1 parameter rho unused with sparse fitting")
+    object <- bgam.fit2(G, mf, chunk.size, gp ,scale ,gamma,method=method,
+                       control = control,...)
+  } else if (am) {
     if (nrow(mf)>chunk.size) G$X <- matrix(0,0,ncol(G$X)); gc() 
     object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho)
   } else {
@@ -544,7 +726,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$model <- mf;rm(mf);gc()
   object$na.action <- attr(object$model,"na.action") # how to deal with NA's
   object$nsdf <- G$nsdf
-  names(object$coefficients)[1:G$nsdf] <- colnamesX[1:G$nsdf]
+  if (G$nsdf>0) names(object$coefficients)[1:G$nsdf] <- colnamesX[1:G$nsdf]
   object$offset <- G$offset
   object$prior.weights <- G$w
   object$pterms <- G$pterms
@@ -724,5 +906,5 @@ bam.update <- function(b,data,chunk.size=10000) {
 
 #### ISSUES:   
 ## ? negative binomial support --- docs say it's there...
-## need to add `bam' examples to the test suite, and possibly update the test suite
-## to work through failures, logging them. 
+## offset unused in bam/bgam.fit, also gp only needed for "response",
+## so could efficiently be replaced

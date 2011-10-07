@@ -16,7 +16,7 @@ Rrank <- function(R,tol=.Machine$double.eps^.9) {
   rank
 }
  
-slanczos <- function(A,k=10,kl=-1) {
+slanczos <- function(A,k=10,kl=-1,tol=.Machine$double.eps^.5) {
 ## Computes truncated eigen decomposition of symmetric A by 
 ## Lanczos iteration. If kl < 0 then k largest magnitude
 ## eigenvalues returned, otherwise k highest and kl lowest.
@@ -28,13 +28,16 @@ slanczos <- function(A,k=10,kl=-1) {
 ## then you might as well use eigen(A,symmetric=TRUE), but the
 ## extra cost is the expensive accumulation of eigenvectors.
 ## Should re-write whole thing using LAPACK routines for eigenvectors. 
+   if (tol<=0||tol>.01) stop("silly tolerance supplied")
    k <- round(k);kl <- round(kl)
-   m <- k + max(0,kl)
-   if (m<1) return(list(values=rep(0,0),vectors=matrix(0,n,0),iter=0))
+   if (k<0) stop("argument k must be positive.")
+   m <- k + max(0,kl) 
    n <- nrow(A) 
+   if (m<1) return(list(values=rep(0,0),vectors=matrix(0,n,0),iter=0)) 
    if (n != ncol(A)) stop("A not square")
+   if (m>n) stop("Can not have more eigenvalues than nrow(A)")
    oo <- .C(C_Rlanczos,A=as.double(A),U=as.double(rep(0,n*m)),D=as.double(rep(0,m)),
-            n=as.integer(n),m=as.integer(k),ml=as.integer(kl))
+            n=as.integer(n),m=as.integer(k),ml=as.integer(kl),tol=as.double(tol))
    list(values = oo$D,vectors = matrix(oo$U,n,m),iter=oo$n) 
 }
 
@@ -444,6 +447,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
             sm[[i]]$S[[j]] <- sm[[i]]$S[[j]][-ind,-ind]
             if (sum(sm[[i]]$S[[j]]!=0)==0) rank <- 0 else
             rank <- qr(sm[[i]]$S[[j]],tol=tol,LAPACK=FALSE)$rank
+            sm[[i]]$rank[j] <- rank ## replace previous rank with new rank
             if (rank == 0) { ## drop the penalty
               sm[[i]]$rank <- sm[[i]]$rank[-j]
               sm[[i]]$S[[j]] <- NULL
@@ -583,7 +587,7 @@ parametricPenalty <- function(pterms,assign,paraPen,sp0) {
 
 gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
-                    scale.penalty=TRUE,paraPen=NULL)
+                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE)
 # set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 # needed for a gam fit.
 { # split the formula if the object being passed is a formula, otherwise it's already split
@@ -624,14 +628,15 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
       min.sp <- min.sp[-ind]
     } 
   }
-    
-##  if (parametric.only) { G$X<-X;return(G)}
   
   # next work through smooth terms (if any) extending model matrix.....
   
   G$smooth<-list()
   G$S<-list()
  
+  if (gamm.call) { ## flag that this is a call from gamm --- some smoothers need to now!
+    if (m>0) for (i in 1:m) attr(split$smooth.spec[[i]],"gamm") <- TRUE
+  }
 
   if (m>0 && idLinksBases) { ## search smooth.spec[[]] for terms linked by common id's
     id.list <- list() ## id information list
@@ -1253,7 +1258,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   object$K <-  object$D1 <-  object$D2 <-  object$P <-  object$P1 <-  object$P2 <-  
   object$GACV <-  object$GACV1 <-  object$GACV2 <-  object$REML <-  object$REML1 <-  object$REML2 <-  
   object$GCV<-object$GCV1<- object$GCV2 <- object$UBRE <-object$UBRE1 <- object$UBRE2 <- object$trA <-
-  object$trA1<- object$trA2 <- object$alpha <- object$alpha1 <- object$rV <- object$scale.est <- NULL
+  object$trA1<- object$trA2 <- object$alpha <- object$alpha1 <- object$scale.est <- NULL
   object$sig2 <- object$scale
   
   object
@@ -1426,8 +1431,8 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
     G$null.coef <- null.stuff$null.coef
 
     object <- gam.outer(lsp,fscale=null.stuff$null.scale, ##abs(object$gcv.ubre)+object$sig2/length(G$y),
-                        family=G$family,
-                        control=control,criterion=criterion,method=method,optimizer=optimizer,scale=scale,gamma=gamma,G=G,...)
+                        family=G$family,control=control,criterion=criterion,method=method,
+                        optimizer=optimizer,scale=scale,gamma=gamma,G=G,...)
     
     if (criterion%in%c("REML","ML")&&scale<=0)  object$sp <- 
                                                 object$sp[-length(object$sp)] ## drop scale estimate from sp array
@@ -2075,7 +2080,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         family = family,linear.predictors = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,  
         df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,edf1=mv$edf1,hat=G$hat,
-        boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,mgcv.conv=G$conv,
+        boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,rV=mr$rV,mgcv.conv=G$conv,
         gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev,scale.estimated = (scale < 0))
 }
 
@@ -2560,29 +2565,30 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
     covmat <- dispersion * covmat.unscaled
     est.disp <- FALSE
   } else dispersion <- object$sig2
-  se<-0;for (i in 1:length(object$coefficients)) se[i] <- covmat[i,i]^0.5
+  #se<-0;for (i in 1:length(object$coefficients)) se[i] <- covmat[i,i]^0.5
+  se <- diag(covmat)^0.5
   residual.df<-length(object$y)-sum(object$edf)
   if (object$nsdf>0) # individual parameters
-  { p.coeff<-object$coefficients[1:object$nsdf]
+  { p.coeff <- object$coefficients[1:object$nsdf]
     p.se <- se[1:object$nsdf]
     p.t<-p.coeff/p.se
     if (!est.disp) {
-      p.pv<-2*pnorm(abs(p.t),lower.tail=FALSE)
-      p.table<-cbind(p.coeff, p.se, p.t, p.pv)   
+      p.pv <- 2*pnorm(abs(p.t),lower.tail=FALSE)
+      p.table <- cbind(p.coeff, p.se, p.t, p.pv)   
       dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "z value", "Pr(>|z|)"))
     } else {
-      p.pv<-2*pt(abs(p.t),df=residual.df,lower.tail=FALSE)
-      p.table<-cbind(p.coeff, p.se, p.t, p.pv)
+      p.pv <- 2*pt(abs(p.t),df=residual.df,lower.tail=FALSE)
+      p.table <- cbind(p.coeff, p.se, p.t, p.pv)
       dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "t value", "Pr(>|t|)"))
     }    
-  } else {p.coeff<-p.t<-p.pv<-array(0,0)}
+  } else {p.coeff <- p.t <- p.pv <- array(0,0)}
   
   term.labels<-attr(object$pterms,"term.labels")
   nt<-length(term.labels)
   if (nt>0) # individual parametric terms
-  { np<-length(object$assign)
-    Vb<-matrix(covmat[1:np,1:np],np,np)
-    bp<-array(object$coefficients[1:np],np)
+  { np <- length(object$assign)
+    Vb <- covmat[1:np,1:np,drop=FALSE]
+    bp <- array(object$coefficients[1:np],np)
     pTerms.pv <- array(0,nt)
     attr(pTerms.pv,"names") <- term.labels
     pTerms.df <- pTerms.chi.sq <- pTerms.pv
@@ -2600,9 +2606,9 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
         pTerms.chi.sq[i] <- t(b)%*%V%*%b
       }
       if (!est.disp)
-      pTerms.pv[i]<-pchisq(pTerms.chi.sq[i],df=nb,lower.tail=FALSE)
+      pTerms.pv[i] <- pchisq(pTerms.chi.sq[i],df=nb,lower.tail=FALSE)
       else
-      pTerms.pv[i]<-pf(pTerms.chi.sq[i]/nb,df1=nb,df2=residual.df,lower.tail=FALSE)      
+      pTerms.pv[i] <- pf(pTerms.chi.sq[i]/nb,df1=nb,df2=residual.df,lower.tail=FALSE)      
     }
     if (!est.disp) {      
       pTerms.table <- cbind(pTerms.df, pTerms.chi.sq, pTerms.pv)   
@@ -2640,20 +2646,20 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
       ##  edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
     }
     for (i in 1:m)
-    { start<-object$smooth[[i]]$first.para;stop<-object$smooth[[i]]$last.para
-      V <- covmat[start:stop,start:stop] # cov matrix for smooth
-      p<-object$coefficients[start:stop]  # params for smooth
+    { start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
+      V <- covmat[start:stop,start:stop,drop=FALSE] # cov matrix for smooth
+      p <- object$coefficients[start:stop]  # params for smooth
       edf1[i] <- edf[i] <- sum(object$edf[start:stop]) # edf for this smooth
       ## extract alternative edf estimate for this smooth, if possible...
       if (!is.null(object$edf1)) edf1[i] <-  sum(object$edf1[start:stop]) 
       if (freq) { ## old style frequentist
-        M1<-object$smooth[[i]]$df
-        M<-min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
-        V<-pinv(V,M) # get rank M pseudoinverse of V
-        chi.sq[i]<-t(p)%*%V%*%p
+        M1 <- object$smooth[[i]]$df
+        M <- min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
+        V <- pinv(V,M) # get rank M pseudoinverse of V
+        chi.sq[i] <- t(p)%*%V%*%p
         df[i] <- attr(V, "rank")
       } else { ## Inverted Nychka interval statistics
-        Xt <- X[,start:stop] 
+        Xt <- X[,start:stop,drop=FALSE] 
         ft <- Xt%*%p
        
         df[i] <- min(ncol(Xt),edf1[i])
@@ -2664,7 +2670,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
       }
       names(chi.sq)[i]<- object$smooth[[i]]$label
       if (!est.disp)
-      s.pv[i]<-pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
+      s.pv[i] <- pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
       else
       s.pv[i] <- pf(chi.sq[i]/df[i], df1 = df[i], df2 = residual.df, lower.tail = FALSE)
       ## p-values are meaningless for very small edf. Need to set to NA
@@ -2996,7 +3002,7 @@ mroot <- function(A,rank=NULL,method="chol")
 # given rank. B is returned where BB'=A. A assumed non-negative definite. 
 # Current methods "chol", "svd". "svd" is much slower, but much better at getting the 
 # correct rank if it isn't known in advance. 
-{ if (!all.equal(A,t(A))) stop("Supplied matrix not symmetric")
+{ if (!isTRUE(all.equal(A,t(A)))) stop("Supplied matrix not symmetric")
   if (method=="svd")
   { um<-La.svd(A)
     if (sum(um$d!=sort(um$d,decreasing=TRUE))>0) 
@@ -3012,12 +3018,12 @@ mroot <- function(A,rank=NULL,method="chol")
     return(t(t(um$u[,1:rank])*as.vector(d))) # note recycling rule used for efficiency
   } else
   if (method=="chol")
-  { op<-options(warn=-1) ## don't want to be warned it's not +ve def
-    L<-chol(A,pivot=TRUE)
+  { op <- options(warn=-1) ## don't want to be warned it's not +ve def
+    L <- chol(A,pivot=TRUE)
     options(op) ## reset default warnings
-    piv<-order(attr(L,"pivot"))
-    if (is.null(rank)) rank<-attr(L,"rank")
-    L<-L[,piv,drop=FALSE];L<-t(L[1:rank,,drop=FALSE])
+    piv <- order(attr(L,"pivot"))
+    if (is.null(rank)) rank <- attr(L,"rank")
+    L <- L[,piv,drop=FALSE];L <- t(L[1:rank,,drop=FALSE])
     if (rank <= 1) dim(L) <- c(nrow(A),1)
     return(L)
   } else
@@ -3203,9 +3209,9 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
   # get square roots of penalties using supplied ranks or estimated 
   if (n.p>0)
   { for (i in 1:n.p) 
-    { if (is.null(rank)) B<-mroot(S[[i]],method="svd") 
-      else B<-mroot(S[[i]],rank=rank[i],method="chol")
-      m<-dim(B)[2]
+    { if (is.null(rank)) B <- mroot(S[[i]],method="svd") 
+      else B <- mroot(S[[i]],rank=rank[i],method="chol")
+      m <- dim(B)[2]
       R<-matrix(0,n.b,m)
       R[off[i]:(off[i]+dim(B)[1]-1),]<-B
       S[[i]]<-R
