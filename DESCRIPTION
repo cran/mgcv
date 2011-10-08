@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.7-6
+Version: 1.7-7
 Author: Simon Wood <simon.wood@r-project.org>
 Maintainer: Simon Wood <simon.wood@r-project.org>
 Title: GAMs with GCV/AIC/REML smoothness estimation and GAMMs by PQL
@@ -12,6 +12,6 @@ Imports: graphics, stats, nlme, Matrix
 Suggests: nlme (>= 3.1-64), splines, Matrix
 LazyLoad: yes
 License: GPL (>= 2)
-Packaged: 2011-04-14 11:16:32 UTC; simon
+Packaged: 2011-10-07 12:12:09 UTC; simon
 Repository: CRAN
-Date/Publication: 2011-04-14 17:01:29
+Date/Publication: 2011-10-08 06:44:13
