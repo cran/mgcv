@@ -2818,7 +2818,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       if (!alwaysCon) {
         if (matrixArg) {
           ##q <- nrow(sml[[1]]$X)/n
-          L1 <- matrix(by,n,q)%*%rep(1,q)
+          L1 <- as.numeric(matrix(by,n,q)%*%rep(1,q))
           if (sd(L1)>mean(L1)*.Machine$double.eps*1000) { 
             sml[[1]]$C <- sm$C <- matrix(0,0,1)
             if (!is.null(sm$Cp)) sml[[1]]$Cp <- sm$Cp <- NULL
