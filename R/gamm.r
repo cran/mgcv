@@ -822,22 +822,22 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),
   ## first have to create a processing order, so that any smooths conditional on 
   ## multi-level factors are processed last, and hence end up at the end of the 
   ## random list (right is nested in left in this list!)
-
-  pord <- 1:G$m
-  done <- rep(FALSE,length(pord))
-  k <- 0
-  f.name <- NULL
-  for (i in 1:G$m) if (is.null(G$smooth[[i]]$fac)) { 
-       k <- k + 1
-       pord[k] <- i 
-       done[i] <- TRUE
-  } else {
-    if (is.null(f.name)) f.name <- G$smooth[[i]]$fterm
-    else if (f.name!=G$smooth[[i]]$fterm) stop("only one level of smooth nesting is supported by gamm")
-  }   
-  if (k < G$m) pord[(k+1):G$m] <- (1:G$m)[!done] 
-  ## .... ordered so that nested smooths are last
-
+  if (G$m>0) {
+    pord <- 1:G$m
+    done <- rep(FALSE,length(pord))
+    k <- 0
+    f.name <- NULL
+    for (i in 1:G$m) if (is.null(G$smooth[[i]]$fac)) { 
+         k <- k + 1
+         pord[k] <- i 
+         done[i] <- TRUE
+    } else {
+      if (is.null(f.name)) f.name <- G$smooth[[i]]$fterm
+      else if (f.name!=G$smooth[[i]]$fterm) stop("only one level of smooth nesting is supported by gamm")
+    }   
+    if (k < G$m) pord[(k+1):G$m] <- (1:G$m)[!done] 
+    ## .... ordered so that nested smooths are last
+  }
 
   if (G$m) for (i in 1:G$m) { ## work through the smooths
     
@@ -919,13 +919,13 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),
  
     sm$X <- NULL ## delete model matrix
   
-    G$smooth[[pord[i]]] <- sm  ## replace smooth object with extended version 
+    if (G$m>0) G$smooth[[pord[i]]] <- sm  ## replace smooth object with extended version 
   }
  
   G$random <- random
   G$X <- X  ## fixed effects model matrix
   G$data <- data
-  G$pord <- pord ## gamm needs to run through smooths in same order as here
+  if (G$m>0) G$pord <- pord ## gamm needs to run through smooths in same order as here
 
   G
 } ## end of gamm.setup
@@ -1546,7 +1546,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     }
     
     object$sp <- rep(0,0)
-    for (i in 1:length(spl)) if (!is.null(spl[[i]])) object$sp <- c(object$sp,spl[[i]]) 
+    if (length(spl)) for (i in 1:length(spl)) if (!is.null(spl[[i]])) object$sp <- c(object$sp,spl[[i]]) 
     if (length(object$sp)==0) object$sp <- NULL  
 
     object$coefficients <- p
@@ -1681,6 +1681,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     if (!is.null(G$Xcentre)) object$Xcentre <- G$Xcentre ## column centering values
 
     ret$gam <- object
+    class(ret) <- c("gamm","list")
     ret
 
 } ## end gamm

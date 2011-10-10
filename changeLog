@@ -1,6 +1,14 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-8
+
+* gamm.setup fix. Bug introduced in 1.7-7 whereby gamm with no smooths would
+  fail.
+
+* gamm gives returned object a class "gamm"
+
+
 1.7-7
 
 * "fs" smooth factor interaction class introduced, for smooth factor 
