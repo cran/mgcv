@@ -1,6 +1,19 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-9
+
+* rather lovely plot method added for splines on the sphere.
+
+* plot.gam modified to allow 'scheme' to be specified for plots, to easily
+  select different plot looks.
+
+* schemes added for default smooth plotting method, modified for mrfs and 
+  factor-smooth interactions.
+
+* mgcv function deprected, since magic and gam are much better (let me know 
+  if this is really a problem).  
+
 1.7-8
 
 * gamm.setup fix. Bug introduced in 1.7-7 whereby gamm with no smooths would

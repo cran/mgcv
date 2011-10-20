@@ -1,4 +1,3 @@
-
 ##  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
 ##  With contributions from Henric Nilsson
 
@@ -232,7 +231,7 @@ plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=NULL,...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method for a "random.effect" smooth class
  
   if (is.null(P)) { ## get plotting information...
@@ -252,6 +251,179 @@ plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2
   } ## end of plot production
 } ## end of plot.random.effect
 
+
+repole <- function(lo,la,lop,lap) {
+## painfully plodding function to get new lo, la relative to pole at
+## lap,lop...
+  ## x,y,z location of pole...
+  yp <- sin(lap)
+  xp <- cos(lap)*sin(lop)
+  zp <- cos(lap)*cos(lop)
+  
+  ## x,y,z location of meridian point for pole - i.e. point lat pi/2
+  ## from pole on pole's lon.
+
+  ym <- sin(lap-pi/2)
+  xm <- cos(lap-pi/2)*sin(lop)
+  zm <- cos(lap-pi/2)*cos(lop)
+
+  ## x,y,z locations of points in la, lo
+
+  y <- sin(la)
+  x <- cos(la)*sin(lo)
+  z <- cos(la)*cos(lo)
+
+  ## get angle between points and new equatorial plane (i.e. plane orthogonal to pole)
+  d <- sqrt((x-xp)^2+(y-yp)^2+(z-zp)^2) ## distance from points to to pole 
+  phi <- pi/2-2*asin(d/2)
+
+  ## location of images of la,lo on (new) equatorial plane
+  ## sin(phi) gives distance to plane, -(xp, yp, zp) is 
+  ## direction... 
+  x <- x - xp*sin(phi)
+  y <- y - yp*sin(phi)
+  z <- z - zp*sin(phi)
+
+  ## get distances to meridian point
+  d <- sqrt((x-xm)^2+(y-ym)^2+(z-zm)^2)
+  ## angles to meridian plane (i.e. plane containing origin, meridian point and pole)...
+  theta <- acos((1+cos(phi)^2-d^2)/(2*cos(phi)))
+  
+  ## now decide which side of meridian plane...
+
+  ## get points at extremes of hemispheres on either side
+  ## of meridian plane.... 
+  y1 <- 0
+  x1 <- sin(lop+pi/2)
+  z1 <- cos(lop+pi/2)
+
+  y0 <- 0
+  x0 <- sin(lop-pi/2)
+  z0 <- cos(lop-pi/2)
+
+  d1 <- sqrt((x-x1)^2+(y-y1)^2+(z-z1)^2)
+  d0 <- sqrt((x-x0)^2+(y-y0)^2+(z-z0)^2)
+
+  ii <- d0 < d1 ## index -ve lon hemisphere 
+  theta[ii] <- -theta[ii]
+  
+  list(lo=theta,la=phi)
+} ## end of repole
+
+lolaxy <- function(lo,la,theta,phi) {
+## takes locations lo,la, relative to a pole at lo=theta, la=phi. 
+## theta, phi are expressed relative to plotting co-ordinate system 
+## with pole at top. Convert to x,y in plotting co-ordinates.
+## all in radians!
+  er <- repole(-lo,la,-pi,phi)
+  er$lo <- er$lo - theta
+  y <- sin(er$la)
+  x <- cos(er$la)*sin(er$lo)
+  z <- cos(er$la)*cos(er$lo)
+  ind <- z<0
+  list(x=x[ind],y=y[ind])
+} ## end of lolaxy
+
+plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
+## plot method function for sos.smooth terms
+  if (scheme>1) return(plot.mgcv.smooth(x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
+                     partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
+                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
+                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme-2,...))
+  ## convert location of pole in plotting grid to radians
+  phi <- phi*pi/180
+  theta <- theta*pi/180
+  
+  ## re-map to sensible values...
+  theta <- theta%%(2*pi)
+  if (theta>pi) theta <- theta - 2*pi
+ 
+  phi <- phi%%(2*pi)
+  if (phi > pi) phi <- phi - 2*pi
+  if (phi > pi/2) phi <- pi - phi
+  if (phi < -pi/2 ) phi <- -(phi+pi)  
+
+  if (is.null(P)) { ## get plotting information...
+    if (!x$plot.me) return(NULL) ## shouldn't or can't plot
+    ## get basic plot data 
+    raw <- data[x$term]
+    if (rug) { ## need to project data onto plotting grid...
+      raw <- lolaxy(lo=raw[[2]]*pi/180,la=raw[[1]]*pi/180,theta,phi)
+    }
+
+    m <- round(n2*1.5)
+    ym <- xm <- seq(-1,1,length=m)
+    gr <- expand.grid(x=xm,y=ym)
+    r <- z <- gr$x^2+gr$y^2
+    z[z>1] <- NA
+    z <- sqrt(1-z)
+
+    ## generate la, lo in plotting grid co-ordinates...
+    ind <- !is.na(z) 
+    r <- r[ind]
+    la <- asin(gr$y[ind])
+    lo <- cos(la)
+    lo <- asin(gr$x[ind]/lo)
+
+    um <- repole(lo,la,theta,phi)
+ 
+    dat <- data.frame(la=um$la*180/pi,lo=um$lo*180/pi)
+    names(dat) <- x$term
+
+    X <- PredictMat(x,dat)   # prediction matrix for this term
+
+    ## fix lo for smooth contouring
+    lo <- dat[[2]]
+    ii <- lo <= -177
+    lo[ii] <- lo[ii] <- 360 + lo[ii]
+    ii <- lo < -165 & lo > -177 
+    ii <- ii | (abs(dat[[1]])>80) 
+    lo[ii] <- NA
+
+    return(list(X=X,scale=FALSE,se=FALSE,raw=raw,xlab="",ylab="",main="",
+                ind=ind,xm=xm,ym=ym,lo=lo,la=dat[[1]]))
+  } else { ## do plot
+    op <- par(pty="s",mar=c(0,0,0,0))
+    m <- length(P$xm); zz <- rep(NA,m*m)
+    if (scheme == 0) {
+      col <- 1# "lightgrey 
+      zz[P$ind] <- P$fit
+      image(P$xm,P$ym,matrix(zz,m,m),col=heat.colors(100),axes=FALSE,xlab="",ylab="",...)
+      if (rug) { 
+        if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
+        points(P$raw$x,P$raw$y,...)
+      }
+      zz[P$ind] <- P$la
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,levels=c(-8:8*10),col=col,...)
+      zz[P$ind] <- P$lo
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,levels=c(-8:9*20),col=col,...)
+      zz[P$ind] <- P$fit
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,col=3,...)
+    } else if (scheme == 1) {
+      col <- 1 
+      zz[P$ind] <- P$fit
+      contour(P$xm,P$ym,matrix(zz,m,m),col=1,axes=FALSE,xlab="",ylab="",...) 
+      if (rug) { 
+        if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
+        points(P$raw$x,P$raw$y,...)
+      }
+      zz[P$ind] <- P$la
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,levels=c(-8:8*10),col=col,lty=2,...)
+      zz[P$ind] <- P$lo
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,levels=c(-8:9*20),col=col,lty=2,...)
+      theta <- seq(-pi/2,pi/2,length=200)
+      x <- sin(theta);y <- cos(theta)
+      x <- c(x,x[200:1]);y <- c(y,-y[200:1])
+      lines(x,y)
+    } 
+    par(op)
+  }
+} ## end plot.sos.smooth
 
 poly2 <- function(x,col) {
 ## let x be a 2 col matrix defining some polygons. 
@@ -356,7 +528,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme="grey",...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method function for mrf.smooth terms, depends heavily on polys.plot, above
   if (is.null(P)) { ## get plotting information...
     if (!x$plot.me||is.null(x$xt$polys)) return(NULL) ## shouldn't or can't plot
@@ -369,6 +541,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     return(list(X=X,scale=FALSE,se=FALSE,raw=raw,xlab=xlabel,ylab=ylabel,
              main=label))
     } else { ## do plot
+      if (scheme==0) scheme <- "heat" else scheme <- "grey"
       polys.plot(x$xt$polys,P$fit,scheme=scheme,lab=P$main)
     }
 
@@ -378,7 +551,7 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme="grey",...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method for simple smooth factor interactions...
   if (is.null(P)) { ## get plotting info
     if (x$dim!=1) return(NULL) ## no method for base smooth dim > 1
@@ -398,7 +571,8 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
     plot(P$x[ind],P$fit[ind],ylim=range(P$fit),xlab=P$xlab,ylab=P$ylab,type="l")
     if (P$nf>1) for (i in 2:P$nf) {
       ind <- ind + P$n
-      lines(P$x,P$fit[ind],lty=i,col=i)
+      if (scheme==0) lines(P$x,P$fit[ind],lty=i,col=i) else 
+      lines(P$x,P$fit[ind],lty=i)
     }
   }
 } ## end plot.fs.interaction
@@ -407,7 +581,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=NULL,...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
 ## `x' is a smooth object, usually part of a `gam' fit.
 ## `P' is a list of plot data. 
@@ -557,6 +731,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
   } else { ## produce plot
     if (se) { ## produce CI's
       if (x$dim==1) { 
+        if (scheme == 1) shade <- TRUE
         ul <- P$fit + P$se ## upper CL
         ll <- P$fit - P$se ## lower CL
         if (scale==0&&is.null(ylim)) { ## get scale 
@@ -576,7 +751,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                  xlim=P$xlim,ylab=P$ylab,main=P$main,...)
           polygon(c(P$x,P$x[n:1],P$x[1]),
                     trans(c(ul,ll[n:1],ul[1])+shift),col = shade.col,border = NA)
-          lines(P$x,trans(P$fit+shift))
+          lines(P$x,trans(P$fit+shift),...)
         } else { ## ordinary plot 
           plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,ylim=trans(ylimit+shift),xlim=P$xlim,
                  ylab=P$ylab,main=P$main,...)
@@ -606,9 +781,18 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 
       } else if (x$dim==2) { 
         P$fit[P$exclude] <- NA
-        if (pers) { ## perspective plot 
+        if (pers) scheme <- 1
+        if (scheme == 1) { ## perspective plot 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
+        } else if (scheme==2) {
+          image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=heat.colors(50),...)
+          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=3,...)
+          if (rug) {  
+            if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
+            points(P$raw$x,P$raw$y,...)
+          }
         } else { ## contour plot with error contours
           sp.contour(P$x,P$y,matrix(P$fit,n2,n2),matrix(P$se,n2,n2),
                      xlab=P$xlab,ylab=P$ylab,zlab=P$main,titleOnly=!is.null(main),
@@ -642,9 +826,18 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       } else if (x$dim==2) { 
         P$fit[P$exclude] <- NA
         if (!is.null(main)) P$title <- main
-        if (pers) { 
+        if (pers) scheme <- 1
+        if (scheme==1) { 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                           zlab=P$main,theta=theta,phi=phi,xlim=P$xlim,ylim=P$ylim,...)
+        } else if (scheme==2) {
+          image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=heat.colors(50),...)
+          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=3,...)
+          if (rug) {  
+            if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
+            points(P$raw$x,P$raw$y,...)
+          }
         } else { 
           contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   main=P$main,xlim=P$xlim,ylim=P$ylim,...)
@@ -665,7 +858,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,scheme="grey",...)
+                     shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,scheme=0,...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -713,6 +906,13 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
 
   m <- length(x$smooth) ## number of smooth terms
 
+  if (length(scheme)==1) scheme <- rep(scheme,m)
+  if (length(scheme)!=m) { 
+    warn <- paste("scheme should be a single number, or a vector with",m,"elements")
+    warning(warn)
+    scheme <- rep(scheme[1],m)
+  }
+
   order <- attr(x$pterms,"order") # array giving order of each parametric term
 
   if (all.terms) # plot parametric terms as well
@@ -746,8 +946,13 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     last <- x$smooth[[i]]$last.para
     edf <- sum(x$edf[first:last]) ## Effective DoF for this term
     term.lab <- sub.edf(x$smooth[[i]]$label,edf)
-    P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
-              se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,...)
+    #P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
+    #          se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,scheme=scheme[i],...)
+    P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
+                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
+                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
+
     if (is.null(P)) pd[[i]] <- list(plot.me=FALSE) else {
       p <- x$coefficients[first:last]   ## relevent coefficients 
       offset <- attr(P$X,"offset")      ## any term specific offset
@@ -856,7 +1061,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     plot(x$smooth[[i]],P=pd[[i]],partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
-                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme,...)
+                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
 
   } ## end of smooth plotting loop
   
