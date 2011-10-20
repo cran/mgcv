@@ -364,7 +364,7 @@ print(b)
 
 ## change the smoothness selection method to REML
 b0<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="REML")
-plot(b,pages=1)
+plot(b,pages=1,scheme=1)
 
 ## ... and do automatic terms selection as well
 b1<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,
@@ -374,7 +374,7 @@ plot(b1,pages=1)
 
 ## set the smoothing parameter for the first term, estimate rest ...
 bp<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),sp=c(0.01,-1,-1,-1),data=dat)
-plot(bp,pages=1)
+plot(bp,pages=1,scheme=1)
 ## alternatively...
 bp <- gam(y~s(x0,sp=.01)+s(x1)+s(x2)+s(x3),data=dat)
 
@@ -432,7 +432,7 @@ b4<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,method="GACV.Cp",scale=-1)
 plot(b4,pages=1)
 
-## repeat using REML as in Wood 2009...
+## repeat using REML as in Wood 2011...
 
 b5<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,method="REML")
@@ -472,7 +472,7 @@ Ey <- exp(dat$f);scale <- .5 ## mean and GLM scale parameter
 dat$y <- rgamma(Ey*0,shape=1/scale,scale=Ey*scale)
 bg <- gam(y~ s(x0)+ s(x1)+s(x2)+s(x3),family=Gamma(link=log),
           data=dat,method="REML")
-plot(bg,pages=1)
+plot(bg,pages=1,scheme=1)
 
 ## For inverse Gaussian, see ?rig
 
@@ -496,23 +496,28 @@ par(op)
 ## largish dataset example with user defined knots
 ##################################################
 
-par(mfrow=c(1,1))
+par(mfrow=c(2,2))
 eg <- gamSim(2,n=10000,scale=.5)
 attach(eg)
 
 ind<-sample(1:10000,1000,replace=FALSE)
 b5<-gam(y~s(x,z,k=50),data=data,
         knots=list(x=data$x[ind],z=data$z[ind]))
-vis.gam(b5)
+## various visualizations
+vis.gam(b5,theta=30,phi=30)
+plot(b5)
+plot(b5,scheme=1,theta=50,phi=20)
+plot(b5,scheme=2)
 
+par(mfrow=c(1,1))
 ## and a pure "knot based" spline of the same data
 b6<-gam(y~s(x,z,k=100),data=data,knots=list(x= rep((1:10-0.5)/10,10),
         z=rep((1:10-0.5)/10,rep(10,10))))
-vis.gam(b6,color="heat")
+vis.gam(b6,color="heat",theta=30,phi=30)
 
 ## varying the default large dataset behaviour via `xt'
 b7 <- gam(y~s(x,z,k=50,xt=list(max.knots=1000,seed=2)),data=data)
-vis.gam(b7)
+vis.gam(b7,theta=30,phi=30)
 detach(eg)
 
 ################################################################

@@ -2209,7 +2209,7 @@ smooth.construct.sos.smooth.spec<-function(object,data,knots)
 
   ## Now get the rk matrix...
 
-  if (is.na(object$p.order)) object$p.order <- 1
+  if (is.na(object$p.order)) object$p.order <- 0
   object$p.order <- round(object$p.order)
   if (object$p.order< -1) object$p.order <- -1
   if (object$p.order>4) object$p.order <- 4

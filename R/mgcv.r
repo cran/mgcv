@@ -191,7 +191,9 @@ mgcv <- function(y,X,sp,S,off,C=NULL,w=rep(1,length(y)),H=NULL,scale=1,gcv=TRUE,
 #          edf - array of model edf's from final grid search for overall s.p.
 #          score - array of gcv/ubre scores corresponding to edf.
 #  
-{ if (gcv) scale <- -1
+{ .Deprecated("magic")
+
+  if (gcv) scale <- -1
   
   if (!is.null(C)) C.r<-nrow(C)          # number of equality constraints
   else {C.r<-0;C<-0}

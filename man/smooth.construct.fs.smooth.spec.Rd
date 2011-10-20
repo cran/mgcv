@@ -56,6 +56,8 @@ Note one computational bottleneck: currently \code{\link{gamm}} (or \code{gamm4}
 smooths, including the smooths at each level of the factor. This matrix can get large and computationally costly if there 
 are more than a few hundred levels of the factor. Even at one or two hundred levels, care should be taken to keep 
 down \code{k}. 
+
+The plot method for this class has two schemes. \code{scheme==0} is in colour, while \code{scheme==1} is black and white.
 }
 
 
