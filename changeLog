@@ -1,6 +1,10 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-10
+
+* fix stupid bug in 1.7-9 that lost term labels in plot.gam.
+
 1.7-9
 
 * rather lovely plot method added for splines on the sphere.

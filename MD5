@@ -1,14 +1,14 @@
-b89ea3fff6d53982d22fed46c3ddc916 *DESCRIPTION
+d3a130a90087192ce965333aa88fe2ea *DESCRIPTION
 abc5e760b0f5dd22c81d7614c0b304f0 *NAMESPACE
 4553efb64e4def029f7c5bdfc0168936 *R/bam.r
 257095aabda92b283b68e1b4a55a7976 *R/gam.fit3.r
 902657a0ee2dedc3fdfa501bf3b37c5b *R/gam.sim.r
 085b8b34e68292c173a22e55aca86562 *R/gamm.r
 f20157d570c32d97592a2b8f697fc102 *R/mgcv.r
-bbd7903e5e048077e53dfbffbb1d9526 *R/plots.r
+ee4953289666b34c44a2b63816233330 *R/plots.r
 5344c3e25715ebeca3996f2d6baba454 *R/smooth.r
 fe9745f610246ee1f31eb915ca0d76a9 *R/sparse.r
-0bd4225bb7c2e456039476e43b10fba9 *changeLog
+e9e783dffd81ad4cacc60c521857e11e *changeLog
 e468195a83fab90da8e760c2c3884bd3 *data/columb.polys.rda
 40874e3ced720a596750f499ded8a60a *data/columb.rda
 88d77139cc983317b6acd8c5f1252ab9 *gnugpl2.txt
