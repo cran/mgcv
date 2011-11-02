@@ -949,9 +949,10 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     #P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
     #          se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,scheme=scheme[i],...)
     P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
-                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,label=term.lab,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
-                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
+                     se1.mult=se1.mult,se2.mult=se2.mult,shift=shift,trans=trans,
+                     by.resids=by.resids,scheme=scheme[i],...)
 
     if (is.null(P)) pd[[i]] <- list(plot.me=FALSE) else {
       p <- x$coefficients[first:last]   ## relevent coefficients 
