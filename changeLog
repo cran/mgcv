@@ -1,6 +1,24 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-11
+
+* smoothCon bug fix to avoid NA labels for matrix arguments when 
+  no by variable provided. 
+
+* modification to p-value computation in summary.gam: `alpha' argument 
+  removed (was set to zero anyway); computation now deals with possibility
+  of rank deficiency computing psuedo-inverse of cov matrix for statistic. 
+  Previously p-value computation could fail for random effect smooths with 
+  large datasets, when a random effect has many levels. Also for large data
+  sets test statistic is now based on randomly sampling max(1000,np*2) model
+  matrix rows, where np is number of model coefficients (random number 
+  generator state unchanged by this), previous sample size was 3000. 
+
+* plot.mrf.smooth modified to allow passing '...' argument.
+
+* 'negbin' modified to avoid spurious warnings on initialization call.
+
 1.7-10
 
 * fix stupid bug in 1.7-9 that lost term labels in plot.gam.

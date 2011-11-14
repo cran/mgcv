@@ -13,7 +13,7 @@ suggests that best p-value performance results from using ML estimated smoothing
 }
 \usage{
 \method{anova}{gam}(object, ..., dispersion = NULL, test = NULL,
-                    alpha = 0, freq = FALSE)
+                    freq = FALSE)
 \method{print}{anova.gam}(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -23,8 +23,6 @@ suggests that best p-value performance results from using ML estimated smoothing
 \item{dispersion}{ a value for the dispersion parameter: not normally used.}
 \item{test}{what sort of test to perform for a multi-model call. One of
 \code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
-\item{alpha}{adjustment to degrees of freedom per estimated smoothing parameter for a 
-term when called with a single model object. See \code{\link{summary.gam}} for details.}
 \item{freq}{whether to use frequentist or Bayesian approximations for single smooth term 
 p-values. See \code{\link{summary.gam}} for details.}
 \item{digits}{number of digits to use when printing output.}
@@ -35,7 +33,8 @@ is assessed using Wald tests: see \code{\link{summary.gam}} for details of the
 actual computations.
 In the latter case \code{print.anova.gam} is used as the
 printing method.  Note that the p-values for smooth terms are approximate only:
-simulation evidence suggests that they work best with REML or ML smoothness selection. 
+simulation evidence suggests that they work best with ML smoothness selection 
+(REML coming a close second). 
 
 }
 

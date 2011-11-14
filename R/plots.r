@@ -499,7 +499,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
          (zlim[2]-zlim[1])*(pc[[i]][,2]-ylim[1])/(ylim[2]-ylim[1])
   
     ylim <- zlim
-    plot(0,0,ylim=ylim,xlim=xlim,type="n",xaxt="n",bty="n",xlab="",ylab=lab)
+    plot(0,0,ylim=ylim,xlim=xlim,type="n",xaxt="n",bty="n",xlab="",ylab=lab,...)
     for (i in 1:length(pc)) {
       coli <- round((z[i] - zlim[1])/(zlim[2]-zlim[1])*100)    
       poly2(pc[[i]],col=scheme[coli])
@@ -542,7 +542,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
              main=label))
     } else { ## do plot
       if (scheme==0) scheme <- "heat" else scheme <- "grey"
-      polys.plot(x$xt$polys,P$fit,scheme=scheme,lab=P$main)
+      polys.plot(x$xt$polys,P$fit,scheme=scheme,lab=P$main,...)
     }
 
 } ## end plot.mrf.smooth

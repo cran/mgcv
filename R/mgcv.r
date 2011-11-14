@@ -2500,6 +2500,8 @@ pinvXVX <- function(X,V,rank=NULL) {
 ## Routine for forming fractionally trunctated
 ## pseudoinverse of XVX'. Returns as D where
 ## DD' gives the pseudoinverse itself.
+## truncates to numerical rank, if this is
+## less than supplied rank+1.
   k <- max(0,floor(rank))
   nu <- abs(rank - k)
 #  if (k < 1) { k <- 1; nu <- 0}
@@ -2511,11 +2513,16 @@ pinvXVX <- function(X,V,rank=NULL) {
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
 
+  ## check that actual rank is not below supplied rank+1
+  r.est <- sum(ed$values > max(ed$values)*.Machine$double.eps^.9)
+  if (r.est<k1) {k1 <- k <- r.est;nu <- 0;rank <- r.est}
+
   ## Get the eigenvectors...
   vec <- qr.qy(qrx,rbind(ed$vectors,matrix(0,nrow(X)-ncol(X),ncol(X))))
   if (k1<ncol(vec)) vec <- vec[,1:k1,drop=FALSE]
   if (k==0) {
      vec <- t(t(vec)*sqrt(nu/ed$val[1]))
+     attr(vec,"rank") <- rank
      return(vec)
   }
  
@@ -2534,13 +2541,14 @@ pinvXVX <- function(X,V,rank=NULL) {
   } else {
     vec <- t(t(vec)/sqrt(ed$val[1:k]))
   }
+  attr(vec,"rank") <- rank ## actual rank
   vec ## vec%*%t(vec) is the pseudoinverse
 }
 
 
 
 
-summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...) 
+summary.gam <- function (object, dispersion = NULL, freq = FALSE, ...) 
 # summary method for gam object - provides approximate p values for terms + other diagnostics
 # Improved by Henric Nilsson
 { pinv<-function(V,M,rank.tol=1e-6)
@@ -2627,7 +2635,8 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
   df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
   if (m>0) # form test statistics for each smooth
   { if (!freq) { 
-      if (nrow(object$model)>3000) { ## subsample to get X for p-values calc.
+      sub.samp <- max(1000,2*length(object$coefficients)) 
+      if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
         seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
         if (inherits(seed,"try-error")) {
           runif(1)
@@ -2636,14 +2645,15 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
         kind <- RNGkind(NULL)
         RNGkind("default","default")
         set.seed(11) ## ensure repeatability
-        ind <- sample(1:nrow(object$model),3000,replace=FALSE)  ## sample these rows from X
+        ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
         X <- predict(object,object$model[ind,],type="lpmatrix")
         RNGkind(kind[1],kind[2])
         assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
       } else { ## don't need to subsample 
         X <- model.matrix(object)
-        X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
       }
+      X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
+      ##if (alpha>0) X <- diag(ncol(X))
       ## get corrected edf
       ##  edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
     }
@@ -2666,7 +2676,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE,alpha=0, ...)
        
         df[i] <- min(ncol(Xt),edf1[i])
         D <- pinvXVX(Xt,V,df[i])
-        df[i] <- df[i]+alpha*sum(object$smooth[[i]]$sp<0) ## i.e. alpha * (number free sp's)
+        df[i] <- attr(D,"rank") ## df[i] ##+alpha*sum(object$smooth[[i]]$sp<0) ## i.e. alpha * (number free sp's)
         chi.sq[i] <- sum((t(D)%*%ft)^2)   
        
       }
@@ -2736,7 +2746,7 @@ print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3),
 }
 
 
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL, alpha=0, freq=FALSE)
+anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE)
 # improved by Henric Nilsson
 {   # adapted from anova.glm: R stats package
     dotargs <- list(...)
@@ -2755,7 +2765,7 @@ anova.gam <- function (object, ..., dispersion = NULL, test = NULL, alpha=0, fre
             test = test))
     if (!is.null(test)) warning("test argument ignored")
     if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
-    sg <- summary(object, dispersion = dispersion, freq = freq,alpha = alpha)
+    sg <- summary(object, dispersion = dispersion, freq = freq)
     class(sg) <- "anova.gam"
     sg
 }

@@ -7,7 +7,7 @@
 summaries from it. (See \code{\link{sink}} to divert output to a file.)
 }
 \usage{
-\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, alpha=0, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, ...)
 
 \method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
@@ -24,9 +24,6 @@ summaries from it. (See \code{\link{sink}} to divert output to a file.)
 \item{freq}{By default p-values for individual terms are calculated using the Bayesian estimated
 covariance matrix of the parameter estimators. If this is set to TRUE then
 the frequentist covariance matrix of the parameters is used instead. See details. }
-
-\item{alpha}{ adjustment to reference distribution per estimated smoothing parameter. 
-}
 
 \item{digits}{controls number of digits printed in output.}
 
@@ -71,8 +68,8 @@ covariate values and let \eqn{{\bf V}_f}{V_f} denote the corresponding Bayesian 
 EDF for the term. The statistic used is then 
 \deqn{T = {\bf f}^T {\bf V}_f^{r-}{\bf f}}{T = f'V*_f f}
 (this can be calculated efficiently without forming the pseudoinverse explicitly). \eqn{T}{T} is compared to a 
-chi-squared distribution with degrees of freedom given by the EDF for the term + \code{alpha} * (number of 
-estimated smoothing parameters), or \eqn{T}{T} is used as a component in an F ratio statistic if the 
+chi-squared distribution with degrees of freedom given by the EDF for the term, 
+or \eqn{T}{T} is used as a component in an F ratio statistic if the 
 scale parameter has been estimated.  The non-integer rank truncated inverse is constructed to give an 
 approximation varying smoothly between the bounding integer rank approximations, while yielding test statistics with the 
 correct mean and variance. 
@@ -84,7 +81,7 @@ for \eqn{\bf f}{f} implied by the truncation used in the test statistic.
 Note that the p-values distributional approximations start to break down below one effective degree of freedom, and 
 p-values are not reported below 0.5 degrees of freedom. 
 
-In simualtions the p-values have best behaviour under ML smoothness selection, with REML coming second. 
+In simulations the p-values have best behaviour under ML smoothness selection, with REML coming second. 
 
 }
 

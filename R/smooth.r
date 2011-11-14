@@ -2812,7 +2812,8 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
         if (!is.null(offs)) attr(sml[[1]]$X,"offset") <- offs*as.numeric(by)
       }
 
-      sml[[1]]$label <- paste(sm$label,":",object$by,sep="") 
+      if (object$by == "NA") sml[[1]]$label <- sm$label else 
+        sml[[1]]$label <- paste(sm$label,":",object$by,sep="") 
      
       ## test for cases where no centring constraint on the smooth is needed. 
       if (!alwaysCon) {

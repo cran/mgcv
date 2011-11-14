@@ -2033,6 +2033,9 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
 ## single `theta' to specify fixed value; 2 theta values (first smaller that second)
 ## are limits within which to search for theta; otherwise supplied values make up 
 ## search set.
+## Note: to avoid warnings, get(".Theta")[1] is used below. Otherwise the initialization
+##       call to negbin can generate warnings since get(".Theta") returns a vector
+##       during initialization (only).
   linktemp <- substitute(link)
   if (!is.character(linktemp)) linktemp <- deparse(linktemp)
   if (linktemp %in% c("log", "identity", "sqrt")) stats <- make.link(linktemp)
@@ -2049,28 +2052,28 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
     }
     env <- new.env(parent = .GlobalEnv)
     assign(".Theta", theta, envir = env)
-    variance <- function(mu) mu + mu^2/get(".Theta")
+    variance <- function(mu) mu + mu^2/get(".Theta")[1]
     ## dvaraince/dmu needed as well
-    dvar <- function(mu) 1 + 2*mu/get(".Theta")
+    dvar <- function(mu) 1 + 2*mu/get(".Theta")[1]
     ## d2variance/dmu...
-    d2var <- function(mu) rep(2/get(".Theta"),length(mu))
+    d2var <- function(mu) rep(2/get(".Theta")[1],length(mu))
     d3var <- function(mu) rep(0,length(mu))
     getTheta <- function() get(".Theta")
     validmu <- function(mu) all(mu > 0)
 
-    dev.resids <- function(y, mu, wt) { Theta <- get(".Theta")
+    dev.resids <- function(y, mu, wt) { Theta <- get(".Theta")[1]
       2 * wt * (y * log(pmax(1, y)/mu) - 
         (y + Theta) * log((y + Theta)/(mu + Theta))) 
     }
     aic <- function(y, n, mu, wt, dev) {
-        Theta <- get(".Theta")
+        Theta <- get(".Theta")[1]
         term <- (y + Theta) * log(mu + Theta) - y * log(mu) +
             lgamma(y + 1) - Theta * log(Theta) + lgamma(Theta) -
             lgamma(Theta + y)
         2 * sum(term * wt)
     }
     ls <- function(y,w,n,scale) {
-       Theta <- get(".Theta")
+       Theta <- get(".Theta")[1]
        ylogy <- y;ind <- y>0;ylogy[ind] <- y[ind]*log(y[ind])
        term <- (y + Theta) * log(y + Theta) - ylogy +
             lgamma(y + 1) - Theta * log(Theta) + lgamma(Theta) -
@@ -2084,12 +2087,12 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
     })
 
     rd <- function(mu,wt,scale) {
-      Theta <- get(".Theta")
+      Theta <- get(".Theta")[1]
       rnbinom(mu,size=Theta,mu=mu)
     }
 
     qf <- function(p,mu,wt,scale) {
-      Theta <- get(".Theta")
+      Theta <- get(".Theta")[1]
       qnbinom(p,size=Theta,mu=mu)
     }
  
