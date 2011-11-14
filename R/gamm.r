@@ -1322,7 +1322,6 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 
 
 
-
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
       subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B"),
       niterPQL=20,verbosePQL=TRUE,method="ML",...)
@@ -1494,7 +1493,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     ## Grouped random coefs are returned in matrices. Each row relates to one 
     ## level of the grouping factor. So to get coefs in order, with all coefs
-    ## for each grouping factor level contoguous, requires the following...
+    ## for each grouping factor level contiguous, requires the following...
  
     br <- as.numeric(unlist(lapply(ret$lme$coefficients$random,t)))
 
@@ -1553,7 +1552,6 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     
     V <- extract.lme.cov2(ret$lme,mf,n.sr+1) # the data covariance matrix, excluding smooths
  
-    ## from here not dealing with nested smooths yet....
 
     ## obtain XVX and S....
     first.para <- last.para <- rep(0,G$m) ## collect first and last para info relevant to expanded Xf
