@@ -1079,6 +1079,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     d <- eh$values;U <- eh$vectors
     ind <- d < 0
     d[ind] <- -d[ind] ## see Gill Murray and Wright p107/8
+    low.d <- max(d)*.Machine$double.eps^.7
+    ind <- d < low.d
+    d[ind] <- low.d 
     d <- 1/d
     
     Nstep <- 0 * grad
@@ -1193,7 +1196,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
              hess <- diag(rho$rho1,nr,nr)%*%hess%*%diag(rho$rho1,nr,nr) + diag(rho$rho2*grad)
              grad <- rho$rho1*grad
           }
-          
+          score1 <- score - abs(score) - 1 ## make damn sure that score1 < score
         }  # end of if (score1<= score )
         ii <- ii + 1
       } # end of step halving

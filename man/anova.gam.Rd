@@ -13,7 +13,7 @@ suggests that best p-value performance results from using ML estimated smoothing
 }
 \usage{
 \method{anova}{gam}(object, ..., dispersion = NULL, test = NULL,
-                    freq = FALSE)
+                    freq = FALSE,p.type=0)
 \method{print}{anova.gam}(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -25,6 +25,8 @@ suggests that best p-value performance results from using ML estimated smoothing
 \code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
 \item{freq}{whether to use frequentist or Bayesian approximations for single smooth term 
 p-values. See \code{\link{summary.gam}} for details.}
+\item{p.type}{selects exact test statistic to use for single smooth term p-values. See
+ \code{\link{summary.gam}} for details.}
 \item{digits}{number of digits to use when printing output.}
 }
 \details{ If more than one fitted model is provided than \code{anova.glm} is

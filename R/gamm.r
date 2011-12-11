@@ -1290,7 +1290,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
  
   data[[zz.name]] <- zz ## pseudodata to `data' 
   
-  ## find non-clashing name fro inverse weights, and make 
+  ## find non-clashing name for inverse weights, and make 
   ## varFixed formula using it...
   
   invwt.name <- new.name("invwt",names(data))
@@ -1317,6 +1317,8 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
     data[[invwt.name]] <- 1/wz
   } ## end i in 1:niter
   if (!converged) warning("gamm not converged, try increasing niterPQL")
+  fit$y <- fit0$y
+  fit$w <- w ## prior weights
   fit
 }
 
@@ -1344,26 +1346,40 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       random.vars<-c(unlist(lapply(random, function(x) all.vars(formula(x)))),r.names)
     } else random.vars<-NULL
 
-    if (!is.null(correlation))
-    { cor.for<-attr(correlation,"formula")
-      if (!is.null(cor.for))
-      cor.vars<-all.vars(cor.for)
+    if (!is.null(correlation)) { 
+      cor.for<-attr(correlation,"formula")
+      if (!is.null(cor.for)) cor.vars<-all.vars(cor.for)
     } else cor.vars<-NULL
+
+    ## now establish whether weights is varFunc or not...  
+    wisvf <- try(inherits(weights,"varFunc"),silent=TRUE)
+    if (inherits(wisvf,"try-error")) wisvf <- FALSE
+    if (wisvf) { ## collect its variables
+      vf.for<-attr(weights,"formula")
+      if (!is.null(vf.for)) vf.vars<-all.vars(vf.for)
+    } else vf.vars <- NULL
 
     # create model frame.....
     gp<-interpret.gam(formula) # interpret the formula 
     ##cl<-match.call() # call needed in gamm object for update to work
     mf <- match.call(expand.dots=FALSE)
     mf$formula <- gp$fake.formula
-    mf$correlation <- mf$random <- mf$family <- mf$control <- mf$scale <- mf$knots <- mf$sp <- mf$weights <-
-    mf$min.sp <- mf$H <- mf$gamma <- mf$fit <- mf$niterPQL <- mf$verbosePQL <- mf$G <- mf$method <- mf$... <- NULL
+    if (wisvf) {
+      mf$correlation <- mf$random <- mf$family <- mf$control <- mf$scale <- mf$knots <- mf$sp <- mf$weights <-
+      mf$min.sp <- mf$H <- mf$gamma <- mf$fit <- mf$niterPQL <- mf$verbosePQL <- mf$G <- mf$method <- mf$... <- NULL
+    } else {
+      mf$correlation <- mf$random <- mf$family <- mf$control <- mf$scale <- mf$knots <- mf$sp <-
+      mf$min.sp <- mf$H <- mf$gamma <- mf$fit <- mf$niterPQL <- mf$verbosePQL <- mf$G <- mf$method <- mf$... <- NULL
+    }
     mf$drop.unused.levels <- TRUE
     mf[[1]] <- as.name("model.frame")
     pmf <- mf
     gmf <- eval(mf, parent.frame()) # the model frame now contains all the data, for the gam part only 
     gam.terms <- attr(gmf,"terms") # terms object for `gam' part of fit -- need this for prediction to work properly
 
-    allvars <- c(cor.vars,random.vars)
+    if (!wisvf) weights <- gmf[["(weights)"]]
+
+    allvars <- c(cor.vars,random.vars,vf.vars)
     if (length(allvars)) {
       mf$formula <- as.formula(paste(paste(deparse(gp$fake.formula,backtick=TRUE),collapse=""),
                            "+",paste(allvars,collapse="+")))
@@ -1451,7 +1467,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     if (family$family=="gaussian"&&family$link=="identity"&&
     length(offset.name)==0) lme.used <- TRUE else lme.used <- FALSE
-    if (lme.used&&!is.null(weights)&&!inherits(weights,"varFunc")) lme.used <- FALSE   
+    if (lme.used&&!is.null(weights)&&!wisvf) lme.used <- FALSE   
 
     if (lme.used)
     { ## following construction is a work-around for problem in nlme 3-1.52 
@@ -1462,14 +1478,13 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
     } else
     { ## Again, construction is a work around for nlme 3-1.52
-      if (inherits(weights,"varFunc")) 
-      stop("weights must be like glm weights for generalized case")
+      if (wisvf) stop("weights must be like glm weights for generalized case")
       if (verbosePQL) cat("\n Maximum number of PQL iterations: ",niterPQL,"\n")
       eval(parse(text=paste("ret$lme<-gammPQL(",deparse(fixed.formula),
           ",random=rand,data=strip.offset(mf),family=family,",
           "correlation=correlation,control=control,",
             "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
-     
+      G$y <- ret$lme$y ## makes sure that binomial response is returned as a vector!
       ##ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
       ##                 control=control,niter=niterPQL,verbose=verbosePQL)
     }
@@ -1668,11 +1683,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     names(object$coefficients) <- term.names  # note - won't work on matrices!!
     names(object$edf) <- term.names
-    if (is.null(weights))
-    object$prior.weights <- object$y*0+1
-    else if (inherits(weights,"varFunc")) 
-    object$prior.weights <- varWeights.dfo(ret$lme,mf)^2
-    else object$prior.weights <- weights 
+    if (is.null(weights)) object$prior.weights <- object$y*0+1
+    else if (wisvf) object$prior.weights <- varWeights.dfo(ret$lme,mf)^2
+    else object$prior.weights <- ret$lme$w
     
     object$weights<-object$prior.weights   
 

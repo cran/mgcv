@@ -58,7 +58,9 @@ void free2d(double **a) {free(*a);free(a);}
 
 
 void mgcv_AtA(double *AA,double *A,int *q,int *n)
-/* form A'A efficiently where A is an R matrix supplied using 
+/* REDUNDANT: call getXtX(AA,A,n,q) instead.
+ 
+   form A'A efficiently where A is an R matrix supplied using 
    as.double(A) so that it is stored column wise. A has n rows
    and q columns.
    Typical R call something like
@@ -221,7 +223,8 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
 
 { double *p,*p1,*p2,*p3,*p4,xx,xx1,x1,x2;
   int i,j,*ip,bt,ct,r,c; 
-  mgcv_AtA(U1U1,U1,&rank,&q); /* U_1'U_1 U1 is q by rank*/
+  /*mgcv_AtA(U1U1,U1,&rank,&q);*/ /* U_1'U_1 U1 is q by rank*/
+  getXtX(U1U1,U1,&q,&rank);
   for (p=S,ip=cS,i=0;ip<cS+m;p+= *ip *q,ip++,i++) /* work through all smooths */ 
   { bt=1;ct=0;r=rank;c= *ip;
     mgcv_mmult(VS,V,p,&bt,&ct,&r,&c,&q); /* V'S_i^0.5 result is rank by cS[i] */ 
