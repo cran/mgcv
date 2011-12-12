@@ -1,6 +1,36 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-12
+
+* bam can now compute the leading order QR decomposition on a cluster
+  set up using the parallel package.
+
+* Default k for "tp" and "ds" modified so that it doesn't exceed the 100 + 
+  the null space dimension (to avoid complaints from users smoothing in 
+  quite alot of dimensions). Also defualt sub-sample size reduced to 2000.
+
+* Greater use of BLAS routines in the underlying method code. In particular 
+  all leading order operations count steps for gam fitting now use BLAS. 
+  You'll need R to be using a rather fancy BLAS to see much difference, 
+  however. 
+
+* Amusingly, some highly tuned blas libraries can result in lapack not always 
+  giving identical eigenvalues when called twice with the same matrix. The 
+  `newton' optimizer had assumed this wouldn't happen: not any more.
+
+* Now byte compiled by default. Turn this off in DESCRIPTION if it interferes
+  with debugging.
+ 
+* summary.gam p-value computation options modified (default remains the 
+  same).
+
+* summary.gam default p-value computation made more computationally 
+  efficient.
+
+* gamm and bam could fail under some options for specifying binomial models.
+  Now fixed.
+
 1.7-11
 
 * smoothCon bug fix to avoid NA labels for matrix arguments when 

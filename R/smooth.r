@@ -959,7 +959,7 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
   ## deal with possible extra arguments of "tp" type smooth
   xtra <- list()
 
-  if (is.null(object$xt$max.knots)) xtra$max.knots <- 3000 
+  if (is.null(object$xt$max.knots)) xtra$max.knots <- 2000 
   else xtra$max.knots <- object$xt$max.knots 
   if (is.null(object$xt$seed)) xtra$seed <- 1 
   else xtra$seed <- object$xt$seed 
@@ -1010,10 +1010,13 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
       assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
     }
   } ## end of large data set handling
-  if (object$bs.dim[1]<0) object$bs.dim <- 10*3^(object$dim-1) # auto-initialize basis dimension
+  ##if (object$bs.dim[1]<0) object$bs.dim <- 10*3^(object$dim-1) # auto-initialize basis dimension
   object$p.order[is.na(object$p.order)] <- 0 ## auto-initialize
-  k<-object$bs.dim 
   M<-null.space.dimension(object$dim,object$p.order) 
+  def.k <- c(8,27,100) ## default penalty range space dimension for different dimensions 
+  dd <- min(object$dim,length(def.k))
+  if (object$bs.dim[1]<0) object$bs.dim <- M+def.k[dd] ##10*3^(object$dim-1) # auto-initialize basis dimension
+  k<-object$bs.dim 
   if (k<M+1) # essential or construct_tprs will segfault, as tprs_setup does this
   { k<-M+1
     object$bs.dim<-k
@@ -2408,7 +2411,7 @@ smooth.construct.ds.smooth.spec<-function(object,data,knots)
 
  
 
-  if (object$bs.dim[1]<0) object$bs.dim <-  10*3^(object$dim[1]-1) # auto-initialize basis dimension
+ ## if (object$bs.dim[1]<0) object$bs.dim <-  10*3^(object$dim[1]-1) # auto-initialize basis dimension
 
   ## Check the conditions on Duchon's m, s and n (p.order[1], p.order[2] and dim)... 
 
@@ -2451,6 +2454,15 @@ smooth.construct.ds.smooth.spec<-function(object,data,knots)
   T <- DuchonT(knt,m=object$p.order[1],n=object$dim) ## constraint matrix
 
   ind <- 1:ncol(T)
+  
+  def.k <- c(10,30,100)
+  dd <- min(object$dim,length(def.k))
+  if (object$bs.dim[1]<0) object$bs.dim <- ncol(T) + def.k[dd] ## default basis dimension 
+  if (object$bs.dim < ncol(T)+1) {
+    object$bs.dim <- ncol(T)+1
+    warning("basis dimension reset to minimum possible")
+  }
+
   k <- object$bs.dim   
 
   if (k<nk) {

@@ -46,7 +46,6 @@ void RQT(double *A,int *r,int *c);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
-void mgcv_AtA(double *AA,double *A,int *q,int *n);
 void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);
 void rksos(double *x,int *n,double *eps);
 
@@ -59,7 +58,8 @@ void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
 void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
 void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau);
 void update_qr(double *Q,double *R,int *n, int *q,double *lam, int *k);
-void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
+extern void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
+void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
 void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c);
 void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd, int *get_vectors,int *descending);
 void mroot(double *A,int *rank,int *n);
@@ -67,6 +67,10 @@ void R_cond(double *R,int *r,int *c,double *work,double *Rcondition);
 void mgcv_td_qy(double *S,double *tau,int *m,int *n, double *B,int *left,int *transpose);
 void mgcv_tri_diag(double *S,int *n,double *tau);
 void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending); 
+void getXtWX(double *XtWX, double *X,double *w,int *r,int *c,double *work);
+void getXtX(double *XtX,double *X,int *r,int *c);
+void getXtMX(double *XtMX,double *X,double *M,int *r,int *c,double *work);
+void getXXt(double *XXt,double *X,int *r,int *c);
 
 /* basis constructor/prediction routines*/
 

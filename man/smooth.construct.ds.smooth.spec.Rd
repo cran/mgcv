@@ -53,8 +53,11 @@ out duplicate locations).}
 wiggliness penalty for this term.}
 }
 
-\details{ The default basis dimension for this class is \code{k=10*3^(d-1)} where \code{d} is the number
- of covariates for the term. This is essentially arbitrary, and should be checked.
+\details{  The default basis dimension for this class is \code{k=M+k.def} where \code{M} is the null space dimension 
+(dimension of unpenalized function space) and \code{k.def} is 10 for dimension 1, 30 for dimension 2 and 100 for higher dimensions. 
+This is essentially arbitrary, and should be checked, but as with all penalized regression smoothers, results are statistically 
+insensitive to the exact choise, provided it is not so small that it forces oversmoothing (the smoother's 
+degrees of freedom are controlled primarily by its smoothing parameter).
 
 The constructor is not normally called directly, but is rather used internally by \code{\link{gam}}. 
 To use for basis setup it is recommended to use \code{\link{smooth.construct2}}.  
