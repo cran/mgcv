@@ -174,7 +174,7 @@ You must have more unique combinations of covariates than the model has total
 parameters. (Total parameters is sum of basis dimensions plus sum of non-spline 
 terms less the number of spline terms). 
 
-This routine is less stable than `gam' for a the same dataset.
+This routine is less stable than `gam' for the same dataset.
 
 The negbin family is only supported for the *known theta* case.
 

@@ -374,7 +374,24 @@ fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0)
 }
 
 
-gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
+augment.smX <- function(sm,nobs,np) {
+## augments a smooth model matrix with a square root penalty matrix for
+## identifiability constraint purposes.
+  ns <- length(sm$S) ## number of penalty matrices
+  if (ns==0) { ## nothing to do
+    return(rbind(sm$X),matrix(0,np,np))
+  }
+  St <- sm$S[[1]]    ## total scaled penalty
+  St <- St/sqrt(sum(St^2))
+  if (ns>1) for (i in 2:ns) St <- St +  sm$S[[i]]/sqrt(sum(sm$S[[i]]^2))
+  rS <- mroot(St,rank=ncol(St)) ## get sqrt of penalty
+  rS <- rS/sqrt(mean(rS^2))
+  X <- rbind(sm$X/sqrt(mean(sm$X^2)),matrix(0,np,ncol(sm$X))) ## create augmented model matrix
+  X[nobs+sm$p.ind,] <- t(rS) ## add in 
+  X ## scaled augmented model matrix
+}
+
+gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
 # works through a list of smooths, sm, aiming to identify nested or partially
 # nested terms, and impose identifiability constraints on them.
 # Xp is the parametric model matrix. It is needed in order to check whether
@@ -402,7 +419,9 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
   ## Need to test for intercept or equivalent in Xp
   intercept <- FALSE
   if (ncol(Xp)) {
+    ## first check columns directly...
     if (sum(apply(Xp,2,sd)<.Machine$double.eps^.75)>0) intercept <- TRUE else {
+      ## no constant column, so need to check span of Xp...
       f <- rep(1,nrow(Xp))
       ff <- qr.fitted(qr(Xp),f)
       if (max(abs(ff-f))<.Machine$double.eps^.75) intercept <- TRUE 
@@ -428,19 +447,41 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
   ## the smooths of which it is an argument, arranged in ascending 
   ## order of dimension.
   if (maxDim==1) stop("model has repeated 1-d smooths of same variable.")
+
+  ## Now set things up to enable term specific model matrices to be
+  ## augmented with square root penalties, on the fly...
+  if (with.pen) {
+    k <- 1
+    for (i in 1:m) { ## create parameter indices for each term
+      k1 <- k + ncol(sm[[i]]$X) - 1
+      sm[[i]]$p.ind <- k:k1
+      k <- k1 + 1
+    }
+    np <- k-1 ## number of penalized parameters
+  }
+  nobs <- nrow(sm[[1]]$X) ## number of observations
+  
   for (d in 2:maxDim) { ## work up through dimensions 
     for (i in 1:m) { ## work through smooths
-      if (sm[[i]]$dim == d) { ## check for nesting
-        X1 <- matrix(1,nrow(sm[[i]]$X),as.integer(intercept))
+      if (sm[[i]]$dim == d&&sm[[i]]$side.constrain) { ## check for nesting
+        if (with.pen) X1 <- matrix(c(rep(1,nobs),rep(0,np)),nobs+np,as.integer(intercept)) else
+        X1 <- matrix(1,nobs,as.integer(intercept))
         for (j in 1:d) { ## work through variables
           b <- sm.id[[sm[[i]]$vn[j]]] # list of smooths dependent on this variable
           k <- (1:length(b))[b==i] ## locate current smooth in list 
           if (k>1) for (l in 1:(k-1)) { ## collect X columns
-            X1 <- cbind(X1,sm[[b[l]]]$X)
+            if (with.pen) { ## need to use augmented model matrix in testing 
+              if (is.null(sm[[b[l]]]$Xa)) sm[[b[l]]]$Xa <- augment.smX(sm[[b[l]]],nobs,np)
+              X1 <- cbind(X1,sm[[b[l]]]$Xa)
+            } else X1 <- cbind(X1,sm[[b[l]]]$X) ## penalties not considered
           }
         } ## Now X1 contains columns for all lower dimensional terms
-        if (ncol(X1)==as.integer(intercept)) ind <- NULL else
-        ind <- fixDependence(X1,sm[[i]]$X,tol=tol)        
+        if (ncol(X1)==as.integer(intercept)) ind <- NULL else {
+          if (with.pen) {
+             if (is.null(sm[[i]]$Xa)) sm[[i]]$Xa <- augment.smX(sm[[i]],nobs,np)
+             ind <- fixDependence(X1,sm[[i]]$Xa,tol=tol) 
+          } else ind <- fixDependence(X1,sm[[i]]$X,tol=tol)        
+        }
         ## ... the columns to zero to ensure independence
         if (!is.null(ind)) { 
           sm[[i]]$X <- sm[[i]]$X[,-ind]
@@ -464,18 +505,28 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5)
           sm[[i]]$df <- ncol(sm[[i]]$X)
           attr(sm[[i]],"del.index") <- ind
           ## Now deal with case in which prediction constraints differ from fit constraints
-          if (!is.null(sm[[i]]$Xp)) { ## need to get deletion indeces under prediction parameterization
+          if (!is.null(sm[[i]]$Xp)) { ## need to get deletion indices under prediction parameterization
             ## Note that: i) it doesn't matter what the identifiability con on X1 is
             ##            ii) the degree of rank deficiency can't be changed by an identifiability con
-            ind <- fixDependence(X1,sm[[i]]$Xp,rank.def=length(ind)) 
+            if (with.pen) { 
+              smi <- sm[[i]]  ## clone smooth 
+              smi$X <- smi$Xp ## copy prediction Xp to X slot.
+              smi$S <- smi$Sp ## and make sure penalty parameterization matches. 
+              Xpa <- augment.smX(smi,nobs,np)
+              ind <- fixDependence(X1,Xpa,rank.def=length(ind)) 
+            } else ind <- fixDependence(X1,sm[[i]]$Xp,rank.def=length(ind)) 
             sm[[i]]$Xp <- sm[[i]]$Xp[,-ind]
             attr(sm[[i]],"del.index") <- ind ## over-writes original
           }
         }
         sm[[i]]$vn <- NULL
-      } ## end if
+      } ## end if (sm[[i]]$dim == d)
     } ## end i in 1:m loop
   }  
+  if (with.pen) for (i in 1:m) { ## remove working variables that were added
+    sm[[i]]$p.ind <- NULL
+    if (!is.null(sm[[i]]$Xa)) sm[[i]]$Xa <- NULL
+  }
   sm
 }
 
@@ -3466,6 +3517,10 @@ set.mgcv.options <- function()
   options(mgcv.vc.logrange=25)
 }
 
+.onLoad <- function(...) {
+  set.mgcv.options()
+}
+
 .onAttach <- function(...) { 
   print.mgcv.version()
   set.mgcv.options()
@@ -3473,11 +3528,12 @@ set.mgcv.options <- function()
 
 .onUnload <- function(libpath) library.dynam.unload("mgcv", libpath)
 
-.First.lib <- function(lib, pkg) {
-  library.dynam("mgcv", pkg, lib)
-  print.mgcv.version()
-  set.mgcv.options()
-}
+#.First.lib <- function(lib, pkg) {
+  ## defunct
+#  library.dynam("mgcv", pkg, lib)
+#  print.mgcv.version()
+#  set.mgcv.options()
+#}
 
 
 ###############################################################################
