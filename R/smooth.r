@@ -1806,7 +1806,7 @@ smooth.construct.ad.smooth.spec<-function(object,data,knots)
 ########################################################
 
 
-smooth.construct.re.smooth.spec<-function(object,data,knots)
+smooth.construct.re.smooth.spec <- function(object,data,knots)
 ## a simple random effects constructor method function
 ## basic idea is that s(x,f,z,...,bs="re") generates model matrix
 ## corresponding to ~ x:f:z: ... - 1. Corresponding coefficients 
@@ -1832,6 +1832,7 @@ smooth.construct.re.smooth.spec<-function(object,data,knots)
   ## need to store formula (levels taken care of by calling function)
   object$form <- form
 
+  object$side.constrain <- FALSE ## don't apply side constraints
   object$plot.me <- TRUE ## "re" terms can be plotted by plot.gam
   object$te.ok <- 2 ## these terms are  suitable as te marginals, but 
                     ##   can not be plotted
@@ -2671,6 +2672,11 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   ## plot.me tells `plot.gam' whether or not to plot the term
   if (is.null(sm$plot.me)) sm$plot.me <- TRUE
 
+  ## add side.constrain indicator if missing
+  ## `side.constrain' tells gam.side, whether term should be constrained
+  ## as a result of any nesting detected... 
+  if (is.null(sm$side.constrain)) sm$side.constrain <- TRUE
+
   ## automatically produce centering constraint...
   ## must be done here on original model matrix to ensure same
   ## basis for all `id' linked terms
@@ -2865,6 +2871,13 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       for (i in 1:length(sml)) { ## loop through smooth list
         sml[[i]]$Xp <- t(qr.qty(qrcp,t(sml[[i]]$X))[(pj+1):k,]) ## form XZ
         sml[[i]]$Cp <- NULL 
+        if (length(sml[[i]]$S)) { ## gam.side requires penalties in prediction para
+          sml[[i]]$Sp <- sml[[i]]$S ## penalties in prediction parameterization
+          for (l in 1:length(sml[[i]]$S)) { # some smooths have > 1 penalty 
+            ZSZ <- qr.qty(qrcp,sml[[i]]$S[[l]])[(pj+1):k,]
+            sml[[i]]$Sp[[l]]<-t(qr.qty(qrcp,t(ZSZ))[(pj+1):k,]) ## Z'SZ
+          }
+        }
       }
     } else qrcp <- NULL ## rest of Cp processing is after C processing
 
@@ -2955,7 +2968,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
         } ## end smooth list loop       
     }
    
-    ## finish of treatment of case where prediction constraints are different
+    ## finish off treatment of case where prediction constraints are different
     if (!is.null(qrcp)) {
       for (i in 1:length(sml)) { ## loop through smooth list
         attr(sml[[i]],"qrc") <- qrcp
