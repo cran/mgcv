@@ -561,8 +561,13 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
         np <- ncol(object$margin[[i]]$X) ## number of params
         ## note: to avoid extrapolating wiggliness measure
         ## must include extremes as eval points
-#        knt <- quantile(unique(x),(0:(np-1))/(np-1)) 
-        knt <- seq(min(x),max(x),length=np) ## evaluation points
+##        knt <- quantile(unique(x),(0:(np-1))/(np-1)) 
+        knt <- if(is.factor(x)) {
+                  unique(x)
+          } else { 
+                 seq(min(x), max(x), length=np)
+          } 
+        ## knt <- seq(min(x),max(x),length=np) ## evaluation points
         pd <- data.frame(knt)
         names(pd) <- object$margin[[i]]$term
         sv <- svd(Predict.matrix(object$margin[[i]],pd))
@@ -585,7 +590,10 @@ smooth.construct.tensor.smooth.spec<-function(object,data,knots)
   X<-tensor.prod.model.matrix(Xm)
   if (object$mp) # multiple penalties
   { S<-tensor.prod.penalties(Sm)
-    for (i in m:1) if (object$fx[i]) S[[i]]<-NULL # remove penalties for un-penalized margins
+    for (i in m:1) if (object$fx[i]) { 
+      S[[i]]<-NULL # remove penalties for un-penalized margins
+      r <- r[-i]   # remove corresponding rank from list
+    }
   } else # single penalty
   { S<-Sm[[1]];r<-object$margin[[i]]$rank
     if (m>1) for (i in 2:m) 
@@ -1115,17 +1123,16 @@ Predict.matrix.ts.smooth<-function(object,data)
 #############################################
 
 
-smooth.construct.cr.smooth.spec<-function(object,data,knots)
+smooth.construct.cr.smooth.spec<-function(object,data,knots) {
 # this routine is the constructor for cubic regression spline basis objects
 # It takes a cubic regression spline specification object and returns the 
-# corresponding basis object.
-{ shrink <- attr(object,"shrink")
+# corresponding basis object. Efficient code.
+  shrink <- attr(object,"shrink")
   if (length(object$term)!=1) stop("Basis only handles 1D smooths")
   x <- data[[object$term]]
-  nx<-length(x)
-  if (is.null(knots)) ok <- FALSE
-  else 
-  { k <- knots[[object$term]]
+  nx <- length(x)
+  if (is.null(knots)) ok <- FALSE else { 
+    k <- knots[[object$term]]
     if (is.null(k)) ok <- FALSE
     else ok<-TRUE
   }
@@ -1135,37 +1142,34 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
   if (object$bs.dim <3) { object$bs.dim <- 3
     warning("basis dimension, k, increased to minimum possible\n")
   }
+ 
+  xu <- unique(x)
 
   nk <- object$bs.dim
-  if (!ok) { k <- rep(0,nk);k[2]<- -1}
-  
-  if (length(k)!=nk) stop("number of supplied knots != k for a cr smooth")
 
-  X <- rep(0,nx*nk);S<-rep(0,nk*nk);C<-rep(0,nk);control<-0
-  
-  if (length(unique(x))<nk) 
+  if (length(xu)<nk) 
   { msg <- paste(object$term," has insufficient unique values to support ",
                  nk," knots: reduce k.",sep="")
     stop(msg)
   }
 
-  oo <- .C(C_construct_cr,as.double(x),as.integer(nx),as.double(k),
-           as.integer(nk),as.double(X),as.double(S),
-           as.double(C),as.integer(control))
+  if (!ok) { k <- quantile(xu,seq(0,1,length=nk))} ## generate knots
+  
+  if (length(k)!=nk) stop("number of supplied knots != k for a cr smooth")
 
-  object$X <- matrix(oo[[5]],nx,nk)
+  X <- rep(0,nx*nk);F <- S <- rep(0,nk*nk);F.supplied <- 0
+  
+  oo <- .C(C_crspl,x=as.double(x),n=as.integer(nx),xk=as.double(k),
+           nk=as.integer(nk),X=as.double(X),S=as.double(S),
+           F=as.double(F),Fsupplied=as.integer(F.supplied))
 
-  object$S<-list()     # only return penalty if term not fixed
-  if (!object$fixed) 
-  { object$S[[1]] <- matrix(oo[[6]],nk,nk)
+  object$X <- matrix(oo$X,nx,nk)
+
+  object$S <- list()     # only return penalty if term not fixed
+  if (!object$fixed) {
+    object$S[[1]] <- matrix(oo$S,nk,nk)
     object$S[[1]]<-(object$S[[1]]+t(object$S[[1]]))/2 # ensure exact symmetry
-    if (!is.null(shrink)) # then add shrinkage term to penalty 
-    { ## Following is pre-1.5 code. Approach was not general enough
-      ## as identity term could dominate the small eigenvalues
-      ## and really ness up the penalty
-      ## norm <- mean(object$S[[1]]^2)^0.5
-      ## object$S[[1]] <- object$S[[1]] + diag(nk)*norm*abs(shrink)
-      
+    if (!is.null(shrink)) { # then add shrinkage term to penalty 
       ## Modify the penalty by increasing the penalty on the 
       ## unpenalized space from zero... 
       es <- eigen(object$S[[1]],symmetric=TRUE)
@@ -1180,12 +1184,16 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots)
     object$rank <- nk-2 
   } else object$rank <- nk   # penalty rank
 
-  object$df<-object$bs.dim # degrees of freedom,  unconstrained and unpenalized
+
+  object$df <- object$bs.dim # degrees of freedom,  unconstrained and unpenalized
   object$null.space.dim <- 2
-  object$xp <- oo[[3]]  # knot positions 
+  object$xp <- k  # knot positions
+  object$F <- oo$F # f'' = t(F)%*%f (at knots) - helps prediction 
   class(object) <- "cr.smooth"
   object
-}
+} # end smooth.construct.cr.smooth.spec
+
+
 
 smooth.construct.cs.smooth.spec<-function(object,data,knots)
 # implements a class of cr like smooths with an additional shrinkage
@@ -1196,23 +1204,26 @@ smooth.construct.cs.smooth.spec<-function(object,data,knots)
   object
 }
 
+Predict.matrix.cr.smooth<-function(object,data) {
+# this is the prediction method for a cubic regression spline, efficient code.
 
-Predict.matrix.cr.smooth<-function(object,data)
-# this is the prediction method for a cubic regression spline
-{
   x <- data[[object$term]]
   if (length(x)<1) stop("no data to predict at")
-  nx<-length(x)
-  nk<-object$bs.dim
-  X <- rep(0,nx*nk);S<-rep(0,nk*nk);C<-rep(0,nk);control<-0
-
-  oo <- .C(C_construct_cr,as.double(x),as.integer(nx),as.double(object$xp),
-            as.integer(object$bs.dim),as.double(X),as.double(S),
-                   as.double(C),as.integer(control))
-  X<-matrix(oo[[5]],nx,nk) # the prediction matrix
+  nx <- length(x)
+  nk <- object$bs.dim
+  X <- rep(0,nx*nk) 
+  S <- 1 ## unused
+  F.supplied <- 1
+ 
+  oo <- .C(C_crspl,x=as.double(x),n=as.integer(nx),xk=as.double(object$xp),
+           nk=as.integer(nk),X=as.double(X),S=as.double(S),
+           F=as.double(object$F),Fsupplied=as.integer(F.supplied))
+  
+  X <- matrix(oo$X,nx,nk) # the prediction matrix
 
   X
 }
+
 
 Predict.matrix.cs.smooth<-function(object,data)
 # this is the prediction method for a cubic regression spline 
@@ -2630,7 +2641,6 @@ ExtractData <- function(object,data,knots) {
    if (!is.null(attr(dat[[1]],"matrix"))) { ## strip down to unique covariate combinations
      n <- length(dat[[1]])
      X <- matrix(unlist(dat),n,m)
-     
      if (is.numeric(X)) {
        X <- uniquecombs(X)
        if (nrow(X)<n*.9) { ## worth the hassle
@@ -2680,9 +2690,16 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   ## automatically produce centering constraint...
   ## must be done here on original model matrix to ensure same
   ## basis for all `id' linked terms
+  drop <- -1 ## signals not to use sweep and drop
   if (is.null(sm$C)) {
-    if (sparse.cons==0) {
-      sm$C <- matrix(colSums(sm$X),1,ncol(sm$X))
+    if (sparse.cons<=0) {
+      sm$C <- matrix(colMeans(sm$X),1,ncol(sm$X))
+     ## following 2 lines implement sweep and drop constraints,
+     ## which are computationally faster than QR null space 
+     if (sparse.cons == -1) {
+       vcol <- apply(sm$X,2,var) ## drop least variable column
+       drop <- min((1:length(vcol))[vcol==min(vcol)])
+     }
     } else { ## use sparse constraints for sparse terms
       if (sum(sm$X==0)>.1*sum(sm$X!=0)) { ## treat term as sparse
         if (sparse.cons==1) {
@@ -2886,7 +2903,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       if (j>0) # there are constraints
       { indi <- (1:ncol(sm$C))[colSums(sm$C)!=0] ## index of non-zero columns in C
         nx <- length(indi)
-        if (nx<ncol(sm$C)) { ## then some parameters are completely constraint free
+        if (nx < ncol(sm$C)) { ## then some parameters are completely constraint free
           nc <- j ## number of constraints
           nz <- nx-nc   ## reduced null space dimension
           qrc <- qr(t(sm$C[,indi,drop=FALSE])) ## gives constraint null space for constrained only
@@ -2914,22 +2931,38 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
             ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
           } ## end smooth list loop
         } else { ## full null space created
-          qrc<-qr(t(sm$C)) 
-          for (i in 1:length(sml)) { ## loop through smooth list
-            if (length(sm$S)>0)
-            for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
-            { ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
-              sml[[i]]$S[[l]]<-t(qr.qty(qrc,t(ZSZ))[(j+1):k,]) ## Z'SZ
+          if (drop>0) { ## sweep and drop constraints
+            qrc <- c(drop,as.numeric(sm$C)[-drop])
+            class(qrc) <- "sweepDrop"
+            for (i in 1:length(sml)) { ## loop through smooth list
+              ## sml[[i]]$X <- sweep(sml[[i]]$X[,-drop],2,qrc[-1])
+              sml[[i]]$X <- sml[[i]]$X[,-drop] - 
+                            matrix(qrc[-1],nrow(sml[[i]]$X),ncol(sml[[i]]$X)-1,byrow=TRUE)
+              if (length(sm$S)>0)
+              for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
+                sml[[i]]$S[[l]]<-sml[[i]]$S[[l]][-drop,-drop]
+              }
             }
-            sml[[i]]$X <- t(qr.qty(qrc,t(sml[[i]]$X))[(j+1):k,]) ## form XZ
+          } else { ## full QR based approach
+            qrc<-qr(t(sm$C)) 
+            for (i in 1:length(sml)) { ## loop through smooth list
+              if (length(sm$S)>0)
+              for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
+              { ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
+                sml[[i]]$S[[l]]<-t(qr.qty(qrc,t(ZSZ))[(j+1):k,]) ## Z'SZ
+              }
+              sml[[i]]$X <- t(qr.qty(qrc,t(sml[[i]]$X))[(j+1):k,]) ## form XZ
+            }  
+            ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
+            ## and qr.qy(attr(sm,"qrc"),rbind(rep(0,length(b)),diag(length(b)))) gives 
+            ## null space basis Z, such that Zb are the original params, subject to con. 
+          }
+          for (i in 1:length(sml)) { ## loop through smooth list
             attr(sml[[i]],"qrc") <- qrc
             attr(sml[[i]],"nCons") <- j;
             sml[[i]]$C <- NULL
             sml[[i]]$rank <- pmin(sm$rank,k-j)
             sml[[i]]$df <- sml[[i]]$df - j
-            ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
-            ## and qr.qy(attr(sm,"qrc"),rbind(rep(0,length(b)),diag(length(b)))) gives 
-            ## null space basis Z, such that Zb are the original params, subject to con. 
           } ## end smooth list loop
         } # end full null space version of constraint
       } else { ## no constraints
@@ -3066,6 +3099,11 @@ PredictMat <- function(object,data,n=nrow(data))
             X <- X[,-indi[(nz+1):nx]]
           }
         }
+      } else if (inherits(qrc,"sweepDrop")) {
+        ## Sweep and drop constraints. First element is index to drop. 
+        ## Remainder are constants to be swept out of remaining columns 
+        ## X <- sweep(X[,-qrc[1],drop=FALSE],2,qrc[-1])
+        X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
       } else if (qrc>0) { ## simple set to zero constraint
         X <- X[,-qrc]
       } else if (qrc<0) { ## params sum to zero

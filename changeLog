@@ -1,6 +1,61 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-14
+
+** predict.bam now added as a wrapper for predict.gam, allowing parallel 
+   computation
+
+** bam now has method="fREML" option which uses faster REML optimizer: 
+   can make a big difference on parameter rich models.
+
+* bam can now use a cross product and Choleski based method to accumulate
+  the required model matrix factorization. Faster, but less stable than 
+  the QR based default.
+
+* bam can now obtain starting values using a random sub sample of the data. 
+  Useful for seriously large datasets. 
+
+* check of adequacy of basis dimensions added to gam.check
+
+* magic can now deal with model matrices with more columns than rows.
+
+* p-value reference distribution approximations improved.
+
+* bam returns objects of class "bam" inheriting from "gam"
+
+* bam now uses newdata.guaranteed=TRUE option when predicting as part
+  of model matrix decomposition accumulation. Speeds things up. 
+
+* More efficient `sweep and drop' centering constraints added as default for
+  bam. Constaint null space unchanged, but computation is faster.
+
+* Underlying "cr" basis code re-written for greater efficiency.
+
+* routine mgcv removed, it now being many years since there has been any 
+  reason to use it. C source code heavily pruned as a result. 
+
+* coefficient name generation moved from estimate.gam to gam.setup.
+
+* smooth2random.tensor.smooth had a bug that could produce a nonsensical
+  penalty null space rank and an error, in some cases (e.g. "cc" basis)
+  causing te terms to fail in gamm. Fixed.
+
+* minor change to te constructor. Any unpenalized margin now has 
+  corresponding penalty rank dropped along with penalty.
+
+* Code for handling sp's fixed at exactly zero was badly thought out, and 
+  could easily fail. fixed.
+
+* TPRS prediction code made more efficient, partly by use of BLAS. Large
+  dataset setup also made more efficient using BLAS.
+
+* smooth.construct.tensor.smooth.spec now handles marginals with factor
+  arguments properly (there was a knot generation bug in this case)
+
+* bam now uses LAPACK version of qr, for model matrix QR, since it's 
+  faster and uses BLAS.
+
 1.7-13
 
 ** The Lanczos routine in mat.c was using a stupidly inefficient check for 
