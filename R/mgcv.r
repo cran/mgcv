@@ -2,6 +2,7 @@
 ##  With contributions from Henric Nilsson
 
 
+
 Rrank <- function(R,tol=.Machine$double.eps^.9) {
 ## Finds rank of upper triangular matrix R, by estimating condition
 ## number of upper rank by rank block, and reducing rank until this is 
@@ -139,126 +140,6 @@ pcls <- function(M)
   if (qra.exist) p <- qr.qy(qra,c(rep(0,j),p))
   p
 }  
-
-mgcv.control<-function(conv.tol=1e-7,max.half=20,target.edf=NULL,min.edf=-1)
-# control constants for mgcv
-# conv.tol - convergence tolerence for multiple s.p. GCV
-# max.half - maximum number of step-length halvings to perform at each newton update
-#              of s.p.'s
-# min.edf - minimum possible estimated degrees of freedom for model - useful for setting limits
-#             on overall smoothing parameter. Set to zero or negative to ignore.
-# target.edf - set to negative to ignore. This should only be used if cautious optimization
-#                is to be used in mgcv searching. If this is non-negative then the local 
-#                minimum closest to the target edf will be returned (which can be the global
-#                optimum). Designed for use with non-convergent gams.
-
-{ list(conv.tol=conv.tol,max.half=max.half,target.edf=target.edf,min.edf=min.edf)
-}
-
-mgcv <- function(y,X,sp,S,off,C=NULL,w=rep(1,length(y)),H=NULL,scale=1,gcv=TRUE,control=mgcv.control())
-
-# Performs multiple smoothing parameter selection for Generalized ridge regression problems 
-# y is the response vector
-# X is the model matrix
-# sp is an array of smoothing parameters. If control$fixed.sp==TRUE then these are taken as 
-#    being the s.p.s. Otherwise any positive are taken as initial estimates and negatives 
-#    indicate that autoinitialization should take place.
-# S is a list of penalty matrices. S[[i]] is the ith penalty matrix, and is stored as the 
-#   smallest sub-matrix of the penalty not excluding any non-zero elements. off[i]
-#   indicates which parameter S[[i]][1,1] relates to.
-# off off[i] is the first parameter to which S[[i]] applies  
-# C is an optional linear constaint matrix.
-# w is the weight matrix (often 1/std.dev(y), or an estimate of this).
-# H a single fixed penalty matrix to be used instead of the multiple penalties in S
-# scale is the scale parameter needed by UBRE
-# gcv is true if GCV is to be used (and hence scale ignored), FALSE for UBRE.
-# control is a list of control options (see mgcv.control()).
-#
-# An object is returned 
-#
-# b estimated parameters
-# scale estimated or supplied scale parameter
-# score minimising score
-# sp estimated smoothing parameters 
-# Vb estimated covariance matrix
-# hat diagonal of hat matrix
-# edf array of edf per parameter
-# info - a list of convergence diagnostics
-#          g - gradients of gcv/ubre score at termination, h - leading diagonal of Hessian
-#          e - eigenvalues of Hessian, iter - iterations taken, init.ok - TRUE if second 
-#          autoinitialization guess ok (or intial values supplied), step.fail - TRUE
-#          if algorithm terminated on step failure rather than convergence. 
-#          edf - array of model edf's from final grid search for overall s.p.
-#          score - array of gcv/ubre scores corresponding to edf.
-#  
-{ .Deprecated("magic")
-
-  if (gcv) scale <- -1
-  
-  if (!is.null(C)) C.r<-nrow(C)          # number of equality constraints
-  else {C.r<-0;C<-0}
-  q<-ncol(X)            # number of parameters
-  n<-nrow(X)            # number of data
-  if (is.null(H))  
-  { # pack the S array for mgcv call 
-    m<-length(S)
-    Sa<-array(0,0);df<-0
-    if (m>0) for (i in 1:m)
-    { Sa<-c(Sa,S[[i]])
-      df[i]<-nrow(S[[i]])
-    }
-    fixed.sp<-0
-  }
-  else
-  { if (length(S)>0) stop("Can't mix fixed and estimated penalties in mgcv() - use magic()")
-    k<-1;while (sum(H[,k]!=0)==0&&sum(H[k,]!=0)==0) k<-k+1
-    off <- k
-    k<-nrow(H);while (sum(H[,k]!=0)==0&&sum(H[k,]!=0)==0) k<-k-1
-    df <- k-off+1
-    Sa<-array(H[off:(off+df-1),off:(off+df-1)],df*df)
-    m<-1
-    fixed.sp<-1
-  } 
-
-  # deal with quantities that will be estimated
-  p<-matrix(0,q,1)      # set up parameter vector
-  Vp<-matrix(0.0,q,q)   # estimated covariance matrix
-  edf<-array(0,q)       # estimated degrees of freedom
-  hat<-array(0,n)       # elements on leading diagonal of hat matrix
-  ddiag<-array(0,3*m)   # array for diagonostics
-  idiag<-array(0,3)     # array for diagnostics
-  Vp[1,1]<-1.0
-  gcv.ubre<-1.0;
-  direct.mesh<-100      # number of points for overall s.p. initial direct search
-  sdiag<-array(0.0,2*direct.mesh) # array for gcv/ubre vs edf diagnostics
-  if (is.null(control$target.edf)) control$target.edf<- -1 # set to signal no target edf
-
-  oo<-.C(C_mgcv,as.double(y),as.double(X),as.double(C),as.double(w^2),as.double(Sa),
-         as.double(p),as.double(sp),as.integer(off-1),as.integer(df),as.integer(m),
-         as.integer(n),as.integer(q),as.integer(C.r),as.double(scale),as.double(Vp),
-		 as.double(edf),as.double(control$conv.tol),as.integer(control$max.half),as.double(ddiag),
-                 as.integer(idiag),as.double(sdiag),as.integer(direct.mesh),as.double(control$min.edf),
-                 as.double(gcv.ubre),as.double(control$target.edf),as.integer(fixed.sp),
-                 as.double(hat))
-   
-  p<-matrix(oo[[6]],q,1);
-  scale<-oo[[14]]
-  Vp<-matrix(oo[[15]],q,q)
-  sp<-matrix(oo[[7]])
-  edf<-oo[[16]]
-  ddiag<-oo[[19]]
-  idiag<-oo[[20]]
-  sdiag<-oo[[21]]
-  gcv.ubre<-oo[[24]]
-  hat<-oo[[27]]
-  conv<-list(edf=sdiag[1:direct.mesh],score=sdiag[direct.mesh+1:direct.mesh],g=ddiag[1:m],h=ddiag[(m+1):(2*m)],
-             e=ddiag[(2*m+1):(3*m)],iter=idiag[1],init.ok=as.logical(idiag[2]),step.fail=as.logical(idiag[3]))
-  
-  list(b=p,scale=scale,score=gcv.ubre,sp=sp,Vb=Vp,hat=hat,edf=edf,info=conv)
- 
-}
-
-
 
 
 interpret.gam <- function (gf)
@@ -739,7 +620,8 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
     } else { ## it's a smooth with an id, so basis setup data differs from model matrix data
       names(id.list[[id]]$data) <- split$smooth.spec[[i]]$term ## give basis data suitable names
       sml <- smoothCon(split$smooth.spec[[i]],id.list[[id]]$data,knots,
-                       absorb.cons,n=nrow(data),dataX=data,scale.penalty=scale.penalty,null.space.penalty=select,sparse.cons=sparse.cons)
+                       absorb.cons,n=nrow(data),dataX=data,scale.penalty=scale.penalty,
+                       null.space.penalty=select,sparse.cons=sparse.cons)
     }
     for (j in 1:length(sml)) {
       newm <- newm + 1
@@ -831,22 +713,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
     G$smooth[[i]] <- sm[[i]]   
   }
 
-## Now test if intercept in span of parametric, and centre all smooth
-## columns if it is....
-## I don't think that this is legitimate --- some smooths have no null
-## space, in which case this trick alters the fit...
-#  G$Xcentre <- NULL
-#  if (G$nsdf>0) { 
-#    qrx <- qr(X[,1:G$nsdf,drop=FALSE])
-#    one <- rep(1,nrow(X))
-#    if (max(abs(one-qr.qy(qrx,qr.qty(qrx,one)))) < .Machine$double.eps^.75 ) {
-#      G$Xcentre <- colMeans(X)
-#      G$Xcentre[1:G$nsdf] <- 0 
-#      if (max(G$Xcentre^2)<.Machine$double.eps^.75) G$Xcentre <- NULL else 
-#      X <- sweep(X,2,G$Xcentre)
-#    } else G$Xcentre <- NULL
-#  }
-  
+
 
   if (is.null(Xp)) {
     G$cmX <- colMeans(X) ## useful for componentwise CI construction 
@@ -885,7 +752,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
 ## L into columns relating to free log smoothing parameters,
 ## and columns, L0, corresponding to values supplied in sp.
 ## lsp0 = L0%*%log(sp[sp>=0]) [need to fudge sp==0 case by
-## setting log(0) to, e.g. 10*log(.Machine$double.xmin)]
+## setting log(0) to log(effective zero) computed case-by-case]
 
 
   ## following deals with supplied and estimated smoothing parameters...
@@ -1004,9 +871,15 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
 
   if (sum(fix.ind)) {
     lsp0 <- G$sp[fix.ind]
-    ind <- lsp0==0
+    ind <- lsp0==0 ## find the zero s.p.s
+    ef0 <- indi <- (1:length(ind))[ind]
+    if (length(indi)>0) for (i in 1:length(indi)) {
+      ## find "effective zero" to replace each zero s.p. with
+      ii <- G$off[i]:(G$off[i]+ncol(G$S[[i]])-1) 
+      ef0[i] <- norm(G$X[,ii],type="F")^2/norm(G$S[[i]],type="F")*.Machine$double.eps*.1
+    }
     lsp0[!ind] <- log(lsp0[!ind])
-    lsp0[ind] <- log(.Machine$double.xmin)*1000 ## zero fudge
+    lsp0[ind] <- log(ef0) ##log(.Machine$double.xmin)*1000 ## zero fudge
     lsp0 <- as.numeric(L[,fix.ind,drop=FALSE]%*%lsp0)
 
     L <- L[,!fix.ind,drop=FALSE]  
@@ -1042,6 +915,20 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
 
   if (is.null(data$"(weights)")) G$w<-rep(1,G$n)
   else G$w<-data$"(weights)"  
+
+  ## Create names for model coefficients... 
+
+  if (G$nsdf>0) term.names <- colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
+  n.smooth <- length(G$smooth)
+  if (n.smooth)
+  for (i in 1:n.smooth)
+  { k<-1
+    for (j in G$smooth[[i]]$first.para:G$smooth[[i]]$last.para)
+    { term.names[j] <- paste(G$smooth[[i]]$label,".",as.character(k),sep="")
+      k<-k+1
+    }
+  }
+  G$term.names <- term.names
 
   # now run some checks on the arguments
 
@@ -1373,13 +1260,6 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
       else G$sig2 <- -1 #gcv
   } else {G$sig2 <- scale}
 
-## Following removed since extended quasi-likelihood coded up...
-#  if (fam.name=="quasi"||fam.name=="quasipoisson"||fam.name=="quasibinomial") {
-#    ## REML/ML invalid with quasi families
-#    if (method=="REML") method <- "P-REML"
-#    if (method=="ML") method <- "P-ML"
-#    if (method=="P-ML"||method=="P-REML") warning("RE/ML is not recommended for quasi families")
-#  }
 
   if (reml) { ## then RE(ML) selection, but which variant?
    criterion <- method
@@ -1502,28 +1382,27 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
 
   object$smooth<-G$smooth
   # now re-assign variable names to coefficients etc. 
-  if (G$nsdf>0) term.names<-colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
-  n.smooth<-length(G$smooth)
-  if (n.smooth)
-  for (i in 1:n.smooth)
-  { k<-1
-    for (j in G$smooth[[i]]$first.para:G$smooth[[i]]$last.para)
-    { term.names[j]<-paste(G$smooth[[i]]$label,".",as.character(k),sep="")
-      k<-k+1
-    }
-  }
-  ##names(object$coefficients) <- term.names  # note - won't work on matrices!!
-  names(object$edf) <- term.names
-  names(object$edf1) <- term.names
+#  if (G$nsdf>0) term.names<-colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
+#  n.smooth<-length(G$smooth)
+#  if (n.smooth)
+#  for (i in 1:n.smooth)
+#  { k<-1
+#    for (j in G$smooth[[i]]$first.para:G$smooth[[i]]$last.para)
+#    { term.names[j]<-paste(G$smooth[[i]]$label,".",as.character(k),sep="")
+#      k<-k+1
+#    }
+#  }
+  names(object$edf) <- G$term.names
+  names(object$edf1) <- G$term.names
 
   if (!is.null(G$P)) {
     object$coefficients <- as.numeric(G$P %*% object$coefficients)
     object$Vp <- G$P %*% object$Vp %*% t(G$P)
     object$Ve <- G$P %*% object$Ve %*% t(G$P)
-    rownames(object$Vp) <- colnames(object$Vp) <- term.names
-    rownames(object$Ve) <- colnames(object$Ve) <- term.names
+    rownames(object$Vp) <- colnames(object$Vp) <- G$term.names
+    rownames(object$Ve) <- colnames(object$Ve) <- G$term.names
   }
-  names(object$coefficients) <- term.names 
+  names(object$coefficients) <- G$term.names 
   
   object
 }
@@ -1956,7 +1835,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     scale <- G$sig2
 
     msp <- G$sp
-    magic.control<-list(tol=G$conv.tol,step.half=G$max.half,maxit=control$maxit+control$globit,
+    magic.control<-list(tol=G$conv.tol,step.half=G$max.half,#maxit=control$maxit+control$globit,
                           rank.tol=control$rank.tol)
 
     for (iter in 1:(control$maxit)) 
@@ -2232,6 +2111,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   } else { ## newdata.guaranteed == TRUE
     na.act <- NULL
     new.data.ok=TRUE ## it's guaranteed!
+    if (!is.null(attr(newdata,"terms"))) nd.is.mf <- TRUE
   }
   
 
@@ -2511,7 +2391,6 @@ residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson"
 { type <- match.arg(type)
   y <- object$y
   mu <- object$fitted.values
-##  family <- object$family
   wts <- object$prior.weights
   res<- switch(type,working = object$residuals,
          scaled.pearson = (y-mu)*sqrt(wts)/sqrt(object$sig2*object$family$variance(mu)),
@@ -2527,121 +2406,98 @@ residuals.gam <-function(object, type = c("deviance", "pearson","scaled.pearson"
 
 ## Start of anova and summary (with contributions from Henric Nilsson) ....
 
-eigXVX <- function(X,V,rank=NULL,tol=.Machine$double.eps^.5) {
-## forms truncated eigen-decomposition of XVX', efficiently,
-## where V is symmetric, and X has more rows than columns
-## first `rank' eigen values/vectors are returned, where `rank'
-## is the smaller of any non-NULL supplied value, and the rank
-## estimated using `tol'
-  qrx <- qr(X)
-  R <- qr.R(qrx)
-  V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
-  V <- (V + t(V))/2
-  ed <- eigen(V,symmetric=TRUE)
-  ind <- abs(ed$values) > max(abs(ed$values))*tol
-  erank <- sum(ind) ## empirical rank
-  if (is.null(rank)) {
-    rank <- erank
-  } else { if (rank<erank) ind <- 1:rank else rank <- erank }
-  vec <- qr.qy(qrx,rbind(ed$vectors,matrix(0,nrow(X)-ncol(X),ncol(X))))
-  list(values=ed$values[ind],vectors=vec[,ind],rank=rank)
-}
 
-smoothTest <- function(b,X,V,z) {
+
+
+smoothTest <- function(b,X,V,eps=.Machine$double.eps^.5) {
 ## Forms Cox, Koh, etc type test statistic, and
 ## obtains null distribution by simulation...
 ## if b are coefs f=Xb, cov(b) = V. z is a vector of 
 ## i.i.d. N(0,1) deviates
+
   qrx <- qr(X)
   R <- qr.R(qrx)
   V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
-  f <- t(ed$vectors)%*%R%*%b
+  k <- n <- length(ed$values)
+  ## could truncate, but it doesn't improve power in correlated case!
+  f <- t(ed$vectors[,1:k])%*%R%*%b
   t <- sum(f^2)
   k <- ncol(X)
-  n.rep <- floor(length(z)/k)
-  lambda <- as.numeric(ed$values)
-  T <- colSums(lambda*matrix(z[1:(n.rep*k)]^2,k,n.rep))
-  pval <- sum(T>=t)
-  #if (pval==0) pval <- .5
-  pval <- pval/n.rep
+  lambda <- as.numeric(ed$values[1:k])
+  pval <- liu2(t,lambda) ## should really use Davies
   list(stat=t,pval=pval)  
 } 
 
-pinvXVX <- function(X,V,rank=NULL,type=0) {
-## Routine for forming fractionally trunctated
-## pseudoinverse of XVX'. Returns as D where
-## DD' gives the pseudoinverse itself.
-## truncates to numerical rank, if this is
-## less than supplied rank+1.
-## The type argument specifies the type of truncation to use.
-## on entry `rank' should be an edf estimate
-## 0. Default using the fractionally truncated pinv.
-## 1. Round down to k if k<= rank < k+0.05, otherwise up.
-## 2. Naive rounding.
-## 3. Round up.
-## 4. Numerical rank estimation, tol=1e-3
+
+liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
+# Evaluate Pr[sum_i \lambda_i \chi^2_h_i < x] approximately.
+# Code adapted from CompQuadForm package of Pierre Lafaye de Micheaux 
+# and directly from....
+# H. Liu, Y. Tang, H.H. Zhang, A new chi-square approximation to the 
+# distribution of non-negative definite quadratic forms in non-central 
+# normal variables, Computational Statistics and Data Analysis, Volume 53, 
+# (2009), 853-856. Actually, this is just Pearson (1959) given that
+# the chi^2 variables are central. 
+# Note that this can be rubiish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
+  
+#  if (FALSE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
+#    require(CompQuadForm)
+#    r <- x
+#    for (i in 1:length(x)) r[i] <- davies(x[i],lambda,h)$Qq
+#    return(r)
+#  }
+
+  if (length(h) != length(lambda)) stop("lambda and h should have the same length!")
  
+  lh <- lambda*h
+  muQ <- sum(lh)
+  
+  lh <- lh*lambda
+  c2 <- sum(lh)
+  
+  lh <- lh*lambda
+  c3 <- sum(lh)
+  
+  s1 <- c3/c2^1.5
+  s2 <- sum(lh*lambda)/c2^2
 
-  qrx <- qr(X)
-  R <- qr.R(qrx)
-  V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
-  V <- (V + t(V))/2
-  ed <- eigen(V,symmetric=TRUE)
+  sigQ <- sqrt(2*c2)
 
-  k <- max(0,floor(rank)) 
-  nu <- abs(rank - k)     ## fractional part of supplied edf
-  if (type==1) { ## round up is more than .05 above lower
-    if (rank > k + .05||k==0) k <- k + 1
-    nu <- 0;rank <- k
-  } else if (type==2) { ## naive round
-    nu <- 0;rank <- k <- max(1,round(rank))
-    warning("p-values may give low power in some circumstances")
-  } else if (type==3) { ## round up
-    nu <- 0; rank <- k <- max(1,ceiling(rank))
-    warning("p-values un-reliable")
-  } else if (type==4) { ## rank estimation
-    rank <- k <- max(sum(ed$values>1e-3*max(ed$values)),1) 
-    nu <- 0
-    warning("p-values may give very low power")
-  }
+  t <- (x-muQ)/sigQ
 
-  if (nu>0) k1 <- k+1 else k1 <- k
-
-  ## check that actual rank is not below supplied rank+1
-  r.est <- sum(ed$values > max(ed$values)*.Machine$double.eps^.9)
-  if (r.est<k1) {k1 <- k <- r.est;nu <- 0;rank <- r.est}
-
-  ## Get the eigenvectors...
-  vec <- qr.qy(qrx,rbind(ed$vectors,matrix(0,nrow(X)-ncol(X),ncol(X))))
-  if (k1<ncol(vec)) vec <- vec[,1:k1,drop=FALSE]
-  if (k==0) {
-     vec <- t(t(vec)*sqrt(nu/ed$val[1]))
-     attr(vec,"rank") <- rank
-     return(vec)
-  }
- 
-  ## deal with the fractional part of the pinv...
-  if (nu>0) {
-     if (k>1) vec[,1:(k-1)] <- t(t(vec[,1:(k-1)])/sqrt(ed$val[1:(k-1)]))
-     b12 <- .5*nu*(1-nu)
-     if (b12<0) b12 <- 0
-     b12 <- sqrt(b12)
-     B <- matrix(c(1,b12,b12,nu),2,2)
-     ev <- diag(ed$values[k:k1]^-.5)
-     B <- ev%*%B%*%ev
-     eb <- eigen(B,symmetric=TRUE)
-     rB <- eb$vectors%*%diag(sqrt(eb$values))%*%t(eb$vectors)
-     vec[,k:k1] <- t(rB%*%t(vec[,k:k1]))
+  if (s1^2>s2) {
+    a <- 1/(s1-sqrt(s1^2-s2))
+    delta <- s1*a^3-a^2
+    l <- a^2-2*delta
   } else {
-    vec <- t(t(vec)/sqrt(ed$val[1:k]))
+    a <- 1/s1
+    delta <- 0
+    l <- c2^3/c3^2
   }
-  attr(vec,"rank") <- rank ## actual rank
-  vec ## vec%*%t(vec) is the pseudoinverse
-} ## end of pinvXVX
 
-testStat <- function(p,X,V,rank=NULL,type=0) {
+  muX <- l+delta
+  sigX <- sqrt(2)*a
+  
+  return(pchisq(t*sigX+muX,df=l,ncp=delta,lower.tail=lower.tail))
+
+}
+
+simf <- function(x,a,df,nq=50) {
+## suppose T = sum(a_i \chi^2_1)/(chi^2_df/df). We need
+## Pr[T>x] = Pr(sum(a_i \chi^2_1) > x *chi^2_df/df). Quadrature 
+## used here. So, e.g.
+## 1-pf(4/3,3,40);simf(4,rep(1,3),40);1-pchisq(4,3)
+  p <- (1:nq-.5)/nq
+  q <- qchisq(p,df)
+  x <- x*q/df
+  pr <- sum(liu2(x,a)) ## Pearson/Liu approx to chi^2 mixture
+  pr/nq 
+}
+
+
+testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 ## Routine for forming fractionally trunctated
 ## pseudoinverse of XVX'. And returning 
 ## p'X'(XVX)^-Xp.
@@ -2654,6 +2510,8 @@ testStat <- function(p,X,V,rank=NULL,type=0) {
 ## 2. Naive rounding.
 ## 3. Round up.
 ## 4. Numerical rank estimation, tol=1e-3
+## res.df is residual dof used to estimate scale. <=0 implies
+## fixed scale.
 
   qrx <- qr(X)
   R <- qr.R(qrx)
@@ -2661,6 +2519,13 @@ testStat <- function(p,X,V,rank=NULL,type=0) {
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
 
+  lp <- ed$values/max(ed$values)
+  lp <- 2*lp - lp^2
+  k <- ceiling(rank) ## reset rank if failing to catch important terms...
+  if (k < length(lp)&&lp[k+1]>max(lp)*0.5) {
+    rank <- max(rank,sum(lp>.5*max(lp)))
+  }
+ 
   k <- max(0,floor(rank)) 
   nu <- abs(rank - k)     ## fractional part of supplied edf
   if (type==1) { ## round up is more than .05 above lower
@@ -2689,9 +2554,8 @@ testStat <- function(p,X,V,rank=NULL,type=0) {
   vec <- ed$vectors
   if (k1<ncol(vec)) vec <- vec[,1:k1,drop=FALSE]
   if (k==0) {
-     vec <- t(t(vec)*sqrt(nu/ed$val[1]))
-     ##attr(vec,"rank") <- rank
-     ##return(vec)
+     vec <- t(t(vec)*sqrt(1/ed$val[1]))
+    
   }
  
   ## deal with the fractional part of the pinv...
@@ -2708,14 +2572,31 @@ testStat <- function(p,X,V,rank=NULL,type=0) {
      vec[,k:k1] <- t(rB%*%t(vec[,k:k1]))
   } else {
     vec <- t(t(vec)/sqrt(ed$val[1:k]))
+    if (k==1) rank <- 1
   }
-  ##attr(vec,"rank") <- rank ## actual rank
-  #d <- t(vec)%*%(X%*%p)
+ 
   d <- t(vec)%*%(R%*%p)
   d <- sum(d^2) 
-  attr(d,"rank") <- rank ## actual rank
-  ##vec ## vec%*%t(vec) is the pseudoinverse
-  d
+
+  if (nu>0) { ## mixture of chi^2 ref dist
+     if (k1==1) val <- 1 else { 
+       val <- rep(1,k1)##ed$val[1:k1]
+       rp <- nu+1
+       val[k] <- (rp + sqrt(rp*(2-rp)))/2
+       val[k1] <- (rp - val[k])
+     }
+   
+     if (res.df <= 0) pval <- liu2(d,val) else ##  pval <- davies(d,val)$Qq else
+     pval <- simf(d,val,res.df)
+  } else { pval <- 1 }
+  ## integer case still needs computing, also liu/pearson approx only good in 
+  ## upper tail. In lower tail, 2 moment approximation is better (Can check this 
+  ## by simply plotting the whole interesting range as a contour plot!)
+  if (pval > .5) {
+    if (res.df <= 0) pval <- pchisq(d,df=rank,lower.tail=FALSE) else
+    pval <- pf(d/rank,rank,res.df,lower.tail=FALSE)
+  }
+  list(stat=d,pval=min(1,pval),rank=rank)
 } ## end of testStat
 
 
@@ -2725,12 +2606,11 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
 # summary method for gam object - provides approximate p values for terms + other diagnostics
 # Improved by Henric Nilsson
 { pinv<-function(V,M,rank.tol=1e-6)
-  { ##D<-La.svd(V)
-    ##M1<-length(D$d[D$d>rank.tol*D$d[1]])
+  {
     D <- eigen(V,symmetric=TRUE)
     M1<-length(D$values[D$values>rank.tol*D$values[1]])
     if (M>M1) M<-M1 # avoid problems with zero eigen-values
-    ##if (M+1<=length(D$d)) D$d[(M+1):length(D$d)]<-1
+  
     if (M+1<=length(D$values)) D$values[(M+1):length(D$values)]<-1
     D$values<- 1/D$values
     if (M+1<=length(D$values)) D$values[(M+1):length(D$values)]<-0
@@ -2748,7 +2628,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     covmat <- dispersion * covmat.unscaled
     est.disp <- FALSE
   } else dispersion <- object$sig2
-  #se<-0;for (i in 1:length(object$coefficients)) se[i] <- covmat[i,i]^0.5
+ 
   se <- diag(covmat)^0.5
   residual.df<-length(object$y)-sum(object$edf)
   if (object$nsdf>0) # individual parameters
@@ -2813,7 +2693,6 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       k <- stop-start+1
       if (k>kmax) kmax <- k 
     }
-    z <- rnorm(kmax*100000) ## N(0,1) deviates to drive null simulation
   }
 
   df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
@@ -2837,9 +2716,8 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         X <- model.matrix(object)
       }
       X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
-      ##if (alpha>0) X <- diag(ncol(X))
       ## get corrected edf
-      ##  edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
+      #edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
     }
     for (i in 1:m)
     { start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
@@ -2857,24 +2735,24 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       } else { ## Inverted Nychka interval statistics
         Xt <- X[,start:stop,drop=FALSE] 
         if (p.type < 0) {
-          ##if (p.type == -2) Xt <- diag(length(p)) ## amazingly poor
-          res <- smoothTest(p,Xt,V,z)
+          res <- smoothTest(p,Xt,V)
           df[i] <- edf[i] ## not really used
           chi.sq[i] <- res$stat
           s.pv[i] <- res$pval
         } else {
-          #ft <- Xt%*%p
-       
+         
           df[i] <- min(ncol(Xt),edf1[i])
-          ##D <- pinvXVX(Xt,V,df[i],type=p.type)
-          chi.sq[i] <- Tp <- testStat(p,Xt,V,df[i],type=p.type)
-          df[i] <- attr(Tp,"rank") ##attr(D,"rank") 
-          ## chi.sq[i] <- sum((t(D)%*%ft)^2)
+        
+          if (est.disp) rdf <- residual.df else rdf <- -1
+          res <- testStat(p,Xt,V,df[i],type=p.type,res.df = rdf)
+          df[i] <- res$rank
+          chi.sq[i] <- res$stat
+          s.pv[i] <- res$pval 
         }   
       }
       names(chi.sq)[i]<- object$smooth[[i]]$label
       
-      if (p.type> -.5||freq) {
+      if (freq) {
         if (!est.disp)
          s.pv[i] <- pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
         else
@@ -3375,7 +3253,7 @@ initial.sp <- function(X,S,off,expensive=FALSE)
 
 
 magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,gamma=1,scale=1,gcv=TRUE,
-                ridge.parameter=NULL,control=list(maxit=50,tol=1e-6,step.half=25,
+                ridge.parameter=NULL,control=list(tol=1e-6,step.half=25,
                 rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y))
 # Wrapper for C routine magic. Deals with constraints weights and square roots of 
 # penalties. 
@@ -3398,7 +3276,12 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
 # `extra.rss' is an additive constant by which the RSS is modified in the
 #  GCV/UBRE or scale calculations, n.score is the `n' to use in the GCV/UBRE
 #  score calcualtions (Useful for dealing with huge datasets).
-{ n.p<-length(S)
+{ if (is.null(control)) control <- list()
+  if (is.null(control$tol)) control$tol <- 1e-6
+  if (is.null(control$step.half)) control$step.half <- 25
+  if (is.null(control$rank.tol)) control$rank.tol <- .Machine$double.eps^0.5
+
+  n.p<-length(S)
   n.b<-dim(X)[2] # number of parameters
   # get initial estimates of smoothing parameters, using better method than is
   # built in to C code. This must be done before application of general 
@@ -3433,7 +3316,7 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
   if (!is.null(C)) # then impose constraints 
    { n.con<-dim(C)[1]
     ns.qr<-qr(t(C)) # last n.b-n.con columns of Q are the null space of C
-    X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b] # last n.b-n.con cols of XQ (=(Q'X')')
+    X<-t(qr.qty(ns.qr,t(X)))[,(n.con+1):n.b,drop=FALSE] # last n.b-n.con cols of XQ (=(Q'X')')
     # need to work through penalties forming Z'S_i^0.5 's
     if (n.p>0) for (i in 1:n.p) { 
       S[[i]]<-qr.qty(ns.qr,S[[i]])[(n.con+1):n.b,,drop=FALSE]
@@ -3444,8 +3327,8 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
     }
     # and Z'HZ too
     if (!is.null(H))
-    { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,] # Z'H
-      H<-t(qr.qty(ns.qr,t(H))[(n.con+1):n.b,]) # Z'HZ = (Z'[Z'H]')' 
+    { H<-qr.qty(ns.qr,H)[(n.con+1):n.b,,drop=FALSE] # Z'H
+      H<-t(qr.qty(ns.qr,t(H))[(n.con+1):n.b,,drop=FALSE]) # Z'HZ = (Z'[Z'H]')' 
     }
     full.rank=n.b-n.con
   } else full.rank=n.b
@@ -3461,17 +3344,24 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
       X<-as.vector(w)*X # use recycling rule to form diag(w)%*%X cheaply
     }
   }
-  if (is.null(dim(X))) # lost dimensions as result of being single columned! 
-  { n<-length(y)
+  if (is.null(dim(X))) { # lost dimensions as result of being single columned! 
+    n <- length(y)
     if (n!=length(X)) stop("X lost dimensions in magic!!")
-    dim(X)<-c(n,1)
+    dim(X) <- c(n,1)
   }
   # call real mgcv engine...
   Si<-array(0,0);cS<-0
-  if (n.p>0) for (i in 1:n.p) 
-  { Si<-c(Si,S[[i]]);
-    cS[i]<-dim(S[[i]])[2]
+  if (n.p>0) for (i in 1:n.p) { 
+    Si <- c(Si,S[[i]]);
+    cS[i] <- dim(S[[i]])[2]
   }
+  rdef <- ncol(X) - nrow(X)
+  if (rdef>0) { ## need to zero pad model matrix
+    n.score <- n.score ## force evaluation *before* y lengthened
+    X <- rbind(X,matrix(0,rdef,ncol(X)))
+    y <- c(y,rep(0,rdef))
+  }
+
   icontrol<-as.integer(gcv);icontrol[2]<-length(y);q<-icontrol[3]<-dim(X)[2];
   if (!is.null(ridge.parameter)&&ridge.parameter>0)
   { if(is.null(H)) H<-diag(ridge.parameter,q) else H<-H+diag(ridge.parameter,q)}
@@ -3490,12 +3380,12 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
   gcv.info<-list(full.rank=full.rank,rank=um$info[1],fully.converged=as.logical(um$info[2]),
       hess.pos.def=as.logical(um$info[3]),iter=um$info[4],score.calls=um$info[5],rms.grad=um$rms.grad)
   res$gcv.info<-gcv.info
-  if (!is.null(C)) # need image of constrained parameter vector in full space
-  { b<-c(rep(0,n.con),res$b)
-    res$b<-qr.qy(ns.qr,b) # Zb 
-    b<-matrix(0,n.b,dim(res$rV)[2])
-    b[(n.con+1):n.b,]<-res$rV 
-    res$rV<-qr.qy(ns.qr,b)# ZrV
+  if (!is.null(C)) { # need image of constrained parameter vector in full space
+    b <- c(rep(0,n.con),res$b)
+    res$b <- qr.qy(ns.qr,b) # Zb 
+    b <- matrix(0,n.b,dim(res$rV)[2])
+    b[(n.con+1):n.b,] <- res$rV 
+    res$rV <- qr.qy(ns.qr,b)# ZrV
   } 
   res
 }
