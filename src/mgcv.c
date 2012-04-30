@@ -224,7 +224,7 @@ void MonoCon(matrix *A,matrix *b,matrix *x,int control,double lower,double upper
 
 
 void getFS(double *x,int n,double *S,double *F) {
-/* x contains ascending knot seqence for a cubic regression spline
+/* x contains ascending knot sequence for a cubic regression spline
    Routine finds wigglness penalty S and F such that F' maps function 
    values at knots to second derivatives. See Wood 2006 section 4.1.2.
    F and S are n by n. F is F' in 4.1.2 notation.
@@ -263,16 +263,22 @@ void getFS(double *x,int n,double *S,double *F) {
   /* now create D'B^{-1}D efficiently */
   a = 1/h[0];  /* row 0 */
   for (Sp=S,Di=D,i=0;i<n;i++,Sp+=n,Di+=n2) *Sp = *Di * a;
-  a = -1/h[0] - 1/h[1];b = 1/h[1]; /* row 1 */
-  for (Sp=S+1,Di1=D+1,Di=D,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2) *Sp = *Di * a + *Di1 * b;
-  for (j=2;j<n2;j++) { /* rows 2 to n-3 */
-    a = 1/h[j-1];c = 1/h[j];b = -a -c; 
-    for (Sp=S+j,Di=D+j-2,Di1 = D +j-1,Di2=D + j,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2,Di2+=n2) 
-      *Sp = *Di * a + *Di1 * b + *Di2 * c;
+  if (n>3) {
+    a = -1/h[0] - 1/h[1];b = 1/h[1]; /* row 1 */
+    for (Sp=S+1,Di1=D+1,Di=D,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2) *Sp = *Di * a + *Di1 * b;
+    for (j=2;j<n2;j++) { /* rows 2 to n-3 */
+      a = 1/h[j-1];c = 1/h[j];b = -a -c; 
+      for (Sp=S+j,Di=D+j-2,Di1 = D +j-1,Di2=D + j,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2,Di2+=n2) 
+        *Sp = *Di * a + *Di1 * b + *Di2 * c;
+    }
+    j = n2; /* n-2 */
+    a = 1/h[j-1]; b = -1/h[j-1] - 1/h[j]; /* row n-2 */
+    for (Sp=S+n2,Di1=D+n2-1,Di=D+n2-2,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2) *Sp = *Di * a + *Di1 * b;
+  } else { /* D' has only one column */
+    a = -1/h[0] - 1/h[1]; 
+    for (Sp=S+1,Di=D,i=0;i<n;i++,Sp+=n,Di+=n2) *Sp = *Di * a;
   }
-  j = n2; /* n-2 */
-  a = 1/h[j-1]; b = -1/h[j-1] - 1/h[j]; /* row n-2 */
-  for (Sp=S+n2,Di1=D+n2-1,Di=D+n2-2,i=0;i<n;i++,Sp+=n,Di+=n2,Di1+=n2) *Sp = *Di * a + *Di1 * b;
+  j = n2;
   a = 1/h[j]; /* row n-1 */
   for (Sp=S+n1,Di=D+n2-1,i=0;i<n;i++,Sp+=n,Di+=n2) *Sp = *Di * a;
 
