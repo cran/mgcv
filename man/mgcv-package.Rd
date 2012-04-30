@@ -1,5 +1,6 @@
 \name{mgcv-package}
 \alias{mgcv-package}
+\alias{mgcv}
 \docType{package}
 \title{Mixed GAM Computation Vehicle with GCV/AIC/REML smoothness estimation and GAMMs by REML/PQL
 }

@@ -168,6 +168,7 @@ k.check <- function(b,subsample=5000,n.rep=400) {
 ## does a randomization test looking for evidence of residual 
 ## pattern attributable to covariates of each smooth. 
   m <- length(b$smooth)
+  if (m==0) return(NULL)
   rsd <- residuals(b)
  
   ve <- rep(0,n.rep)
@@ -185,11 +186,14 @@ k.check <- function(b,subsample=5000,n.rep=400) {
     snames[k] <- b$smooth[[k]]$label
     ind <- b$smooth[[k]]$first.para:b$smooth[[k]]$last.para
     kc[k] <- length(ind)
-    edf[k] <- sum(b$edf[ind])
-    if (!is.null(attr(dat[[1]],"matrix"))) {
-      p.val[k] <- v.obs[k] <- NA ## can't do this test with summation convention
+    edf[k] <- sum(b$edf[ind]) 
+    nc <- b$smooth[[k]]$dim
+    ok <- TRUE
+    for (j in 1:nc) if (is.factor(dat[[j]])) ok <- FALSE 
+    if (!is.null(attr(dat[[1]],"matrix"))) ok <- FALSE
+    if (!ok) {
+      p.val[k] <- v.obs[k] <- NA ## can't do this test with summation convention/factors
     } else { ## normal term
-      nc <- b$smooth[[k]]$dim
       if (nc==1) { ## 1-D term
         e <- diff(rsd[order(dat[,1])])
         v.obs[k] <- mean(e^2)/2
@@ -295,9 +299,13 @@ gam.check <- function(b, old.style=FALSE,
       }
     }
     cat("\n")
-    cat("Basis dimension (k) checking results. Low p-value (k-index<1) may\n") 
-    cat("indicate that k is too low, especially if edf is close to k\'.\n\n")
-    printCoefmat(k.check(b,subsample=k.sample,n.rep=k.rep),digits=3);
+    ## now check k
+    kchck <- k.check(b,subsample=k.sample,n.rep=k.rep)
+    if (!is.null(kchck)) {
+      cat("Basis dimension (k) checking results. Low p-value (k-index<1) may\n") 
+      cat("indicate that k is too low, especially if edf is close to k\'.\n\n")
+      printCoefmat(kchck,digits=3);
+    }
     par(old.par)
 ##  } else plot(linpred,resid,xlab="linear predictor",ylab="residuals",...)
 } ## end of gam.check
