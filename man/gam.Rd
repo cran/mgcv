@@ -17,21 +17,9 @@ with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
 (when an isotropic smooth is inappropriate). For an overview of the smooths available see \code{\link{smooth.terms}}. 
-For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. 
-For more on model selection see \code{\link{gam.selection}}. 
+For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. For more on model selection see \code{\link{gam.selection}}. Do read \code{\link{gam.check}} and \code{\link{choose.k}}.
 
-\code{gam()} is not a clone of what S-PLUS provides: the major
-differences are (i) that by default estimation of the
-degree of smoothness of model terms is part of model fitting, (ii) a
-Bayesian approach to variance estimation is employed that makes for easier
-confidence interval calculation (with good coverage probabilities), (iii) that the model
-can depend on any (bounded) linear functional of smooth terms, (iv) the parametric part of the model can be penalized, (v) simple random effects can be incorporated, and 
-(vi) the facilities for incorporating smooths of more than one variable are
-different: specifically there are no \code{lo} smooths, but instead (a) \code{s}
-terms can have more than one argument, implying an isotropic smooth and (b) \code{te} smooths are
-provided as an effective means for modelling smooth interactions of any
-number of variables via scale invariant tensor product smooths. See \link[gam]{gam} 
-from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
+See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach (see details for differences to this implementation).
 
 For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gamm}} and \code{\link{random.effects}}.
 }
@@ -255,7 +243,21 @@ general linear functionals of smooths, via the summation convention mechanism de
 Details of the default underlying fitting methods are given in Wood (2011
 and 2004). Some alternative methods are discussed in Wood (2000 and 2006). 
 
- }
+\code{gam()} is not a clone of Trevor Hastie's oroginal (as supplied in S-PLUS or package \link[gam]{gam}) The major
+differences are (i) that by default estimation of the
+degree of smoothness of model terms is part of model fitting, (ii) a
+Bayesian approach to variance estimation is employed that makes for easier
+confidence interval calculation (with good coverage probabilities), (iii) that the model
+can depend on any (bounded) linear functional of smooth terms, (iv) the parametric part of the model can be penalized, 
+(v) simple random effects can be incorporated, and 
+(vi) the facilities for incorporating smooths of more than one variable are
+different: specifically there are no \code{lo} smooths, but instead (a) \code{\link{s}}
+terms can have more than one argument, implying an isotropic smooth and (b) \code{\link{te}} or \code{\link{t2}} smooths are
+provided as an effective means for modelling smooth interactions of any
+number of variables via scale invariant tensor product smooths. Splines on the sphere, Duchon splines 
+and Gaussian Markov Random Fields are also available. See \link[gam]{gam} 
+from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
+}
 
 
 \references{
