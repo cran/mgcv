@@ -938,23 +938,23 @@ expand.t2.smooths <- function(sm) {
 ## Thin plate regression splines (tprs) methods start here
 ##########################################################
 
-null.space.dimension<-function(d,m)
-# vectorized function for calculating null space dimension for penalties of order m
+null.space.dimension <- function(d,m)
+# vectorized function for calculating null space dimension for tps penalties of order m
 # for dimension d data M=(m+d-1)!/(d!(m-1)!). Any m not satisfying 2m>d is reset so 
 # that 2m>d+1 (assuring "visual" smoothness) 
 { if (sum(d<0)) stop("d can not be negative in call to null.space.dimension().")
-  ind<-2*m<d+1
+  ind <- 2*m < d+1
   if (sum(ind)) # then default m required for some elements
-  { m[ind]<-1;ind<-2*m<d+2
-    while (sum(ind)) { m[ind]<-m[ind]+1;ind<-2*m<d+2;}
+  { m[ind] <- 1;ind <- 2*m < d+2
+    while (sum(ind)) { m[ind]<-m[ind]+1;ind <- 2*m < d+2;}
   }
-  M<-m*0+1;ind<-M==1;i<-0
+  M <- m*0+1;ind <- M==1;i <- 0
   while(sum(ind))
-  { M[ind]<-M[ind]*(d[ind]+m[ind]-1-i);i<-i+1;ind<-i<d
+  { M[ind] <- M[ind]*(d[ind]+m[ind]-1-i);i <- i+1;ind <- i<d
   }
-  ind<-d>1;i<-2
+  ind <- d>1;i <- 2
   while(sum(ind))
-  { M[ind]<-M[ind]/i;ind<-d>i;i<-i+1   
+  { M[ind] <- M[ind]/i;ind <- d>i;i <- i+1   
   }
   M
 }
@@ -1068,14 +1068,13 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
   Xu.len <- oo$n.Xu*object$dim
   object$Xu<-matrix(oo$Xu[1:Xu.len],oo$n.Xu,object$dim)  # unique covariate combinations
 
-  object$df<-object$bs.dim                   # DoF unconstrained and unpenalized
+  object$df <- object$bs.dim                   # DoF unconstrained and unpenalized
   object$shift<-shift                          # covariate shifts
-  if (is.null(shrink)) { 
-    object$rank <- k-M 
-  } else object$rank <- k                             # penalty rank
-  object$null.space.dim<-M
+  if (!is.null(shrink)) M <- 0  ## null space now rank zero
+  object$rank <- k - M                           # penalty rank
+  object$null.space.dim <- M
 
-  class(object)<-"tprs.smooth"
+  class(object) <- "tprs.smooth"
   object
 }
 
@@ -1101,10 +1100,12 @@ Predict.matrix.tprs.smooth<-function(object,data)
   }
 
   by<-0;by.exists<-FALSE
+  ## following used to be object$null.space.dim, but this is now *post constraint*
+  M <- null.space.dimension(object$dim,object$p.order)
 
   X<-matrix(0,n,object$bs.dim)
   oo<-.C(C_predict_tprs,as.double(x),as.integer(object$dim),as.integer(n),as.integer(object$p.order),
-      as.integer(object$bs.dim),as.integer(object$null.space.dim),as.double(object$Xu),
+      as.integer(object$bs.dim),as.integer(M),as.double(object$Xu),
       as.integer(nrow(object$Xu)),as.double(object$UZ),as.double(by),as.integer(by.exists),X=as.double(X))
   X<-matrix(oo$X,n,object$bs.dim)
 
@@ -1158,7 +1159,7 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots) {
   if (length(k)!=nk) stop("number of supplied knots != k for a cr smooth")
 
   X <- rep(0,nx*nk);F <- S <- rep(0,nk*nk);F.supplied <- 0
-  
+
   oo <- .C(C_crspl,x=as.double(x),n=as.integer(nx),xk=as.double(k),
            nk=as.integer(nk),X=as.double(X),S=as.double(S),
            F=as.double(F),Fsupplied=as.integer(F.supplied))
@@ -1181,9 +1182,12 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots) {
     }
   }
   if (is.null(shrink)) { 
-    object$rank <- nk-2 
-  } else object$rank <- nk   # penalty rank
-
+    object$rank <- nk-2;
+    object$null.space.dim <- 2
+  } else { 
+    object$rank <- nk   # penalty rank
+    object$null.space.dim <- 0
+  }
 
   object$df <- object$bs.dim # degrees of freedom,  unconstrained and unpenalized
   object$null.space.dim <- 2
@@ -1215,6 +1219,8 @@ Predict.matrix.cr.smooth<-function(object,data) {
   S <- 1 ## unused
   F.supplied <- 1
  
+  if (is.null(object$F)) stop("F is missing from cr smooth - refit model with current mgcv")
+
   oo <- .C(C_crspl,x=as.double(x),n=as.integer(nx),xk=as.double(object$xp),
            nk=as.integer(nk),X=as.double(X),S=as.double(S),
            F=as.double(object$F),Fsupplied=as.integer(F.supplied))
@@ -1848,6 +1854,17 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
   object$te.ok <- 2 ## these terms are  suitable as te marginals, but 
                     ##   can not be plotted
 
+  ## The Nychka inversion argument for p-values does not apply to 
+  ## random effects, because the eigen spectrum of the penalty is too 
+  ## uniform for the truncation argument to work in all cases,
+  ## and because the interpretation of the Bayesian cov matrix
+  ## as including accross the function bias is also not right, 
+  ## since these are proper random effects (i.e. what is there to
+  ## be biased here)! The theoretical problems can result in very
+  ## low power in practice. 
+ 
+  object$fr.pval <- TRUE ## use full rank frequentist p-value
+
   class(object)<-"random.effect"  # Give object a class
 
   object
@@ -2023,22 +2040,24 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   ## natural parameterization given in Wood (2006) 4.1.14
 
   if (object$bs.dim<length(levels(k))) { ## use low rank approx
-    rp <- mgcv:::nat.param(object$X,object$S[[1]],ncol(object$X)-1,type=0)
+    rp <- mgcv:::nat.param(object$X,object$S[[1]],type=0)
     np <- ncol(object$X)
+    ## now retain only bs.dim least penalized elements
+    ## of basis, which are the final bs.dim cols of rp$X
     ind <- (np-object$bs.dim+1):np
-    object$X <- rp$X[,ind]
-    object$P <- rp$P[,ind]
-    ind <- ind[-object$bs.dim] ## drop last element as zeros not returned in D
-    object$S[[1]] <- diag(c(rp$D[ind],0))
-   
+    object$X <- rp$X[,ind] ## model matrix
+    object$P <- rp$P[,ind] ## re-para matrix
+    ##ind <- ind[ind <= rp$rank] ## drop last element as zeros not returned in D
+    object$S[[1]] <- diag(c(rp$D[ind[ind <= rp$rank]],rep(0,sum(ind>rp$rank))))
+    object$rank <- rp$rank ## penalty rank
+  } else { ## full rank basis, but need to 
+           ## numerically evaluate mrf penalty rank... 
+    ev <- eigen(object$S[[1]],symmetric=TRUE,only.values=TRUE)$values
+    object$rank <- sum(ev >.Machine$double.eps^.8*max(ev)) ## ncol(object$X)-1
   }
-  ## numerically evaluate mrf penalty rank... 
-  ev <- eigen(object$S[[1]],symmetric=TRUE,only.values=TRUE)$values
-  object$rank <- sum(ev >.Machine$double.eps^.8*max(ev)) ## ncol(object$X)-1
   object$null.space.dim <- ncol(object$X) - object$rank
   object$knots <- k
   object$df <- ncol(object$X)
-  ##object$plot.me <- FALSE
   class(object)<-"mrf.smooth"
   object
 }
@@ -2928,6 +2947,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
             sml[[i]]$C <- NULL
             sml[[i]]$rank <- pmin(sm$rank,k-j)
             sml[[i]]$df <- sml[[i]]$df - j
+            sml[[i]]$null.space.dim <- max(0,sml[[i]]$null.space.dim - j)
             ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
           } ## end smooth list loop
         } else { ## full null space created
@@ -2963,6 +2983,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
             sml[[i]]$C <- NULL
             sml[[i]]$rank <- pmin(sm$rank,k-j)
             sml[[i]]$df <- sml[[i]]$df - j
+            sml[[i]]$null.space.dim <- max(0,sml[[i]]$null.space.dim-j)
           } ## end smooth list loop
         } # end full null space version of constraint
       } else { ## no constraints
@@ -2983,6 +3004,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
           sml[[i]]$C <- NULL
           sml[[i]]$rank <- pmin(sm$rank,k-1)
           sml[[i]]$df <- sml[[i]]$df - 1
+          sml[[i]]$null.space.dim <- max(sml[[i]]$null.space.dim-1,0)
           ## so insert an extra 0 at position sm$C in coef vector to get original
         } ## end smooth list loop
     } else if (sm$C <0) { ## params sum to zero 
@@ -2997,6 +3019,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
           sml[[i]]$C <- NULL
           sml[[i]]$rank <- pmin(sm$rank,k-1)
           sml[[i]]$df <- sml[[i]]$df - 1
+          sml[[i]]$null.space.dim <- max(sml[[i]]$null.space.dim-1,0)
           ## so insert an extra 0 at position sm$C in coef vector to get original
         } ## end smooth list loop       
     }
@@ -3035,12 +3058,129 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   sml
 } ## end of smoothCon
 
-
-
-
 PredictMat <- function(object,data,n=nrow(data))
 ## wrapper function which calls Predict.matrix and imposes same constraints as 
 ## smoothCon on resulting Prediction Matrix
+{ pm <- Predict.matrix3(object,data)
+  if (!is.null(pm$ind)&&length(pm$ind)!=n) { ## then summation convention used with packing 
+    if (is.null(attr(pm$X,"by.done"))&&object$by!="NA") { # find "by" variable 
+      by <- get.var(object$by,data)
+      if (is.null(by)) stop("Can't find by variable")
+    } else by <- rep(1,length(pm$ind))
+    q <- length(pm$ind)/n   
+    ind <- 0:(q-1)*n
+    offs <- attr(pm$X,"offset")
+    if (!is.null(offs)) offX <- rep(0,n) else offX <- NULL 
+    X <- matrix(0,n,ncol(pm$X))  
+    for (i in 1:n) { ## in this case have to work down the rows
+      ind <- ind + 1
+      X[i,] <- colSums(by[ind]*pm$X[pm$ind[ind],]) 
+      if (!is.null(offs)) {
+        offX[i] <- sum(offs[pm$ind[ind]]*by[ind])
+      }      
+    } ## finished all rows
+    offset <- offX
+  } else { ## regular case 
+    offset <- attr(pm$X,"offset")
+    if (!is.null(pm$ind)) { ## X needs to be unpacked
+      X <- pm$X[pm$ind,]
+      if (!is.null(offset)) offset <- offset[pm$ind]
+    } else X <- pm$X
+   
+    if (is.null(attr(pm$X,"by.done"))) { ## handle `by variables' 
+      if (object$by!="NA")  # deal with "by" variable 
+      { by <- get.var(object$by,data)
+        if (is.null(by)) stop("Can't find by variable")
+        if (is.factor(by)) {
+          by.dum <- as.numeric(object$by.level==by)
+          X <- by.dum*X
+          if (!is.null(offset)) offset <- by.dum*offset
+        } else { 
+          if (length(by)!=nrow(X)) stop("`by' variable must be same dimension as smooth arguments")
+          X <- as.numeric(by)*X
+          if (!is.null(offset)) offset <- as.numeric(by)*offset
+        }
+      }
+    }
+    rm(pm)
+    attr(X,"by.done") <- NULL
+
+    ## now deal with any necessary model matrix summation
+    if (n != nrow(X)) {
+      q <- nrow(X)/n ## note: can't get here if `by' a factor
+      ind <- 1:n 
+      Xs <- X[ind,]
+      if (!is.null(offset)) {
+        get.off <- TRUE
+        offs <- offset[ind]
+      } else { get.off <- FALSE;offs <- NULL}
+      for (i in 2:q) {
+        ind <- ind + n
+        Xs <- Xs + X[ind,]
+        if (get.off) offs <- offs + offset[ind]
+      }
+      offset <- offs
+      X <- Xs
+    }
+  }
+
+  ## finished by and summation handling. do constraints...  
+
+  qrc <- attr(object,"qrc")
+  if (!is.null(qrc)) { ## then smoothCon absorbed constraints
+    j <- attr(object,"nCons")
+    if (j>0) { ## there were constraints to absorb - need to untransform
+      k<-ncol(X)
+      if (inherits(qrc,"qr")) {
+        indi <- attr(object,"indi") ## index of constrained parameters
+        if (is.null(indi)) {
+          if (sum(is.na(X))) {
+            ind <- !is.na(rowSums(X))
+            X1 <- t(qr.qty(qrc,t(X[ind,,drop=FALSE]))[(j+1):k,,drop=FALSE]) ## XZ
+            X <- matrix(NA,nrow(X),ncol(X1))
+            X[ind,] <- X1
+          } else {
+            X <- t(qr.qty(qrc,t(X))[(j+1):k,,drop=FALSE])
+          }
+        } else { ## only some parameters are subject to constraint
+          nx <- length(indi)
+          nc <- j;nz <- nx - nc
+          if (sum(is.na(X))) {
+            ind <- !is.na(rowSums(X))
+            X[ind,indi[1:nz]]<-t(qr.qty(qrc,t(X[ind,indi,drop=FALSE]))[(nc+1):nx,])
+            X <- X[,-indi[(nz+1):nx]]
+            X[!ind,] <- NA 
+          } else { 
+            X[,indi[1:nz]]<-t(qr.qty(qrc,t(X[,indi,drop=FALSE]))[(nc+1):nx,,drop=FALSE])
+            X <- X[,-indi[(nz+1):nx]]
+          }
+        }
+      } else if (inherits(qrc,"sweepDrop")) {
+        ## Sweep and drop constraints. First element is index to drop. 
+        ## Remainder are constants to be swept out of remaining columns 
+        ## X <- sweep(X[,-qrc[1],drop=FALSE],2,qrc[-1])
+        X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
+      } else if (qrc>0) { ## simple set to zero constraint
+        X <- X[,-qrc]
+      } else if (qrc<0) { ## params sum to zero
+        X <- t(diff(t(X)))
+      }
+    }
+  }
+  ## drop columns eliminated by side-conditions...
+  del.index <- attr(object,"del.index") 
+  if (!is.null(del.index)) X <- X[,-del.index]
+  attr(X,"offset") <- offset
+  X
+} ## end of PredictMat
+
+
+
+
+PredictMat.old <- function(object,data,n=nrow(data))
+## wrapper function which calls Predict.matrix and imposes same constraints as 
+## smoothCon on resulting Prediction Matrix
+## This version is very memory intensive if summation convention is needed
 { X <- Predict.matrix2(object,data)
   if (is.null(attr(X,"by.done"))) { ## handle `by variables' 
     if (object$by!="NA")  # deal with "by" variable 
@@ -3116,5 +3256,5 @@ PredictMat <- function(object,data,n=nrow(data))
   if (!is.null(del.index)) X <- X[,-del.index]
   attr(X,"offset") <- offset
   X
-} ## end of PredictMat
+} ## end of PredictMat.old
 

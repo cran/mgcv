@@ -1,6 +1,35 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-17
+
+** p-values for terms with no un-penalized components were poor. The theory on 
+  which the p-value computation for other terms is based shows why this is, 
+  and allows fixes to be made. These are now implemented.
+
+* summary p value bug fix --- smooths with no null space had a bug in 
+  lower tail of p-value computation, yielding far too low values. Fixed.
+
+* bam now outputs frequentist cov matrix Ve and alternative effective degrees 
+  of freedom edf1, in all cases.
+
+* smoothCon now adjusts null.space.dim on constraint absorption.
+
+* Prediction with matrix arguments (i.e. for models using summation 
+  convention) could be very memory hungry. This in turn meant that
+  bam could run out of memory when fitting models with such terms.
+  The problem was memory inefficient handling of duplicate evaluations.
+  Now fixed by modification of PredictMat
+
+* bam could fail if the response vector was of class matrix. fixed.
+
+* reduced rank mrf smooths with supplied penalty could use the incorrect
+  penalty rank when computing the reduced rank basis and fail. fixed 
+  thanks to Fabian Scheipl.
+
+* a cr basis efficiency change could lead to old fitted model objects causing 
+  segfaults when used with current mgcv version. This is now caught.
+
 1.7-16
 
 * There was an unitialized variable bug in the 1.7-14 re-written "cr" basis 

@@ -27,12 +27,16 @@ gam.check(b, old.style=FALSE,
 
 \value{A vector of reference quantiles for the residual distribution, if these can be computed.}
 
-\details{ This function plots 4 standard diagnostic plots,  some smoothing parameter estimation
+\details{ Checking a fitted \code{gam} is like checking a fitted \code{glm}, with two main differences. Firstly, 
+the basis dimensions used for smooth terms need to be checked, to ensure that they are not so small that they force 
+oversmoothing: the defaults are arbitrary. \code{\link{choose.k}} provides more detail, but the diagnostic tests described below and reported by this function may also help. Secondly, fitting may not always be as robust to violation of the distributional assumptions as would be the case for a regular GLM, so slightly more care may be needed here. In particular, the thoery of quasi-likelihood implies that if the mean variance relationship is OK for a GLM, then other departures from the assumed distribution are not problematic: GAMs can sometimes be more sensitive. For example, un-modelled overdispersion will typically lead to overfit, as the smoothness selection criterion tries to reduce the scale parameter to the one specified. Similarly, it is not clear how sensitive REML and ML smoothness selection will be to deviations from the assumed response dsistribution. For these reasons this routine uses an enhanced residual QQ plot.
+
+
+This function plots 4 standard diagnostic plots,  some smoothing parameter estimation
 convergence information and the results of tests which may indicate if the smoothing basis dimension
 for a term is too low.  
 
-Usually the 4 plots are various residual plots. For the default optimization methods the convergence information is summarized in a
-readable way, but for other optimization methods, whatever is returned by way of
+Usually the 4 plots are various residual plots. For the default optimization methods the convergence information is summarized in a readable way, but for other optimization methods, whatever is returned by way of
 convergence diagnostics is simply printed. 
 
 The test of whether the basis dimension for a smooth is adequate is based on computing an estimate of the residual variance 

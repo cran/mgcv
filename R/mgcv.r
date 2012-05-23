@@ -378,6 +378,16 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
               if (!is.null(sm[[i]]$L)) sm[[i]]$L <- sm[[i]]$L[-j,,drop=FALSE]
             }
           } ## penalty matrices finished
+          ## Now we need to establish null space rank for the term
+          m <- length(sm[[i]]$S)
+          if (m>0) {
+            St <- sm[[i]]$S[[1]]/norm(sm[[i]]$S[[1]],type="F")
+            if (m>1) for (j in 1:m) St <- St + 
+                  sm[[i]]$S[[j]]/norm(sm[[i]]$S[[j]],type="F")
+            es <- eigen(St,symmetric=TRUE,only.values=TRUE)
+            sm[[i]]$null.space.dim <- sum(es$values<max(es$values)*.Machine$double.eps^.75) 
+          } ## rank found
+
           if (!is.null(sm[[i]]$L)) {
             ind <- as.numeric(colSums(sm[[i]]$L!=0))!=0
             sm[[i]]$L <- sm[[i]]$L[,ind,drop=FALSE] ## retain only those sps that influence something!
@@ -2440,7 +2450,7 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
 # normal variables, Computational Statistics and Data Analysis, Volume 53, 
 # (2009), 853-856. Actually, this is just Pearson (1959) given that
 # the chi^2 variables are central. 
-# Note that this can be rubiish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
+# Note that this can be rubbish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
   
 #  if (FALSE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
 #    require(CompQuadForm)
@@ -2519,12 +2529,14 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
 
-  lp <- ed$values/max(ed$values)
-  lp <- 2*lp - lp^2
-  k <- ceiling(rank) ## reset rank if failing to catch important terms...
-  if (k < length(lp)&&lp[k+1]>max(lp)*0.5) {
-    rank <- max(rank,sum(lp>.5*max(lp)))
-  }
+if (rank<1) rank <- 1 ## EXPERIMENTAL
+
+#  lp <- ed$values/max(ed$values)
+#  lp <- 2*lp - lp^2
+#  k <- ceiling(rank) ## reset rank if failing to catch important terms...
+#  if (k < length(lp)&&lp[k+1]>max(lp)*0.5) {
+#    rank <- max(rank,sum(lp>.5*max(lp)))
+#  }
  
   k <- max(0,floor(rank)) 
   nu <- abs(rank - k)     ## fractional part of supplied edf
@@ -2578,9 +2590,11 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
   d <- t(vec)%*%(R%*%p)
   d <- sum(d^2) 
 
+  rank1 <- rank ## rank for lower tail pval computation below
+
   if (nu>0) { ## mixture of chi^2 ref dist
-     if (k1==1) val <- 1 else { 
-       val <- rep(1,k1)##ed$val[1:k1]
+     if (k1==1) rank1 <- val <- 1 else { 
+       val <- rep(1,k1) ##ed$val[1:k1]
        rp <- nu+1
        val[k] <- (rp + sqrt(rp*(2-rp)))/2
        val[k1] <- (rp - val[k])
@@ -2593,8 +2607,8 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
   ## upper tail. In lower tail, 2 moment approximation is better (Can check this 
   ## by simply plotting the whole interesting range as a contour plot!)
   if (pval > .5) {
-    if (res.df <= 0) pval <- pchisq(d,df=rank,lower.tail=FALSE) else
-    pval <- pf(d/rank,rank,res.df,lower.tail=FALSE)
+    if (res.df <= 0) pval <- pchisq(d,df=rank1,lower.tail=FALSE) else
+    pval <- pf(d/rank1,rank1,res.df,lower.tail=FALSE)
   }
   list(stat=d,pval=min(1,pval),rank=rank)
 } ## end of testStat
@@ -2602,11 +2616,27 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 
 
 
-summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...) 
-# summary method for gam object - provides approximate p values for terms + other diagnostics
-# Improved by Henric Nilsson
-{ pinv<-function(V,M,rank.tol=1e-6)
-  {
+summary.gam <- function (object, dispersion = NULL, freq = TRUE, p.type=0, ...) {
+## summary method for gam object - provides approximate p values 
+## for terms + other diagnostics
+## Improved by Henric Nilsson
+## * freq determines whether a frequentist or Bayesian cov matrix is 
+##   used for parametric terms. Usually the default TRUE will result
+##   in reasonable results with paraPen.
+## * p.type determines the type of smooth p-value
+##   0 Bayesian default, unless smooth opts out
+##   1 Bayesian biased rounding
+##   2 Bayesian rounding
+##   3 Bayesian round up
+##   4 Bayesian numerical rank
+##   5 Wood (2006) frequentist
+##   -1 Modified Cox et al.
+## If a smooth has a field 'fr.pval' and it is set to TRUE then 
+## its p-value is based on the full rank frequentist Wald statistic. 
+## This option is appropriate for random effects. 
+
+  pinv<-function(V,M,rank.tol=1e-6) {
+  ## a local pseudoinverse function
     D <- eigen(V,symmetric=TRUE)
     M1<-length(D$values[D$values>rank.tol*D$values[1]])
     if (M>M1) M<-M1 # avoid problems with zero eigen-values
@@ -2617,8 +2647,10 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     res <- D$vectors%*%(D$values*t(D$vectors))  ##D$u%*%diag(D$d)%*%D$v
     attr(res,"rank") <- M
     res
-  }
+  } ## end of pinv
+  
   p.table <- pTerms.table <- s.table <- NULL
+
   if (freq) covmat <- object$Ve else covmat <- object$Vp
   name <- names(object$edf)
   dimnames(covmat) <- list(name, name)
@@ -2626,9 +2658,14 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
   est.disp <- object$scale.estimated
   if (!is.null(dispersion)) { 
     covmat <- dispersion * covmat.unscaled
+    object$Ve <- object$Ve*dispersion/object$sig2 ## freq
+    object$Vp <- object$Vp*dispersion/object$sig2 ## Bayes
     est.disp <- FALSE
   } else dispersion <- object$sig2
  
+
+  ## Now the individual parameteric coefficient p-values...
+
   se <- diag(covmat)^0.5
   residual.df<-length(object$y)-sum(object$edf)
   if (object$nsdf>0) # individual parameters
@@ -2645,6 +2682,8 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       dimnames(p.table) <- list(names(p.coeff), c("Estimate", "Std. Error", "t value", "Pr(>|t|)"))
     }    
   } else {p.coeff <- p.t <- p.pv <- array(0,0)}
+
+  ## Next the p-values for parametric terms, so that factors are treated whole... 
   
   term.labels<-attr(object$pterms,"term.labels")
   nt<-length(term.labels)
@@ -2683,6 +2722,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
   } else { pTerms.df<-pTerms.chi.sq<-pTerms.pv<-array(0,0)}
 
   ## Now deal with the smooth terms....
+
   m <- length(object$smooth) # number of smooth terms
   
   if (p.type < 0 ) {
@@ -2697,7 +2737,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
 
   df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
   if (m>0) # form test statistics for each smooth
-  { if (!freq) { 
+  { if (p.type < 5) { ## Bayesian p-values required 
       sub.samp <- max(1000,2*length(object$coefficients)) 
       if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
         seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
@@ -2718,15 +2758,30 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
       ## get corrected edf
       #edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
-    }
-    for (i in 1:m)
-    { start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
-      V <- covmat[start:stop,start:stop,drop=FALSE] # cov matrix for smooth
+    } ## end if (p.type<5)
+
+    for (i in 1:m) { ## loop through smooths
+      fr.pval <- object$smooth[[i]]$fr.pval  ## should full rank frequentist p-value be used?
+      if (is.null(fr.pval)) fr.pval <- FALSE 
+
+      start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
+
+      if (p.type==5||fr.pval||object$smooth[[i]]$null.space.dim==0) { ## use frequentist cov matrix 
+        V <- object$Ve[start:stop,start:stop,drop=FALSE] 
+      } else V <- object$Vp[start:stop,start:stop,drop=FALSE] ## Bayesian
+      
       p <- object$coefficients[start:stop]  # params for smooth
+
       edf1[i] <- edf[i] <- sum(object$edf[start:stop]) # edf for this smooth
       ## extract alternative edf estimate for this smooth, if possible...
       if (!is.null(object$edf1)) edf1[i] <-  sum(object$edf1[start:stop]) 
-      if (freq) { ## old style frequentist
+ 
+      #if (fr.pval) { ## smooth requires full rank frequentist p-value
+      #  V <- pinv(V,object$smooth[[i]]$df) # get (pseudo)inverse of V
+      #  chi.sq[i] <- t(p)%*%V%*%p
+      #  df[i] <- attr(V, "rank")
+      #} else 
+      if (p.type==5) { ## old style frequentist
         M1 <- object$smooth[[i]]$df
         M <- min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
         V <- pinv(V,M) # get rank M pseudoinverse of V
@@ -2742,7 +2797,9 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         } else {
          
           df[i] <- min(ncol(Xt),edf1[i])
-        
+          if (df[i]<1) df[i] <- 1
+          if (fr.pval) df[i] <- ncol(Xt) ## full rank frequentist          
+
           if (est.disp) rdf <- residual.df else rdf <- -1
           res <- testStat(p,Xt,V,df[i],type=p.type,res.df = rdf)
           df[i] <- res$rank
@@ -2752,17 +2809,18 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       }
       names(chi.sq)[i]<- object$smooth[[i]]$label
       
-      if (freq) {
+      ## if (fr.pval || 
+      if (p.type == 5) {
         if (!est.disp)
          s.pv[i] <- pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
         else
          s.pv[i] <- pf(chi.sq[i]/df[i], df1 = df[i], df2 = residual.df, lower.tail = FALSE)
          ## p-values are meaningless for very small edf. Need to set to NA
-        if (df[i] < 0.5) s.pv[i] <- NA
+        if (df[i] < 0.1) s.pv[i] <- NA
       }
     }
     if (!est.disp) {
-      if (freq) {
+      if (p.type==5) {
         s.table <- cbind(edf, df, chi.sq, s.pv)      
         dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "Chi.sq", "p-value"))
       } else {
@@ -2770,7 +2828,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "Chi.sq", "p-value"))
       }
     } else {
-      if (freq) {
+      if (p.type==5) {
         s.table <- cbind(edf, df, chi.sq/df, s.pv)      
         dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "F", "p-value"))
       } else {
@@ -2819,7 +2877,7 @@ print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3),
 }
 
 
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE,p.type=0)
+anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=TRUE,p.type=0)
 # improved by Henric Nilsson
 {   # adapted from anova.glm: R stats package
     dotargs <- list(...)
