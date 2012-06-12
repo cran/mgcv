@@ -1,6 +1,6 @@
 ## code for fast REML computation. key feature is that first and 
 ## second derivatives come at no increase in leading order 
-## computational cost, realtive to evaluation! 
+## computational cost, relative to evaluation! 
 ## (c) Simon N. Wood, 2010-2012
 
 Sl.setup <- function(G) {
@@ -91,7 +91,7 @@ Sl.setup <- function(G) {
       Sl[[b]]$S <- G$smooth[[i]]$S
       nb <- nrow(Sl[[b]]$S[[1]])      
       sbStart <- sbStop <- rep(NA,m)
-      ## overlap testing requires that block ranges 
+      ## overlap testing requires the block ranges 
       for (j in 1:m) { ## get block range for each S[[j]]
         ir <- range((1:nb)[rowSums(abs(Sl[[b]]$S[[j]]))>0])
         ic <- range((1:nb)[colSums(abs(Sl[[b]]$S[[j]]))>0])
@@ -209,8 +209,10 @@ Sl.initial.repara <- function(Sl,X,inverse=FALSE) {
         if (is.matrix(Sl[[b]]$D)) { 
           X[ind,] <- Sl[[b]]$D%*%X[ind,,drop=FALSE]
           X[,ind] <- X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) 
-        } else 
-        X[ind,ind] <- Sl[[b]]$D*t(Sl[[b]]$D*t(X[ind,ind,drop=FALSE])) 
+        } else {
+          X[,ind] <- t(Sl[[b]]$D * t(X[,ind,drop=FALSE]))
+          X[ind,] <- Sl[[b]]$D * X[ind,,drop=FALSE]
+        } 
       }
     } else { ## it's a parameter vector
       for (b in 1:length(Sl)) { 
@@ -642,7 +644,7 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
   best$iter <- iter
   best$outer.info <- list(conv = best$conv, iter = best$iter,grad = grad,hess = hess)
   best$rho <- rho
-  best$rho.full <-  L%*%rho+rho.0
+  best$rho.full <-  as.numeric(L%*%rho+rho.0)
   best ## return the best fit (note that it will need post-processing to be useable)
 } ## end fast.REML.fit
 
