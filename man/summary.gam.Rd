@@ -7,7 +7,7 @@
 summaries from it. (See \code{\link{sink}} to divert output to a file.)
 }
 \usage{
-\method{summary}{gam}(object, dispersion=NULL, freq=TRUE, p.type = 0, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, p.type = 0, ...)
 
 \method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
@@ -21,9 +21,9 @@ summaries from it. (See \code{\link{sink}} to divert output to a file.)
 \item{dispersion}{A known dispersion parameter. \code{NULL} to use estimate or
                   default (e.g. 1 for Poisson).}
 
-\item{freq}{By default p-values for parametric terms are calculated using the frequentist estimated
-covariance matrix of the parameter estimators. If this is set to \code{FALSE} then
-the Bayesian covariance matrix of the parameters is used instead. }
+\item{freq}{By default p-values for parametric terms are calculated using the Bayesian estimated
+covariance matrix of the parameter estimators. If this is set to \code{TRUE} then
+the frequentist covariance matrix of the parameters is used instead. }
 
 \item{p.type}{determines how p-values are computed for smooth terms. 0 uses a test statistic with 
 distribution determined by the un-rounded edf of the term. 1 uses upwardly biased rounding of the edf and -1
@@ -94,6 +94,12 @@ which case it will have been estimated) the statistic is compared
 to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model. 
 Typically the p-values will be somewhat too low.
 
+By default the p-values for parametric model terms are also based on Wald tests using the Bayesian 
+covariance matrix for the coefficients. This is appropriate when there are "re" terms present, and is 
+otherwise rather similar to the results using the frequentist covariance matrix (\code{freq=TRUE}), since 
+the parametric terms themselves are usually unpenalized. Default P-values for parameteric terms that are 
+penalized using the \code{paraPen} argument will not be good. However if such terms represent conventional 
+random effects with full rank penalties, then setting \code{freq=TRUE} is appropriate. 
 
 }
 
@@ -186,7 +192,9 @@ and Hall/CRC Press.
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}
 
-\section{WARNING }{ The p-values are approximate (especially for terms that can be peanlized to zero): do read the details section.
+\section{WARNING }{ The p-values are approximate (especially for terms that can be penalized to zero): do read the details section.
+
+P-values for terms penalized via `paraPen' will not be correct unless `freq=TRUE' (and maybe not even then).
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},

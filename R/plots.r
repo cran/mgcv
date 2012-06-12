@@ -1011,8 +1011,8 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     if (se1.mult<0) se1.mult<-0;if (se2.mult < 0) se2.mult <- 0
   } else se1.mult <- se2.mult <-1
   
-  if (se && x$Vp[1,1]<=0) ## check that variances are actually available
-  { se<-FALSE
+  if (se && x$Vp[1,1] < 0) ## check that variances are actually available
+  { se <- FALSE
     warning("No variance estimates available")
   }
 

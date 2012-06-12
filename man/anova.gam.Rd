@@ -12,7 +12,7 @@ to zero. See details.
 }
 \usage{
 \method{anova}{gam}(object, ..., dispersion = NULL, test = NULL,
-                    freq = TRUE,p.type=0)
+                    freq = FALSE,p.type=0)
 \method{print}{anova.gam}(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -34,8 +34,8 @@ in effective degress of freedom. The p-values resulting from this are only appro
 and must be used with care. The approximation is most accurate when the comparison 
 relates to unpenalized terms, or smoothers with a null space of dimension greater than zero.
 (Basically we require that the difference terms could be well approximated by unpenalized 
-terms with degrees of freedom approximately the effective degrees of freedom). In simualtions the 
-p-values are usually slightly to low. For terms with a zero-dimensional null space 
+terms with degrees of freedom approximately the effective degrees of freedom). In simulations the 
+p-values are usually slightly too low. For terms with a zero-dimensional null space 
 (i.e. those which can be penalized to zero) the approximation is often very poor, and significance 
 can be greatly overstated: i.e. p-values are often substantially too low. This case applies to random effect terms. 
 
@@ -46,6 +46,13 @@ is assessed using Wald tests: see \code{\link{summary.gam}} for details. The p-v
 provided here are better justified than in the multi model case, and have close to the 
 correct distribution under the null for smooths with a non-zero dimensional null space (i.e. terms that can-not be penalized to zero). ML or REML smoothing parameter selection leads to the best results in simulations as they tend to avoid occasional severe undersmoothing. In the single model case \code{print.anova.gam} is used as the
 printing method. 
+
+By default the p-values for parametric model terms are also based on Wald tests using the Bayesian 
+covariance matrix for the coefficients. This is appropriate when there are "re" terms present, and is 
+otherwise rather similar to the results using the frequentist covariance matrix (\code{freq=TRUE}), since 
+the parametric terms themselves are usually unpenalized. Default P-values for parameteric terms that are 
+penalized using the \code{paraPen} argument will not be good. However if such terms represent conventional 
+random effects with full rank penalties, then setting \code{freq=TRUE} is appropriate. 
 
 }
 
@@ -65,6 +72,9 @@ improvements by Henric Nilsson.}
 
 \section{WARNING}{ If models 'a' and 'b' differ only in terms with no un-penalized components then 
 p values from anova(a,b) are unreliable, and usually much too low.
+
+Default P-values will usually be wrong for parametric terms penalized using `paraPen': use freq=TRUE
+to obtain better p-values when the penalties are full rank and represent conventional random effects.
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}},

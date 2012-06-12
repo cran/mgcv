@@ -2091,30 +2091,31 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   # get data from which to predict.....  
   nd.is.mf <- FALSE # need to flag if supplied newdata is already a model frame
   if (newdata.guaranteed==FALSE)
-  { if (missing(newdata)) # then "fake" an object suitable for prediction 
-    { newdata<-object$model
+  { if (missing(newdata)) { # then "fake" an object suitable for prediction 
+      newdata <- object$model
       new.data.ok <- FALSE
       nd.is.mf <- TRUE
-    }
-    else  # do an R ``standard'' evaluation to pick up data
-    { new.data.ok <- TRUE
-      if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) # it's a model frame
-      { if (sum(!(names(object$model)%in%names(newdata)))) stop(
+    } else {  # do an R ``standard'' evaluation to pick up data
+      new.data.ok <- TRUE
+      if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) { # it's a model frame
+        if (sum(!(names(object$model)%in%names(newdata)))) stop(
         "newdata is a model.frame: it should contain all required variables\n")
          nd.is.mf <- TRUE
-      } else
-      { ## Following is non-standard to allow convenient splitting into blocks
+      } else {
+        ## Following is non-standard to allow convenient splitting into blocks
         ## below, and to allow checking that all variables are in newdata ...
 
         ## get names of required variables, less response, but including offset variable
         Terms <- delete.response(terms(object))
         allNames <- all.vars(Terms)
-        ff <- reformulate(allNames)
-        if (sum(!(allNames%in%names(newdata)))) { 
-        warning("not all required variables have been supplied in  newdata!\n")}
-        ## note that `xlev' argument not used here, otherwise `as.factor' in 
-        ## formula can cause a problem ... levels reset later.
-        newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame()) 
+        if (length(allNames) > 0) { 
+          ff <- reformulate(allNames) 
+          if (sum(!(allNames%in%names(newdata)))) { 
+          warning("not all required variables have been supplied in  newdata!\n")}
+          ## note that `xlev' argument not used here, otherwise `as.factor' in 
+          ## formula can cause a problem ... levels reset later.
+          newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame()) 
+        } ## otherwise it's intecept only and newdata can be left alone
         na.act <- attr(newdata,"na.action")
       }
     }
@@ -2616,7 +2617,7 @@ if (rank<1) rank <- 1 ## EXPERIMENTAL
 
 
 
-summary.gam <- function (object, dispersion = NULL, freq = TRUE, p.type=0, ...) {
+summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...) {
 ## summary method for gam object - provides approximate p values 
 ## for terms + other diagnostics
 ## Improved by Henric Nilsson
@@ -2838,8 +2839,10 @@ summary.gam <- function (object, dispersion = NULL, freq = TRUE, p.type=0, ...) 
     }
   }
   w <- object$prior.weights
+  mean.y <- sum(w*object$y)/sum(w)
+  w <- sqrt(w)
   nobs <- nrow(object$model)
-  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(nobs-1)/(var(w*object$y)*residual.df) 
+  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(nobs-1)/(var(w*(object$y-mean.y))*residual.df) 
   dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
   ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
        s.pv=s.pv,scale=dispersion,r.sq=r.sq,family=object$family,formula=object$formula,n=nobs,
@@ -2877,7 +2880,7 @@ print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3),
 }
 
 
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=TRUE,p.type=0)
+anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE,p.type=0)
 # improved by Henric Nilsson
 {   # adapted from anova.glm: R stats package
     dotargs <- list(...)
@@ -3029,7 +3032,7 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
   }
   ## If a Hessian exists, get CI's for variance components...
 
-  if (x$method%in%c("ML","P-ML","REML","P-REML")&&!is.null(x$outer.info$hess)) {
+  if (x$method%in%c("ML","P-ML","REML","P-REML","fREML")&&!is.null(x$outer.info$hess)) {
     H <- x$outer.info$hess ## the hessian w.r.t. log sps and log scale
     if (ncol(H)>length(x$sp)) scale.est <- TRUE else scale.est <- FALSE
     

@@ -364,18 +364,22 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
                              log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
                              nobs =nobs+nobs.extra,Mp=um$Mp)
         res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=FALSE)
-        object <- list(coefficients=res$beta,full.sp = exp(fit$rho.full),
+        object <- list(coefficients=res$beta,
                        gcv.ubre=fit$reml,mgcv.conv=list(iter=fit$iter,
                        message=fit$conv),rank=ncol(um$X),
                        Ve=NULL,scale.estimated = scale<=0,outer.info=fit$outer.info,
                         optimizer=c("perf","newton"))
+ 
         if (scale<=0) { ## get sp's and scale estimate
           nsp <- length(fit$rho)
           object$sig2 <- object$scale <- exp(fit$rho[nsp])
           object$sp <- exp(fit$rho[-nsp]) 
+          nsp <- length(fit$rho.full)
+          object$full.sp <- exp(fit$rho.full[-nsp])
         } else { ## get sp's
           object$sig2 <- object$scale <- scale  
           object$sp <- exp(fit$rho)
+          object$full.sp <- exp(fit$rho.full)
         }
         class(object)<-c("gam")               
       } else { ## method is one of "ML", "P-REML" etc...
@@ -911,7 +915,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
             log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
             nobs =n,Mp=um$Mp)
      res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale)
-     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,full.sp = exp(fit$rho.full),
+     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,
                     gcv.ubre=fit$reml,hat=res$hat,mgcv.conv=list(iter=fit$iter,
                     message=fit$conv),rank=ncol(um$X),
                     Ve=res$Ve,Vp=res$Vp,scale.estimated = scale<=0,outer.info=fit$outer.info,
@@ -919,10 +923,13 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
      if (scale<=0) { ## get sp's and scale estimate
        nsp <- length(fit$rho)
        object$sig2 <- object$scale <- exp(fit$rho[nsp])
-       object$sp <- exp(fit$rho[-nsp]) 
+       object$sp <- exp(fit$rho[-nsp])
+       nsp <- length(fit$rho.full)
+       object$full.sp <- exp(fit$rho.full[-nsp])
      } else { ## get sp's
        object$sig2 <- object$scale <- scale  
        object$sp <- exp(fit$rho)
+       object$full.sp <- exp(fit$rho.full)
      }
      
      if (rho!=0) { ## correct RE/ML score for AR1 transform
@@ -1227,6 +1234,10 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$aic <- family$aic(object$y,1,object$fitted.values,object$weights,object$deviance) +
                 2*sum(object$edf)
   object$null.deviance <- sum(family$dev.resids(object$y,mean(object$y),object$weights))
+  if (!is.null(object$full.sp)) {
+    if (length(object$full.sp)==length(object$sp)&&
+        all.equal(object$sp,object$full.sp)==TRUE) object$full.sp <- NULL
+  }
   object
 } ## end of bam
 
@@ -1326,7 +1337,7 @@ bam.update <- function(b,data,chunk.size=10000) {
      res <- Sl.postproc(b$Sl,fit,um$undrop,b$qrx$R,cov=TRUE,scale=scale)
 
 
-     object <- list(coefficients=res$beta,edf=res$edf,full.sp = exp(fit$rho.full),
+     object <- list(coefficients=res$beta,edf=res$edf,
                     gcv.ubre=fit$reml,hat=res$hat,outer.info=list(iter=fit$iter,
                     message=fit$conv),optimizer="fast-REML",rank=ncol(um$X),
                     Ve=NULL,Vp=res$V,scale.estimated = scale<=0)
@@ -1334,9 +1345,12 @@ bam.update <- function(b,data,chunk.size=10000) {
        nsp <- length(fit$rho)
        object$sig2 <- object$scale <- exp(fit$rho[nsp])
        object$sp <- exp(fit$rho[-nsp]) 
+       nsp <- length(fit$rho.full)
+       object$full.sp <- exp(fit$rho.full[-nsp])
      } else { ## get sp's
        object$sig2 <- object$scale <- scale  
        object$sp <- exp(fit$rho)
+       object$full.sp <- exp(fit$rho.full)
      }
      
      if (b$AR1.rho!=0) { ## correct RE/ML score for AR1 transform
@@ -1399,6 +1413,7 @@ bam.update <- function(b,data,chunk.size=10000) {
       b$gcv.ubre <- b$gcv.ubre - (n-1)*log(ld)
     }
   }
+
   b$G$X <- NULL
   b$linear.predictors <- as.numeric(predict.gam(b,newdata=b$model,block.size=chunk.size))
   b$fitted.values <- b$linear.predictor ## strictly additive only!
