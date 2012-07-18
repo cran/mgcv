@@ -1,8 +1,6 @@
 ##  R routines for the package mgcv (c) Simon Wood 2000-2011
 ##  With contributions from Henric Nilsson
 
-
-
 Rrank <- function(R,tol=.Machine$double.eps^.9) {
 ## Finds rank of upper triangular matrix R, by estimating condition
 ## number of upper rank by rank block, and reducing rank until this is 
@@ -233,7 +231,7 @@ interpret.gam <- function (gf)
 }
 
 
-fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0)
+fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0,strict=FALSE)
 # model matrix X2 may be linearly dependent on X1. This 
 # routine finds which columns of X2 should be zeroed to 
 # fix this. If rank.def>0 then it is taken as the known degree 
@@ -241,17 +239,29 @@ fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0)
 { qr1 <- qr(X1,LAPACK=TRUE)
   R11 <- abs(qr.R(qr1)[1,1])
   r<-ncol(X1);n<-nrow(X1)
-  QtX2 <- qr.qty(qr1,X2)[(r+1):n,] # Q'X2
-  qr2 <- qr(QtX2,LAPACK=TRUE)
-  R <- qr.R(qr2)
-  # now final diagonal block of R may be zero, indicating rank 
-  # deficiency.
-  r0 <- r <- nrow(R)
-  if (rank.def > 0 && rank.def <= nrow(R)) r0 <- r - rank.def else ## degree of rank def known
-    while (mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
-  r0 <- r0 + 1
-  if (r0>r) return(NULL) else
-  qr2$pivot[r0:r] # the columns of X2 to zero in order to get independence
+  if (strict) { ## only delete columns of X2 individually dependent on X1
+    ## Project columns of X2 into space of X1 and look at difference
+    ## to orignal X2 to check for deficiency...  
+    QtX2 <- qr.qty(qr1,X2)
+    QtX2[-(1:r),] <- 0
+    mdiff <- colMeans(abs(X2 - qr.qy(qr1,QtX2)))
+    if (rank.def>0) ind <- (1:ncol(X2))[rank(mdiff) <= rank.def] else
+    ind <- (1:ncol(X2))[mdiff < R11*tol]
+    if (length(ind)<1) ind <- NULL
+  } else { ## make X2 full rank given X1
+    QtX2 <- qr.qty(qr1,X2)[(r+1):n,] # Q'X2
+    qr2 <- qr(QtX2,LAPACK=TRUE)
+    R <- qr.R(qr2)
+    # now final diagonal block of R may be zero, indicating rank 
+    # deficiency.
+    r0 <- r <- nrow(R)
+    if (rank.def > 0 && rank.def <= nrow(R)) r0 <- r - rank.def else ## degree of rank def known
+      while (mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
+    r0 <- r0 + 1
+    if (r0>r) return(NULL) else
+    ind <- qr2$pivot[r0:r] # the columns of X2 to zero in order to get independence
+  }
+  ind
 }
 
 
@@ -262,12 +272,17 @@ augment.smX <- function(sm,nobs,np) {
   if (ns==0) { ## nothing to do
     return(rbind(sm$X),matrix(0,np,np))
   }
-  St <- sm$S[[1]]    ## total scaled penalty
-  St <- St/sqrt(sum(St^2))
-  if (ns>1) for (i in 2:ns) St <- St +  sm$S[[i]]/sqrt(sum(sm$S[[i]]^2))
+  ind <- colMeans(abs(sm$S[[1]]))!=0
+  sqrmaX  <- mean(abs(sm$X[,ind]))^2
+  alpha <- sqrmaX/mean(abs(sm$S[[1]][ind,ind]))
+  St <- sm$S[[1]]*alpha
+  if (ns>1) for (i in 2:ns) { 
+    ind <- colMeans(abs(sm$S[[i]]))!=0
+    alpha <- sqrmaX/mean(abs(sm$S[[i]][ind,ind]))
+    St <- St +  sm$S[[i]]*alpha
+  }
   rS <- mroot(St,rank=ncol(St)) ## get sqrt of penalty
-  rS <- rS/sqrt(mean(rS^2))
-  X <- rbind(sm$X/sqrt(mean(sm$X^2)),matrix(0,np,ncol(sm$X))) ## create augmented model matrix
+  X <- rbind(sm$X,matrix(0,np,ncol(sm$X))) ## create augmented model matrix
   X[nobs+sm$p.ind,] <- t(rS) ## add in 
   X ## scaled augmented model matrix
 }
@@ -279,6 +294,8 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
 # there is a constant (or equivalent) in the model. If there is, then this needs 
 # to be included when working out side constraints, otherwise dependencies can be 
 # missed. 
+# Note that with.pen is quite extreme, since you then pretty much only pick
+# up dependencies in the null spaces
 { m <- length(sm)
   if (m==0) return(sm)
   v.names<-array("",0);maxDim<-1
@@ -375,6 +392,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
             if (rank == 0) { ## drop the penalty
               sm[[i]]$rank <- sm[[i]]$rank[-j]
               sm[[i]]$S[[j]] <- NULL
+              sm[[i]]$S.scale <- sm[[i]]$S.scale[-j]
               if (!is.null(sm[[i]]$L)) sm[[i]]$L <- sm[[i]]$L[-j,,drop=FALSE]
             }
           } ## penalty matrices finished
@@ -1203,6 +1221,8 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   object$Ve <- mv$Ve
   object$edf<-mv$edf
   object$edf1 <- mv$edf1
+  object$F <- mv$F ## DoF matrix --- probably not needed
+  object$R <- mv$R ## qr.R(sqrt(W)X)
   object$aic <- object$aic + 2*sum(mv$edf)
   object$nsdf <- G$nsdf
   object$K <-  object$D1 <-  object$D2 <-  object$P <-  object$P1 <-  object$P2 <-  
@@ -1415,7 +1435,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   names(object$coefficients) <- G$term.names 
   
   object
-}
+} ## end estimate.gam
 
 variable.summary <- function(pf,dl,n) {
 ## routine to summarize all the variables in dl, which is a list
@@ -1473,7 +1493,7 @@ variable.summary <- function(pf,dl,n) {
      vs[[v.name[i]]] <- x
    }
    vs
-}
+} ## end variable.summary
 
 
 ## don't be tempted to change to control=list(...) --- messes up passing on other stuff via ...
@@ -1604,12 +1624,12 @@ print.gam<-function (x,...)
     cat("\nEstimated degrees of freedom:\n")
     for (i in 1:n.smooth)
     edf[i]<-sum(x$edf[x$smooth[[i]]$first.para:x$smooth[[i]]$last.para])
-    edf.str <- format(edf,digits=5)
+    edf.str <- format(round(edf,digits=4),digits=3,scientific=FALSE)
     for (i in 1:n.smooth) {   
     cat(edf.str[i]," ",sep="")
       if (i%%7==0) cat("\n")
     }
-    cat(" total =",sum(x$edf),"\n")
+    cat(" total =",round(sum(x$edf),digits=2),"\n")
   }
   if (!is.null(x$method)&&!(x$method%in%c("PQL","lme.ML","lme.REML")))  
   cat("\n",x$method," score: ",x$gcv.ubre,"\n",sep="")
@@ -2022,6 +2042,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         family = family,linear.predictors = eta, deviance = dev,
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights,  
         df.null = nulldf, y = y, converged = conv,sig2=G$sig2,edf=G$edf,edf1=mv$edf1,hat=G$hat,
+        F=mv$F,R=mr$R,
         boundary = boundary,sp = G$sp,nsdf=G$nsdf,Ve=G$Ve,Vp=G$Vp,rV=mr$rV,mgcv.conv=G$conv,
         gcv.ubre=G$gcv.ubre,aic=aic.model,rank=rank,gcv.ubre.dev=gcv.ubre.dev,scale.estimated = (scale < 0))
 }
@@ -2035,8 +2056,8 @@ model.matrix.gam <- function(object,...)
 
 
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-                       block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...) 
-{
+                       block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...) {
+
 # This function is used for predicting from a GAM. object is a gam object, newdata a dataframe to
 # be used in prediction......
 #
@@ -2308,7 +2329,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   }
   if (type=="terms"||type=="iterms") attr(H,"constant") <- object$coefficients[1]
   H # ... and return
-}
+} ## end of gam.fit
 
 
 concurvity <- function(b,full=TRUE) {
@@ -2453,11 +2474,11 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
 # the chi^2 variables are central. 
 # Note that this can be rubbish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
   
-#  if (FALSE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
+#  if (TRUE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
 #    require(CompQuadForm)
 #    r <- x
 #    for (i in 1:length(x)) r[i] <- davies(x[i],lambda,h)$Qq
-#    return(r)
+#    return(pmin(r,1))
 #  }
 
   if (length(h) != length(lambda)) stop("lambda and h should have the same length!")
@@ -2508,6 +2529,183 @@ simf <- function(x,a,df,nq=50) {
 }
 
 
+recov <- function(b,re=rep(0,0),m=0) {
+## b is a fitted gam object. re is an array of indices of 
+## smooth terms to be treated as fully random....
+## Returns frequentist Cov matrix based on the given
+## mapping from data to params, but with dist of data
+## corresponding to that implied by treating terms indexed
+## by re as random effects... (would be usual frequentist 
+## if nothing treated as random)
+## if m>0, then this is indexes a term, not in re, whose
+## unpenalized cov matrix is required, with the elements of re
+## dropped.
+  if (!inherits(b,"gam")) stop("recov works with fitted gam objects only") 
+  if (is.null(b$full.sp)) sp <- b$sp else sp <- b$full.sp
+  llr <- TRUE
+  if (length(re)<1) { 
+    if (m>0) {
+    if (llr) { ## llr
+      ## annoyingly, need total penalty  
+      np <- length(coef(b))
+      k <- 1;S1 <- matrix(0,np,np)
+      for (i in 1:length(b$smooth)) { 
+        ns <- length(b$smooth[[i]]$S)
+        ind <- b$smooth[[i]]$first.para:b$smooth[[i]]$last.para
+        if (ns>0) for (j in 1:ns) {
+          S1[ind,ind] <- S1[ind,ind] + sp[k]*b$smooth[[i]]$S[[j]]
+          k <- k + 1
+        }
+      }
+      LRB <- rbind(b$R,t(mroot(S1)))
+      ii <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para 
+      ## ii is cols of LRB related to smooth m, which need 
+      ## to be moved to the end...
+      LRB <- cbind(LRB[,-ii],LRB[,ii])
+      ii <- (ncol(LRB)-length(ii)+1):ncol(LRB)
+      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
+    } else {
+      er <- eigen(crossprod(b$R))
+      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
+      er$values[!ii] <- 0
+      er$values[ii] <- 1/sqrt(er$values[ii])
+      ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
+      Vu <- crossprod(er$values*t(er$vector))[ind,ind] 
+      er <- eigen(Vu,symmetric=TRUE)
+      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
+      er$values[!ii] <- 0
+      er$values[ii] <- 1/sqrt(er$values[ii])
+      Rm <- er$values*t(er$vectors)
+    }
+    } else Rm <- NULL
+    return(list(Ve=b$Ve,Rm=Rm)) 
+  }
+
+  if (m%in%re) stop("m can't be in re")
+  ## partition R into R1 ("fixed") and R2 ("random"), with S1 and S2
+  p <- length(b$coefficients)
+  rind <- rep(FALSE,p) ## random coefficient index
+  for (i in 1:length(re)) {
+    rind[b$smooth[[re[i]]]$first.para:b$smooth[[re[i]]]$last.para] <- TRUE
+  }
+  p2 <- sum(rind) ## number random
+  p1 <- p - p2 ## number fixed
+  map <- rep(0,p) ## remaps param indices to indices in split version
+  map[rind] <- 1:p2 ## random
+  map[!rind] <- 1:p1 ## fixed
+  
+  ## split R...
+  R1 <- b$R[,!rind]  ## fixed effect columns
+  R2 <- b$R[,rind]   ## random effect columns
+  ## seitdem ich dich kennen, hab ich ein probleme,
+
+  ## assemble S1 and S2
+  S1 <- matrix(0,p1,p1);S2 <- matrix(0,p2,p2)
+ 
+  k <- 1
+  for (i in 1:length(b$smooth)) { 
+    ns <- length(b$smooth[[i]]$S)
+    ind <- map[b$smooth[[i]]$first.para:b$smooth[[i]]$last.para]
+    is.random <- i%in%re
+    if (ns>0) for (j in 1:ns) {
+      if (is.random) S2[ind,ind] <- S2[ind,ind] +  sp[k]*b$smooth[[i]]$S[[j]] else
+         S1[ind,ind] <- S1[ind,ind] + sp[k]*b$smooth[[i]]$S[[j]]
+      k <- k + 1
+    }
+  }
+  ## pseudoinvert S2
+  if (nrow(S2)==1) {
+    S2[1,1] <- 1/S2[1,1]
+  } else if (max(abs(diag(diag(S2))-S2))==0) {
+    ds2 <- diag(S2)
+    ind <- ds2 > max(ds2)*.Machine$double.eps^.8
+    ds2[ind] <- 1/ds2[ind];ds2[!ind] <- 0
+    diag(S2) <- ds2
+  } else {
+    ev <- eigen(S2,symmetric=TRUE)
+    ind <- ev$values > max(ev$values)*.Machine$double.eps^.8
+    ev$values[ind] <- 1/ev$values[ind];ev$values[!ind] <- 0 
+    S2 <- ev$vectors%*%(ev$values*t(ev$vectors))
+  }
+  ## choleski of cov matrix....
+  L <- chol(diag(p)+R2%*%S2%*%t(R2)) ## L'L = I + R2 S2^- R2'
+ 
+  ## now we need the square root of the unpenalized
+  ## cov matrix for m
+  if (m>0) {
+    if (llr) { ## llr version
+      LRB <- rbind(L%*%R1,t(mroot(S1)))
+      ii <- map[b$smooth[[m]]$first.para:b$smooth[[m]]$last.para] 
+      ## ii is cols of LRB related to smooth m, which need 
+      ## to be moved to the end...
+      LRB <- cbind(LRB[,-ii],LRB[,ii])
+      ii <- (ncol(LRB)-length(ii)+1):ncol(LRB) ## need to pick up final block
+      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
+    } else { ## original inverse unpenalized cov version
+      er <- eigen(crossprod(L%*%R1),symmetric=TRUE)
+      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
+      er$values[!ii] <- 0
+      er$values[ii] <- 1/sqrt(er$values[ii])
+      ind <- map[b$smooth[[m]]$first.para:b$smooth[[m]]$last.para]
+      Vu <- crossprod(er$values*t(er$vector))[ind,ind]
+      er <- eigen(Vu,symmetric=TRUE)
+      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
+      er$values[!ii] <- 0
+      er$values[ii] <- 1/sqrt(er$values[ii])
+      Rm <- er$values*t(er$vectors)
+    }
+  } else Rm <- NULL
+
+  list(Ve= crossprod(L%*%b$R%*%b$Vp)/b$sig2, ## Frequentist cov matrix
+       Rm=Rm)
+ # mapi <- (1:p)[!rind] ## indexes mapi[j] is index of total coef vector to which jth row/col of Vb/e relates
+  
+} ## end of recov
+
+
+reTest <- function(b,m) {
+## Test the mth smooth for equality to zero, using f'f as statistic,
+## and accounting for all random effects in model 
+  
+  ## find indices of random effects other than m
+  rind <- rep(0,0)
+  for (i in 1:length(b$smooth)) if (!is.null(b$smooth[[i]]$random)&&b$smooth[[i]]$random&&i!=m) rind <- c(rind,i)
+  ## get frequentist cov matrix of effects treating smooth terms in rind as random
+  rc <- recov(b,rind,m) 
+  Ve <- rc$Ve
+  ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
+  B <- mroot(Ve[ind,ind]) ## BB'=Ve
+  if (FALSE) { 
+    ## (R'R)^- is unpenalized cov matrix
+    ev <- eigen(crossprod(b$R),symmetric=TRUE)
+    ii <- ev$values>max(ev$values)*.Machine$double.eps^.8
+    ev$values[ii] <- 1/ev$values[ii]
+    ev$values[!ii] <- 0
+    Vu <- crossprod(sqrt(ev$values)*t(ev$vectors))
+    ev <- eigen(Vu[ind,ind])
+    ii <- ev$values>max(ev$values)*.Machine$double.eps^.8
+    ev$values[ii] <- 1/ev$values[ii]
+    ev$values[!ii] <- 0
+    Rm <- sqrt(ev$values)*t(ev$vectors) ## Rm'Rm is inv unp cov
+  } else { 
+    #Rm <- b$R[,ind]
+    #Rm <- t(mroot(b$smooth[[m]]$S[[1]])) ## CHECK: te etc.!!
+    #Rm <- t(mroot(b$Ve[ind,ind]/b$sig2))
+    Rm <- rc$Rm
+  }
+  b.hat <- coef(b)[ind]
+  d <- Rm%*%b.hat
+  stat <- sum(d^2)/b$sig2
+  ev <- eigen(crossprod(Rm%*%B)/b$sig2,symmetric=TRUE,only.values=TRUE)$values
+  ev[ev<0] <- 0
+  rank <- sum(ev>max(ev)*.Machine$double.eps^.8)
+  
+  if (b$scale.estimated) {
+    pval <- simf(stat,ev,b$df.residual)
+  } else { pval <- liu2(stat,ev) }
+  list(stat=stat,pval=pval,rank=rank)
+} ## end reTest
+
 testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 ## Routine for forming fractionally trunctated
 ## pseudoinverse of XVX'. And returning 
@@ -2524,24 +2722,20 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 ## res.df is residual dof used to estimate scale. <=0 implies
 ## fixed scale.
 
-  qrx <- qr(X)
+  qrx <- qr(X,tol=0)
   R <- qr.R(qrx)
   V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
 
-if (rank<1) rank <- 1 ## EXPERIMENTAL
 
-#  lp <- ed$values/max(ed$values)
-#  lp <- 2*lp - lp^2
-#  k <- ceiling(rank) ## reset rank if failing to catch important terms...
-#  if (k < length(lp)&&lp[k+1]>max(lp)*0.5) {
-#    rank <- max(rank,sum(lp>.5*max(lp)))
-#  }
- 
   k <- max(0,floor(rank)) 
   nu <- abs(rank - k)     ## fractional part of supplied edf
-  if (type==1) { ## round up is more than .05 above lower
+  if (type < -.5) { ## Crude modification of Cox and Koh
+    res <- smoothTest(p,X,V)
+    res$rank <- rank
+    return(res)
+  } else  if (type==1) { ## round up is more than .05 above lower
     if (rank > k + .05||k==0) k <- k + 1
     nu <- 0;rank <- k
   } else if (type==2) { ## naive round
@@ -2566,11 +2760,7 @@ if (rank<1) rank <- 1 ## EXPERIMENTAL
   # vec <- qr.qy(qrx,rbind(ed$vectors,matrix(0,nrow(X)-ncol(X),ncol(X))))
   vec <- ed$vectors
   if (k1<ncol(vec)) vec <- vec[,1:k1,drop=FALSE]
-  if (k==0) {
-     vec <- t(t(vec)*sqrt(1/ed$val[1]))
-    
-  }
- 
+
   ## deal with the fractional part of the pinv...
   if (nu>0&&k>0) {
      if (k>1) vec[,1:(k-1)] <- t(t(vec[,1:(k-1)])/sqrt(ed$val[1:(k-1)]))
@@ -2584,6 +2774,7 @@ if (rank<1) rank <- 1 ## EXPERIMENTAL
      rB <- eb$vectors%*%diag(sqrt(eb$values))%*%t(eb$vectors)
      vec[,k:k1] <- t(rB%*%t(vec[,k:k1]))
   } else {
+    if (k==0) vec <- t(t(vec)*sqrt(1/ed$val[1])) else
     vec <- t(t(vec)/sqrt(ed$val[1:k]))
     if (k==1) rank <- 1
   }
@@ -2592,6 +2783,9 @@ if (rank<1) rank <- 1 ## EXPERIMENTAL
   d <- sum(d^2) 
 
   rank1 <- rank ## rank for lower tail pval computation below
+
+  ## note that for <1 edf then d is not weighted by EDF, and instead is 
+  ## simply refered to a chi-squared 1
 
   if (nu>0) { ## mixture of chi^2 ref dist
      if (k1==1) rank1 <- val <- 1 else { 
@@ -2603,11 +2797,11 @@ if (rank<1) rank <- 1 ## EXPERIMENTAL
    
      if (res.df <= 0) pval <- liu2(d,val) else ##  pval <- davies(d,val)$Qq else
      pval <- simf(d,val,res.df)
-  } else { pval <- 1 }
+  } else { pval <- 2 }
   ## integer case still needs computing, also liu/pearson approx only good in 
   ## upper tail. In lower tail, 2 moment approximation is better (Can check this 
   ## by simply plotting the whole interesting range as a contour plot!)
-  if (pval > .5) {
+  if (pval > .5) { 
     if (res.df <= 0) pval <- pchisq(d,df=rank1,lower.tail=FALSE) else
     pval <- pf(d/rank1,rank1,res.df,lower.tail=FALSE)
   }
@@ -2632,9 +2826,9 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
 ##   4 Bayesian numerical rank
 ##   5 Wood (2006) frequentist
 ##   -1 Modified Cox et al.
-## If a smooth has a field 'fr.pval' and it is set to TRUE then 
-## its p-value is based on the full rank frequentist Wald statistic. 
-## This option is appropriate for random effects. 
+## If a smooth has a field 'random' and it is set to TRUE then 
+## it is treated as a random effect for some p-value dist calcs 
+
 
   pinv<-function(V,M,rank.tol=1e-6) {
   ## a local pseudoinverse function
@@ -2650,6 +2844,8 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     res
   } ## end of pinv
   
+  if (is.null(object$R)) warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
+
   p.table <- pTerms.table <- s.table <- NULL
 
   if (freq) covmat <- object$Ve else covmat <- object$Vp
@@ -2757,17 +2953,14 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         X <- model.matrix(object)
       }
       X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
-      ## get corrected edf
-      #edf1 <- 2*object$edf - rowSums(object$Ve*(t(X)%*%X))/object$sig2
+    
     } ## end if (p.type<5)
 
     for (i in 1:m) { ## loop through smooths
-      fr.pval <- object$smooth[[i]]$fr.pval  ## should full rank frequentist p-value be used?
-      if (is.null(fr.pval)) fr.pval <- FALSE 
 
       start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
 
-      if (p.type==5||fr.pval||object$smooth[[i]]$null.space.dim==0) { ## use frequentist cov matrix 
+      if (p.type==5) { ## use frequentist cov matrix 
         V <- object$Ve[start:stop,start:stop,drop=FALSE] 
       } else V <- object$Vp[start:stop,start:stop,drop=FALSE] ## Bayesian
       
@@ -2777,40 +2970,27 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       ## extract alternative edf estimate for this smooth, if possible...
       if (!is.null(object$edf1)) edf1[i] <-  sum(object$edf1[start:stop]) 
  
-      #if (fr.pval) { ## smooth requires full rank frequentist p-value
-      #  V <- pinv(V,object$smooth[[i]]$df) # get (pseudo)inverse of V
-      #  chi.sq[i] <- t(p)%*%V%*%p
-      #  df[i] <- attr(V, "rank")
-      #} else 
       if (p.type==5) { ## old style frequentist
         M1 <- object$smooth[[i]]$df
         M <- min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
         V <- pinv(V,M) # get rank M pseudoinverse of V
         chi.sq[i] <- t(p)%*%V%*%p
         df[i] <- attr(V, "rank")
-      } else { ## Inverted Nychka interval statistics
+      } else { ## Better founded alternatives...
         Xt <- X[,start:stop,drop=FALSE] 
-        if (p.type < 0) {
-          res <- smoothTest(p,Xt,V)
-          df[i] <- edf[i] ## not really used
-          chi.sq[i] <- res$stat
-          s.pv[i] <- res$pval
-        } else {
-         
+        if (object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
+          res <- reTest(object,i)
+        } else { ## Inverted Nychka interval statistics
           df[i] <- min(ncol(Xt),edf1[i])
-          if (df[i]<1) df[i] <- 1
-          if (fr.pval) df[i] <- ncol(Xt) ## full rank frequentist          
-
           if (est.disp) rdf <- residual.df else rdf <- -1
           res <- testStat(p,Xt,V,df[i],type=p.type,res.df = rdf)
-          df[i] <- res$rank
-          chi.sq[i] <- res$stat
-          s.pv[i] <- res$pval 
-        }   
+        }
+        df[i] <- res$rank
+        chi.sq[i] <- res$stat
+        s.pv[i] <- res$pval 
       }
       names(chi.sq)[i]<- object$smooth[[i]]$label
       
-      ## if (fr.pval || 
       if (p.type == 5) {
         if (!est.disp)
          s.pv[i] <- pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
@@ -2838,11 +3018,11 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       }
     }
   }
-  w <- object$prior.weights
+  w <- as.numeric(object$prior.weights)
   mean.y <- sum(w*object$y)/sum(w)
   w <- sqrt(w)
   nobs <- nrow(object$model)
-  r.sq<- 1 - var(w*(object$y-object$fitted.values))*(nobs-1)/(var(w*(object$y-mean.y))*residual.df) 
+  r.sq<- 1 - var(w*(as.numeric(object$y)-object$fitted.values))*(nobs-1)/(var(w*(as.numeric(object$y)-mean.y))*residual.df) 
   dev.expl<-(object$null.deviance-object$deviance)/object$null.deviance
   ret<-list(p.coeff=p.coeff,se=se,p.t=p.t,p.pv=p.pv,residual.df=residual.df,m=m,chi.sq=chi.sq,
        s.pv=s.pv,scale=dispersion,r.sq=r.sq,family=object$family,formula=object$formula,n=nobs,
@@ -2852,7 +3032,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
  
   class(ret)<-"summary.gam"
   ret
-}
+} ## end summary.gam
 
 print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3), 
                               signif.stars = getOption("show.signif.stars"), ...)
@@ -3195,7 +3375,8 @@ magic.post.proc <- function(X,object,w=NULL)
   M <- WX%*%V
   ##Ve <- (V%*%t(X))%*%M*object$scale # frequentist cov. matrix
   XWX <- t(X)%*%WX
-  Ve <- V%*%XWX
+  F <- Ve <- V%*%XWX
+  ##bias <- as.numeric(object$b - Ve%*%object$b) ## estimated beta bias
   edf1 <- rowSums(t(Ve)*Ve) ## this is diag(FF), where F is edf matrix
   Ve <- Ve%*%V*object$scale ## frequentist cov matrix
   B <- X*M
@@ -3203,7 +3384,7 @@ magic.post.proc <- function(X,object,w=NULL)
   hat <- apply(B,1,sum) # diag(X%*%V%*%t(WX))
   edf <- apply(B,2,sum) # diag(V%*%t(X)%*%WX)
   Vb <- V*object$scale;rm(V)
-  list(Ve=Ve,Vb=Vb,hat=hat,edf=edf,edf1=2*edf-edf1)
+  list(Ve=Ve,Vb=Vb,hat=hat,edf=edf,edf1=2*edf-edf1,F=F)
 }
 
 single.sp <- function(X,S,target=.5,tol=.Machine$double.eps*100)
@@ -3432,11 +3613,12 @@ magic <- function(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,w=NULL,g
  
   b<-array(0,icontrol[3])
   # argument names in call refer to returned values.
-  um<-.C(C_magic,as.double(y),as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),as.double(L),
+  um<-.C(C_magic,as.double(y),X=as.double(X),sp=as.double(sp),as.double(def.sp),as.double(Si),as.double(H),as.double(L),
           lsp0=as.double(lsp0),score=as.double(gamma),scale=as.double(scale),info=as.integer(icontrol),as.integer(cS),
           as.double(control$rank.tol),rms.grad=as.double(control$tol),b=as.double(b),rV=double(q*q),
           as.double(extra.rss),as.integer(n.score))
   res<-list(b=um$b,scale=um$scale,score=um$score,sp=um$sp,sp.full=as.numeric(exp(L%*%log(um$sp))))
+  res$R <- matrix(um$X[1:q^2],q,q)
   res$rV<-matrix(um$rV[1:(um$info[1]*q)],q,um$info[1])
   gcv.info<-list(full.rank=full.rank,rank=um$info[1],fully.converged=as.logical(um$info[2]),
       hess.pos.def=as.logical(um$info[3]),iter=um$info[4],score.calls=um$info[5],rms.grad=um$rms.grad)

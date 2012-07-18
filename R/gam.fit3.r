@@ -703,6 +703,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
 gam.fit3.post.proc <- function(X,object) {
 ## get edf array and covariance matrices after a gam fit. 
+## X is original model matrix
   Vb <- object$rV%*%t(object$rV)*object$scale ## Bayesian cov.
   PKt <- object$rV%*%t(object$K)
   F <- PKt%*%(sqrt(object$weights)*X)
@@ -712,7 +713,13 @@ gam.fit3.post.proc <- function(X,object) {
   ## Ve <- PKt%*%t(PKt)*object$scale  ## frequentist cov
   Ve <- F%*%Vb ## not quite as stable as above, but quicker
   hat <- rowSums(object$K*object$K)
-  list(Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,hat=hat)
+  ## get QR factor R of WX - more efficient to do this
+  ## in gdi_1 really, but that means making QR of augmented 
+  ## a two stage thing, so not clear cut...
+  qrx <- qr(sqrt(object$weights)*X,LAPACK=TRUE)
+  R <- qr.R(qrx);R[,qrx$pivot] <- R
+  ##bias = as.numeric(object$coefficients - F%*%object$coefficients)
+  list(Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,hat=hat,F=F,R=R)
 }
 
 

@@ -7,7 +7,9 @@
 
 \description{\code{\link{gam}} can use isotropic smooths of any number of variables, specified via terms like
 \code{s(x,z,bs="tp",m=3)} (or just \code{s(x,z)} as this is the default basis). These terms are based on thin plate 
-regression splines. \code{m} specifies the order of the derivatives in the thin plate spline penalty.
+regression splines. \code{m} specifies the order of the derivatives in the thin plate spline penalty. If \code{m} is 
+a vector of length 2 and the second element is zero, then the penalty null space of the smooth is not included in
+the smooth.  
 
  Thin plate regression splines are constructed by starting with the
   basis and penalty for a full thin plate spline and then truncating this basis in
