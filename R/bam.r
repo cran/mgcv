@@ -401,6 +401,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         object$coefficients <- fit$b
         object$edf <- post$edf 
         object$edf1 <- post$edf1
+        object$F <- post$F
         object$full.sp <- fit$sp.full
         object$gcv.ubre <- fit$score
         object$hat <- post$hat
@@ -429,6 +430,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale)
       object$edf <- res$edf
       object$edf1 <- res$edf1
+      object$F <- res$F
       object$hat <- res$hat
       object$Vp <- res$Vp
       object$Ve <- res$Ve
@@ -446,7 +448,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
             if (any(mu < eps))
                 warning("fitted rates numerically 0 occurred")
     }
-      
+  object$R <- qrx$R    
   object$iter <- iter 
   object$wt <- wt
   object$y <- G$y
@@ -575,6 +577,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
         object$coefficients <- fit$b
         object$edf <- post$edf
         object$edf1 <- post$edf1
+        object$F <- post$F
         object$full.sp <- fit$sp.full
         object$gcv.ubre <- fit$score
         object$hat <- post$hat
@@ -614,6 +617,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
       
   object$iter <- iter  
   object$wt <- w
+  object$R <- qrx$R
   object$y <- G$y
   rm(G);gc()
   object
@@ -915,7 +919,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
             log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
             nobs =n,Mp=um$Mp)
      res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale)
-     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,
+     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,F=res$F,
                     gcv.ubre=fit$reml,hat=res$hat,mgcv.conv=list(iter=fit$iter,
                     message=fit$conv),rank=ncol(um$X),
                     Ve=res$Ve,Vp=res$Vp,scale.estimated = scale<=0,outer.info=fit$outer.info,
@@ -961,6 +965,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
      object$coefficients <- fit$b
      object$edf <- post$edf
      object$edf1 <- post$edf1
+     object$F <- post$F
      object$full.sp <- fit$sp.full
      object$gcv.ubre <- fit$score
      object$hat <- post$hat
@@ -982,7 +987,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
      object$yX.last <- yX.last
    }
   
- 
+   object$R <- qrx$R
    object$gamma <- gamma;object$G <- G;object$qrx <- qrx ## to allow updating of the model
    object$y <- mf[[gp$response]]
    object$iter <- 1
@@ -1100,6 +1105,9 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
 
+  ## no advantage to "fREML" with no free smooths...
+  if (((!is.null(G$L)&&ncol(G$L) < 1)||(length(G$sp)==0))&&method=="fREML") method <- "REML"
+
   G$var.summary <- var.summary
   G$family <- family
   G$terms<-terms;G$pterms<-pterms
@@ -1209,8 +1217,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
   object$terms <- G$terms
   object$var.summary <- G$var.summary 
- 
-  object$weights <- object$prior.weights
+  if (is.null(object$wt)) object$weights <- object$prior.weights else
+  object$weights <- object$wt
   object$xlevels <- G$xlevels
   #object$y <- object$model[[gp$response]]
   object$NA.action <- na.action ## version to use in bam.update
@@ -1228,12 +1236,12 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$linear.predictors <- as.numeric(predict.bam(object,newdata=object$model,block.size=chunk.size,cluster=cluster))
   object$fitted.values <- family$linkinv(object$linear.predictors)
   
-  object$residuals <- sqrt(family$dev.resids(object$y,object$fitted.values,object$weights)) * 
+  object$residuals <- sqrt(family$dev.resids(object$y,object$fitted.values,object$prior.weights)) * 
                       sign(object$y-object$fitted.values)
   object$deviance <- sum(object$residuals^2)
-  object$aic <- family$aic(object$y,1,object$fitted.values,object$weights,object$deviance) +
+  object$aic <- family$aic(object$y,1,object$fitted.values,object$prior.weights,object$deviance) +
                 2*sum(object$edf)
-  object$null.deviance <- sum(family$dev.resids(object$y,mean(object$y),object$weights))
+  object$null.deviance <- sum(family$dev.resids(object$y,mean(object$y),object$prior.weights))
   if (!is.null(object$full.sp)) {
     if (length(object$full.sp)==length(object$sp)&&
         all.equal(object$sp,object$full.sp)==TRUE) object$full.sp <- NULL
@@ -1337,7 +1345,7 @@ bam.update <- function(b,data,chunk.size=10000) {
      res <- Sl.postproc(b$Sl,fit,um$undrop,b$qrx$R,cov=TRUE,scale=scale)
 
 
-     object <- list(coefficients=res$beta,edf=res$edf,
+     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,F=res$F,
                     gcv.ubre=fit$reml,hat=res$hat,outer.info=list(iter=fit$iter,
                     message=fit$conv),optimizer="fast-REML",rank=ncol(um$X),
                     Ve=NULL,Vp=res$V,scale.estimated = scale<=0)
@@ -1386,6 +1394,8 @@ bam.update <- function(b,data,chunk.size=10000) {
 
     b$coefficients <- fit$b
     b$edf <- post$edf
+    b$edf1 <- post$edf1
+    b$F <- post$F
     b$full.sp <- fit$sp.full
     b$gcv.ubre <- fit$score
     b$hat <- post$hat
@@ -1400,6 +1410,8 @@ bam.update <- function(b,data,chunk.size=10000) {
   } else { ## REML or ML
     b$coefficients <- object$coefficients
     b$edf <- object$edf
+    b$edf1 <- object$edf1
+    b$F <- object$F
     b$full.sp <- object$sp.full
     b$gcv.ubre <- object$gcv.ubre
     b$hat <- object$hat
@@ -1414,15 +1426,17 @@ bam.update <- function(b,data,chunk.size=10000) {
     }
   }
 
+
+  b$R <- b$qrx$R
   b$G$X <- NULL
   b$linear.predictors <- as.numeric(predict.gam(b,newdata=b$model,block.size=chunk.size))
   b$fitted.values <- b$linear.predictor ## strictly additive only!
   
-  b$residuals <- sqrt(b$family$dev.resids(b$y,b$fitted.values,b$weights)) * 
+  b$residuals <- sqrt(b$family$dev.resids(b$y,b$fitted.values,b$prior.weights)) * 
                       sign(b$y-b$fitted.values)
   b$deviance <- sum(b$residuals^2)
-  b$aic <- b$family$aic(b$y,1,b$fitted.values,b$weights,b$deviance) + 2 * sum(b$edf)
-  b$null.deviance <- sum(b$family$dev.resids(b$y,mean(b$y),b$weights))
+  b$aic <- b$family$aic(b$y,1,b$fitted.values,b$prior.weights,b$deviance) + 2 * sum(b$edf)
+  b$null.deviance <- sum(b$family$dev.resids(b$y,mean(b$y),b$prior.weights))
   names(b$coefficients) <- names(b$edf) <- cnames
   b
 } ## end of bam.update

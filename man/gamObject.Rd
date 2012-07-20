@@ -67,7 +67,7 @@ from \code{min.sp} argument to \code{gam}). May be larger than \code{sp} if some
 smoothing parameters, and/or some smoothing parameter values were supplied in the \code{sp} argument
 of \code{\link{gam}}.}
 
-
+\item{F}{Degrees of freedom matrix. This may be removed at some point, and should probably not be used.}
 
 \item{gcv.ubre}{The minimized smoothing parameter selection score: GCV, UBRE(AIC), GACV, negative log marginal 
 likelihood or negative log restricted likelihood.}
@@ -125,6 +125,9 @@ information on the parametric penalties. \code{NULL} otherwise.}
 
 \item{pterms}{\code{terms} object for strictly parametric part of model.}
 
+\item{R}{Factor R from QR decomposition of weighted model matrix, unpivoted to be in
+         same column order as model matrix (so need not be upper triangular).}
+
 \item{rank}{apparent rank of fitted model.}
 
 \item{reml.scale}{The scale (RE)ML scale parameter estimate, if (P-)(RE)ML used 
@@ -169,7 +172,6 @@ useful for CI's as smooths are usually biased.}
 posterior covariance matrix that results from adopting a particular Bayesian
 model of the smoothing process. Paricularly useful for creating
 credible/confidence intervals.}
-
 
 \item{weights}{final weights used in IRLS iteration.}
 

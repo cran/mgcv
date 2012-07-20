@@ -1,6 +1,47 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+ISSUES:
+
+* F needed in gam object?
+
+* still not really happy with nesting constraints, especially under rank
+  deficiency.
+
+1.7-19
+
+** summary.gam and anova.gam now use an improved p-value computation for 
+  smooth terms with a zero dimensional penalty null space (including 
+  random effects). The new scheme has been tested by full replication 
+  of the simulation study in Scheipl (2008,CSDA) to compare it to the best 
+  method there-in. In these tests it is at least as powerful as the best 
+  method given there, and usually indistinguishable, but it gives slightly 
+  too low null p-values when smoothing parameters are very poorly identified. 
+  Note that the new p-values can not be computed from old fitted gam objects.
+  Thanks to Martijn Wieling for pointing out how bad the p-values for regular
+  smooths could be with random effects.
+
+* t2 terms now take an argument `ord' that allows orders of interaction to 
+  be selected.
+
+* "tp" smooths can now drop the null space from their construction via
+  a vector m argument, to allow testing against polynomial in the null space.
+
+* Fix of vicious little bug in gamm tensor product handling that could have 
+  a te term pick up the wrong model matrix and fail. 
+
+* bam now resets method="fREML" to "REML" if there are no free smoothing 
+  parameters, since there is no advantage to the "fREML" optimizer in this 
+  case, and it assumes there is at least one free smoothing parameter.
+
+* print.gam modified to print effective degrees of freedom more prettily,
+
+* testStat bug fix. qr was called with default arguments, which includes 
+  tol=1e-7... 
+
+* bam now correctly returns fitting weights (rather than prior) in weights 
+  field.
+
 1.7-18
 
 * Embarrassingly, the adjusted r^2 computation in summary.gam was wrong

@@ -768,7 +768,8 @@ Sl.postproc <- function(Sl,fit,undrop,X0,cov=FALSE,scale = -1) {
     ## edf <- rowSums(PP*crossprod(X0)) ## diag(PP%*%(t(X0)%*%X0))
     if (scale<=0) scale <- fit$rss/(fit$nobs - sum(edf))
     Vp <- PP * scale ## cov matrix
-    return(list(beta=beta,Vp=Vp,Ve=F%*%Vp,edf=edf,edf1=edf1,hat=hat))
+    ##bias <- as.numeric(beta-F%*%beta) ## estimate of smoothing bias in beta
+    return(list(beta=beta,Vp=Vp,Ve=F%*%Vp,edf=edf,edf1=edf1,hat=hat,F=F))
   } else return(list(beta=beta))
 }
 

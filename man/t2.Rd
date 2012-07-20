@@ -5,13 +5,13 @@
 \description{ Alternative to \code{\link{te}} for defining tensor product smooths
 in a \code{\link{gam}} formula. Results in a construction in which the penalties are 
 non-overlapping multiples of identity matrices (with some rows and columns zeroed). 
-The construction is analogous to Chong Gu's (2002) Smoothing Spline ANOVA, but using 
-low rank penalized regression spline marginals. The main advantage of this construction 
+The construction, which is due to Fabian Scheipl, is analogous to Smoothing Spline ANOVA 
+(Gu, 2002), but using low rank penalized regression spline marginals. The main advantage of this construction 
 is that it is useable with \code{gamm4} from package \code{gamm4}.
 }
 
-\usage{t2(..., k=NA,bs="cr",m=NA,d=NA,by=NA,
-              xt=NULL,id=NULL,sp=NULL,full=FALSE)
+\usage{t2(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,
+               id=NULL,sp=NULL,full=FALSE,ord=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -76,6 +76,8 @@ range space generates one penalty, but the coulmns of each null space basis are 
 The latter is more parsimonious, but does mean that invariance is only 
 achieved by an arbitrary rescaling of null space basis vectors.}
 
+\item{ord}{an array giving the orders of terms to retain. Here order means number of marginal range spaces
+used in the construction of the component. \code{NULL} to retain everything. }
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases

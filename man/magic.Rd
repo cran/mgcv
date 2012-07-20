@@ -186,7 +186,9 @@ by failing to decrease the score along the search direction.}
 \item{iter}{is the number of Newton/Steepest descent iterations taken.}
 \item{score.calls}{is the number of times that the GCV/UBRE score had to be evaluated.}
 \item{rms.grad}{is the root mean square of the gradient of the UBRE/GCV score w.r.t. the smoothing parameters.}
-}}
+\item{R}{The factor R from the QR decomposition of the weighted model matrix. This is un-pivoted so that column 
+order corresponds to \code{X}. So it may not be upper triangular.}}
+}
 Note that some further useful quantities can be obtained using \code{\link{magic.post.proc}}.
 
 }

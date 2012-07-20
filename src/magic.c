@@ -272,7 +272,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
    space of the log of the smoothing parameters.
 
    y - an n dimensional response vector
-   X - an n by q model matrix
+   X - an n by q model matrix (on exit q by q unpivoted factor R from QR=X) 
    sp0 - an mp-array of (underlying) smoothing parameters (any -ve => autoinitialize)
    def_sp - an array of default values for sp0's (any -ve => set up internally)
    b - a q dimensional parameter vector
@@ -645,6 +645,15 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
 
   if (m>0) {free(sp);free2d(Si);}
   
+  /* unpivot R from QR factor of X */
+  for (i=0;i<q;i++) { 
+    for (j=0;j<i;j++) V[i + q * j] = 0.0; 
+    for (j=i;j<q;j++) V[i + q * j] = X[i + n * j]; 
+  }
+
+  pivoter(V,&q,&q,pivot,&TRUE,&TRUE); /* unpivoting the columns of R1 */
+  for (p1=X,p2=V,p=V+q*q;p2<p;p1++,p2++) *p1 = *p2; /* copy back to X */
+
   free(tau);free(pivot);free(work);free(y0);free(y1);free(U1);free(V);free(d);free(sd_step);
   free(n_step);
     

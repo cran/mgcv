@@ -38,6 +38,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
 void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);
 void rksos(double *x,int *n,double *eps);
+void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse);
 
 /* Routines for direct access to linpack and lapack */
 
