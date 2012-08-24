@@ -15,6 +15,8 @@ straight line.) \code{s(x,bs="cc")} specifies a cyclic penalized cubic regressio
 `Cardinal' spline bases are used: Wood (2006) sections 4.1.2 and 4.1.3 gives full details. These bases have 
 very low setup costs. For a given basis dimension, \code{k}, they typically perform a little less well 
 then thin plate regression splines, but a little better than p-splines. See \code{\link{te}} to use these bases in tensor product smooths of several variables.
+
+Default \code{k} is 10. 
 }
 
 \usage{

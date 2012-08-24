@@ -1909,15 +1909,7 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
   object$te.ok <- 2 ## these terms are  suitable as te marginals, but 
                     ##   can not be plotted
 
-  ## The Nychka inversion argument for p-values does not apply to 
-  ## random effects, because the eigen spectrum of the penalty is too 
-  ## uniform for the truncation argument to work in all cases,
-  ## and because the interpretation of the Bayesian cov matrix
-  ## as including accross the function bias is also not right, 
-  ## since these are proper random effects (i.e. what is there to
-  ## be biased here)! The theoretical problems can result in very
-  ## low power in practice. 
- 
+
   object$random <- TRUE ## treat as a random effect for p-value comp.
 
   class(object)<-"random.effect"  # Give object a class
@@ -1928,7 +1920,7 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
 
 
 Predict.matrix.random.effect<-function(object,data)
-# prediction method function for the p.spline smooth class
+# prediction method function for the random effect class
 { X <- model.matrix(object$form,data)
   X
 }
@@ -2028,7 +2020,8 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   if (sum(!levels(x)%in%levels(k)))
      stop("data contain regions that are not contained in the knot specification")
 
-  levels(x) <- levels(k) ## to allow for regions with no data
+  ##levels(x) <- levels(k) ## to allow for regions with no data
+  x <- factor(x,levels=levels(k)) ## to allow for regions with no data
 
   object$X <- model.matrix(~x-1,) ## model matrix
  
@@ -2119,8 +2112,8 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
 
 Predict.matrix.mrf.smooth<-function(object, data) { 
   
-  x <- as.factor(data[[object$term]])
-  levels(x) <- levels(object$knots)
+  x <- factor(data[[object$term]],levels=levels(object$knots))
+  ##levels(x) <- levels(object$knots)
   X <- model.matrix(~x-1)
   if (!is.null(object$P)) X <- X%*%object$P
   X 

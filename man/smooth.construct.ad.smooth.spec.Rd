@@ -11,8 +11,8 @@ p-spline(s) or cubic regression spline(s). Discrete P-spline type penalties are 
 of the basis, but the penalties themselves have a basis representation, allowing the strength of the
 penalty to vary with the covariates. The coefficients of the penalty basis are the smoothing parameters.
 
-When invoking an adaptive smoother the \code{k} argument specifies the dimension of the smoothing basis, 
-while the \code{m} argument specifies the dimension of the penalty basis. For an adaptive smooth of two 
+When invoking an adaptive smoother the \code{k} argument specifies the dimension of the smoothing basis (default 40 in 1D, 15 in 2D), 
+while the \code{m} argument specifies the dimension of the penalty basis (default 5 in 1D, 3 in 2D). For an adaptive smooth of two 
 variables \code{k} is taken as the dimension of both marginal bases: different marginal basis dimensions can be 
 specified by making \code{k} a two element vector. Similarly, in the two dimensional case \code{m} is the 
 dimension of both marginal bases for the penalties, unless it is a two element vector, which specifies different

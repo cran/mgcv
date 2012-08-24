@@ -574,7 +574,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
     xlim[1] <- xlim[1] - .1 * (xlim[2]-xlim[1]) ## allow space for scale
 
     n.col <- 100
-    if (scheme=="heat") scheme <- heat.colors(n.col) else 
+    if (scheme=="heat") scheme <- heat.colors(n.col+1) else 
     scheme <- gray(0:n.col/n.col)
    
     zlim <- range(pretty(z))
@@ -588,7 +588,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
     ylim <- zlim
     plot(0,0,ylim=ylim,xlim=xlim,type="n",xaxt="n",bty="n",xlab="",ylab=lab,...)
     for (i in 1:length(pc)) {
-      coli <- round((z[i] - zlim[1])/(zlim[2]-zlim[1])*100)    
+      coli <- round((z[i] - zlim[1])/(zlim[2]-zlim[1])*n.col)+1    
       poly2(pc[[i]],col=scheme[coli])
     }
   
@@ -621,7 +621,8 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (!x$plot.me||is.null(x$xt$polys)) return(NULL) ## shouldn't or can't plot
     ## get basic plot data 
     raw <- data[x$term][[1]]
-    dat <- data.frame(x=factor(names(x$xt$polys),levels=levels(x$knots)));names(dat) <- x$term
+    dat <- data.frame(x=factor(names(x$xt$polys),levels=levels(x$knots)))
+    names(dat) <- x$term
     X <- PredictMat(x,dat)   # prediction matrix for this term
     if (is.null(xlab)) xlabel<- "" else xlabel <- xlab
     if (is.null(ylab)) ylabel <- "" else ylabel <- ylab
@@ -1161,7 +1162,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   { class(x) <- c("gam","glm","lm") # needed to get termplot to call model.frame.glm 
     if (is.null(select)) {
       attr(x,"para.only") <- TRUE
-      termplot(x,se=se,rug=rug,col.se=1,col.term=1)
+      termplot(x,se=se,rug=rug,col.se=1,col.term=1,...)
     } else { # figure out which plot is required
       if (select > m) { 
         select <- select - m # i.e. which parametric term
@@ -1169,7 +1170,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
         term.labels <- term.labels[order==1]
         if (select <= length(term.labels)) {
           # if (interactive() && m &&i%%ppp==0) 
-          termplot(x,terms=term.labels[select],se=se,rug=rug,col.se=1,col.term=1)
+          termplot(x,terms=term.labels[select],se=se,rug=rug,col.se=1,col.term=1,...)
         }  
       }
     }

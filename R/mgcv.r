@@ -1406,7 +1406,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   ## correct null deviance if there's an offset [Why not correct calc in gam.fit/3???]....
 
   if (G$intercept&&any(G$offset!=0)) object$null.deviance <-
-         glm(G$y~offset(G$offset),family=object$family,weights=object$prior.weights)$deviance
+         glm(object$y~offset(G$offset),family=object$family,weights=object$prior.weights)$deviance
 
   object$method <- criterion
 
@@ -2542,10 +2542,8 @@ recov <- function(b,re=rep(0,0),m=0) {
 ## dropped.
   if (!inherits(b,"gam")) stop("recov works with fitted gam objects only") 
   if (is.null(b$full.sp)) sp <- b$sp else sp <- b$full.sp
-  llr <- TRUE
   if (length(re)<1) { 
     if (m>0) {
-    if (llr) { ## llr
       ## annoyingly, need total penalty  
       np <- length(coef(b))
       k <- 1;S1 <- matrix(0,np,np)
@@ -2564,21 +2562,8 @@ recov <- function(b,re=rep(0,0),m=0) {
       LRB <- cbind(LRB[,-ii],LRB[,ii])
       ii <- (ncol(LRB)-length(ii)+1):ncol(LRB)
       Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
-    } else {
-      er <- eigen(crossprod(b$R))
-      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
-      er$values[!ii] <- 0
-      er$values[ii] <- 1/sqrt(er$values[ii])
-      ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
-      Vu <- crossprod(er$values*t(er$vector))[ind,ind] 
-      er <- eigen(Vu,symmetric=TRUE)
-      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
-      er$values[!ii] <- 0
-      er$values[ii] <- 1/sqrt(er$values[ii])
-      Rm <- er$values*t(er$vectors)
-    }
     } else Rm <- NULL
-    return(list(Ve=b$Ve,Rm=Rm)) 
+    return(list(Ve=(t(b$Ve)+b$Ve)*.5,Rm=Rm)) 
   }
 
   if (m%in%re) stop("m can't be in re")
@@ -2615,25 +2600,27 @@ recov <- function(b,re=rep(0,0),m=0) {
   }
   ## pseudoinvert S2
   if (nrow(S2)==1) {
-    S2[1,1] <- 1/S2[1,1]
+    S2[1,1] <- 1/sqrt(S2[1,1])
   } else if (max(abs(diag(diag(S2))-S2))==0) {
     ds2 <- diag(S2)
     ind <- ds2 > max(ds2)*.Machine$double.eps^.8
     ds2[ind] <- 1/ds2[ind];ds2[!ind] <- 0
-    diag(S2) <- ds2
+    diag(S2) <- sqrt(ds2)
   } else {
-    ev <- eigen(S2,symmetric=TRUE)
+    ev <- eigen((S2+t(S2))/2,symmetric=TRUE)
     ind <- ev$values > max(ev$values)*.Machine$double.eps^.8
     ev$values[ind] <- 1/ev$values[ind];ev$values[!ind] <- 0 
-    S2 <- ev$vectors%*%(ev$values*t(ev$vectors))
+    ## S2 <- ev$vectors%*%(ev$values*t(ev$vectors))
+    S2 <- sqrt(ev$values)*t(ev$vectors)
   }
   ## choleski of cov matrix....
-  L <- chol(diag(p)+R2%*%S2%*%t(R2)) ## L'L = I + R2 S2^- R2'
- 
+  ## L <- chol(diag(p)+R2%*%S2%*%t(R2)) ## L'L = I + R2 S2^- R2'
+  L <- chol(diag(p) + crossprod(S2%*%t(R2)))  
+
   ## now we need the square root of the unpenalized
   ## cov matrix for m
   if (m>0) {
-    if (llr) { ## llr version
+      ## llr version
       LRB <- rbind(L%*%R1,t(mroot(S1)))
       ii <- map[b$smooth[[m]]$first.para:b$smooth[[m]]$last.para] 
       ## ii is cols of LRB related to smooth m, which need 
@@ -2641,19 +2628,6 @@ recov <- function(b,re=rep(0,0),m=0) {
       LRB <- cbind(LRB[,-ii],LRB[,ii])
       ii <- (ncol(LRB)-length(ii)+1):ncol(LRB) ## need to pick up final block
       Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
-    } else { ## original inverse unpenalized cov version
-      er <- eigen(crossprod(L%*%R1),symmetric=TRUE)
-      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
-      er$values[!ii] <- 0
-      er$values[ii] <- 1/sqrt(er$values[ii])
-      ind <- map[b$smooth[[m]]$first.para:b$smooth[[m]]$last.para]
-      Vu <- crossprod(er$values*t(er$vector))[ind,ind]
-      er <- eigen(Vu,symmetric=TRUE)
-      ii <- er$values>max(er$values)*.Machine$double.eps^0.8
-      er$values[!ii] <- 0
-      er$values[ii] <- 1/sqrt(er$values[ii])
-      Rm <- er$values*t(er$vectors)
-    }
   } else Rm <- NULL
 
   list(Ve= crossprod(L%*%b$R%*%b$Vp)/b$sig2, ## Frequentist cov matrix
@@ -2664,7 +2638,7 @@ recov <- function(b,re=rep(0,0),m=0) {
 
 
 reTest <- function(b,m) {
-## Test the mth smooth for equality to zero, using f'f as statistic,
+## Test the mth smooth for equality to zero
 ## and accounting for all random effects in model 
   
   ## find indices of random effects other than m
@@ -2675,24 +2649,9 @@ reTest <- function(b,m) {
   Ve <- rc$Ve
   ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
   B <- mroot(Ve[ind,ind]) ## BB'=Ve
-  if (FALSE) { 
-    ## (R'R)^- is unpenalized cov matrix
-    ev <- eigen(crossprod(b$R),symmetric=TRUE)
-    ii <- ev$values>max(ev$values)*.Machine$double.eps^.8
-    ev$values[ii] <- 1/ev$values[ii]
-    ev$values[!ii] <- 0
-    Vu <- crossprod(sqrt(ev$values)*t(ev$vectors))
-    ev <- eigen(Vu[ind,ind])
-    ii <- ev$values>max(ev$values)*.Machine$double.eps^.8
-    ev$values[ii] <- 1/ev$values[ii]
-    ev$values[!ii] <- 0
-    Rm <- sqrt(ev$values)*t(ev$vectors) ## Rm'Rm is inv unp cov
-  } else { 
-    #Rm <- b$R[,ind]
-    #Rm <- t(mroot(b$smooth[[m]]$S[[1]])) ## CHECK: te etc.!!
-    #Rm <- t(mroot(b$Ve[ind,ind]/b$sig2))
-    Rm <- rc$Rm
-  }
+ 
+  Rm <- rc$Rm
+  
   b.hat <- coef(b)[ind]
   d <- Rm%*%b.hat
   stat <- sum(d^2)/b$sig2
