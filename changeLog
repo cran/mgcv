@@ -8,6 +8,26 @@ ISSUES:
 * still not really happy with nesting constraints, especially under rank
   deficiency.
 
+
+1.7-20
+
+* '...' now passd to termplot by plot.gam (thanks Andreas Eckner).
+
+* fix to null deviance computation for binomial when n>1, matrix response 
+  used and an offset is present. (Thanks to Tim Miller)
+
+* Some pruning of unused code from recov and reTest.
+
+* recov modified to stop it returning a numerically non-symmetric Ve, and 
+  causing occasional failures of summary.gam with "re" terms.
+
+* MRF smooth bug. Region ordering could become confused under some 
+  circumstances due to incorrect setting of factor levels. Corrected 
+  thanks to detailed bug report from Andreas Bender.
+
+* polys.plot colour/grey scale bug. Could ask for colour 0 from colour 
+  scheme, and therefore fail. Fixed.
+
 1.7-19
 
 ** summary.gam and anova.gam now use an improved p-value computation for 
