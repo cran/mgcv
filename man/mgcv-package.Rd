@@ -75,8 +75,11 @@ For a complete list of functions type \code{library(help=mgcv)}. See also \code{
 \author{
 Simon Wood <simon.wood@r-project.org>
 
-with contributions and/or help from Thomas Kneib, Kurt Hornik, Mike Lonergan, Henric Nilsson
-and Brian Ripley. 
+with contributions and/or help from Thomas Kneib, Kurt Hornik, Mike Lonergan, Henric Nilsson,
+Fabian Scheipl and Brian Ripley. 
+
+Polish translation - Lukasz Daniel; German translation - Chris Leick, Detlef Steuer; 
+French Translation - Philippe Grosjean
 
 Maintainer: Simon Wood <simon.wood@r-project.org>
 

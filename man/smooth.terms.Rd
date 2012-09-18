@@ -64,6 +64,8 @@ for use in tensor product smooths.}
 geographic units (districts of a town, for example). In this case a simple smoothing penalty is constructed
 based on the neighbourhood structure of the geographic units. See \code{\link{mrf}} for details and an example.}
 
+\item{Soap film smooths}{\code{bs="so"} (actually not single penaltied, but \code{bs="sw"} and \code{bs="sf"} allows splitting into single penalty components for use in tensor product smoothing). These are finite area smoothers designed to smooth within complicated geographical boundaries, where the boundary matters (e.g. you do not want to smooth across boundary features). See \code{\link{soap}} for details.}
+
 }
 
 Broadly speaking the default penalized thin plate regression splines tend to give the best MSE performance, 
@@ -72,20 +74,17 @@ but they are a little slower to set up than the other bases. The knot based pena
 just a little worse. However the P-splines are useful in non-standard situations.
 
 All the preceding classes (and any user defined smooths with single penalties) may be used as marginal 
-bases for tensor product smooths specified via \code{\link{te}} terms, except for \code{"re"} terms. Tensor 
+bases for tensor product smooths specified via \code{\link{te}} or \code{\link{t2}} terms. Tensor 
 product smooths are smooth functions 
 of several variables where the basis is built up from tensor products of bases for smooths of fewer (usually one) 
 variable(s) (marginal bases). The multiple penalties for these smooths are produced automatically from the
-penalties of the marginal smooths. Wood (2006b) give the general recipe for this construction.
+penalties of the marginal smooths. Wood (2006b) and Wood, Scheipl and Faraway (2012), give the general recipe for these constructions. The \code{te} construction results in fewer, more interpretable, penalties, while the \code{t2} construction is more natural if you are interested in functional ANOVA decompositions. \code{t2} works with the 
+\code{gamm4} package. 
 
 Tensor product smooths often perform better than isotropic smooths when the covariates of a smooth are not naturally
 on the same scale, so that their relative scaling is arbitrary. For example, if smoothing with repect to time and 
-distance, an isotropic smoother will give very different results if the units are cm and minutes compared to if the units are 
-metres and seconds: a tensor product smooth will  give the same 
-answer in both cases (see \code{\link{te}} for an example of this). Note that tensor product terms are knot based, and the 
-thin plate splines seem to offer no advantage over cubic or P-splines as  marginal bases.
+distance, an isotropic smoother will give very different results if the units are cm and minutes compared to if the units are metres and seconds: a tensor product smooth will  give the same answer in both cases (see \code{\link{te}} for an example of this). Note that \code{te} terms are knot based, and the thin plate splines seem to offer no advantage over cubic or P-splines as  marginal bases.
  
-
 Some further specialist smoothers that are not suitable for use in tensor products are also available.
 \describe{
 \item{Adaptive smoothers}{\code{bs="ad"}}
@@ -103,8 +102,10 @@ class (see \code{\link{factor.smooth.interaction}}) is available for the case in
 
 }
 
-\seealso{\code{\link{s}}, \code{\link{te}}, \code{\link{tprs}}, \code{\link{cubic.regression.spline}},
-\code{\link{p.spline}}, \code{\link{adaptive.smooth}}, \code{\link{user.defined.smooth}}}
+\seealso{\code{\link{s}}, \code{\link{te}}, \code{\link{t2}} \code{\link{tprs}},\code{\link{Duchon.spline}}, 
+\code{\link{cubic.regression.spline}},\code{\link{p.spline}}, \code{\link{mrf}}, code{\link{soap}}, 
+code{\link{Spherical.Spline}}, \code{\link{adaptive.smooth}}, \code{\link{user.defined.smooth}},
+code{\link{smooth.construct.re.smooth.spec}}, code{\link{factor.smooth.interaction}}}
 
 \author{
 Simon Wood <simon.wood@r-project.org>
@@ -121,6 +122,9 @@ Wood, S.N. (2006a) \emph{Generalized Additive Models: an introduction with R}, C
 
 Wood, S.N. (2006b) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics 62(4):1025-1036
+
+Wood S.N., F. Scheipl and J.J. Faraway (2012) Straightforward intermediate rank tensor product smoothing
+in mixed models. Statistical Computing.
 
 }
 

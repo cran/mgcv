@@ -71,6 +71,11 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
 void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,double *X,double *S,
                     double *UZ,double *Xu,int *nXu,double *C);
 void gen_tps_poly_powers(int *pi,int *M,int *m, int *d);
+void boundary(int *G, double *d, double *dto, double *x0, double *y0, double *dx, double *dy,
+              int *nx, int *ny, double *x, double *y,double *break_code, int *n, int *nb);
+void gridder(double *z,double *x,double *y,int *n,double *g, int *G,int *nx, int *ny,double *x0, 
+             double *y0,double *dx,double *dy,double NA_code);
+void pde_coeffs(int *G,double *x,int *ii,int *jj,int *n,int *nx,int *ny,double *dx,double *dy);
 
 /* sparse smooth related routines */
 void sparse_penalty(double *X,int *n,int *d,double *D,int *ni,int *k,int *m,int *a_weight,double *kappa);

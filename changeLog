@@ -3,15 +3,26 @@
 
 ISSUES:
 
+
 * F needed in gam object?
 
 * still not really happy with nesting constraints, especially under rank
   deficiency.
 
+1.7-21
+
+** soap film smoother class added. See ?soap
+
+* Polish translation added thanks to Lukasz Daniel.
+
+* mgcv/po/R-mgcv.pot up-dated.
+
+* plot methods for smooths modified slightly to allow methods to return 
+  plot data directly, without a prediction matrix.
 
 1.7-20
 
-* '...' now passd to termplot by plot.gam (thanks Andreas Eckner).
+* '...' now passed to termplot by plot.gam (thanks Andreas Eckner).
 
 * fix to null deviance computation for binomial when n>1, matrix response 
   used and an offset is present. (Thanks to Tim Miller)
@@ -34,7 +45,7 @@ ISSUES:
   smooth terms with a zero dimensional penalty null space (including 
   random effects). The new scheme has been tested by full replication 
   of the simulation study in Scheipl (2008,CSDA) to compare it to the best 
-  method there-in. In these tests it is at least as powerful as the best 
+  method therein. In these tests it is at least as powerful as the best 
   method given there, and usually indistinguishable, but it gives slightly 
   too low null p-values when smoothing parameters are very poorly identified. 
   Note that the new p-values can not be computed from old fitted gam objects.
@@ -45,7 +56,7 @@ ISSUES:
   be selected.
 
 * "tp" smooths can now drop the null space from their construction via
-  a vector m argument, to allow testing against polynomial in the null space.
+  a vector m argument, to allow testing against polynomials in the null space.
 
 * Fix of vicious little bug in gamm tensor product handling that could have 
   a te term pick up the wrong model matrix and fail. 
@@ -590,7 +601,7 @@ ISSUES:
 * minor bug fix in `gamm' so that intercept gets correct name, if 
   it's the only non-smooth fixed effect.
 
-* .pot files updated, de translation added.
+* .pot files updated, German translation added, thanks to Detlef Steuer.
 
 * `in.out' was not working from 1.5 --- fixed.
 

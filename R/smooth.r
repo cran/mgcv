@@ -2422,7 +2422,7 @@ DuchonE <- function(x,xk,m=2,s=0,n=1) {
   E*signE
 }
 
-smooth.construct.ds.smooth.spec<-function(object,data,knots)
+smooth.construct.ds.smooth.spec <- function(object,data,knots)
 ## The constructor for a Duchon 1977 smoother
 { ## deal with possible extra arguments of "sos" type smooth
   xtra <- list()
@@ -2619,6 +2619,10 @@ Predict.matrix.duchon.spline <- function(object,data)
   X 
 } ## end of Predict.matrix.duchon.spline
 
+
+############################
+# Soap film smoothers
+############################
 
 
 
@@ -3225,85 +3229,4 @@ PredictMat <- function(object,data,n=nrow(data))
 
 
 
-
-PredictMat.old <- function(object,data,n=nrow(data))
-## wrapper function which calls Predict.matrix and imposes same constraints as 
-## smoothCon on resulting Prediction Matrix
-## This version is very memory intensive if summation convention is needed
-{ X <- Predict.matrix2(object,data)
-  if (is.null(attr(X,"by.done"))) { ## handle `by variables' 
-    if (object$by!="NA")  # deal with "by" variable 
-    { by <- get.var(object$by,data)
-      if (is.null(by)) stop("Can't find by variable")
-      if (is.factor(by)) {
-        by.dum <- as.numeric(object$by.level==by)
-        X <- by.dum*X
-      } else { 
-        if (length(by)!=nrow(X)) stop("`by' variable must be same dimension as smooth arguments")
-        X <- as.numeric(by)*X
-      }
-    }
-  }
-  attr(X,"by.done") <- NULL
-  offset <- attr(X,"offset")
-
-  ## now deal with any necessary model matrix summation
-  if (n != nrow(X)) {
-    q <- nrow(X)/n ## note: can't get here if `by' a factor
-    ind <- 1:n 
-    Xs <- X[ind,]
-    for (i in 2:q) {
-      ind <- ind + n
-      Xs <- Xs + X[ind,]
-    }
-    X <- Xs
-  }
-
-  qrc <- attr(object,"qrc")
-  if (!is.null(qrc)) { ## then smoothCon absorbed constraints
-    j <- attr(object,"nCons")
-    if (j>0) { ## there were constraints to absorb - need to untransform
-      k<-ncol(X)
-      if (inherits(qrc,"qr")) {
-        indi <- attr(object,"indi") ## index of constrained parameters
-        if (is.null(indi)) {
-          if (sum(is.na(X))) {
-            ind <- !is.na(rowSums(X))
-            X1 <- t(qr.qty(qrc,t(X[ind,,drop=FALSE]))[(j+1):k,,drop=FALSE]) ## XZ
-            X <- matrix(NA,nrow(X),ncol(X1))
-            X[ind,] <- X1
-          } else {
-            X <- t(qr.qty(qrc,t(X))[(j+1):k,,drop=FALSE])
-          }
-        } else { ## only some parameters are subject to constraint
-          nx <- length(indi)
-          nc <- j;nz <- nx - nc
-          if (sum(is.na(X))) {
-            ind <- !is.na(rowSums(X))
-            X[ind,indi[1:nz]]<-t(qr.qty(qrc,t(X[ind,indi,drop=FALSE]))[(nc+1):nx,])
-            X <- X[,-indi[(nz+1):nx]]
-            X[!ind,] <- NA 
-          } else { 
-            X[,indi[1:nz]]<-t(qr.qty(qrc,t(X[,indi,drop=FALSE]))[(nc+1):nx,,drop=FALSE])
-            X <- X[,-indi[(nz+1):nx]]
-          }
-        }
-      } else if (inherits(qrc,"sweepDrop")) {
-        ## Sweep and drop constraints. First element is index to drop. 
-        ## Remainder are constants to be swept out of remaining columns 
-        ## X <- sweep(X[,-qrc[1],drop=FALSE],2,qrc[-1])
-        X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
-      } else if (qrc>0) { ## simple set to zero constraint
-        X <- X[,-qrc]
-      } else if (qrc<0) { ## params sum to zero
-        X <- t(diff(t(X)))
-      }
-    }
-  }
-  ## drop columns eliminated by side-conditions...
-  del.index <- attr(object,"del.index") 
-  if (!is.null(del.index)) X <- X[,-del.index]
-  attr(X,"offset") <- offset
-  X
-} ## end of PredictMat.old
 
