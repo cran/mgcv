@@ -671,7 +671,9 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
-## `x' is a smooth object, usually part of a `gam' fit.
+## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
+##     'coefficients' containg the coefs for the smooth, but usually these
+##     are not needed.
 ## `P' is a list of plot data. 
 ##     If `P' is NULL then the routine should compute some of this plot data
 ##     and return without plotting...  
@@ -684,6 +686,9 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 ##             y scale is required.
 ##     * any raw data information.
 ##     * axis labels and plot titles 
+##     As an alternative, P may contain a 'fit' field directly, in which case the 
+##     very little processing is done outside the routine, except for partial residual
+##     computations.
 ##     Alternatively return P as NULL if x should not be plotted.
 ##     If P is not NULL it will contain 
 ##     * fit - the values for plotting 
@@ -1036,13 +1041,14 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     term.lab <- sub.edf(x$smooth[[i]]$label,edf)
     #P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
     #          se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,scheme=scheme[i],...)
+    attr(x$smooth[[i]],"coefficients") <- x$coefficients[first:last]   ## relevent coefficients
     P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,label=term.lab,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      se1.mult=se1.mult,se2.mult=se2.mult,shift=shift,trans=trans,
                      by.resids=by.resids,scheme=scheme[i],...)
 
-    if (is.null(P)) pd[[i]] <- list(plot.me=FALSE) else {
+    if (is.null(P)) pd[[i]] <- list(plot.me=FALSE) else if (is.null(P$fit)) {
       p <- x$coefficients[first:last]   ## relevent coefficients 
       offset <- attr(P$X,"offset")      ## any term specific offset
       ## get fitted values ....
@@ -1065,7 +1071,11 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
       P$X <- NULL
       P$plot.me <- TRUE
       pd[[i]] <- P;rm(P) 
-    } ## plot data setup complete
+    } else { ## P$fit created directly
+      if (partial.resids) { P$p.resid <- fv.terms[,length(order)+i] + w.resid }
+      P$plot.me <- TRUE
+      pd[[i]] <- P;rm(P)
+    }
   } ## end of data setup loop through smooths
 
   
