@@ -3,11 +3,23 @@
 
 ISSUES:
 
+* users can use as.factor(a) in formula, and variable.summary won't know 
+  about it - causes a problem is a is character, for example. Could coerce
+  character to factor, but is that general enough? what about if a was numeric
+  then summary doesn't reflect how it's used?  
 
 * F needed in gam object?
 
 * still not really happy with nesting constraints, especially under rank
   deficiency.
+
+1.7-22
+
+* Predict.matrix.pspline.smooth now allows prediction outside range of knots, 
+  and uses linear extrapolation in this case.
+
+* missing drop=FALSE in reTest called by summary.gam caused 1-D random effect
+  p-value computation to fail. Fixed (thanks Silje Skår).
 
 1.7-21
 

@@ -87,6 +87,7 @@ and Hall/CRC Press.
 }
 
 \examples{
+require(mgcv)
 library(nlme)
 data(Rail)
 b <- lme(travel~1,Rail,~1|Rail)

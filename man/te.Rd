@@ -173,6 +173,7 @@ generalized additive mixed models. Biometrics 62(4):1025-1036
 
 # following shows how tensor pruduct deals nicely with 
 # badly scaled covariates (range of x 5\% of range of z )
+require(mgcv)
 test1<-function(x,z,sx=0.3,sz=0.4)  
 { x<-x*20
   (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+

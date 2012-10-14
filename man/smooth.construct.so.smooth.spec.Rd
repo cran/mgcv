@@ -140,6 +140,7 @@ boundary and the interior knots, plus the boundary smooth basis dimension(s)). I
 \seealso{\code{\link{Predict.matrix.soap.film}}}
 
 \examples{
+
 require(mgcv)
 
 ##########################

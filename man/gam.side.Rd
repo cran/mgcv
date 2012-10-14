@@ -56,6 +56,7 @@ prediction matrices for the term.
 
 \examples{
 set.seed(7)
+require(mgcv)
 dat <- gamSim(n=400,scale=2) ## simulate data
 ## estimate model with redundant smooth interaction...
 b<-gam(y~s(x0)+s(x1)+s(x0,x1)+s(x2),data=dat)
