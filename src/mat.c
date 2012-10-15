@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <R.h>
-#include <R_ext/Linpack.h>
+#include <R_ext/Linpack.h> /* only needed for pivoted chol - see note in mgcv_chol */
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 /*#include <dmalloc.h>*/
@@ -242,6 +242,7 @@ void mgcv_chol(double *a,int *pivot,int *n,int *rank)
    rD<-rD[,ind]
    L<-mroot(D)
    D;t(rD)%*%rD;L%*%t(L)
+   NOTE: This uses LINPACK - dpstf2.f is LAPACK version, but not in R headers yet! 
 */
 { double *work,*p1,*p2,*p;
   int piv=1;

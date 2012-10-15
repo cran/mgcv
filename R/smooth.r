@@ -1521,14 +1521,33 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
 
   class(object)<-"pspline.smooth"  # Give object a class
   object
-}
+} ### end of p-spline constructor
 
 
 
 Predict.matrix.pspline.smooth<-function(object,data)
 # prediction method function for the p.spline smooth class
 { require(splines)
-  X <- spline.des(object$knots,data[[object$term]],object$m[1]+2)$design
+  m <- object$m[1]+1
+  ## find spline basis inner knot range...
+  ll <- object$knots[m+1];ul <- object$knots[length(object$knots)-m]
+  m <- m + 1
+  x <- data[[object$term]]
+  n <- length(x)
+  ind <- x<=ul & x>=ll ## data in range
+  if (sum(ind)==n) { ## all in range
+    X <- spline.des(object$knots,x,m)$design
+  } else { ## some extrapolation needed 
+    ## matrix mapping coefs to value and slope at end points...
+    D <- spline.des(object$knots,c(ll,ll,ul,ul),m,c(0,1,0,1))$design
+    X <- matrix(0,n,ncol(D)) ## full predict matrix
+    X[ind,] <- spline.des(object$knots,x[ind],m)$design ## interior rows
+    ## Now add rows for linear extrapolation...
+    ind <- x < ll 
+    if (sum(ind)>0) X[ind,] <- cbind(1,x[ind]-ll)%*%D[1:2,]
+    ind <- x > ul
+    if (sum(ind)>0) X[ind,] <- cbind(1,x[ind]-ul)%*%D[3:4,]
+  }
   X
 }
 

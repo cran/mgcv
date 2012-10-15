@@ -250,6 +250,7 @@ and Hall/CRC Press.
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
+require(mgcv)
 set.seed(10)
 ## simulate date from y = f(x2)*x1 + error
 dat <- gamSim(3,n=400)

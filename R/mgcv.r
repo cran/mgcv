@@ -2627,7 +2627,7 @@ recov <- function(b,re=rep(0,0),m=0) {
       ## to be moved to the end...
       LRB <- cbind(LRB[,-ii],LRB[,ii])
       ii <- (ncol(LRB)-length(ii)+1):ncol(LRB) ## need to pick up final block
-      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii] ## unpivoted QR
+      Rm <- qr.R(qr(LRB,tol=0,LAPACK=FALSE))[ii,ii,drop=FALSE] ## unpivoted QR
   } else Rm <- NULL
 
   list(Ve= crossprod(L%*%b$R%*%b$Vp)/b$sig2, ## Frequentist cov matrix
@@ -2648,7 +2648,7 @@ reTest <- function(b,m) {
   rc <- recov(b,rind,m) 
   Ve <- rc$Ve
   ind <- b$smooth[[m]]$first.para:b$smooth[[m]]$last.para
-  B <- mroot(Ve[ind,ind]) ## BB'=Ve
+  B <- mroot(Ve[ind,ind,drop=FALSE]) ## BB'=Ve
  
   Rm <- rc$Rm
   
@@ -2683,7 +2683,7 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 
   qrx <- qr(X,tol=0)
   R <- qr.R(qrx)
-  V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
+  V <- R%*%V[qrx$pivot,qrx$pivot,drop=FALSE]%*%t(R)
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
 
@@ -2727,7 +2727,7 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
      if (b12<0) b12 <- 0
      b12 <- sqrt(b12)
      B <- matrix(c(1,b12,b12,nu),2,2)
-     ev <- diag(ed$values[k:k1]^-.5)
+     ev <- diag(ed$values[k:k1]^-.5,nrow=k1-k+1)
      B <- ev%*%B%*%ev
      eb <- eigen(B,symmetric=TRUE)
      rB <- eb$vectors%*%diag(sqrt(eb$values))%*%t(eb$vectors)

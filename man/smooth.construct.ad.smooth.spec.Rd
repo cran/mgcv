@@ -66,6 +66,7 @@ This class can not be used as a marginal basis in a tensor product smooth, nor b
 \examples{
 ## Comparison using an example taken from AdaptFit
 ## library(AdaptFit)
+require(mgcv)
 set.seed(0)
 x <- 1:1000/1000
 mu <- exp(-400*(x-.6)^2)+5*exp(-500*(x-.75)^2)/3+2*exp(-500*(x-.9)^2)

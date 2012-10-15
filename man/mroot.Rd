@@ -31,6 +31,7 @@ problems into ordinary regression problems.}
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
+  require(mgcv)
   set.seed(0)
   a <- matrix(runif(24),6,4)
   A <- a\%*\%t(a) ## A is +ve semi-definite, rank 4
