@@ -2,13 +2,14 @@
 \alias{smooth.terms}
 \title{Smooth terms in GAM}
 \description{
-Smooth terms are specified in a \code{\link{gam}} formula using \code{\link{s}}, \code{\link{te}} and \code{\link{t2}} terms. 
+Smooth terms are specified in a \code{\link{gam}} formula using \code{\link{s}}, \code{\link{te}}, \code{\link{ti}} 
+and \code{\link{t2}} terms. 
 Various smooth classes are available, for different modelling tasks, and users can add smooth classes 
 (see \code{\link{user.defined.smooth}}). What defines a smooth class is the basis used to represent 
 the smooth function and quadratic penalty (or multiple  penalties) used to penalize 
 the basis coefficients in order to control the degree of smoothness. Smooth classes are 
 invoked directly by \code{s} terms, or as building blocks for tensor product smoothing 
-via \code{te} or \code{t2} terms (only smooth classes with single penalties can be used in tensor products). The smooths
+via \code{te}, \code{ti} or \code{t2} terms (only smooth classes with single penalties can be used in tensor products). The smooths
 built into the \code{mgcv} package are all based one way or another on low rank versions of splines. For the full rank 
 versions see Wahba (1990).
 
@@ -73,7 +74,7 @@ but they are slower to set up than the other bases. The knot based penalized cub
 just a little worse. However the P-splines are useful in non-standard situations.
 
 All the preceding classes (and any user defined smooths with single penalties) may be used as marginal 
-bases for tensor product smooths specified via \code{\link{te}} or \code{\link{t2}} terms. Tensor 
+bases for tensor product smooths specified via \code{\link{te}}, \code{\link{ti}} or \code{\link{t2}} terms. Tensor 
 product smooths are smooth functions 
 of several variables where the basis is built up from tensor products of bases for smooths of fewer (usually one) 
 variable(s) (marginal bases). The multiple penalties for these smooths are produced automatically from the

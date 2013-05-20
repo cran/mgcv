@@ -503,7 +503,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
       /* now X1'[UZ] p_k evaluates to the correct thing */
       
       /* UZ is kk by k */
-      F77_NAME(dgemv)(&trans,&kk,&k,&alpha,uz,&kk, b, &one,&beta, a, &one); /* BLAS call for (UZ)'b */
+      F77_CALL(dgemv)(&trans,&kk,&k,&alpha,uz,&kk, b, &one,&beta, a, &one); /* BLAS call for (UZ)'b */
       XMi = X->M[i];
       for (p0=a,p1=a+k;p0<p1;p0++,XMi++) *XMi = *p0;
 
@@ -636,7 +636,7 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
       /*tps_g(&Xum,&p,xx,*d,*m,b,1);*/             
       /*j=0;
         mgcv_mmult(a,UZ,b,&one,&j,k,&one,&nobsM);*/ /* get a=(UZ)'b */
-      F77_NAME(dgemv)(&trans,&nobsM,k,&alpha,UZ,&nobsM, b, &one,&beta, a, &one); /* BLAS call for (UZ)'b */
+      F77_CALL(dgemv)(&trans,&nobsM,k,&alpha,UZ,&nobsM, b, &one,&beta, a, &one); /* BLAS call for (UZ)'b */
       if (*by_exists)
       for (xp1=Xp,xxp=a,xxp1=a + *k;xxp<xxp1;xxp++,xp1+= *n) *xp1 = *xxp * by_mult; 
       else 

@@ -248,7 +248,7 @@ void getFS(double *x,int n,double *S,double *F) {
   sdB = (double *)calloc((size_t)(n2-1),sizeof(double));
   for (i=1;i<n2;i++) sdB[i-1] = h[i]/6;
   /* Now find B^{-1}D using LAPACK routine DPTSV (result in D) */
-  F77_NAME(dptsv)(&n2,&n,ldB,sdB,D,&n2,&i);
+  F77_CALL(dptsv)(&n2,&n,ldB,sdB,D,&n2,&i);
 
   /* copy B^{-1}D into appropriate part of F */
   Di=D;

@@ -1,17 +1,62 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
-ISSUES:
+1.7-23
 
-* users can use as.factor(a) in formula, and variable.summary won't know 
-  about it - causes a problem is a is character, for example. Could coerce
-  character to factor, but is that general enough? what about if a was numeric
-  then summary doesn't reflect how it's used?  
+*** Fix of severe bug introduced with R 2.15.2 LAPACK change. The shipped
+  version of dsyevr can fail to produce orthogonal eigenvectors when 
+  uplo='U' (upper triangule of symmetric matrix used), as opposed to 'L'. 
+  This led to a substantial number of gam smoothing parameter estimation 
+  convergence failures, as the key stabilizing re-parameterization was 
+  substantially degraded. The issue did not affect gaussian additive models
+  with GCV model selection. Other models could fail to converge any further 
+  as soon as any smoothing parameter became `large', as happens when a 
+  smooth is estimated as a straight line. check.gam reported the lack of full 
+  convergence, but the issue could also generate complete fit failures.
+  Picked up late as full test suite had only been run on R > 2.15.1 with an 
+  external LAPACK.
 
-* F needed in gam object?
+** 'ti' smooth specification introduced, which provides a much better (and 
+  very simple) way of allowing nested models based on 'te' type tensor 
+  product smooths. 'ti' terms are used to set up smooth interactions 
+  excluding main effects (so ti(x,z) is like x:z while te(x,z) is more
+  like x*z, although the analogy is not exact). 
 
-* still not really happy with nesting constraints, especially under rank
-  deficiency.
+* summary.gam now uses a more efficient approach to p-value computation 
+  for smooths, using the factor R from the QR factorization of the weighted 
+  model matrix produced during fitting. This is a weighted version of the 
+  Wood (2013) statistic used previously - simulations in that paper 
+  essentially unchanged by the change. 
+
+* summary.gam now deals gracefully with terms such as "fs" smooths 
+  estimated using gamm, for which p-values can no be computed. (thanks to 
+  Gavin Simpson).
+
+* gam.check/qq.gam now uses a normal QQ-plot when the model has been fitted 
+  using gamm or gamm4, since qq.gam cannot compute corrext quantiles in 
+  the presence of random effects in these cases. 
+
+* gamm could fail with fixed smooths while assembling total 
+  penalty matrix, by attempting to access non-existent penalty 
+  matrix. (Thanks Ainars Aunins for reporting this.)
+
+* stripped rownames from model matrix, eta, linear predictor etc. Saves
+  memory and time.
+
+* plot.soap.film could switch axis ranges. Fixed.
+
+* plot.mgcv.smooth now sets smooth plot range on basis of xlim and 
+  ylim if present.
+
+* formXtViX documentation fixed + return matrix labels.
+
+* fixDependence related negative index failures for completely confounded 
+  terms - now fixed.
+
+* sos smooth model matrix re-scaled for better conditioning.
+
+* sos plot method could produce NaNs by a rounding error in argument to 
+  acos - fixed. 
 
 1.7-22
 

@@ -83,12 +83,23 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
                    pch=".", rl.col=2, rep.col="gray80",...) {
 ## get deviance residual quantiles under good fit
   type <- match.arg(type)
+  ylab <- paste(type,"residuals")
+
   if (inherits(object,c("glm","gam"))) {
     if (is.null(object$sig2)) object$sig2 <- summary(object)$dispersion
   } else stop("object is not a glm or gam")
+
   ## in case of NA & na.action="na.exclude", we need the "short" residuals:
   object$na.action <- NULL
   D <- residuals(object,type=type)
+
+  if (object$method %in% c("PQL","lme.ML","lme.REML","lmer.REML","lmer.ML","glmer.ML")) {
+    ## then it's come out of a gamm fitter and qq.gam can't see the random effects
+    ## that would be necessary to get quantiles. Fall back to normal QQ plot.
+    qqnorm(D,ylab=ylab,pch=pch,...)
+    return()
+  }
+
   lim <- Dq <- NULL
   if (rep==0) { 
     fam <- fix.family.qf(object$family)
@@ -144,8 +155,6 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
     }
   }
  
-  ylab <- paste(type,"residuals")
-
   if (!is.null(Dq))  
   { qqplot(Dq,D,ylab=ylab,xlab="theoretical quantiles",ylim=range(c(lim,D)),
            pch=pch,...)
@@ -374,7 +383,9 @@ repole <- function(lo,la,lop,lap) {
   ## get distances to meridian point
   d <- sqrt((x-xm)^2+(y-ym)^2+(z-zm)^2)
   ## angles to meridian plane (i.e. plane containing origin, meridian point and pole)...
-  theta <- acos((1+cos(phi)^2-d^2)/(2*cos(phi)))
+  theta <- (1+cos(phi)^2-d^2)/(2*cos(phi))
+  theta[theta < -1] <- -1; theta[theta > 1] <- 1
+  theta <- acos(theta)
   
   ## now decide which side of meridian plane...
 
@@ -778,7 +789,8 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (!x$plot.me||x$dim>2) return(NULL) ## shouldn't or can't plot
     if (x$dim==1) { ## get basic plotting data for 1D terms 
       raw <- data[x$term][[1]]
-      xx<-seq(min(raw),max(raw),length=n) # generate x sequence for prediction
+      if (is.null(xlim)) xx <- seq(min(raw),max(raw),length=n) else # generate x sequence for prediction
+      xx <- seq(xlim[1],xlim[2],length=n)
       if (x$by!="NA")         # deal with any by variables
       { by<-rep(1,n);dat<-data.frame(x=xx,by=by)
         names(dat)<-c(x$term,x$by)
@@ -799,8 +811,10 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       raw <- data.frame(x=as.numeric(data[xterm][[1]]),
                         y=as.numeric(data[yterm][[1]]))
       n2 <- max(10,n2)
-      xm <- seq(min(raw$x),max(raw$x),length=n2)
-      ym <- seq(min(raw$y),max(raw$y),length=n2)  
+      if (is.null(xlim)) xm <- seq(min(raw$x),max(raw$x),length=n2) else 
+        xm <- seq(xlim[1],xlim[2],length=n2)
+      if (is.null(ylim)) ym <- seq(min(raw$y),max(raw$y),length=n2) else
+        ym <- seq(ylim[1],ylim[2],length=n2)
       xx <- rep(xm,n2)
       yy <- rep(ym,rep(n2,n2))
       if (too.far>0)
@@ -1063,7 +1077,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
           X1[,first:last] <- P$X
           se.fit <- sqrt(rowSums((X1%*%x$Vp)*X1))
         } else se.fit <- ## se in centred (or anyway unconstained) space only
-        sqrt(rowSums((P$X%*%x$Vp[first:last,first:last])*P$X))
+        sqrt(rowSums((P$X%*%x$Vp[first:last,first:last,drop=FALSE])*P$X))
         if (!is.null(P$exclude)) P$se.fit[P$exclude] <- NA
       } ## standard errors for fit completed
       if (partial.resids) { P$p.resid <- fv.terms[,length(order)+i] + w.resid }

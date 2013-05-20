@@ -55,7 +55,8 @@ of Bayesian confidence intervals for smooths.
 These have better frequentist performance (in terms of power and distribution under the null) 
 than the alternative strictly frequentist approximation. When the Bayesian intervals have good 
 across the function properties then the p-values have close to the correct null distribution 
-and reasonable power (but there are no optimality results for the power). 
+and reasonable power (but there are no optimality results for the power). Full details are in Wood (2013), 
+although what is computed is actually a slight variant in which the components of the test statistic are weighted by the iterative fitting weights. 
 
 Let \eqn{\bf f}{f} denote the vector of 
 values of a smooth term evaluated at the original 
@@ -70,14 +71,11 @@ The non-integer rank truncated inverse is constructed to give an
 approximation varying smoothly between the bounding integer rank approximations, while yielding test statistics with the correct mean and variance under the null. Alternatively (\code{p.type==1}) \eqn{r}{r} is obtained by 
 biased rounding of the EDF: values less than .05 above the preceding integer are rounded down, while other values are rounded up. Another option (\code{p.type==-1}) uses a statistic of formal rank given by the number of coefficients for the smooth, but with its terms weighted by the eigenvalues of the covariance matrix, so that penalized terms are down-weighted, but the null distribution requires simulation. Other options for \code{p.type} are 2 (naive rounding), 3 (round up), 4 (numerical rank determination): these are poor options for theoretically known reasons, and will generate a warning. 
 
-The default p-values also have a  Bayesian interpretation: 
-the probability of observing an \eqn{\bf f}{f} less probable than \eqn{\bf 0}{0}, 
-under the approximation for the posterior for \eqn{\bf f}{f} implied by the truncation used in the test statistic.
 
 Note that for terms with no unpenalized terms the Nychka (1988) requirement for smoothing bias to be substantially 
 less than variance breaks down (see e.g. appendix of Marra and Wood, 2012), and this results in incorrect null 
 distribution for p-values computed using the above approach. In this case it is necessary to use an alternative 
-approach designed for random effects variance components.
+approach designed for random effects variance components, and this is done.
 
 In this zero-dimensional null space/random effects case, the p-values are again conditional on the smoothing parameters/variance component estimates,
 and may therefore be somewhat too low when these are subject to large uncertainty. The idea is to condition on the smoothing parameter estimates, and 
@@ -188,7 +186,7 @@ by scale parameter.}
 
 \references{
 
-Wood, S.N. (2012) On p-values for smooth component es of an extended generalized additive model. in press Biometrika
+Wood, S.N. (2013) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
 Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
