@@ -86,6 +86,7 @@ qr.up <- function(arg) {
     ind <- arg$start[b]:arg$stop[b]
     ##arg$G$model <- arg$mf[ind,]
     X <- predict(arg$G,newdata=arg$mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
+    rownames(X) <- NULL
     if (is.null(arg$coef)) eta1 <- arg$eta[ind] else eta1 <- drop(X%*%arg$coef) + arg$offset[ind]
     mu <- arg$linkinv(eta1) 
     y <- arg$G$y[ind] ## arg$G$model[[arg$response]] 
@@ -265,6 +266,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
            ind <- start[b]:stop[b]
            ##G$model <- mf[ind,]
            X <- predict(G,newdata=mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
+           rownames(X) <- NULL
            if (is.null(coef)) eta1 <- eta[ind] else eta1 <- drop(X%*%coef) + offset[ind]
            mu <- linkinv(eta1) 
            y <- G$y[ind] ## G$model[[gp$response]] ## - G$offset[ind]
@@ -1259,7 +1261,7 @@ bam.update <- function(b,data,chunk.size=10000) {
   gp<-interpret.gam(b$formula) # interpret the formula 
   
   X <- predict(b,newdata=data,type="lpmatrix",na.action=b$NA.action) ## extra part of model matrix
-  
+  rownames(X) <- NULL
   cnames <- names(b$coefficients)
 
   ## now get the new data in model frame form...

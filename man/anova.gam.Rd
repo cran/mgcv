@@ -77,7 +77,7 @@ which is in fact an object returned from \code{\link{summary.gam}}.
 Scheipl, F., Greven, S. and Kuchenhoff, H. (2008) Size and power of tests for a zero random effect variance or polynomial 
 regression in additive and linear mixed models. Comp. Statist. Data Anal. 52, 3283-3299
 
-Wood, S.N. (2012) On p-values for smooth componentes of an extended generalized additive model. in press Biometrika
+Wood, S.N. (2013) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial

@@ -549,6 +549,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
           ls <- family$ls(y,weights,n,scale)*n.true/nobs ## saturated likelihood and derivatives
           Dp <- dev + oo$conv.tol + dev.extra
           REML <- Dp/(2*scale) - ls[1] + oo$rank.tol/2 - rp$det/2 - remlInd*Mp/2*log(2*pi*scale)
+          attr(REML,"Dp") <- Dp/(2*scale)
           if (deriv) {
             REML1 <- oo$D1/(2*scale) + oo$trA1/2 - rp$det1/2 
             if (deriv==2) REML2 <- (matrix(oo$D2,nSp,nSp)/scale + matrix(oo$trA2,nSp,nSp) - rp$det2)/2
@@ -581,7 +582,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
           K <- oo$rank.tol/2 - rp$det/2
                  
           REML <- Dp/(2*phi) - ls[1] + K - Mp/2*log(2*pi*phi)*remlInd
-
+          attr(REML,"Dp") <- Dp/(2*phi)
           if (deriv) {
             phi1 <- oo$P1; Dp1 <- oo$D1; K1 <- oo$trA1/2 - rp$det1/2;
             REML1 <- Dp1/(2*phi) - phi1*(Dp/(2*phi^2)+Mp/(2*phi)*remlInd + ls[2]) + K1
@@ -2040,7 +2041,7 @@ fix.family.ls<-function(fam)
 negbin <- function (theta = stop("'theta' must be specified"), link = "log") { 
 ## modified from Venables and Ripley's MASS library to work with gam.fit3,
 ## and to allow a range of `theta' values to be specified
-## single `theta' to specify fixed value; 2 theta values (first smaller that second)
+## single `theta' to specify fixed value; 2 theta values (first smaller than second)
 ## are limits within which to search for theta; otherwise supplied values make up 
 ## search set.
 ## Note: to avoid warnings, get(".Theta")[1] is used below. Otherwise the initialization
@@ -2161,17 +2162,19 @@ totalPenaltySpace <- function(S,H,off,p)
 
 
 
-mini.roots <- function(S,off,np)
+mini.roots <- function(S,off,np,rank=NULL)
 # function to obtain square roots, B[[i]], of S[[i]]'s having as few
 # columns as possible. S[[i]]=B[[i]]%*%t(B[[i]]). np is the total number
-# of parameters. S is in packed form. 
+# of parameters. S is in packed form. rank[i] is optional supplied rank 
+# of S[[i]], rank[i] < 1, or rank=NULL to estimate.
 { m<-length(S)
   if (m<=0) return(list())
   B<-S
+  if (is.null(rank)) rank <- rep(-1,m)
   for (i in 1:m)
-  { b<-mroot(S[[i]])
-    B[[i]]<-matrix(0,np,ncol(b))
-    B[[i]][off[i]:(off[i]+nrow(b)-1),]<-b
+  { b <- mroot(S[[i]],rank=rank[i]) 
+    B[[i]] <- matrix(0,np,ncol(b))
+    B[[i]][off[i]:(off[i]+nrow(b)-1),] <- b
   }
   B
 }

@@ -4,12 +4,55 @@
 */
 #include "mgcv.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <R.h>
 #include <R_ext/Linpack.h> /* only needed for pivoted chol - see note in mgcv_chol */
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 /*#include <dmalloc.h>*/
+
+
+
+void dump_mat(double *M,int *r,int*c,const char *path) {
+  /* dump r by c matrix M to path - intended for debugging use only */
+  FILE *mf;
+  mf = fopen(path,"wb");
+  if (mf == NULL) { 
+    Rprintf("\nFailed to open file\n");
+    return;
+  }
+  fwrite(r,sizeof(int),1,mf); fwrite(c,sizeof(int),1,mf);
+  fwrite(M,sizeof(double),*r * *c,mf);
+  fclose(mf);
+}
+
+void read_mat(double *M,int *r,int*c,char *path) {
+/* routine to facilitate reading dumped matrices back into R - debugging use only
+   
+   e.g. (actually path doesn't work here)
+   oo <- .C("read_mat",as.double(0),r=as.integer(0),c=as.integer(0),
+             as.character("/home/sw283/tmp/badmat.dat"),PACKAGE="mgcv")
+   oo <- .C("read_mat",M=as.double(rep(0,oo$c*oo$r)),r=as.integer(oo$r),c=as.integer(oo$c),
+             as.character("/home/sw283/tmp/badmat.dat"),PACKAGE="mgcv")
+   M <- matrix(oo$M,oo$r,oo$c)
+*/
+ int j;
+ FILE *mf;
+ mf = fopen("/home/sw283/tmp/badmat.dat","rb"); 
+ if (mf == NULL) { 
+    Rprintf("\nFailed to open file\n");
+    return;
+ }
+ if (*r < 1) { /* dimension query */
+   j=fread(r,sizeof(int),1,mf); j=fread(c,sizeof(int),1,mf);
+ } else {
+   j=fread(r,sizeof(int),1,mf); j=fread(c,sizeof(int),1,mf);
+   j=fread(M,sizeof(double),*r * *c,mf);
+ }
+ fclose(mf);
+}
+
 
 void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n)
 /* This code doesn't rely on the BLAS...
@@ -116,7 +159,7 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
   } else ldb = *n; /* C is n by c */
   
   ldc = *r;
-  F77_NAME(dgemm)(&transa,&transb,r,c,n, &alpha,
+  F77_CALL(dgemm)(&transa,&transb,r,c,n, &alpha,
 		B, &lda,C, &ldb,&beta, A, &ldc);
 } /* end mgcv_mmult */
 
@@ -136,7 +179,7 @@ void getXtX(double *XtX,double *X,int *r,int *c)
 { double alpha=1.0,beta=0.0;
   int i,j;
   char uplo = 'L',trans='T';
-  F77_NAME(dsyrk)(&uplo,&trans,c, r, &alpha,X,r,&beta,XtX,c);
+  F77_CALL(dsyrk)(&uplo,&trans,c, r, &alpha,X,r,&beta,XtX,c);
   /* fill in upper triangle from lower */
   for (i=0;i<*c;i++) 
   for (j=0;j<i;j++)  XtX[j + i * *c] = XtX[i + j * *c];
@@ -148,7 +191,7 @@ void getXXt(double *XXt,double *X,int *r,int *c)
 { double alpha=1.0,beta=0.0;
   int i,j;
   char uplo = 'L',trans='N';
-  F77_NAME(dsyrk)(&uplo,&trans,r, c, &alpha,X,r,&beta,XXt,r);
+  F77_CALL(dsyrk)(&uplo,&trans,r, c, &alpha,X,r,&beta,XXt,r);
   /* fill in upper triangle from lower */
   for (i=0;i<*r;i++) 
   for (j=0;j<i;j++)  XXt[j + i * *r] = XXt[i + j * *r];
@@ -192,7 +235,7 @@ void getXtWX(double *XtWX, double *X,double *w,int *r,int *c,double *work)
     for (p=w,p1=work;p1<p2;p++,p1++,pX0++) *p1 = *pX0 * *p;  
     /* Now form X[,1:i]'work ... */
     j = i+1; /* number of columns of X to use */
-    F77_NAME(dgemv)(&trans, r, &j,&alpha,X, r,work,&one,&beta,w2, &one);
+    F77_CALL(dgemv)(&trans, r, &j,&alpha,X, r,work,&one,&beta,w2, &one);
     if (i==0) xx = w2[0]; /* save the 0,0 element of XtWX (since its in use as workspace) */
     else for (j=0;j<=i;j++) XtWX[i * *c + j] = w2[j];
   }
@@ -247,7 +290,7 @@ void mgcv_chol(double *a,int *pivot,int *n,int *rank)
 { double *work,*p1,*p2,*p;
   int piv=1;
   work=(double *)calloc((size_t) *n,sizeof(double));
-  F77_NAME(dchdc)(a,n,n,work,pivot,&piv,rank);
+  F77_CALL(dchdc)(a,n,n,work,pivot,&piv,rank);
   /* zero stuff below the leading diagonal */
   for (p2=a+ *n,p1=a+1;p2<a+ *n * *n;p1+= *n+1,p2+= *n) for (p=p1;p<p2;p++) *p=0.0;
   free(work);
@@ -296,13 +339,13 @@ void mgcv_svd(double *x,double *u,double *d,int *r,int *c)
   ldu=lda= *r;
   lwork=-1;
   /* workspace query */
-  F77_NAME(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   &work1, &lwork, &info);
   lwork=(int)floor(work1);
   if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
   /* actual call */
-  F77_NAME(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   work, &lwork, &info);
   free(work);
 }
@@ -329,13 +372,13 @@ matrix(um[[2]],q,q);er$v
   ldu=lda= *r;ldvt = *c;
   lwork=-1;
   /* workspace query */
-  F77_NAME(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   &work1, &lwork, &info);
   lwork=(int)floor(work1);
   if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
   /* actual call */
-  F77_NAME(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   work, &lwork, &info);
   free(work);
 }
@@ -355,11 +398,11 @@ void mgcv_td_qy(double *S,double *tau,int *m,int *n, double *B,int *left,int *tr
   if (*left) { side = 'L';nq = *m;} else nq = *n;
   if (*transpose) trans = 'T';
   /* workspace query ... */
-  F77_NAME(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,&work1,&lwork,&info);
+  F77_CALL(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,&work1,&lwork,&info);
   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
   /* actual call ... */
-  F77_NAME(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,work,&lwork,&info);
+  F77_CALL(dormtr)(&side,&uplo,&trans,m,n,S,&nq,tau,B,m,work,&lwork,&info);
   free(work);
 }
 
@@ -387,11 +430,11 @@ void mgcv_tri_diag(double *S,int *n,double *tau)
   d = (double *)calloc((size_t)*n,sizeof(double));
   e = (double *)calloc((size_t)*n-1,sizeof(double));
   /* work space query... */
-  F77_NAME(dsytrd)(&uplo,n,S,n,d,e,tau,&work1,&lwork,&info);
+  F77_CALL(dsytrd)(&uplo,n,S,n,d,e,tau,&work1,&lwork,&info);
   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
   /* Actual call... */
-  F77_NAME(dsytrd)(&uplo,n,S,n,d,e,tau,work,&lwork,&info);
+  F77_CALL(dsytrd)(&uplo,n,S,n,d,e,tau,work,&lwork,&info);
   free(work);free(d);free(e);
 }
 
@@ -426,7 +469,7 @@ void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc)
 { double *pR,*pC,alpha=1.0;
   char side='L',uplo='U',transa='N',diag='N';
   for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
-  F77_NAME(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
+  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
 }
 
 
@@ -458,7 +501,7 @@ void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc)
 { double *pR,*pC,alpha=1.0;
   char side='L',uplo='U',transa='T',diag='N';
   for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
-  F77_NAME(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
+  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
 }
 
 
@@ -466,7 +509,7 @@ void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau)
 /* call LA_PACK to get pivoted QR decomposition of x
    tau is an array of length min(r,c)
    pivot is array of length c, zeroed on entry, pivoting order on return.
-   On exist upper triangle of x is R. Below upper triangle plus tau 
+   On exit upper triangle of x is R. Below upper triangle plus tau 
    represent reflectors making up Q.
    pivoting is always performed (not just when matrix is rank deficient), so
    leading diagonal of R is in descending order of magnitude.
@@ -480,18 +523,45 @@ void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau)
 { int info,lwork=-1,*ip;
   double work1,*work;
   /* workspace query */
-  F77_NAME(dgeqp3)(r,c,x,r,pivot,tau,&work1,&lwork,&info);
+  /* Args: M, N, A, LDA, JPVT, TAU, WORK, LWORK, INFO */
+  F77_CALL(dgeqp3)(r,c,x,r,pivot,tau,&work1,&lwork,&info);
   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
    /* actual call */
-  F77_NAME(dgeqp3)(r,c,x,r,pivot,tau,work,&lwork,&info); 
+  F77_CALL(dgeqp3)(r,c,x,r,pivot,tau,work,&lwork,&info); 
   free(work);
   /*if (*r<*c) lwork= *r; else lwork= *c;*/ 
   for (ip=pivot;ip < pivot + *c;ip++) (*ip)--;
   /* ... for 'tis C in which we work and not the 'cursed Fortran... */
   
-}
+} /* end mgcv_qr */
 
+void mgcv_qr2(double *x, int *r, int *c,int *pivot,double *tau)
+/* call LA_PACK to get  QR decomposition of x
+   tau is an array of length min(r,c)
+   pivot is array of length c, zeroed on entry, pivoting order on return.
+   On exit upper triangle of x is R. Below upper triangle plus tau 
+   represent reflectors making up Q.
+   pivoting is not performed in this case, but the pivoting index is returned anyway. 
+   library(mgcv)
+   r<-4;c<-3
+   X<-matrix(rnorm(r*c),r,c)
+   pivot<-rep(1,c);tau<-rep(0,c)
+   um<-.C("mgcv_qr",as.double(X),as.integer(r),as.integer(c),as.integer(pivot),as.double(tau))
+   qr.R(qr(X));matrix(um[[1]],r,c)[1:c,1:c]
+*/
+{ int info,*ip,i;
+  double *work;
+  work=(double *)calloc((size_t)*r,sizeof(double));
+   /* actual call */
+  /* Args: M, N, A, LDA, TAU, WORK, INFO */
+  F77_CALL(dgeqr2)(r,c,x,r,tau,work,&info); 
+  free(work);
+  /*if (*r<*c) lwork= *r; else lwork= *c;*/ 
+  for (i=0,ip=pivot;ip < pivot + *c;ip++,i++) *ip = i;
+  /* ... pivot index equivalent to no pivoting */
+  
+} /* end mgcv_qr2 */
 
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp)
 /* applies k reflectors of Q of a QR decomposition to r by c matrix b.
@@ -519,11 +589,12 @@ void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,in
   if (! *left) { side='R';lda = *c;} else lda= *r;
   if ( *tp) trans='T'; 
   /* workspace query */
-  F77_NAME(dormqr)(&side,&trans,r,c,k,a,&lda,tau,b,r,&work1,&lwork,&info);
+  
+  F77_CALL(dormqr)(&side,&trans,r,c,k,a,&lda,tau,b,r,&work1,&lwork,&info);
   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
   work=(double *)calloc((size_t)lwork,sizeof(double));
   /* actual call */
-  F77_NAME(dormqr)(&side,&trans,r,c,k,a,&lda,tau,b,r,work,&lwork,&info); 
+  F77_CALL(dormqr)(&side,&trans,r,c,k,a,&lda,tau,b,r,work,&lwork,&info); 
   free(work);
    
 }
@@ -612,54 +683,74 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
    either dsyevd (slower, robust) or dsyevr (faster, seems less robust). 
    Vectors returned in columns of A, values in ev (ascending).
    
+   Note: R 2.15.2 upgraded to a patched version of LAPACK 
+         3.4.1 which seems to have broken uplo='U' - non-orthogonal 
+         eigen-vectors are possible with that option.
+
    ******************************************************
    *** Eigenvalues are returned  in *ascending* order ***
    *** unless descending is set to be non-zero        ***
    ******************************************************
 
    Testing R code....
-   library(mgcv)
-   n<-4;A<-matrix(rnorm(n*n),n,n);A<-A%*%t(A);d<-array(0,n)
+   library(mgcv);m <- 34
+   n<-46;A<-matrix(rnorm(n*m),n,m);A<-A%*%t(A);
    er<-eigen(A)
-   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(n),
-           as.integer(1),as.integer(1),PACKAGE="mgcv")
-   er$vectors;matrix(um[[1]],n,n)
+   d<-array(0,ncol(A));n <- ncol(A)
+   um<-.C("mgcv_symeig",as.double(A),as.double(d),as.integer(ncol(A)),
+           as.integer(0),as.integer(1),as.integer(1),PACKAGE="mgcv")
+   U <- matrix(um[[1]],n,n)
+   er$vectors;U
    er$values;um[[2]]
 */  
 
-{ char jobz='V',uplo='U',range='A'; 
-  double work1,*work,dum1=0,abstol=0.0,*Z,*dum2,x,*p;
-  int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ,i;
+{ char jobz='V',uplo='L',range='A'; 
+  double work1,*work,dum1=0,abstol=0.0,*Z,*dum2,x,*p,*p1,*p2,*Acopy;
+  int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ,i,j,k,debug=0;
+  if (debug && *get_vectors) { /* need a copy to dump in case of trouble */
+    Acopy = (double *)calloc((size_t)*n * *n,sizeof(double));
+    for (p2=Acopy,p=A,p1=A+ *n * *n;p<p1;p++,p2++) *p2 = *p;
+  }
+
   if (*get_vectors) jobz='V'; else jobz='N';
   if (*use_dsyevd)
-  { F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,&work1,&lwork,&iwork1,&liwork,&info);
+  { F77_CALL(dsyevd)(&jobz,&uplo,n,A,n,ev,&work1,&lwork,&iwork1,&liwork,&info);
     lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
     work=(double *)calloc((size_t)lwork,sizeof(double));
     liwork = iwork1;iwork= (int *)calloc((size_t)liwork,sizeof(int));
-    F77_NAME(dsyevd)(&jobz,&uplo,n,A,n,ev,work,&lwork,iwork,&liwork,&info);
+    F77_CALL(dsyevd)(&jobz,&uplo,n,A,n,ev,work,&lwork,iwork,&liwork,&info);
     free(work);free(iwork);
+    if (*descending) for (i=0;i<*n/2;i++) {
+        /* work in from left and right swapping cols */
+	p = A + i * *n; /* start of left col */ 
+        p1 = A + *n * (*n - 1 - i); /* start of right col */
+        for (p2 = p + *n;p<p2;p++,p1++) { /* do the swap */
+          x = *p;*p=*p1;*p1=x;
+        }
+    }
   } else
   { Z=(double *)calloc((size_t)(*n * *n),sizeof(double)); /* eigen-vector storage */
     isupZ=(int *)calloc((size_t)(2 * *n),sizeof(int)); /* eigen-vector support */
-    F77_NAME(dsyevr)(&jobz,&range,&uplo,
+    F77_CALL(dsyevr)(&jobz,&range,&uplo,
 		   n,A,n,&dum1,&dum1,&dumi,&dumi,
 		   &abstol,&n_eval,ev, 
-    		     Z,n,isupZ, &work1,&lwork,&iwork1,&liwork,&info);
+    		   Z,n,isupZ, &work1,&lwork,&iwork1,&liwork,&info);
     lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
     work=(double *)calloc((size_t)lwork,sizeof(double));
     liwork = iwork1;iwork= (int *)calloc((size_t)liwork,sizeof(int));
-    F77_NAME(dsyevr)(&jobz,&range,&uplo,
+    F77_CALL(dsyevr)(&jobz,&range,&uplo,
 		   n,A,n,&dum1,&dum1,&dumi,&dumi,
 		   &abstol,&n_eval,ev, 
     		     Z,n,isupZ, work,&lwork,iwork,&liwork,&info);
     free(work);free(iwork);
     
-    if (*descending) for (i=0;i<*n/2;i++) { /* reverse the eigenvalues */
+    /* if (*descending) for (i=0;i<*n/2;i++) { 
       x = ev[i]; ev[i] = ev[*n-i-1];ev[*n-i-1] = x;
-    }
+      } - now below*/
 
     if (*get_vectors) {  /* copy vectors back into A */
-      if (*descending) { /* need to reverse order */
+     p1 = A; 
+     if (*descending) { /* need to reverse order */
         dum2 = Z + *n * (*n-1);
         for (work=dum2;work>=Z;work -= *n)
 	  for (p=work;p<work + *n;p++,A++) *A = *p; 
@@ -668,10 +759,32 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
         for (work=Z;work<dum2;work++,A++) *A = *work;
       }
     }
+    A = p1;
     free(Z);free(isupZ);
   }
+  if (*descending) for (i=0;i<*n/2;i++) { /* reverse the eigenvalues */
+       x = ev[i]; ev[i] = ev[*n-i-1];ev[*n-i-1] = x;
+  }
+  if (debug && *get_vectors) { /* are the eigenvectors really orthogonal?? */
+    p = (double *)calloc((size_t)*n * *n,sizeof(double));
+    getXtX(p,A,n,n); /* cross prod of eigenvec matrix - should be I */
+    x=0.0;k=0;
+    for (i=0;i<*n;i++) for (j=0;j<i;j++)  if (fabs(p[i + *n * j])>1e-14) { 
+	  x += fabs(p[i + *n * j]);k++;  
+    }
+    Rprintf("**\n");
+    j=k;
+    if (k) Rprintf("Non orthogonal eigenvectors %d %g\n",k,x/k);
+    x=0.0;k=0;
+    for (i=0;i<*n;i++) if (fabs(p[i + *n * i]-1)>1e-14) { 
+	x += fabs(p[i + *n * i]-1);k++;
+    }
+    if (k) Rprintf("Eigenvectors not normalized %d %g\n",k,x/k);
+    if (k+j>0) dump_mat(Acopy,n,n,"/home/sw283/tmp/badmat.dat");
+    free(p);free(Acopy);
+  }
 
- }
+}
 
 void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending) 
 /* Find eigen-values and vectors of n by n symmetric tridiagonal matrix 
@@ -693,7 +806,7 @@ void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descendi
   if (getvec) { compz='I';ldz = *n;} else { compz='N';ldz=0;}
 
   /* workspace query first .... */
-  F77_NAME(dstedc)(&compz,n,
+  F77_CALL(dstedc)(&compz,n,
 		   d, g, /* lead and su-diag */
 		   v, /* eigenvectors on exit */  
                    &ldz, /* dimension of v */
@@ -706,7 +819,7 @@ void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descendi
    iwork= (int *)calloc((size_t)liwork,sizeof(int));
 
    /* and the actual call... */
-   F77_NAME(dstedc)(&compz,n,
+   F77_CALL(dstedc)(&compz,n,
 		   d, g, /* lead and su-diag */
 		   v, /* eigenvectors on exit */  
                    &ldz, /* dimension of v */
@@ -786,7 +899,7 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol)
     /*for (Ap=A,zp=z,p0=zp+*n;zp<p0;zp++) 
       for (*zp=0.0,qp=q[j],p1=qp+*n;qp<p1;qp++,Ap++) *zp += *Ap * *qp;*/
     /*  BLAS versions y := alpha*A*x + beta*y, */
-    F77_NAME(dsymv)(&uplo,n,&alpha,
+    F77_CALL(dsymv)(&uplo,n,&alpha,
 		A,n,
 		q[j],&incx,
 		&beta,z,&incx);
@@ -808,20 +921,20 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol)
       for (i=0;i<=j;i++) 
       { /* form xx= z'q[i] */
         /*for (xx=0.0,qp=q[i],p0=qp + *n,zp=z;qp<p0;zp++,qp++) xx += *zp * *qp;*/
-        xx = -F77_NAME(ddot)(n,z,&incx,q[i],&incx); /* BLAS version */
+        xx = -F77_CALL(ddot)(n,z,&incx,q[i],&incx); /* BLAS version */
         /* z <- z - xx*q[i] */
         /*for (qp=q[i],zp=z;qp<p0;qp++,zp++) *zp -= xx * *qp;*/
-        F77_NAME(daxpy)(n,&xx,q[i],&incx,z,&incx); /* BLAS version */
+        F77_CALL(daxpy)(n,&xx,q[i],&incx,z,&incx); /* BLAS version */
       } 
       
       /* exact repeat... */
       for (i=0;i<=j;i++) 
       { /* form xx= z'q[i] */
         /* for (xx=0.0,qp=q[i],p0=qp + *n,zp=z;qp<p0;zp++,qp++) xx += *zp * *qp; */
-        xx = -F77_NAME(ddot)(n,z,&incx,q[i],&incx); /* BLAS version */
+        xx = -F77_CALL(ddot)(n,z,&incx,q[i],&incx); /* BLAS version */
         /* z <- z - xx*q[i] */
         /* for (qp=q[i],zp=z;qp<p0;qp++,zp++) *zp -= xx * *qp; */
-        F77_NAME(daxpy)(n,&xx,q[i],&incx,z,&incx); /* BLAS version */
+        F77_CALL(daxpy)(n,&xx,q[i],&incx,z,&incx); /* BLAS version */
       } 
       /* ... stabilized!! */
     } /* z update complete */

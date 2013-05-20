@@ -54,7 +54,7 @@ void boundary(int *G, double *d, double *dto, double *x0, double *y0, double *dx
  
 */ 
 { int segi,j,j0,j1,k,kk,i,reversed,*inb,*ip,*ip1,*ip2,bnd_count,ii,out_lim;
-  double x1,y1,x2,y2,xb0,yb0,xl,yl,xc,yc,dist,dist_to,grad=0.0,b,len2,*p1,*p2,*p3;
+  double x1,y1,x2,y2,xb0,yb0,xl,yl,xc,yc,dist,dist_to,grad=0.0,b,len2,*p1,*p2;
  
   /* first step is to mark outside points in grid */
   
@@ -288,8 +288,8 @@ void gridder(double *z,double *x,double *y,int *n,double *g, int *G,int *nx, int
    Does not do strict boundary testing here, since this routine is often called several
    times with same geometry. 
 */
-  int i,ix,iy,ok,Gthresh,Gk,k,ok00,ok01,ok10,ok11,erc=0;
-  double xx,yy,xx0,yy0,dmax,xa,ya,g00,g01,g10,g11,b0,b1,b2,b3,dist,d1,ming,maxg;
+  int i,ix,iy,ok,Gthresh,Gk,k,ok00,ok01,ok10,ok11;
+  double xx,yy,xx0,yy0,dmax,xa,ya,g00,g01,g10,g11,b0,b1,b2,b3,dist,d1;
   dmax = (*dx * *dx + *dy * *dy)*2;
   xx0 = *x0;yy0 = *y0;
   Gthresh = - *nx * *ny; /* G below with implies out of area */

@@ -752,6 +752,9 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 ## plot method function for soap.smooth terms
   if (scheme==3) {  
     if (is.null(P)) outline <- FALSE else outline <- TRUE   
+            if (is.null(xlim)) xlim <- c(x$sd$x0,x$sd$x0+ncol(x$sd$G)*x$sd$dx)
+            if (is.null(ylim)) ylim <- c(x$sd$y0,x$sd$y0+nrow(x$sd$G)*x$sd$dy)
+       
             P0 <- plot.mgcv.smooth(x=x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
@@ -773,24 +776,24 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     soap.basis(x$sd,film=film,wiggly=wiggly,plot=TRUE,beta=beta) -> G
     if (is.null(xlab)) xlabel<- x$term[1] else xlabel <- xlab
     if (is.null(ylab)) ylabel <- x$term[2] else ylabel <- ylab
-    xscale <- x$sd$x0 + 0:(ncol(G)-1) * x$sd$dx 
-    yscale <- x$sd$y0 + 0:(nrow(G)-1) * x$sd$dy
+    xscale <- x$sd$x0 + 0:(nrow(G)-1) * x$sd$dx 
+    yscale <- x$sd$y0 + 0:(ncol(G)-1) * x$sd$dy
     return(list(fit=G,scale=FALSE,se=FALSE,raw=raw,xlab=xlabel,ylab=ylabel,
                 xscale=xscale,yscale=yscale,main=label,bnd=x$sd$bnd))
     } else { ## do plot
       if (scheme==0) {
         xlim <- range(P$xscale);dx = xlim[2] - xlim[1]
         ylim <- range(P$yscale);dy = ylim[2] - ylim[1]
-        plot(P$yscale[1],P$xscale[1],xlab=P$xlab,ylab=P$ylab,main=P$main,xlim=ylim,ylim=xlim,...)
-        rect(ylim[1]-dy,xlim[1]-dx,ylim[2]+dy,xlim[2]+dx,col="lightgrey")
-        image(P$yscale,P$xscale,P$fit,add=TRUE,col=heat.colors(50),...)
-        contour(P$yscale,P$xscale,P$fit,add=TRUE,...)
+        plot(P$xscale[1],P$yscale[1],xlab=P$xlab,ylab=P$ylab,main=P$main,xlim=xlim,ylim=ylim,...)
+        rect(xlim[1]-dx,ylim[1]-dy,xlim[2]+dx,ylim[2]+dy,col="lightgrey")
+        image(P$xscale,P$yscale,P$fit,add=TRUE,col=heat.colors(50),...)
+        contour(P$xscale,P$yscale,P$fit,add=TRUE,...)
       } else if (scheme==1) {
-        image(P$yscale,P$xscale,P$fit,col=grey(0:50/50),xlab=P$xlab,
+        image(P$xscale,P$yscale,P$fit,col=grey(0:50/50),xlab=P$xlab,
               ylab=P$ylab,main=P$main,...)
-        contour(P$yscale,P$xscale,P$fit,add=TRUE,...)
+        contour(P$xscale,P$yscale,P$fit,add=TRUE,...)
       } else if (scheme==2) {
-        contour(P$yscale,P$xscale,P$fit,xlab=P$xlab,
+        contour(P$xscale,P$yscale,P$fit,xlab=P$xlab,
               ylab=P$ylab,main=P$main,...)
         if (is.null(names(P$bnd))) {
           for (i in 1:length(P$bnd)) lines(P$bnd[[i]],lwd=2)

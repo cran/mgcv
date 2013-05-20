@@ -147,7 +147,7 @@ interpret.gam <- function (gf)
 # 1. a model formula for the parametric part: pf (and pfok indicating whether it has terms)
 # 2. a list of descriptors for the smooths: smooth.spec
 { p.env<-environment(gf) # environment of formula
-  tf<-terms.formula(gf,specials=c("s","te","t2")) # specials attribute indicates which terms are smooth
+  tf<-terms.formula(gf,specials=c("s","te","ti","t2")) # specials attribute indicates which terms are smooth
  
   terms<-attr(tf,"term.labels") # labels of the model terms 
   nt<-length(terms) # how many terms?
@@ -156,9 +156,10 @@ interpret.gam <- function (gf)
   { response<-as.character(attr(tf,"variables")[2])
     pf<-rf<-paste(response,"~",sep="")
   }
-  else pf<-rf<-"~"
+  else pf <- rf <- "~"
   sp <- attr(tf,"specials")$s     # array of indices of smooth terms 
   tp <- attr(tf,"specials")$te    # indices of tensor product terms
+  tip <- attr(tf,"specials")$ti   # indices of tensor product pure interaction terms
   t2p <- attr(tf,"specials")$t2   # indices of type 2 tensor product terms
   off<-attr(tf,"offset") # location of offset in formula
   ## have to translate sp,tp so that they relate to terms,
@@ -172,58 +173,66 @@ interpret.gam <- function (gf)
     ind <- (1:nt)[as.logical(vtab[tp[i],])]
     tp[i] <- ind # the term that smooth relates to
   } 
+  if (length(tip)>0) for (i in 1:length(tip)) {
+    ind <- (1:nt)[as.logical(vtab[tip[i],])]
+    tip[i] <- ind # the term that smooth relates to
+  } 
   if (length(t2p)>0) for (i in 1:length(t2p)) {
     ind <- (1:nt)[as.logical(vtab[t2p[i],])]
     t2p[i] <- ind # the term that smooth relates to
   } ## re-referencing is complete
 
-  ns<-length(sp)+length(tp)+length(t2p) # number of smooths
-  k<-kt<-kt2<-ks<-kp<-1 # counters for terms in the 2 formulae
+  ##ns <- length(sp) + length(tp) + length(tip) + length(t2p) # number of smooths
+  k <- kt <- kti <- kt2 <- ks <- kp <- 1 # counters for terms in the 2 formulae
   len.sp <- length(sp)
   len.tp <- length(tp)
+  len.tip <- length(tip)
   len.t2p <- length(t2p)
+  ns <- len.sp + len.tp + len.tip + len.t2p # number of smooths
 
-  smooth.spec<-list()
+  smooth.spec <- list()
   if (nt)
   for (i in 1:nt) # work through all terms
-  { if (k<=ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||(kt2<=len.t2p&&t2p[kt2]==i))) # it's a smooth
-    { st<-eval(parse(text=terms[i]),envir=p.env)
-      smooth.spec[[k]]<-st
+  { if (k <= ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||
+                  (kti<=len.tip&&tip[kti]==i)||(kt2<=len.t2p&&t2p[kt2]==i))) # it's a smooth
+    { st <- eval(parse(text=terms[i]),envir=p.env)
+      smooth.spec[[k]] <- st
       if (ks<=len.sp&&sp[ks]==i) ks <- ks + 1 else # counts s() terms
       if (kt<=len.tp&&tp[kt]==i) kt <- kt + 1 else # counts te() terms
+      if (kti<=len.tip&&tip[kti]==i) kti <- kti + 1 else # counts ti() terms
       kt2 <- kt2 + 1                           # counts t2() terms
-      k <- k+1      # counts smooth terms 
+      k <- k + 1      # counts smooth terms 
     } else          # parametric
-    { if (kp>1) pf<-paste(pf,"+",terms[i],sep="") # add to parametric formula
-      else pf<-paste(pf,terms[i],sep="")
+    { if (kp>1) pf <- paste(pf,"+",terms[i],sep="") # add to parametric formula
+      else pf <- paste(pf,terms[i],sep="")
       kp <- kp+1    # counts parametric terms
     }
   }    
   if (!is.null(off)) # deal with offset
-  { if (kp>1) pf<-paste(pf,"+",sep="")
-    if (kp>1||k>1) rf<-paste(rf,"+",sep="")
-    pf<-paste(pf,as.character(attr(tf,"variables")[1+off]),sep="")
-    kp<-kp+1          
+  { if (kp>1) pf <- paste(pf,"+",sep="")
+    if (kp>1||k>1) rf <- paste(rf,"+",sep="")
+    pf <- paste(pf,as.character(attr(tf,"variables")[1+off]),sep="")
+    kp <- kp+1          
   }
-  if (attr(tf,"intercept")==0) 
-  { pf<-paste(pf,"-1",sep="")
-    if (kp>1) pfok<-1 else pfok<-0
+  if (attr(tf,"intercept")==0) {
+    pf <- paste(pf,"-1",sep="")
+    if (kp>1) pfok <- 1 else pfok <- 0
   } else { 
-    pfok<-1;if (kp==1) { 
-    pf<-paste(pf,"1"); 
+    pfok <- 1;if (kp==1) { 
+      pf <- paste(pf,"1"); 
     }
   }
   
-  fake.formula<-pf
+  fake.formula <- pf
   if (length(smooth.spec)>0) 
   for (i in 1:length(smooth.spec))
-  { nt<-length(smooth.spec[[i]]$term)
-    ff1<-paste(smooth.spec[[i]]$term[1:nt],collapse="+")
-    fake.formula<-paste(fake.formula,"+",ff1)
+  { nt <- length(smooth.spec[[i]]$term)
+    ff1 <- paste(smooth.spec[[i]]$term[1:nt],collapse="+")
+    fake.formula <- paste(fake.formula,"+",ff1)
     if (smooth.spec[[i]]$by!="NA")
-    fake.formula<-paste(fake.formula,"+",smooth.spec[[i]]$by)
+    fake.formula <- paste(fake.formula,"+",smooth.spec[[i]]$by)
   }
-  fake.formula<-as.formula(fake.formula,p.env)
+  fake.formula <- as.formula(fake.formula,p.env)
   ret<-list(pf=as.formula(pf,p.env),pfok=pfok,smooth.spec=smooth.spec,##full.formula=as.formula(rf,p.env),
             fake.formula=fake.formula,response=response)
   class(ret)<-"split.gam.formula"
@@ -256,7 +265,7 @@ fixDependence <- function(X1,X2,tol=.Machine$double.eps^.5,rank.def=0,strict=FAL
     # deficiency.
     r0 <- r <- nrow(R)
     if (rank.def > 0 && rank.def <= nrow(R)) r0 <- r - rank.def else ## degree of rank def known
-      while (mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
+      while (r0>0 && mean(abs(R[r0:r,r0:r]))< R11*tol) r0 <- r0 -1 ## compute rank def
     r0 <- r0 + 1
     if (r0>r) return(NULL) else
     ind <- qr2$pivot[r0:r] # the columns of X2 to zero in order to get independence
@@ -424,7 +433,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
               Xpa <- augment.smX(smi,nobs,np)
               ind <- fixDependence(X1,Xpa,rank.def=length(ind)) 
             } else ind <- fixDependence(X1,sm[[i]]$Xp,rank.def=length(ind)) 
-            sm[[i]]$Xp <- sm[[i]]$Xp[,-ind]
+            sm[[i]]$Xp <- sm[[i]]$Xp[,-ind,drop=FALSE]
             attr(sm[[i]],"del.index") <- ind ## over-writes original
           }
         }
@@ -575,6 +584,7 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
   # construct strictly parametric model matrix.... 
   
   X <- model.matrix(pterms,mf)
+  rownames(X) <- NULL ## save memory
   G$nsdf <- ncol(X)
   G$contrasts <- attr(X,"contrasts")
   G$xlevels <- .getXlevels(pterms,mf)
@@ -949,11 +959,12 @@ gam.setup <- function(formula,pterms,data=stop("No data supplied to gam.setup"),
   if (G$nsdf>0) term.names <- colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
   n.smooth <- length(G$smooth)
   if (n.smooth)
-  for (i in 1:n.smooth)
-  { k<-1
-    for (j in G$smooth[[i]]$first.para:G$smooth[[i]]$last.para)
-    { term.names[j] <- paste(G$smooth[[i]]$label,".",as.character(k),sep="")
-      k<-k+1
+  for (i in 1:n.smooth) { ## create coef names, if smooth has any coefs!
+    k<-1
+    jj <- G$smooth[[i]]$first.para:G$smooth[[i]]$last.para
+    if (G$smooth[[i]]$df > 0) for (j in jj) {
+      term.names[j] <- paste(G$smooth[[i]]$label,".",as.character(k),sep="")
+      k <- k+1
     }
   }
   G$term.names <- term.names
@@ -1179,7 +1190,8 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
     object$GACV <- object$D2 <- object$P2 <- object$UBRE2 <- object$trA2 <- 
     object$GACV1 <- object$GACV2 <- object$GCV2 <- object$D1 <- object$P1 <- NULL
     object$sp <- as.numeric(exp(b$lsp))
-    object$gcv.ubre <- as.numeric(b$score)
+    #object$gcv.ubre <- as.numeric(b$score)
+    object$gcv.ubre <- b$score
     b <- list(conv=b$conv,iter=b$iter,grad=b$grad,hess=b$hess,score.hist=b$score.hist) ## return info
     object$outer.info <- b   
   } else { ## methods calling gam.fit3 
@@ -1258,7 +1270,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
   if (!optimizer[1]%in%c("perf","outer")) stop("unknown optimizer")
   if (!method%in%c("GCV.Cp","GACV.Cp","REML","P-REML","ML","P-ML")) stop("unknown smoothness selection criterion") 
 
-  G$rS <- mini.roots(G$S,G$off,ncol(G$X))
+  G$rS <- mini.roots(G$S,G$off,ncol(G$X),G$rank)
 
   if (method%in%c("REML","P-REML","ML","P-ML")) {
     if (optimizer[1]=="perf") {
@@ -2248,7 +2260,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       if (n.smooth&&!para.only) 
       { for (k in 1:n.smooth) # work through the smooth terms 
         { first<-object$smooth[[k]]$first.para;last<-object$smooth[[k]]$last.para
-          fit[start:stop,n.pterms+k]<-X[,first:last]%*%object$coefficients[first:last] + Xoff[,k]
+          fit[start:stop,n.pterms+k]<-X[,first:last,drop=FALSE]%*%object$coefficients[first:last] + Xoff[,k]
           if (se.fit) { # diag(Z%*%V%*%t(Z))^0.5; Z=X[,first:last]; V is sub-matrix of Vp
             if (type=="iterms"&& attr(object$smooth[[k]],"nCons")>0) { ## termwise se to "carry the intercept"
               X1 <- matrix(object$cmX,nrow(X),ncol(X),byrow=TRUE)
@@ -2257,7 +2269,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
               X1[,first:last] <- X[,first:last]
               se[start:stop,n.pterms+k] <- sqrt(rowSums((X1%*%object$Vp)*X1))
             } else se[start:stop,n.pterms+k] <- ## terms strictly centred
-            sqrt(rowSums((X[,first:last]%*%object$Vp[first:last,first:last])*X[,first:last]))
+            sqrt(rowSums((X[,first:last,drop=FALSE]%*%
+                          object$Vp[first:last,first:last,drop=FALSE])*X[,first:last,drop=FALSE]))
           } ## end if (se.fit)
         }
         colnames(fit) <- ColNames
@@ -2474,7 +2487,7 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
 # the chi^2 variables are central. 
 # Note that this can be rubbish in lower tail (e.g. lambda=c(1.2,.3), x = .15)
   
-#  if (TRUE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
+#  if (FALSE) { ## use Davies exact method in place of Liu et al/ Pearson approx.
 #    require(CompQuadForm)
 #    r <- x
 #    for (i in 1:length(x)) r[i] <- davies(x[i],lambda,h)$Qq
@@ -2641,6 +2654,14 @@ reTest <- function(b,m) {
 ## Test the mth smooth for equality to zero
 ## and accounting for all random effects in model 
   
+  ## check that smooth penalty matrices are full size.  
+  ## e.g. "fs" type smooths estimated by gamm do not 
+  ## have full sized S matrices, and we can't compute 
+  ## p=values here....
+  if (ncol(b$smooth[[m]]$S[[1]]) != b$smooth[[m]]$last.para-b$smooth[[m]]$first.para+1) {
+    return(list(stat=NA,pval=NA,rank=NA)) 
+  }
+
   ## find indices of random effects other than m
   rind <- rep(0,0)
   for (i in 1:length(b$smooth)) if (!is.null(b$smooth[[i]]$random)&&b$smooth[[i]]$random&&i!=m) rind <- c(rind,i)
@@ -2666,11 +2687,7 @@ reTest <- function(b,m) {
 } ## end reTest
 
 testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
-## Routine for forming fractionally trunctated
-## pseudoinverse of XVX'. And returning 
-## p'X'(XVX)^-Xp.
-## Truncates to numerical rank, if this is
-## less than supplied rank+1.
+## Implements Wood (2013) Biometrika 100(1), 221-228
 ## The type argument specifies the type of truncation to use.
 ## on entry `rank' should be an edf estimate
 ## 0. Default using the fractionally truncated pinv.
@@ -2785,6 +2802,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
 ##   4 Bayesian numerical rank
 ##   5 Wood (2006) frequentist
 ##   -1 Modified Cox et al.
+##   -2 old style p-values based on X not R
 ## If a smooth has a field 'random' and it is set to TRUE then 
 ## it is treated as a random effect for some p-value dist calcs 
 
@@ -2803,7 +2821,14 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     res
   } ## end of pinv
   
-  if (is.null(object$R)) warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
+  if (is.null(object$R)) { 
+    warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
+    useR <- FALSE
+  } else useR <- TRUE
+
+  if (p.type < -1) useR <- FALSE
+
+  if (p.type!=0) warning("p.type!=0 is deprecated, and liable to be removed in future")
 
   p.table <- pTerms.table <- s.table <- NULL
 
@@ -2894,25 +2919,26 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
   df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
   if (m>0) # form test statistics for each smooth
   { if (p.type < 5) { ## Bayesian p-values required 
-      sub.samp <- max(1000,2*length(object$coefficients)) 
-      if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
-        seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-        if (inherits(seed,"try-error")) {
-          runif(1)
-          seed <- get(".Random.seed",envir=.GlobalEnv)
+      if (useR)  X <- object$R else {
+        sub.samp <- max(1000,2*length(object$coefficients)) 
+        if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
+          seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+          if (inherits(seed,"try-error")) {
+            runif(1)
+            seed <- get(".Random.seed",envir=.GlobalEnv)
+          }
+          kind <- RNGkind(NULL)
+          RNGkind("default","default")
+          set.seed(11) ## ensure repeatability
+          ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
+          X <- predict(object,object$model[ind,],type="lpmatrix")
+          RNGkind(kind[1],kind[2])
+          assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+        } else { ## don't need to subsample 
+          X <- model.matrix(object)
         }
-        kind <- RNGkind(NULL)
-        RNGkind("default","default")
-        set.seed(11) ## ensure repeatability
-        ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
-        X <- predict(object,object$model[ind,],type="lpmatrix")
-        RNGkind(kind[1],kind[2])
-        assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
-      } else { ## don't need to subsample 
-        X <- model.matrix(object)
-      }
-      X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
-    
+        X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
+      }    
     } ## end if (p.type<5)
 
     for (i in 1:m) { ## loop through smooths
@@ -3287,13 +3313,14 @@ mroot <- function(A,rank=NULL,method="chol")
 # given rank. B is returned where BB'=A. A assumed non-negative definite. 
 # Current methods "chol", "svd". "svd" is much slower, but much better at getting the 
 # correct rank if it isn't known in advance. 
-{ if (!isTRUE(all.equal(A,t(A)))) stop("Supplied matrix not symmetric")
+{ if (is.null(rank)) rank <- 0 
+  if (!isTRUE(all.equal(A,t(A)))) stop("Supplied matrix not symmetric")
   if (method=="svd")
   { um<-La.svd(A)
     if (sum(um$d!=sort(um$d,decreasing=TRUE))>0) 
     stop("singular values not returned in order")
-    if (is.null(rank)) # have to work out rank
-    { rank<-dim(A)[1]
+    if (rank < 1) # have to work out rank
+    { rank <- dim(A)[1]
       if (um$d[1]<=0) rank <- 1 else
       while (rank>0&&(um$d[rank]/um$d[1]<.Machine$double.eps||
                            all.equal(um$u[,rank],um$vt[rank,])!=TRUE)) rank<-rank-1 
@@ -3307,9 +3334,9 @@ mroot <- function(A,rank=NULL,method="chol")
     L <- chol(A,pivot=TRUE)
     options(op) ## reset default warnings
     piv <- order(attr(L,"pivot"))
-    if (is.null(rank)) rank <- attr(L,"rank")
+    if (rank < 1) rank <- attr(L,"rank")
     L <- L[,piv,drop=FALSE];L <- t(L[1:rank,,drop=FALSE])
-    if (rank <= 1) dim(L) <- c(nrow(A),1)
+    #if (rank <= 1) dim(L) <- c(nrow(A),1)
     return(L)
   } else
   stop("method not recognised.")

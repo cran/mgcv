@@ -14,14 +14,14 @@ mroot(A,rank=NULL,method="chol")
  \item{A}{ The positive semi-definite matrix, a square root of which is 
 to be found.}
 \item{rank}{if the rank of the matrix \code{A} is known then it should 
-be supplied.}
+be supplied. \code{NULL} or <1 imply that it should be estimated.}
 \item{method}{ \code{"chol"} to use pivoted choloeski decompositon, 
 which is fast but tends to over-estimate rank. \code{"svd"} to use 
 singular value decomposition, which is slow, but is the most accurate way 
 to estimate rank.}
 }
 
-\details{ The routine uses an LAPACK SVD routine, or the LINPACK pivoted 
+\details{ The function uses SVD, or a pivoted 
 Choleski routine. It is primarily of use for turning penalized regression 
 problems into ordinary regression problems.} 
 \value{ A matrix, \eqn{ {\bf B}}{B} with as many columns as the rank of 

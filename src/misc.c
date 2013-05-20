@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Simon N. Wood  simon.wood@r-project.org
+/* Copyright (C) 2008-2013 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
