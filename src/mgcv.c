@@ -303,8 +303,11 @@ void crspl(double *x,int *n,double *xk, int *nk,double *X,double *S, double *F,i
     if (xi < kmin||xi>kmax) {
       extrapolate=1;
     } else if (i>0 && fabs(xlast-xi) < 2*h) { /* use simple direct search */
-      while (xi<xk[j]&&j>0) j--;
-      while (xi>xk[j+1] && j+1 < *nk-1) j++;
+      while (xi <= xk[j] && j > 0) j--;
+      while (xi > xk[j+1] && j < *nk-2) j++;
+      /* next line should not be needed, except under dodgy use of 
+         fpu registers during optimization... */
+      if (j<0) j=0;if (j > *nk-2) j = *nk - 2; 
       /* now xk[j] <= x[i] <= xk[j+1] */ 
     } else { /* bisection search required */ 
       j=0;jup=*nk-1;

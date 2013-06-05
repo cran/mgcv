@@ -1,11 +1,41 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-24
+
+* Examples pruned in negbin, smooth.construct.ad.smooth.spec and bam help 
+  files to reduce CRAN checking load.
+
+* gam.side now warns if only repeated 1-D smooths of the same variable are
+  encountered, but does not halt.
+
+* Bug fix in C code for "cr" basis, that could cause a memory violation during
+  prediction, when an extrapolation was immediately followed by a prediction 
+  that lay exactly on the upper boundary knot. Thanks to Keith Woolner for 
+  reporting this.
+
+* Fix for bug in fast REML code that could cause bam to fail with ti/te only
+  models. Thanks to Martijn Wieling.
+
+* Fix of bug in extract.lme.cov2, which could cause gamm to fail when
+  a correlation structure was nested inside a grouping factor finer than
+  the finest random effect grouping factor. 
+
+* Fix for an interesting feature of lme that getGroups applied to the 
+  corStruct that is part of the fitted lme object returns groups in 
+  sorted order, not data frame order, and without an index from one order 
+  to the other. (Oddly, the same corStruct Initialized outside lme has its 
+  groups  in data frame order.) This feature could cause gamm to fail,
+  complaining that the grouping factors for the correlation did not appear 
+  to be nested inside the grouping structure of the random effects. A 
+  bunch of ordering sensitivity tests have been added to the mgcv test suite.
+  Thanks to Dave Miller for reporting the bug. 
+
 1.7-23
 
 *** Fix of severe bug introduced with R 2.15.2 LAPACK change. The shipped
   version of dsyevr can fail to produce orthogonal eigenvectors when 
-  uplo='U' (upper triangule of symmetric matrix used), as opposed to 'L'. 
+  uplo='U' (upper triangle of symmetric matrix used), as opposed to 'L'. 
   This led to a substantial number of gam smoothing parameter estimation 
   convergence failures, as the key stabilizing re-parameterization was 
   substantially degraded. The issue did not affect gaussian additive models
@@ -29,7 +59,7 @@
   essentially unchanged by the change. 
 
 * summary.gam now deals gracefully with terms such as "fs" smooths 
-  estimated using gamm, for which p-values can no be computed. (thanks to 
+  estimated using gamm, for which p-values can not be computed. (thanks to 
   Gavin Simpson).
 
 * gam.check/qq.gam now uses a normal QQ-plot when the model has been fitted 

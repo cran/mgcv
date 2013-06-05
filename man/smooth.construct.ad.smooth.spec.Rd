@@ -91,7 +91,9 @@ b <- gam(y~s(x,bs="ad",k=40,m=5,xt=list(bs="cr")))
 plot(b,shade=TRUE,main=round(cor(fitted(b),mu),digits=4))
 lines(x,mu-mean(mu),col=2)
 
-## A 2D example....
+## A 2D example (marked, 'Not run' purely to reduce
+## checking load on CRAN).
+\dontrun{
 par(mfrow=c(2,2),mar=c(1,1,1,1))
 x <- seq(-.5, 1.5, length= 60)
 z <- x
@@ -120,7 +122,7 @@ vis.gam(b1,theta=30,phi=30,ticktype="detailed")
 b <- gam(y~s(x,z,bs="ad",k=15,m=3),gamma=1.4)
 vis.gam(b,theta=30,phi=30,ticktype="detailed")
 cor(fitted(b0),f);cor(fitted(b),f)
-
+}
 
 
 }

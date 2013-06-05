@@ -523,7 +523,7 @@ Sl.fit <- function(Sl,X,y,rho,fixed,log.phi=0,phi.fixed=TRUE,rss.extra=0,nobs=NU
   #list(reml=ldS$ldetS,reml1=ldS$ldet1,reml2=ldS$ldet2)
   #list(reml=dift$rss,reml1=dift$rss1,reml2=dift$rss2)
   #list(reml=dift$bSb,reml1=dift$bSb1,reml2=dift$bSb2) 
-  list(reml=reml,reml1=reml1,reml2=reml2,beta=beta[rp],PP=PP,
+  list(reml=as.numeric(reml),reml1=reml1,reml2=reml2,beta=beta[rp],PP=PP,
        rp=ldS$rp,rss=dift$rss+rss.extra,nobs=nobs)
 }
 
