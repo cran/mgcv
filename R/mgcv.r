@@ -353,7 +353,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
   ## so now each unique variable name has an associated array of 
   ## the smooths of which it is an argument, arranged in ascending 
   ## order of dimension.
-  if (maxDim==1) stop("model has repeated 1-d smooths of same variable.")
+  if (maxDim==1) warning("model has repeated 1-d smooths of same variable.")
 
   ## Now set things up to enable term specific model matrices to be
   ## augmented with square root penalties, on the fly...
@@ -368,7 +368,8 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
   }
   nobs <- nrow(sm[[1]]$X) ## number of observations
   
-  for (d in 2:maxDim) { ## work up through dimensions 
+ # for (d in 2:maxDim) { ## work up through dimensions   
+  for (d in 1:maxDim) { ## work up through dimensions 
     for (i in 1:m) { ## work through smooths
       if (sm[[i]]$dim == d&&sm[[i]]$side.constrain) { ## check for nesting
         if (with.pen) X1 <- matrix(c(rep(1,nobs),rep(0,np)),nobs+np,as.integer(intercept)) else

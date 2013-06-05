@@ -966,21 +966,42 @@ extract.lme.cov2<-function(b,data,start.level=1)
 { if (!inherits(b,"lme")) stop("object does not appear to be of class lme")
   grps <- nlme::getGroups(b) # labels of the innermost groupings - in data frame order
   n <- length(grps)    # number of data
-  n.levels <- length(b$groups) # number of levels of grouping
-  if (n.levels<start.level) ## then examine correlation groups
-  { if (is.null(b$modelStruct$corStruct)) n.corlevels <- 0 else
+  n.levels <- length(b$groups) # number of levels of grouping (random effects only)
+#  if (n.levels<start.level) { ## then examine correlation groups
+    if (is.null(b$modelStruct$corStruct)) n.corlevels <- 0 else
     n.corlevels <-
     length(all.vars(nlme::getGroupsFormula(b$modelStruct$corStruct)))
-  } else n.corlevels <- 0 ## used only to signal irrelevance
+#  } else n.corlevels <- 0 ## used only to signal irrelevance
   ## so at this stage n.corlevels > 0 iff it determines the coarsest grouping
   ## level if > start.level. 
-  if (n.levels<n.corlevels) ## then cor groups are finest
-  grps <- nlme::getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
-
+  if (n.levels<n.corlevels) { ## then cor groups are finest
+    ## correlation groups are awkward. The groups returned by 
+    ## getGroups(b$modelStruct$corStruct) are not in data frame 
+    ## order, but in a sorted order. This is odd because if you
+    ## take the original uninitialized corStruct and Initialize 
+    ## using what is stored in b$data, and then apply getGroups,
+    ## the groups are in data frame order (suggesting one route
+    ## for getting the groups into data frame order). The approach
+    ## taken here simply re-constructs the groups in data frame
+    ## order, thereby avoiding the need to store the uninitialized 
+    ## corStruct. Note that covariates of corStructs do not 
+    ## cause re-ordering: only grouping variables do that. 
+    ## The above has been tested at nlme_3.1-109
+    ## grps <- nlme::getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
+    getGroupsFormula(b$modelStruct$corStruct)
+    vnames <- all.vars(nlme:::getGroupsFormula(b$modelStruct$corStruct))
+    ## attr(b$modelStruct$corStruct,"formula") # would include covariates
+    lab <- paste(eval(parse(text=vnames[1]),envir=b$data))
+    if (length(vnames)>1) for (i in 2:length(vnames)) {
+      lab <- paste(lab,"/",eval(parse(text=vnames[i]),envir=b$data),sep="")
+    }
+    grps <- factor(lab)
+  }
   if (n.levels >= start.level||n.corlevels >= start.level)
   { if (n.levels >= start.level)
     Cgrps <- nlme::getGroups(b,level=start.level) # outer grouping labels (dforder) 
-    else Cgrps <- nlme::getGroups(b$modelStruct$corStruct) # ditto
+    else Cgrps <- grps
+    #Cgrps <- nlme::getGroups(b$modelStruct$corStruct) # ditto
     Cind <- sort(as.numeric(Cgrps),index.return=TRUE)$ix
     # Cind[i] is where row i of sorted Cgrps is in original data frame order 
     rCind <- 1:n; rCind[Cind] <- 1:n

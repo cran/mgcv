@@ -119,6 +119,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
     nSp <- length(sp)  
     if (nSp==0) deriv.sp <- 0 else deriv.sp <- deriv 
 
+    rank.tol <- .Machine$double.eps*100 ## tolerance to use for rank deficiency
+
     xnames <- dimnames(x)[[2]]
     ynames <- if (is.matrix(y)) 
         rownames(y)
@@ -304,7 +306,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
                      E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
                      q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
-                     penalty=as.double(1),rank.tol=as.double(.Machine$double.eps*100))
+                     penalty=as.double(1),rank.tol=as.double(rank.tol))
 
             if (!fisher&&oo$n<0) { ## likelihood indefinite - switch to Fisher for this step
               z <- (eta - offset)[good] + (yg - mug)/mevg
@@ -312,7 +314,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
               oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
                        E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
                        q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
-                       penalty=as.double(1),rank.tol=as.double(.Machine$double.eps*100))
+                       penalty=as.double(1),rank.tol=as.double(rank.tol))
             }
 
             start <- oo$y[1:ncol(x)];
@@ -525,7 +527,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
                 V2=as.double(V2),V3=as.double(V3),beta=as.double(coef),D1=as.double(D1),
                 D2=as.double(D2),P=as.double(dum),P1=as.double(P1),P2=as.double(P2),
                 trA=as.double(dum),trA1=as.double(trA1),trA2=as.double(trA2),
-                rV=as.double(rV),rank.tol=as.double(.Machine$double.eps*100),
+                rV=as.double(rV),rank.tol=as.double(rank.tol),
                 conv.tol=as.double(control$epsilon),rank.est=as.integer(1),n=as.integer(length(z)),
                 p=as.integer(ncol(x)),M=as.integer(nSp),Mp=as.integer(Mp),Enrow = as.integer(rows.E),
                 rSncol=as.integer(rSncol),deriv=as.integer(deriv.sp),

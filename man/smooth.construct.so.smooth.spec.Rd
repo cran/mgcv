@@ -203,9 +203,10 @@ fsb[[1]]$f <- fs.test(fsb[[1]]$v,fsb[[1]]$w,b=1,exclude=FALSE)
 bk <- gam(y~s(v,w,bs="so",xt=list(bnd=fsb,nmax=nmax)),knots=knots)
 plot(bk) ## default plot
 
-#############################
-## tensor product example....
-#############################
+##########################################
+## tensor product example (marked 
+## 'Not run' to reduce CRAN checking load)
+##########################################
 \dontrun{
 n <- 10000
 v <- runif(n)*5-1;w<-runif(n)*2-1
