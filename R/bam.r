@@ -1,5 +1,5 @@
 ## routines for very large dataset generalized additive modelling.
-## (c) Simon N. Wood 2009-2012
+## (c) Simon N. Wood 2009-2013
 
 
 ls.size <- function(x) {
@@ -17,11 +17,11 @@ ls.size <- function(x) {
 
 rwMatrix <- function(stop,row,weight,X) {
 ## Routine to recombine the rows of a matrix X according to info in 
-## stop,row and weight. Consider the ith row of the output matrix 
+## stop, row and weight. Consider the ith row of the output matrix 
 ## ind <- 1:stop[i] if i==1 and ind <- (stop[i-1]+1):stop[i]
 ## otherwise. The ith output row is then X[row[ind],]*weight[ind]
   if (is.matrix(X)) { n <- nrow(X);p<-ncol(X);ok <- TRUE} else { n<- length(X);p<-1;ok<-FALSE}
-  stop <- stop - 1;row <- row - 1 ## R indeces -> C indeces
+  stop <- stop - 1;row <- row - 1 ## R indices -> C indices
   oo <-.C(C_rwMatrix,as.integer(stop),as.integer(row),as.double(weight),X=as.double(X),as.integer(n),as.integer(p))
   if (ok) return(matrix(oo$X,n,p)) else
   return(oo$X) 
@@ -524,9 +524,9 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
       dev <- sum(dev.resids(y,mu,G$w))
       W <- Diagonal(length(w),sqrt(w))
       if (sum(good)<nobs) {
-        XWX <- as(Matrix:::crossprod(W%*%X[good,]),"matrix")
+        XWX <- as(Matrix::crossprod(W%*%X[good,]),"matrix")
       } else {
-        XWX <- as(Matrix:::crossprod(W%*%X),"matrix")
+        XWX <- as(Matrix::crossprod(W%*%X),"matrix")
       }      
       qrx <- list(R = chol(XWX))
       Wz <- W%*%z
@@ -637,11 +637,19 @@ ar.qr.up <- function(arg) {
     ind <- arg$start[i]:arg$end[i] 
     if (arg$rho!=0) { ## have to find AR1 transform...
        N <- arg$end[i]-arg$start[i]+1
-       ## not first row implied by this transform
+       ## note first row implied by this transform
        ## is always dropped, unless really at beginning of data.
        row <- c(1,rep(1:N,rep(2,N))[-c(1,2*N)])
        weight <- c(1,rep(c(sd,ld),N-1))
        stop <- c(1,1:(N-1)*2+1)
+       if (!is.null(arg$mf$"(AR.start)")) { ## need to correct the start of new AR sections...
+           ii <- which(arg$mf$"(AR.start)"[ind]==TRUE)
+           if (length(ii)>0) {
+             if (ii[1]==1) ii <- ii[-1] ## first observation does not need any correction
+             weight[ii*2-2] <- 0 ## zero sub diagonal
+             weight[ii*2-1] <- 1 ## set leading diagonal to 1
+           }
+       }
      } 
      ## arg$G$model <- arg$mf[ind,]
      w <- sqrt(arg$G$w[ind])
@@ -744,7 +752,8 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   }
 } ## end predict.bam 
 
-bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level=0,use.chol=FALSE) 
+bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
+                    cl=NULL,gc.level=0,use.chol=FALSE) 
 ## function that does big additive model fit in strictly additive case
 {  ## first perform the QR decomposition, blockwise....
    n <- nrow(mf)
@@ -822,7 +831,15 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
 
            row <- c(1,rep(1:N,rep(2,N))[-c(1,2*N)])
            weight <- c(1,rep(c(sd,ld),N-1))
-           stop <- c(1,1:(N-1)*2+1)
+           stop <- c(1,1:(N-1)*2+1) 
+           if (!is.null(mf$"(AR.start)")) { ## need to correct the start of new AR sections...
+             ii <- which(mf$"(AR.start)"[ind]==TRUE)
+             if (length(ii)>0) {
+               if (ii[1]==1) ii <- ii[-1] ## first observation does not need any correction
+               weight[ii*2-2] <- 0 ## zero sub diagonal
+               weight[ii*2-1] <- 1 ## set leading diagonal to 1
+             }
+           }
          } 
          #G$model <- mf[ind,]
          w <- sqrt(G$w[ind])
@@ -888,6 +905,14 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
        row <- c(1,rep(1:n,rep(2,n))[-c(1,2*n)])
        weight <- c(1,rep(c(sd,ld),n-1))
        stop <- c(1,1:(n-1)*2+1)
+       if (!is.null(mf$"(AR.start)")) { ## need to correct the start of new AR sections...
+         ii <- which(mf$"(AR.start)"==TRUE)
+         if (length(ii)>0) {
+           if (ii[1]==1) ii <- ii[-1] ## first observation does not need any correction
+           weight[ii*2-2] <- 0 ## zero sub diagonal
+           weight[ii*2-1] <- 1 ## set leading diagonal to 1
+         }
+       }
        yX.last <- c(G$y[n],G$X[n,])  ## store final row, in case of update
        X <- rwMatrix(stop,row,weight,sqrt(G$w)*G$X)
        y <- rwMatrix(stop,row,weight,sqrt(G$w)*G$y)
@@ -939,7 +964,8 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
      }
      
      if (rho!=0) { ## correct RE/ML score for AR1 transform
-       object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
+       df <- if (is.null(mf$"(AR.start)")) 1 else sum(mf$"(AR.start)")
+       object$gcv.ubre <- object$gcv.ubre - (n-df)*log(ld)
      }
 
      G$X <- qrx$R;G$dev.extra <- rss.extra
@@ -958,8 +984,9 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,cl=NULL,gc.level
      G$n.true <- n
      object <- gam(G=G,method=method,gamma=gamma,scale=scale)
      y -> G$y; w -> G$w; n -> G$n;offset -> G$offset
-     if (rho!=0) { ## correct RE/ML score for AR1 transform
-       object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
+     if (rho!=0) { ## correct RE/ML score for AR1 transform 
+       df <- if (is.null(mf$"(AR.start)")) 1 else sum(mf$"(AR.start)")
+       object$gcv.ubre <- object$gcv.ubre - (n-df)*log(ld)
      }
    }
    if (method=="GCV.Cp") { 
@@ -1032,7 +1059,7 @@ sparse.model.matrix <- function(G,mf,chunk.size) {
 
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),scale=0,gamma=1,knots=NULL,
-                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,sparse=FALSE,cluster=NULL,
+                sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
                 gc.level=1,use.chol=FALSE,samfrac=1,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
@@ -1082,6 +1109,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
   terms <- attr(mf,"terms")
   if (gc.level>0) gc()  
+  if (rho!=0&&!is.null(mf$"(AR.start)")) if (!is.logical(mf$"(AR.start)")) stop("AR.start must be logical")
+
 
   ## summarize the *raw* input variables
   ## note can't use get_all_vars here -- buggy with matrices
@@ -1094,7 +1123,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   dl <- eval(inp, data, parent.frame())
   if (!control$keepData) { rm(data);gc()} ## save space
   names(dl) <- vars ## list of all variables needed
-  var.summary <- mgcv:::variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
+  var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
   rm(dl); if (gc.level>0) gc() ## save space    
 
   ## need mini.mf for basis setup, then accumulate full X, y, w and offset
@@ -1113,7 +1142,9 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   G$var.summary <- var.summary
   G$family <- family
   G$terms<-terms;G$pterms<-pterms
-  
+  pvars <- all.vars(delete.response(terms))
+  G$pred.formula <- if (length(pvars)>0) reformulate(pvars) else NULL
+
   n <- nrow(mf)
   
   if (is.null(mf$"(weights)")) G$w<-rep(1,n)
@@ -1144,7 +1175,6 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   colnamesX <- colnames(G$X)  
 
   if (sparse) { ## Form a sparse model matrix...
-    require(Matrix)
     if (sum(G$X==0)/prod(dim(G$X))<.5) warning("model matrix too dense for any possible benefit from sparse")
     if (nrow(mf)<=chunk.size) G$X <- as(G$X,"dgCMatrix") else 
       G$X <- sparse.model.matrix(G,mf,chunk.size)
@@ -1214,7 +1244,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$offset <- G$offset
   object$prior.weights <- G$w
   object$pterms <- G$pterms
- 
+  object$pred.formula <- G$pred.formula
   object$smooth <- G$smooth
 
   object$terms <- G$terms
@@ -1264,17 +1294,26 @@ bam.update <- function(b,data,chunk.size=10000) {
   rownames(X) <- NULL
   cnames <- names(b$coefficients)
 
-  ## now get the new data in model frame form...
+  AR.start <- NULL ## keep R checks happy
 
-  if ("(weights)"%in%names(b$model)) { 
+  ## now get the new data in model frame form...
+  getw <- "(weights)"%in%names(b$model)
+  getARs <- "(AR.start)"%in%names(b$model)
+  if (getw&&getARs) {
+    mf <- model.frame(gp$fake.formula,data,weights=weights,AR.start=AR.start,
+                      xlev=b$xlev,na.action=b$NA.action)
+    w <- mf[["(weights)"]]
+  } else if (getw) { 
     mf <- model.frame(gp$fake.formula,data,weights=weights,xlev=b$xlev,na.action=b$NA.action)
     w <- mf[["(weights)"]]
+  } else if (getARs) {
+    mf <- model.frame(gp$fake.formula,data,AR.start=AR.start,xlev=b$xlev,na.action=b$NA.action)
+    w <- rep(1,nrow(mf))
   } else {
     mf <- model.frame(gp$fake.formula,data,xlev=b$xlev,na.action=b$NA.action)
     w <- rep(1,nrow(mf))
   }
-
-
+  
   b$model <- rbind(b$model,mf) ## complete model frame --- old + new
 
   ## get response and offset...
@@ -1283,7 +1322,6 @@ bam.update <- function(b,data,chunk.size=10000) {
   if (is.null(off.col)) offset <- rep(0,nrow(mf)) else offset <-  mf[,off.col]
   y <-  mf[,attr(attr(b$model,"terms"),"response")] - offset
   
-
   ## update G
   b$G$y <- c(b$G$y,y)
   b$G$offset <- c(b$G$offset,offset)
@@ -1307,6 +1345,14 @@ bam.update <- function(b,data,chunk.size=10000) {
     row <- c(1,rep(1:m,rep(2,m))[-c(1,2*m)])
     weight <- c(1,rep(c(sd,ld),m-1))
     stop <- c(1,1:(m-1)*2+1)
+    if (!is.null(mf$"(AR.start)")) { ## need to correct the start of new AR sections...
+         ii <- which(mf$"(AR.start)"==TRUE)
+         if (length(ii)>0) {
+           if (ii[1]==1) ii <- ii[-1] ## first observation does not need any correction
+           weight[ii*2-2] <- 0 ## zero sub diagonal
+           weight[ii*2-1] <- 1 ## set leading diagonal to 1
+         }
+    }
    
     ## re-weight to independence....
     wX <- rwMatrix(stop,row,weight,wX)[-1,]
@@ -1364,7 +1410,8 @@ bam.update <- function(b,data,chunk.size=10000) {
      }
      
      if (b$AR1.rho!=0) { ## correct RE/ML score for AR1 transform
-       object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
+       df <- if (getARs) sum(b$model$"(AR.start)") else 1
+       object$gcv.ubre <- object$gcv.ubre - (n-df)*log(ld)
      }
 
      b$G$X <- b$qrx$R;b$G$dev.extra <- rss.extra
@@ -1385,7 +1432,8 @@ bam.update <- function(b,data,chunk.size=10000) {
     in.out <- list(sp=b$sp,scale=b$reml.scale)
     object <- gam(G=b$G,method=method,gamma=b$gamma,scale=scale,in.out=in.out) 
     if (b$AR1.rho!=0) { ## correct RE/ML score for AR1 transform
-       object$gcv.ubre <- object$gcv.ubre - (n-1)*log(ld)
+       df <- if (getARs) sum(b$model$"(AR.start)") else 1
+       object$gcv.ubre <- object$gcv.ubre - (n-df)*log(ld)
     }
     offset -> b$G$offset -> b$offset
     w -> b$G$w -> b$weights -> b$prior.weights; n -> b$G$n

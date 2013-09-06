@@ -518,7 +518,7 @@ smooth2random.fs.interaction <- function(object,vnames,type=1) {
 ## penalties are not interwoven, but blocked (i.e. this ordering is 
 ## as for gamm case). 
   if (object$fixed) return(list(fixed=TRUE,Xf=object$X))
-  if (type == 2) require(Matrix)
+  ##if (type == 2) require(Matrix)
   colx <- ncol(object$X) 
   diagU <- rep(1,colx)
   ind <- 1:colx 
@@ -783,7 +783,7 @@ smooth2random.tensor.smooth <- function(object,vnames,type=1) {
 
 
 
-gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
+gamm.setup <- function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
                      parametric.only=FALSE,absorb.cons=FALSE)
 ## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 ## needed for a gamm fit.
@@ -835,6 +835,7 @@ gamm.setup<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),
     } else {
       if (is.null(f.name)) f.name <- G$smooth[[i]]$fterm
       else if (f.name!=G$smooth[[i]]$fterm) stop("only one level of smooth nesting is supported by gamm")
+      if (!is.null(attr(G$smooth[[i]],"del.index"))) stop("side conditions not allowed for nested smooths")
     }   
     if (k < G$m) pord[(k+1):G$m] <- (1:G$m)[!done] 
     ## .... ordered so that nested smooths are last
@@ -989,7 +990,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
     ## The above has been tested at nlme_3.1-109
     ## grps <- nlme::getGroups(b$modelStruct$corStruct) # replace grps (but not n.levels)
     getGroupsFormula(b$modelStruct$corStruct)
-    vnames <- all.vars(nlme:::getGroupsFormula(b$modelStruct$corStruct))
+    vnames <- all.vars(nlme::getGroupsFormula(b$modelStruct$corStruct))
     ## attr(b$modelStruct$corStruct,"formula") # would include covariates
     lab <- paste(eval(parse(text=vnames[1]),envir=b$data))
     if (length(vnames)>1) for (i in 2:length(vnames)) {
@@ -1362,7 +1363,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # between the basis constructors provided in mgcv and the gammPQL routine used to estimate the model.
 # NOTE: need to fill out the gam object properly
 {
-  if (!require("nlme")) stop("gamm() requires package nlme to be installed")
+  ##if (!require("nlme")) stop("gamm() requires package nlme to be installed")
   control <- do.call("lmeControl",control) 
     # check that random is a named list
     if (!is.null(random))
@@ -1526,6 +1527,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
                  df.null=nrow(G$X),y=G$y,terms=gam.terms,pterms=pTerms,xlevels=G$xlevels,
                  contrasts=G$contrasts,assign=G$assign,na.action=attr(mf,"na.action"),
                  cmX=G$cmX,var.summary=G$var.summary,scale.estimated=TRUE)
+    
+    pvars <- all.vars(delete.response(object$terms))
+    object$pred.formula <- if (length(pvars)>0) reformulate(pvars) else NULL
 
     #######################################################
     ## Transform  parameters back to the original space....

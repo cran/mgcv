@@ -121,6 +121,8 @@ returned by the optimization routine used (currently \code{\link{nlm}} or \code{
 \item{paraPen}{If the \code{paraPen} argument to \code{\link{gam}} was used then this provides
 information on the parametric penalties. \code{NULL} otherwise.}
 
+\item{pred.formula}{one sided formula containing variables needed for prediction, used by \code{predict.gam}}
+
 \item{prior.weights}{prior weights on observations.} 
 
 \item{pterms}{\code{terms} object for strictly parametric part of model.}

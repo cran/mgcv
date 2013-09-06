@@ -31,7 +31,7 @@ nat.param <- function(X,S,rank=NULL,type=0,tol=.Machine$double.eps^.8,unit.fnorm
 ## test code:
 ##   x <- runif(100)
 ##   sm <- smoothCon(s(x,bs="cr"),data=data.frame(x=x),knots=NULL,absorb.cons=FALSE)[[1]]
-##   np <- mgcv:::nat.param(sm$X,sm$S[[1]],type=3)
+##   np <- nat.param(sm$X,sm$S[[1]],type=3)
 ##   range(np$X-sm$X%*%np$P)
   if (type==2||type==3) { ## no need for QR step
     er <- eigen(S,symmetric=TRUE)
@@ -2133,7 +2133,7 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   ## natural parameterization given in Wood (2006) 4.1.14
 
   if (object$bs.dim<length(levels(k))) { ## use low rank approx
-    rp <- mgcv:::nat.param(object$X,object$S[[1]],type=0)
+    rp <- nat.param(object$X,object$S[[1]],type=0)
     np <- ncol(object$X)
     ## now retain only bs.dim least penalized elements
     ## of basis, which are the final bs.dim cols of rp$X

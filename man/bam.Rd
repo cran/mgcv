@@ -17,7 +17,7 @@ for large datasets. \code{bam} can also compute on a cluster set up by the \link
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
-    chunk.size=10000,rho=0,sparse=FALSE,cluster=NULL,gc.level=1,
+    chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,gc.level=1,
     use.chol=FALSE,samfrac=1,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -107,6 +107,10 @@ if smooths share smoothing parameters).}
 
 \item{rho}{An AR1 error model can be used for the residuals (based on dataframe order), of Gaussian-identity 
            link models. This is the AR1 correlation parameter.}
+
+\item{AR.start}{logical variable of same length as data, \code{TRUE} at first observation of an independent
+section of AR1 correlation. Very first observation in data frame does not need this. If \code{NULL} then 
+there are no breaks in AR1 correlaion.}
 
 \item{sparse}{If all smooths are P-splines and all tensor products are of the form \code{te(...,bs="ps",np=FALSE)} 
 then in principle computation could be made faster using sparse matrix methods, and you could set this to \code{TRUE}. 

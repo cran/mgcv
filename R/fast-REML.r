@@ -263,7 +263,7 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE) {
       ind <- k.sp:(k.sp+m-1) ## index for smoothing parameters
       ## call gam.reparam to deal with this block
       ## in a stable way...
-      grp <- mgcv:::gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=2) 
+      grp <- gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=2) 
       Sl[[b]]$lambda <- exp(rho[ind])
       ldS <- ldS + grp$det
       ## next deal with the derivatives...
@@ -661,7 +661,7 @@ ident.test <- function(X,E) {
 ## coeff vector, with dropped coefs re-nstated as zeroes. 
   Xnorm <- norm(X,type="F")
   qrx <- qr(rbind(X/Xnorm,E),LAPACK=TRUE) ## pivoted QR
-  rank <- mgcv:::Rrank(qr.R(qrx),tol=.Machine$double.eps^.75)
+  rank <- Rrank(qr.R(qrx),tol=.Machine$double.eps^.75)
   drop <- qrx$pivot[-(1:rank)] ## index of un-identifiable coefs
   undrop <- 1:ncol(X) 
   if (length(drop)>0) undrop <- undrop[-drop]
@@ -781,7 +781,7 @@ Sl.postproc <- function(Sl,fit,undrop,X0,cov=FALSE,scale = -1) {
 ## 3. At this stage reweight the model matrix in G if needed 
 ##    (e.g. in IRLS) to get X
 ## 4. um <- Sl.Xprep(Sl,X) to deal with identifiability and re-para.
-## 5. initial smoothing parameters from mgcv:::initial.sp(X,G$S,G$off),
+## 5. initial smoothing parameters from initial.sp(X,G$S,G$off),
 ##    initial phi from, say variance of y over 10??
 ## 6. fit <- fast.REML.fit(um$Sl,um$X,G$y,rho,L=G$L,rho.0=G$lsp0,
 ##                         log.phi=log.phi,phi.fixed=FALSE/TRUE,Mp=um$Mp)
