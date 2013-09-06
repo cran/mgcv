@@ -69,11 +69,12 @@ importFrom(graphics,axis,box,contour,hist,lines,mtext, par, persp,plot,points,
 #           runif,termplot,terms,terms.formula, uniroot, 
 #           var,vcov)
 
-importFrom(stats,anova,influence,cooks.distance,logLik,vcov,residuals,predict,
-           model.matrix)
-importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix)
-#importFrom(Matrix,t,mean,colMeans,colSums,chol,solve,diag)
-import(Matrix)
+importFrom(stats,anova,influence,cooks.distance,logLik,vcov,residuals,predict,model.matrix)
+#importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix,getGroupsFormula,lme,varFixed,lmeControl)
+import(nlme)
+importMethodsFrom(Matrix,t,colMeans,colSums,chol,solve,lu,expand)
+importFrom(Matrix,Diagonal,sparseMatrix,Matrix)
+#import(Matrix)
 importFrom(methods,cbind2)
 
 S3method(anova, gam)

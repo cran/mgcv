@@ -66,14 +66,14 @@ void boundary(int *G, double *d, double *dto, double *x0, double *y0, double *dx
   }
   k = *nx * *ny; /* total size of G, d, dto */
   out_lim = -k;
-  inb = (int *)calloc((size_t)k,sizeof(int));  
+  inb = (int *)R_chk_calloc((size_t)k,sizeof(int));  
   in_out(x,y,break_code,d,dto,inb,n,&k); /* test all cell centres for in/out */
   j = -(k + 10);
   for (ip = inb,ip1 = G,p2 = dto,ip2=G+k;ip1<ip2;ip1++,p2++,ip++) {
     if (!*ip) *ip1 = j; else *ip1 = 1; /* set outside/inside in G */
     *p2 = -1.0; /* clear dto to -ve */
   }
-  free(inb);
+  R_chk_free(inb);
 
   xb0 = *x0 - *dx/2;yb0 = *y0 - *dx/2; /* Refers to boundary lines lower left */ 
  
@@ -289,7 +289,7 @@ void gridder(double *z,double *x,double *y,int *n,double *g, int *G,int *nx, int
    times with same geometry. 
 */
   int i,ix,iy,ok,Gthresh,Gk,k,ok00,ok01,ok10,ok11;
-  double xx,yy,xx0,yy0,dmax,xa,ya,g00,g01,g10,g11,b0,b1,b2,b3,dist,d1;
+  double xx,yy,xx0,yy0,dmax,xa,ya,g00=0.0,g01=0.0,g10=0.0,g11=0.0,b0,b1,b2,b3,dist,d1;
   dmax = (*dx * *dx + *dy * *dy)*2;
   xx0 = *x0;yy0 = *y0;
   Gthresh = - *nx * *ny; /* G below with implies out of area */

@@ -191,7 +191,7 @@ k.check <- function(b,subsample=5000,n.rep=400) {
   } else modf <- b$model
   nr <- length(rsd)
   for (k in 1:m) { ## work through smooths
-    dat <- as.data.frame(mgcv:::ExtractData(b$smooth[[k]],modf,NULL)$data)
+    dat <- as.data.frame(ExtractData(b$smooth[[k]],modf,NULL)$data)
     snames[k] <- b$smooth[[k]]$label
     ind <- b$smooth[[k]]$first.para:b$smooth[[k]]$last.para
     kc[k] <- length(ind)
@@ -230,7 +230,7 @@ k.check <- function(b,subsample=5000,n.rep=400) {
           }
         }
         nn <- 3
-        ni <- mgcv:::nearest(nn,as.matrix(dat))$ni
+        ni <- nearest(nn,as.matrix(dat))$ni
         e <- rsd - rsd[ni[,1]]
         for (j in 2:nn) e <- c(e,rsd-rsd[ni[,j]])
         v.obs[k] <- mean(e^2)/2
@@ -660,7 +660,8 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
     fac <- rep(x$flev,rep(n,nf))
     dat <- data.frame(fac,xx)
     names(dat) <- c(x$fterm,x$base$term)
-    X <- Predict.matrix.fs.interaction(x,dat)
+#    X <- Predict.matrix.fs.interaction(x,dat)
+    X <- PredictMat(x,dat)
     if (is.null(xlab)) xlabel <- x$base$term else xlabel <- xlab
     if (is.null(ylab)) ylabel <- label else ylabel <- ylab
     return(list(X=X,scale=TRUE,se=FALSE,raw=raw,xlab=xlabel,ylab=ylabel,

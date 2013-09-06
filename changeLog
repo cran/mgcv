@@ -1,6 +1,45 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-26
+
+* Namespace fixes.
+
+1.7-25
+
+* code added to allow openMP based multi-threading in gam fits (see
+  ?gam.control and ?"mgcv-parallel"). 
+
+* bam now allows AR1 error model to be split blockwise. See argument 
+  'AR.start'.
+
+* magic.post.proc made more efficient (one of two O(np^2) steps removed).
+
+* var.summary now coerces character to factor. 
+
+* bugs fixed whereby etastart etc were not passed to initial.spg and
+  get.null.coefs. Thanks to Gavin Simpson.
+
+* reformulate removed from predict.gam to avoid (slow) repeated parser 
+  calls.
+
+* gaussian(link="log") initialization fixed so that negative data 
+  does not make it fail, via fix.family patching function.
+
+* bug fix in plot method for "fs" basis - ignored any side conditions.
+  Thanks to Martijn Weiling and Jacolien van Rij.
+
+* gamm now checks whether smooths nested in factors have illegal side 
+  conditions, and halts if so (re-ordering formula can help).
+ 
+* anova.glmlist no longer called.
+
+* Compiled code now uses R_chck_calloc and R_chk_free for memory management
+  to avoid the possibility of unfriendly exit on running out of memory. 
+
+* fix in gam.side which would fail with unpenalized interactions in the 
+  presence of main effects. 
+
 1.7-24
 
 * Examples pruned in negbin, smooth.construct.ad.smooth.spec and bam help 

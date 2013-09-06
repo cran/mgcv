@@ -171,8 +171,7 @@ crunch.knots <- function(G,knots,x0,y0,dx,dy)
 setup.soap <- function(bnd,knots,nmax=100,k=10,bndSpec=NULL) {
 ## setup soap film  smooth - nmax is number of grid cells for longest side
 ## it's important that grid cells are square!
-  require(Matrix)
-
+ 
   ## check boundary...
 
   if (!inherits(bnd,"list")) stop("bnd must be a list.")
@@ -272,7 +271,7 @@ soap.basis <- function(sd,x=NA,y=NA,film=TRUE,wiggly=TRUE,penalty=TRUE,plot=FALS
 ## If plot==TRUE then then data suitable for plotting are returned at the resolution
 ## of the solution grid. Then beta contains either the coefficients, or a single number 
 ## representing the single basis function to return (0 for the offset). 
-  require(Matrix)
+
   if (!plot) {
     indout <- inSide(sd$bnd,x,y); n <- length(x)
   } else {

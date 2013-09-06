@@ -17,8 +17,8 @@ value decomposition approach.
 \usage{
 magic(y,X,sp,S,off,L=NULL,lsp0=NULL,rank=NULL,H=NULL,C=NULL,
       w=NULL,gamma=1,scale=1,gcv=TRUE,ridge.parameter=NULL,
-      control=list(tol=1e-6,step.half=25,
-      rank.tol=.Machine$double.eps^0.5),extra.rss=0,n.score=length(y))
+      control=list(tol=1e-6,step.half=25,rank.tol=
+      .Machine$double.eps^0.5),extra.rss=0,n.score=length(y),nthreads=1)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -108,6 +108,7 @@ sets.}
 calculation: usually the actual number of data, but there are methods 
 for dealing with very large datasets that change this.}
 
+\item{nthreads}{\code{magic} can make use of multiple threads if this is set to >1.}
 }
 
 \details{ 
