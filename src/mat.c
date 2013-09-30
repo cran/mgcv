@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <R.h>
+#include <Rinternals.h>
 #include <R_ext/Linpack.h> /* only needed for pivoted chol - see note in mgcv_chol */
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
@@ -142,6 +143,7 @@ void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
 
 void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n) {
   /* Forms A = B C transposing B and C according to bt and ct.
+     A is r by c. Common dimension is n;
      BLAS version A is c (result), B is a, C is b, bt is transa ct is transb 
      r is m, c is n, n is k.
      Does nothing if r,c or n <= zero. 
@@ -169,6 +171,160 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
 		B, &lda,C, &ldb,&beta, A, &ldc);
 } /* end mgcv_mmult */
 
+SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
+/* parallel matrix multiplication using .Call interface */
+  double *A,*B,*C;
+  int r,col,n,nt,Ct,Bt,m;
+  SEXP a; 
+ 
+  nt = asInteger(nthreads);
+  Bt = asInteger(bt);
+  Ct = asInteger(ct);
+ 
+  if (Bt) {
+    r = ncols(b);
+    n = nrows(b);
+  } else {
+    r = nrows(b);
+    n = ncols(b);
+  }
+ 
+  if (Ct) col = nrows(c);
+  else col = ncols(c);
+  /* Rprintf("nt = %d, Bt = %d, Ct = %d, r = %d, c = %d, n = %d\n",nt,Bt,Ct,r,col,n);*/
+  B = REAL(b);C=REAL(c);
+  a = PROTECT(allocMatrix(REALSXP,r,col));
+  A = REAL(a);
+  #ifdef SUPPORT_OPENMP
+  m = omp_get_num_procs(); /* detected number of processors */
+  if (nt > m || nt < 1) nt = m; /* no point in more threads than m */
+  #else
+  nt = 1; /* no openMP support - turn off threading */
+  #endif
+  mgcv_pmmult(A,B,C,&Bt,&Ct,&r,&col,&n,&nt);
+  UNPROTECT(1);
+  return(a);
+} /* mgcv_pmmult2 */
+
+
+int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
+/* Do the work for parallel QR: 
+   Key is to inline the expensive step that is parallelized, noting
+   that housholder ops are not in BLAS, but are LAPACK auxilliary 
+   routines (so no loss in re-writing)
+*/
+
+  int i,k,r,nh,j,one=1,cpt,nth,cpf,ii;
+  double *c,*p0,*p1,*p2,xx,tau,*work,zz,*v,*z,*z1,br;
+  /* const char side = 'L';*/
+
+  #ifndef SUPPORT_OPENMP
+  nt = 1;
+  #endif
+
+  c =(double *)R_chk_calloc((size_t) p,sizeof(double)); 
+  work =(double *)R_chk_calloc((size_t) p*nt,sizeof(double));
+  k=0;tau=0.0;
+  /* find column norms O(np) */
+  for (p0=x,i=0;i<p;i++) {
+    piv[i] = i;
+    for (xx=0.0,p1=p0 + n;p0<p1;p0++) xx += *p0 * *p0;
+    c[i] = xx;
+    if (xx>tau) {tau=xx;k=i;}
+  }
+  r = -1;
+  nh = n; /* householder length */
+  
+  while (tau > 0) {
+    r++;
+    i=piv[r]; piv[r] = piv[k];piv[k] = i;
+    /* swap r with k O(n) */
+    xx = c[r];c[r] = c[k];c[k] = xx;
+    for (p0 = x + n * r, p1 = x + n * k,p2 = p0 + n;p0<p2;p0++,p1++) {
+          xx = *p0; *p0 = *p1; *p1 = xx;
+    }
+    /* now generate the householder reflector for column r O(n)*/
+    p0 = x + r * n + r; /* first element of column */
+    p1 = p0 + 1; /* remaining elements of column */
+    xx = *p0;
+    F77_CALL(dlarfg)(&nh,&xx,p1,&one,beta+r);
+    
+    /* next apply the rotation to the remaining columns of x O(np) */
+       
+    *p0 = 1.0;j=p-r-1;
+    
+    /* now distribute the j columns between nt threads */
+    if (j) {
+          cpt = j / nt; /* cols per thread */
+          if (cpt * nt < j) cpt++; 
+          nth = j/cpt; /* actual number of threads */
+          if (nth * cpt < j) nth++;
+          cpf = j - cpt * (nth-1); /* columns on final block */
+    } else nth=cpf=cpt=0;
+
+    br = beta[r];
+    #ifdef SUPPORT_OPENMP
+    #pragma omp parallel private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
+    #endif
+    { j = cpt;
+      if (j) {        
+        #ifdef SUPPORT_OPENMP
+        #pragma omp for
+        #endif
+        for (i=0;i<nth;i++) {
+	    if (i == nth-1) j = cpf;
+            p1 = p0 + n + n * cpt *i; 
+            z1=p1+nh;
+            for (ii =0;ii<j;ii++,p1+=n,z1+=n) {
+            for (zz=0.0,v=p0,z=p1;z<z1;z++,v++) zz += *z * *v * br;
+            for (z=p1,v=p0;z<z1;z++,v++) *z -= zz * *v;
+	   }
+	   /*F77_CALL(dlarfx)(&side, &nh, &j, p0, beta+r, p0 + n + n * cpt * i , &n , work + p * i);*/
+        }
+      } /* if (j) */
+    } /* end parallel */ 
+    nh--;
+    *p0 = xx;
+    /* update c, get new k... */
+    k = r + 1;
+    for (tau=0.0,p0+=n,i=r+1;i<p;i++,p0+=n) { 
+          c[i] -= *p0 * *p0;
+          if (c[i]>tau) { 
+            tau = c[i];
+            k=i;
+          }
+     }
+     if (r==n-1) tau = 0.0;
+    
+    } /* end while (tau > 0) */
+  
+  R_chk_free(c); R_chk_free(work);
+  return(r+1);
+  } /* mgcv_piqr */
+
+SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT) {
+/* routine to QR decompose N by P matrix X with pivoting using routine
+   dlarg to generate housholder. This is direct 
+   implementation of 5.4.1 from Golub and van Loan (with correction 
+   of the pivot pivoting!). */
+  int n,p,nt,*piv,r,*rrp;
+  double *x,*beta;
+  SEXP rr;
+  nt = asInteger(NT);
+  n = nrows(X);
+  p = ncols(X);
+  x = REAL(X);beta = REAL(BETA);
+  piv = INTEGER(PIV);
+  r = mgcv_piqr(x,n,p,beta,piv,nt);
+  /* should return rank (r+1) */
+  rr = PROTECT(allocVector(INTSXP, 1));
+  rrp = INTEGER(rr);
+  *rrp = r;
+  UNPROTECT(1);
+  return(rr);
+
+} /* mgcv_piqr */
+
 void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n,int *nt) {
   /* 
      Forms r by c product, A, of B and C, transposing each according to bt and ct.
@@ -186,7 +342,7 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
      Does nothing if r,c or n <= zero. 
   */
   char transa='N',transb='N';
-  int lda,ldb,ldc,cpt,cpf,c1,i;
+  int lda,ldb,ldc,cpt,cpf,c1,i,nth;
   double alpha=1.0,beta=0.0;
   if (*r<=0||*c<=0||*n<=0) return;
   if (B==C) { /* this is serial, unfortunately. note case must be caught as B can be re-ordered!  */
@@ -216,17 +372,19 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     if (*bt) { /* can split on columns of n by r matrix B, but A then needs re-ordering */
       cpt = *r / *nt; /* cols per thread */
       if (cpt * *nt < *r) cpt++; 
-      cpf = *r - cpt * (*nt-1); /* columns on final block */
+      nth = *r/cpt;
+      if (nth * cpt < *r) nth++;
+      cpf = *r - cpt * (nth-1); /* columns on final block */
       #ifdef SUPPORT_OPENMP
-      #pragma omp parallel private(i,c1)
+      #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
         c1 = cpt;
         #ifdef SUPPORT_OPENMP
         #pragma omp for
         #endif
-        for (i=0;i<*nt;i++) {
-          if (i == *nt-1) c1 = cpf;
+        for (i=0;i<nth;i++) {
+          if (i == nth-1) c1 = cpf;
           /* note integer after each matrix is its leading dimension */
           if (c1>0) F77_CALL(dgemm)(&transa,&transb,&c1,c,n, &alpha,
 		B + i * cpt * *n, n ,C, c,&beta, A + i * cpt * *c, &c1);
@@ -238,19 +396,21 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     } else { /* worst case - have to re-order r by n mat B and then reverse re-ordering of B and A at end */
       cpt = *r / *nt; /* cols per thread */
       if (cpt * *nt < *r) cpt++; 
-      cpf = *r - cpt * (*nt - 1); /* columns on final block */
+      nth = *r/cpt;
+      if (nth * cpt < *r) nth++;
+      cpf = *r - cpt * (nth-1); /* columns on final block */
       /* re-order cpt-row blocks of B into sequential cpt by n matrices (in B) */ 
       row_block_reorder(B,r,n,&cpt,bt); /* bt contains a zero - forward mode here */
       #ifdef SUPPORT_OPENMP
-      #pragma omp parallel private(i,c1)
+      #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
         c1 = cpt;
         #ifdef SUPPORT_OPENMP
         #pragma omp for
         #endif
-        for (i=0;i<*nt;i++) {
-          if (i == *nt-1) c1 = cpf;
+        for (i=0;i<nth;i++) {
+          if (i == nth-1) c1 = cpf;
           if (c1>0) F77_CALL(dgemm)(&transa,&transb,&c1,c,n, &alpha,
 		B + i * cpt * *n, &c1,C,c,&beta, A + i * cpt * *c, &c1);
         }
@@ -261,18 +421,20 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     }
   } else { /* can split on columns of n by c matrix C, which avoids re-ordering */
     cpt = *c / *nt; /* cols per thread */
-    if (cpt * *nt < *c) cpt++; 
-    cpf = *c - cpt * (*nt - 1); /* columns on final block */
+    if (cpt * *nt < *c) cpt++;
+    nth = *c/cpt;
+    if (nth * cpt < *c) nth++;
+    cpf = *c - cpt * (nth-1); /* columns on final block */
     #ifdef SUPPORT_OPENMP
-    #pragma omp parallel private(i,c1)
+    #pragma omp parallel private(i,c1) num_threads(*nt)
     #endif
     { /* open parallel section */
       c1 = cpt;
       #ifdef SUPPORT_OPENMP
       #pragma omp for
       #endif
-      for (i=0;i< *nt;i++) {
-        if (i == *nt-1) c1 = cpf; /* how many columns in this block */
+      for (i=0;i< nth;i++) {
+        if (i == nth-1) c1 = cpf; /* how many columns in this block */
         if (c1>0) F77_CALL(dgemm)(&transa,&transb,r,&c1,n, &alpha,
 		B, &lda,C + i * *n * cpt, &ldb,&beta, A + i * *r * cpt, &ldc);
       }
@@ -795,7 +957,7 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
       x0 = b + *r * *cb -1; /* end of full b (target) */
       x1 = b + *c * *cb -1; /* end of used block (source) */
       for (j= *cb;j>0;j--) { /* work down columns */
-        //for (i = *r;i > *c;i--,x0--) *x0 = 0.0; /* clear unused */
+        /*for (i = *r;i > *c;i--,x0--) *x0 = 0.0;*/ /* clear unused */
         x0 -= *r - *c; /* skip unused */
         for (i = *c;i>0;i--,x0--,x1--) { 
           *x0 = *x1; /* copy */
@@ -824,7 +986,7 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
       row_block_reorder(b,r,cb,&nb,&FALSE);
     }
     #ifdef SUPPORT_OPENMP
-    #pragma omp parallel private(i,j,l,n,x1)
+    #pragma omp parallel private(i,j,l,n,x1) num_threads(k)
     #endif
     { /* open parallel section */
       #ifdef SUPPORT_OPENMP
@@ -862,7 +1024,7 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
     mgcv_qrqy(Qb,a + *r * *c,tau + k * *c,&nq,cb,c,&left,tp);
     /* the blocks of Qb now have to be copied into separate blocks in b */
     #ifdef SUPPORT_OPENMP
-    #pragma omp parallel private(i,j,l,n,x0,x1)
+    #pragma omp parallel private(i,j,l,n,x0,x1) num_threads(k)
     #endif
     { /* open parallel section */
       #ifdef SUPPORT_OPENMP
@@ -896,10 +1058,10 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
    Routine first computes k, the optimal number of threads to use from 1 to nt.
 */
 
-  int i,j,k,l,*piv,nb,nbf,n,TRUE=1,FALSE=0,nr; /* number of threads to use */
+  int i,j,k,l,*piv,nb,nbf,n,TRUE=1,FALSE=0,nr; 
   double *R,*R1,*xi; 
  
-  k = get_qpr_k(r,c,nt);
+  k = get_qpr_k(r,c,nt);/* number of threads to use */
  
   if (k==1) mgcv_qr(x,r,c,pivot,tau); else { /* multi-threaded version */
     nb = (int)ceil(*r/(double)k); /* block size */
@@ -910,7 +1072,7 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
     R = x + *r * *c ; /* pointer to combined unpivoted R matrix */
     nr = *c * k; /* number of rows in R */
     #ifdef SUPPORT_OPENMP
-    #pragma omp parallel private(i,j,l,n,xi,R1)
+    #pragma omp parallel private(i,j,l,n,xi,R1) num_threads(k)
     #endif
     { /* open parallel section */
       #ifdef SUPPORT_OPENMP

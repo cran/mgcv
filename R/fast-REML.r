@@ -230,7 +230,7 @@ Sl.initial.repara <- function(Sl,X,inverse=FALSE) {
 } ## end Sl.initial.repra
 
 ldetS <- function(Sl,rho,fixed,np,root=FALSE) {
-## Get log generalized derivative of S stored blockwise in an Sl list.
+## Get log generalized determinant of S stored blockwise in an Sl list.
 ## Any multi-term blocks will be re-parameterized using gam.reparam, and
 ## a re-parameterization object supplied in the returned object.
 ## Returns: Sl, with modified rS terms, if needed and rho added to each block

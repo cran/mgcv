@@ -6,6 +6,7 @@
 \alias{Predict.matrix.tensor.smooth}
 \alias{Predict.matrix.tprs.smooth}
 \alias{Predict.matrix.ts.smooth}
+\alias{Predict.matrix.t2.smooth}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Predict matrix method functions}
 \description{The various built in smooth classes for use with \code{\link{gam}} have associate \code{\link{Predict.matrix}} 
@@ -20,6 +21,7 @@ method functions to enable prediction from the fitted model. }
 \method{Predict.matrix}{tensor.smooth}(object, data)
 \method{Predict.matrix}{tprs.smooth}(object, data)
 \method{Predict.matrix}{ts.smooth}(object, data)
+\method{Predict.matrix}{t2.smooth}(object, data)
 }
 
 \arguments{ 
