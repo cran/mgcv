@@ -142,7 +142,7 @@ print(b3)}
 ## another example...
 set.seed(1)
 f <- dat$f
-f <- f - min(f);g <- f^2
+f <- f - min(f)+5;g <- f^2/10
 dat$y <- rnbinom(g,size=3,mu=g)
 b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=negbin(1:10,link="sqrt"),
          data=dat) 

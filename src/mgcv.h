@@ -1,5 +1,5 @@
 /* main method routines */
-
+#include <Rinternals.h>
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
 	   double *lsp0,double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score,int *nt);
@@ -13,8 +13,17 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	 int *n,int *q, int *M,int *Mp,int *Enrow,int *rSncol,int *deriv,
 	  int *REML,int *fisher,int *fixed_penalty,int *nthreads);     
 
-void pls_fit(double *y,double *X,double *w,double *E,int *n,int *q,int *cE,double *eta,
-             double *penalty,double *rank_tol);
+void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
+	  double *sp,double *theta,double *z,double *w,
+          double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
+          double *Det2_th,double *Det3,double *Det_th2,
+          double *Det4, double *Det3_th, double *Det2_th2,
+          double *beta,double *D1,double *D2,double *P,double *P1,double *P2,
+          double *ldet, double *ldet1,double *ldet2,
+          double *rank_tol,int *rank_est,
+	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
+	  int *fixed_penalty,int *nt);
+
 void pls_fit1(double *y,double *X,double *w,double *E,double *Es,int *n,int *q,int *rE,double *eta,
 	      double *penalty,double *rank_tol,int *nt);
 
@@ -51,6 +60,7 @@ void mgcv_qr2(double *x, int *r, int *c,int *pivot,double *tau);
 void update_qr(double *Q,double *R,int *n, int *q,double *lam, int *k);
 extern void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
 void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n,int *nt);
+SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads);
 void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n);
 void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c);
 void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd, int *get_vectors,int *descending);
@@ -68,6 +78,8 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse);
 void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt);
 void getRpqr(double *R,double *x,int *r, int *c,int *rr,int *nt);
 void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,int *nt);
+SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT);
+
 
 /* basis constructor/prediction routines*/
 

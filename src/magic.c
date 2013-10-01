@@ -117,7 +117,7 @@ void fit_magic(double *X,double *sp,double **S,double *H,double *gamma,double *s
   r=rank_S+q;
   R=(double *)R_chk_calloc((size_t)(r*q),sizeof(double));  
   getRpqr(R,X,&n,&q,&r,nt);
-  //for (j=0;j<q;j++) for (i=0;i<=j;i++) R[i+r*j]=X[i+n*j];
+  /*for (j=0;j<q;j++) for (i=0;i<=j;i++) R[i+r*j]=X[i+n*j];*/
   for (j=0;j<q;j++) for (i=q;i<r;i++) R[i+r*j]=St[(i-q)+rank_S*j];
   /* Get singular value decomposition, and hang the expense */
   a=(double *)R_chk_calloc((size_t)q,sizeof(double));
@@ -204,7 +204,7 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
   int i,j,*ip,bt,ct,r,c,tid=0; 
   /* U_1'U_1 U1 is q by rank ... */
   getXtX(U1U1,U1,&q,&rank);
-  //for (p=S,ip=cS,i=0;ip<cS+m;p+= *ip *q,ip++,i++) /* work through all smooths */ 
+  /* for (p=S,ip=cS,i=0;ip<cS+m;p+= *ip *q,ip++,i++) */ /* work through all smooths */ 
   #ifdef SUPPORT_OPENMP
   #pragma omp parallel private(i,j,ip,bt,ct,c,r,p,p1,p2,p3,p4,xx,tid,VSi)
   #endif
@@ -381,7 +381,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
   pivot=(int *)R_chk_calloc((size_t)q,sizeof(int));
   /* Accuracy can be improved by pivoting on some occasions even though it's not going to be 
      `used' as such here - see Golub and Van Loan (1983) section 6.4. page 169 for reference. */
-  // mgcv_qr(X,&n,&q,pivot,tau);
+  /* mgcv_qr(X,&n,&q,pivot,tau);*/
   mgcv_pqr(X,&n,&q,pivot,tau,nt);
   /* Apply pivoting to the parameter space - this simply means reordering the rows of the S_i
      stored in S doing the same for H, and then unscrambling the parameter vector at the end 
@@ -413,7 +413,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
  
   y0=(double *)R_chk_calloc((size_t)n,sizeof(double));
   for (p=y,p1=y0;p<y+n;p++,p1++) *p1 = *p;
-  tp=1;i=1;//left=1;mgcv_qrqy(y0,X,tau,&n,&i,&q,&left,&tp); /* first q elements are y1 */
+  tp=1;i=1;/*left=1;mgcv_qrqy(y0,X,tau,&n,&i,&q,&left,&tp);*/ /* first q elements are y1 */
   mgcv_pqrqy(y0,X,tau,&n,&q,&i,&tp,nt);
   /* form y'y */
  

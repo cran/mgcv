@@ -39,7 +39,7 @@ gam.reparam <- function(rS,lsp,deriv)
                   d.tol = as.double(d.tol),
                   r.tol = as.double(r.tol),
                   fixed_penalty = as.integer(fixed.penalty))
-  S <- matrix(oo$S,q,q)
+  S <- matrix(oo$S,q,q)  
   S <- (S+t(S))*.5
   p <- abs(diag(S))^.5            ## by Choleski, p can not be zero if S +ve def
   p[p==0] <- 1                    ## but it's possible to make a mistake!!
@@ -160,10 +160,13 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
       T[1:ncol(rp$Qs),1:ncol(rp$Qs)] <- rp$Qs
       T <- U1%*%T ## new params b'=T'b old params
     
-      null.coef <- t(T)%*%null.coef
-
-      x <- x%*%T   ## model matrix
+      null.coef <- t(T)%*%null.coef  
+     
+      ## form x%*%T in parallel 
+      x <- .Call(C_mgcv_pmmult2,x,T,0,0,control$nthreads)
+      ## x <- x%*%T   ## model matrix 0(nq^2)
    
+
       rS <- list()
       for (i in 1:length(UrS)) {
         rS[[i]] <- rbind(rp$rS[[i]],matrix(0,Mp,ncol(rp$rS[[i]])))
@@ -406,7 +409,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
              }
              while (pdev -old.pdev > div.thresh)  
              { ## step halve until pdev <= old.pdev
-                if (ii > 200) 
+                if (ii > 100) 
                    stop("inner loop 3; can't correct step size")
                 ii <- ii + 1
                 start <- (start + coefold)/2 
@@ -725,8 +728,10 @@ gam.fit3.post.proc <- function(X,object) {
 ## get edf array and covariance matrices after a gam fit. 
 ## X is original model matrix
   Vb <- object$rV%*%t(object$rV)*object$scale ## Bayesian cov.
-  PKt <- object$rV%*%t(object$K)
-  F <- PKt%*%(sqrt(object$weights)*X)
+  # PKt <- object$rV%*%t(object$K)
+  PKt <- .Call(C_mgcv_pmmult2,object$rV,object$K,0,1,object$control$nthreads)
+  # F <- PKt%*%(sqrt(object$weights)*X)
+  F <- .Call(C_mgcv_pmmult2,PKt,sqrt(object$weights)*X,0,0,object$control$nthreads)
   edf <- diag(F) ## effective degrees of freedom
   edf1 <- 2*edf - rowSums(t(F)*F) ## alternative
   ## edf <- rowSums(PKt*t(sqrt(object$weights)*X))
@@ -736,8 +741,10 @@ gam.fit3.post.proc <- function(X,object) {
   ## get QR factor R of WX - more efficient to do this
   ## in gdi_1 really, but that means making QR of augmented 
   ## a two stage thing, so not clear cut...
-  qrx <- qr(sqrt(object$weights)*X,LAPACK=TRUE)
-  R <- qr.R(qrx);R[,qrx$pivot] <- R
+  #qrx <- qr(sqrt(object$weights)*X,LAPACK=TRUE,tol=0)
+  #R <- qr.R(qrx);R[,qrx$pivot] <- R
+  qrx <- pqr(sqrt(object$weights)*X,object$control$nthreads)
+  R <- pqr.R(qrx);R[,qrx$pivot] <- R
   ##bias = as.numeric(object$coefficients - F%*%object$coefficients)
   list(Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,hat=hat,F=F,R=R)
 }

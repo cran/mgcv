@@ -1,4 +1,4 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2011
+##  R routines for the package mgcv (c) Simon Wood 2000-2013
 ##  With contributions from Henric Nilsson
 
 Rrank <- function(R,tol=.Machine$double.eps^.9) {
@@ -1231,6 +1231,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
     object$scale <- object$scale.est;object$scale.estimated <- TRUE
   } 
   
+  object$control <- control
   mv <- gam.fit3.post.proc(G$X,object)
   object$Vp <- mv$Vb
   object$hat<-mv$hat
@@ -1248,7 +1249,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   object$sig2 <- object$scale
   
   object
-}
+} ## gam.outer
 
 get.null.coef <- function(G,start=NULL,etastart=NULL,mustart=NULL,...) {
 ## Get an estimate of the coefs corresponding to maximum reasonable deviance...
@@ -2159,22 +2160,22 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     names(newdata)->nn # new data names
     colnames(object$model)->mn # original names
     for (i in 1:length(newdata)) 
-    if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) # then so should newdata[[i]] be 
-    { newdata[[i]]<-factor(newdata[[i]],levels=levels(object$model[,nn[i]])) # set prediction levels to fit levels
+    if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) { # then so should newdata[[i]] be 
+      newdata[[i]]<-factor(newdata[[i]],levels=levels(object$model[,nn[i]])) # set prediction levels to fit levels
     }
 
     # split prediction into blocks, to avoid running out of memory
-    if (length(newdata)==1) newdata[[2]]<-newdata[[1]] # avoids data frame losing its labels and dimensions below!
-    if (is.null(dim(newdata[[1]]))) np<-length(newdata[[1]]) 
-    else np<-dim(newdata[[1]])[1] 
-    nb<-length(object$coefficients)
-    if (block.size<1) block.size <- np
-    n.blocks<-np%/%block.size
-    b.size<-rep(block.size,n.blocks)
-    last.block<-np-sum(b.size)
+    if (length(newdata)==1) newdata[[2]] <- newdata[[1]] # avoids data frame losing its labels and dimensions below!
+    if (is.null(dim(newdata[[1]]))) np <- length(newdata[[1]]) 
+    else np <- dim(newdata[[1]])[1] 
+    nb <- length(object$coefficients)
+    if (block.size < 1) block.size <- np
+    n.blocks <- np %/% block.size
+    b.size <- rep(block.size,n.blocks)
+    last.block <- np-sum(b.size)
     if (last.block>0) 
-    { n.blocks<-n.blocks+1  
-      b.size[n.blocks]<-last.block
+    { n.blocks <- n.blocks+1  
+      b.size[n.blocks] <- last.block
     }
   } else # no new data, just use object$model
   { np <- nrow(object$model)
@@ -2184,52 +2185,51 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   }
   # setup prediction arrays
   n.smooth<-length(object$smooth)
-  if (type=="lpmatrix")
-  { H <- matrix(0,np,nb)
-  } else
-  if (type=="terms"||type=="iterms")
-  { term.labels<-attr(object$pterms,"term.labels")
+  if (type=="lpmatrix") {
+    H <- matrix(0,np,nb)
+  } else if (type=="terms"||type=="iterms") { 
+    term.labels <- attr(object$pterms,"term.labels")
     if (is.null(attr(object,"para.only"))) para.only <-FALSE else
     para.only <- TRUE  # if true then only return information on parametric part
     n.pterms <- length(term.labels)
     fit <- array(0,c(np,n.pterms+as.numeric(!para.only)*n.smooth))
     if (se.fit) se <- fit
     ColNames <- term.labels
-  } else
-  { fit <- array(0,np)
+  } else {
+    fit <- array(0,np)
     if (se.fit) se <- fit
   }
-  stop<-0
+  stop <- 0
 
   Terms <- delete.response(object$pterms)
   s.offset <- NULL # to accumulate any smooth term specific offset
   any.soff <- FALSE # indicator of term specific offset existence
-  if (n.blocks>0) for (b in 1:n.blocks)  # work through prediction blocks
-  { start<-stop+1
-    stop<-start+b.size[b]-1
-    if (n.blocks==1) data <- newdata else data<-newdata[start:stop,]
+  if (n.blocks > 0) for (b in 1:n.blocks) { # work through prediction blocks
+    start <- stop+1
+    stop <- start + b.size[b] - 1
+    if (n.blocks==1) data <- newdata else data <- newdata[start:stop,]
     X <- matrix(0,b.size[b],nb)
     Xoff <- matrix(0,b.size[b],n.smooth) ## term specific offsets 
     ## implements safe prediction for parametric part as described in
     ## http://developer.r-project.org/model-fitting-functions.txt
-    if (new.data.ok)
-    { if (nd.is.mf) mf <- model.frame(data,xlev=object$xlevels) else
+    if (new.data.ok) {
+      if (nd.is.mf) mf <- model.frame(data,xlev=object$xlevels) else
       { mf <- model.frame(Terms,data,xlev=object$xlevels)
         if (!is.null(cl <- attr(object$pterms,"dataClasses"))) .checkMFClasses(cl,mf)
       } 
       Xp <- model.matrix(Terms,mf,contrasts=object$contrasts) 
-    } else 
-    { Xp <- model.matrix(Terms,object$model)
+    } else { 
+      Xp <- model.matrix(Terms,object$model)
       mf <- newdata # needed in case of offset, below
     }
     
-    if (object$nsdf) X[,1:object$nsdf]<-Xp
-    if (n.smooth) for (k in 1:n.smooth) 
-    { Xfrag <- PredictMat(object$smooth[[k]],data)		 
+    if (object$nsdf) X[,1:object$nsdf] <- Xp
+    if (n.smooth) for (k in 1:n.smooth) {
+      Xfrag <- PredictMat(object$smooth[[k]],data)		 
       X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para] <- Xfrag
       Xfrag.off <- attr(Xfrag,"offset") ## any term specific offsets?
       if (!is.null(Xfrag.off)) { Xoff[,k] <- Xfrag.off; any.soff <- TRUE }
-      if (type=="terms"||type=="iterms") ColNames[n.pterms+k]<-object$smooth[[k]]$label
+      if (type=="terms"||type=="iterms") ColNames[n.pterms+k] <- object$smooth[[k]]$label
     }
 
     if (!is.null(object$Xcentre)) { ## Apply any column centering
@@ -2238,7 +2238,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
 
     # have prediction matrix for this block, now do something with it
     if (type=="lpmatrix") { 
-      H[start:stop,]<-X
+      H[start:stop,] <- X
       if (any.soff) s.offset <- rbind(s.offset,Xoff)
     } else 
     if (type=="terms"||type=="iterms")
@@ -2248,14 +2248,14 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       for (i in 1:n.pterms)
       { ii <- ind[object$assign==i]
         fit[start:stop,i] <- X[,ii,drop=FALSE]%*%object$coefficients[ii]
-        if (se.fit) se[start:stop,i]<-
+        if (se.fit) se[start:stop,i] <-
         sqrt(rowSums((X[,ii,drop=FALSE]%*%object$Vp[ii,ii])*X[,ii,drop=FALSE]))
       }
 
       if (n.smooth&&!para.only) 
       { for (k in 1:n.smooth) # work through the smooth terms 
-        { first<-object$smooth[[k]]$first.para;last<-object$smooth[[k]]$last.para
-          fit[start:stop,n.pterms+k]<-X[,first:last,drop=FALSE]%*%object$coefficients[first:last] + Xoff[,k]
+        { first <- object$smooth[[k]]$first.para; last <- object$smooth[[k]]$last.para
+          fit[start:stop,n.pterms+k] <- X[,first:last,drop=FALSE] %*% object$coefficients[first:last] + Xoff[,k]
           if (se.fit) { # diag(Z%*%V%*%t(Z))^0.5; Z=X[,first:last]; V is sub-matrix of Vp
             if (type=="iterms"&& attr(object$smooth[[k]],"nCons")>0) { ## termwise se to "carry the intercept"
               X1 <- matrix(object$cmX,nrow(X),ncol(X),byrow=TRUE)
@@ -2276,24 +2276,30 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         # retain only terms of order 1 - this is to make termplot work
         order <- attr(object$pterms,"order")
         term.labels <- term.labels[order==1]
-        fit <- as.matrix(as.matrix(fit)[,order==1])
+        ## fit <- as.matrix(as.matrix(fit)[,order==1])
+        fit <- fit[,order==1,drop=FALSE]
         colnames(fit) <- term.labels
-        if (se.fit) { se <- as.matrix(as.matrix(se)[,order==1])
+        if (se.fit) { ## se <- as.matrix(as.matrix(se)[,order==1])
+        se <- se[,order==1,drop=FALSE]
         colnames(se) <- term.labels } 
       }
-      if (!is.null(terms)) # return only terms requested via `terms'
-      { if (sum(!(terms %in%colnames(fit)))) 
-        warning("non-existent terms requested - ignoring")
-        else { names(term.labels) <- term.labels
-          term.labels <- term.labels[terms]  # names lost if only one col
-          fit <- as.matrix(as.matrix(fit)[,terms])
-          colnames(fit) <- term.labels
-          if (se.fit) {se <- as.matrix(as.matrix(se)[,terms])
-          colnames(se) <- term.labels}
+      if (!is.null(terms)) { # return only terms requested via `terms'
+        if (sum(!(terms %in%colnames(fit)))) 
+          warning("non-existent terms requested - ignoring")
+        else { 
+          #names(term.labels) <- term.labels
+          #term.labels <- term.labels[terms]  # names lost if only one col
+          ##fit <- as.matrix(as.matrix(fit)[,terms])
+          fit <- fit[,terms,drop=FALSE]
+          #colnames(fit) <- term.labels
+          if (se.fit) {## se <- as.matrix(as.matrix(se)[,terms])
+            se <- se[,terms,drop=FALSE]
+            #colnames(se) <- term.labels
+          }
         }
       }
-    } else # "link" or "response"
-    { k<-attr(attr(object$model,"terms"),"offset")
+    } else { # "link" or "response"
+      k<-attr(attr(object$model,"terms"),"offset")
       fit[start:stop]<-X%*%object$coefficients + rowSums(Xoff)
       if (!is.null(k)) fit[start:stop]<-fit[start:stop]+model.offset(mf) + rowSums(Xoff)
       if (se.fit) se[start:stop]<-sqrt(rowSums((X%*%object$Vp)*X))

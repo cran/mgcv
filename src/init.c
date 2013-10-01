@@ -7,6 +7,11 @@
 #include <R_ext/Rdynload.h>
 #include "mgcv.h"
 
+R_CallMethodDef CallMethods[] = {
+  {"mgcv_pmmult2", (DL_FUNC) &mgcv_pmmult2,5},
+  {"mgcv_Rpiqr", (DL_FUNC) &mgcv_Rpiqr,4}, 
+  {NULL, NULL, 0}
+};
 
 R_CMethodDef CEntries[] = {
     {"RMonoCon", (DL_FUNC) &RMonoCon, 7},
@@ -18,10 +23,10 @@ R_CMethodDef CEntries[] = {
     {"MinimumSeparation", (DL_FUNC) &MinimumSeparation, 7},
     {"magic", (DL_FUNC) &magic, 19},
     {"mgcv_mmult", (DL_FUNC) &mgcv_mmult,8},
-    {"mgcv_pmmult", (DL_FUNC) &mgcv_mmult,9},
+    {"mgcv_pmmult", (DL_FUNC) &mgcv_pmmult,9},
     {"gdi1",(DL_FUNC) &gdi1,46},
+    {"gdi2",(DL_FUNC) &gdi2,41},
     {"R_cond",(DL_FUNC) &R_cond,5} ,
-    {"pls_fit",(DL_FUNC)&pls_fit,10},
     {"pls_fit1",(DL_FUNC)&pls_fit1,12},
     {"tweedious",(DL_FUNC)&tweedious,8},
     {"psum",(DL_FUNC)&psum,4},
@@ -56,6 +61,6 @@ R_CMethodDef CEntries[] = {
 
 void R_init_mgcv(DllInfo *dll)
 {
-    R_registerRoutines(dll, CEntries, NULL, NULL, NULL);
+    R_registerRoutines(dll, CEntries, CallMethods, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

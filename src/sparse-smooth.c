@@ -240,7 +240,7 @@ void k_order(int *k,int *ind,double *x,int *n) {
       ind[l+1] = ind[ri];
       ind[ri] = ip;
       /* Now select the partition in which kth largest must lie, by setting new end points */
-      if (ri >= *k ) r = ri - 1; /*else l=li;*//* if (ri <= *k + 1)  l = li;*/ /* had else l=li; here */
+      if (ri >= *k ) r = ri - 1; /*else l=li;*/ /* if (ri <= *k + 1)  l = li;*/ /* had else l=li; here */
       if (ri <= *k ) l = li; 
    } else { /* the partition can only contain 1 or 2 points */
       if (r == l+1 && x[ind[r]] < x[ind[l]]) { /* contains two points, but in wrong order */

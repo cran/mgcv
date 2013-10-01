@@ -153,7 +153,8 @@ nmax <- 100
 knots <- data.frame(v=rep(seq(-.5,3,by=.5),4),
                     w=rep(c(-.6,-.3,.3,.6),rep(8,4)))
 ## Simulate some fitting data, inside boundary...
-n<-1000
+set.seed(0)
+n<-600
 v <- runif(n)*5-1;w<-runif(n)*2-1
 y <- fs.test(v,w,b=1)
 names(fsb[[1]]) <- c("v","w")
@@ -305,7 +306,7 @@ n <- length(x)
 z <- f1(x,y) + rnorm(n)*.1
 
 ## Fit a soap film smooth to the noisy data
-nmax <- 100
+nmax <- 60
 b <- gam(z~s(x,y,k=c(30,15),bs="so",xt=list(bnd=bnd,nmax=nmax)),knots=knots,method="REML")
 plot(b) ## default plot
 vis.gam(b,plot.type="contour") ## prettier version

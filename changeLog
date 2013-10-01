@@ -1,6 +1,17 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-27
+
+* Further multi-threading in gam fits - final two leading order matrix
+  operations parallelized using openMP. 
+
+* Export of smooth.construct.t2.smooth.spec and Predict.matrix.t2.smooth, 
+  and Rrank.
+
+* Fix of of missing [,,drop=FALSE] in predict.gam that could cause problems 
+  with single row prediction when 'terms' supplied (thanks Yang Yang).
+
 1.7-26
 
 * Namespace fixes.
