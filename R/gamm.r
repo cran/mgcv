@@ -337,178 +337,6 @@ summary.pdIdnot <-
 
 ### end of pdIdnot class
 
-
-gamm.setup0<-function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
-                     parametric.only=FALSE,absorb.cons=FALSE)
-## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
-## needed for a gamm fit.
-## NOTE: lme can't deal with offset terms.
-## There is an implicit assumption that any rank deficient penalty does not penalize 
-## the constant term in a basis. 
-## 1. Calls gam.setup, as for a gam to produce object G suitable for estimating a gam.
-## 2. Works through smooth list, G$smooth, modifying so that... 
-##    i) Smooths are reparameterized to have identity, or tensor, penalty matrices,
-##       and separated fixed and random components with transform information 
-##       stored in the smooth.
-##   ii) The smooth stores the index range of its coefficients in overall
-##       fixed and r.e. coef vectors.
-##   iii) pdIdnot or pdTens terms are stored in a separate `G$random' list, which
-##        refers, by name, to r.e. model matrices stored directly in G.
-##   iv) an overall fixed effect matrix X is accumulated.   
-{ 
-  ## first simply call `gam.setup'....
-
-  G <- gam.setup(formula,pterms,data=data,knots=knots,sp=NULL,
-                 min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,gamm.call=TRUE)
- 
-  if (!is.null(G$L)) stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
-  # now perform re-parameterization...
-
-  first.f.para<-G$nsdf+1
-  first.r.para<-1
- 
-  G$Xf <- G$X # full GAM model matrix, treating smooths as fixed effects
-  random<-list()
-  random.i<-0
-  
-  if (G$nsdf>0) ind <- 1:G$nsdf else ind <- rep(0,0)  
-
-  X <- G$X[,ind,drop=FALSE] # accumulate fixed effects into here
-
-  xlab <- rep("",0)
-  
-  ## code to deal with t2 smooths, by splitting up into single terms
-  if (G$m) {
-    sme <- expand.t2.smooths(G$smooth)
-    if (is.null(sme)) G$original.smooth <- NULL else {
-      G$original.smooth <- G$smooth
-      G$smooth <- sme ## G's smooth list is replaced by expanded version, until some time after model fitting is complete
-      rm(sme)
-    }
-    ## G$m is always the length of G$smooth here...
-    G$m <- length(G$smooth)
-  }
-
-
-  if (G$m) for (i in 1:G$m) {
-    sm <- G$smooth[[i]]
-    sm$X <- G$X[,sm$first.para:sm$last.para,drop=FALSE]
-    if (inherits(sm,"tensor.smooth"))
-    { if (sum(sm$fx)==length(sm$fx)) sm$fixed <- TRUE
-      else 
-      { sm$fixed <- FALSE
-        if (sum(sm$fx)!=0) warning("gamm can not fix only some margins of tensor product.")
-      }
-    } 
-    if (!sm$fixed) random.i <- random.i+1
-   
-    ZSZ <- list()
-    if (!sm$fixed) 
-    for (l in 1:length(sm$S)) ZSZ[[l]]<-sm$S[[l]]
-    XZ <- sm$X
-    k <- ncol(sm$X);j<-0
-   
-    if (!sm$fixed) 
-    { sm$ZSZ <- ZSZ            # store these too - for construction of Vp matrix
-      if (inherits(sm,"tensor.smooth")) { 
-        # tensor product term - need to find null space from sum of penalties
-        sum.ZSZ <- ZSZ[[1]]/mean(abs(ZSZ[[1]]))
-        null.rank <- ncol(sm$margin[[1]]$X)-sm$margin[[1]]$rank
-        bs.dim <- sm$margin[[1]]$bs.dim
-        if (length(ZSZ)>1) for (l in 2:length(ZSZ)) 
-        { sum.ZSZ <- sum.ZSZ + ZSZ[[l]]/mean(abs(ZSZ[[l]]))
-          dfl <- ncol(sm$margin[[l]]$X) ## actual df of term (`df' may not be set by constructor)
-          null.rank <- ## the rank of the null space of the penalty 
-                       ## null.rank * (sm$margin[[l]]$bs.dim-sm$margin[[l]]$rank)
-                       null.rank * (dfl-sm$margin[[l]]$rank) 
-          bs.dim <- bs.dim*dfl
-        }
-        null.rank <- null.rank - bs.dim + sm$df
-        sum.ZSZ <- (sum.ZSZ+t(sum.ZSZ))/2 # ensure symmetry
-        ev <- eigen(sum.ZSZ,symmetric=TRUE)
-        mult.pen <- TRUE
-      } else {           # regular s() term
-        ZSZ[[1]] <- (ZSZ[[1]]+t(ZSZ[[1]]))/2
-        ev <- eigen(ZSZ[[1]],symmetric=TRUE)
-        null.rank <- sm$df - sm$rank
-        mult.pen <- FALSE
-      }
-      p.rank <- ncol(XZ) - null.rank
-      if (p.rank>ncol(XZ)) p.rank <- ncol(XZ)
-      U <- ev$vectors
-      D <- ev$values[1:p.rank]
-      if (sum(D<=0)) stop(
-      "Tensor product penalty rank appears to be too low: please email Simon.Wood@R-project.org with details.")
-      D <- 1/sqrt(D)
-      XZU <- XZ%*%U
-      if (p.rank<k-j) Xf <- XZU[,(p.rank+1):(k-j),drop=FALSE]
-      else Xf <- matrix(0,nrow(sm$X),0) # no fixed terms left
-      if (mult.pen) { 
-        Xr <- XZU[,1:p.rank] # tensor product case
-        for (l in 1:length(ZSZ))   # transform penalty explicitly
-        { ZSZ[[l]] <- (t(U)%*%ZSZ[[l]]%*%U)[1:p.rank,1:p.rank]
-          ZSZ[[l]] <- (ZSZ[[l]]+t(ZSZ[[l]]))/2
-        }
-      }
-      else Xr<-t(t(XZU[,1:p.rank])*D)
-      n.para <- k-j-p.rank # indices for fixed parameters
-      sm$first.f.para <- first.f.para
-      first.f.para <- first.f.para+n.para
-      sm$last.f.para <- first.f.para-1
-      n.para <- ncol(Xr) # indices for random parameters
-      sm$first.r.para <- first.r.para
-      first.r.para <- first.r.para+n.para
-      sm$last.r.para <- first.r.para-1
-    
-      sm$D <- D;sm$U <- U # information (with qrc) for backtransforming to original space 
-
-      term.name <- paste("Xr.",random.i,sep="")
-      term.name <- new.name(term.name,names(data))
-      form <- as.formula(paste("~",term.name,"-1",sep=""))
-      if (mult.pen)  # tensor product case
-      { attr(form,"S") <- ZSZ
-        random[[random.i]] <- pdTens(form)
-      } else  # single penalty smooth
-      random[[random.i]] <- pdIdnot(form)
-      names(random)[random.i] <- term.name
-      eval(parse(text=paste("G$",term.name,"<-Xr",sep="")))
-    } else { # term is fixed, so model matrix appended to fixed matrix
-      Xf <- XZ # whole term goes to fixed 
-      n.para <- ncol(Xf)       # now define where the parameters of this term live 
-      sm$first.f.para <- first.f.para
-      first.f.para <- first.f.para+n.para
-      sm$last.f.para <- first.f.para-1
-    }
-    ## now add appropriate column names to Xf.
-    ## without these, summary.lme will fail
-    
-    if (ncol(Xf)) {
-      Xfnames <- rep("",ncol(Xf)) 
-      k <- length(xlab)+1
-      for (j in 1:ncol(Xf)) {
-        xlab[k] <- Xfnames[j] <-
-        new.name(paste(sm$label,"Fx",j,sep=""),xlab)
-        k <- k + 1
-      } 
-      colnames(Xf) <- Xfnames
-    }
-
-    X <- cbind(X,Xf) # add fixed model matrix to overall X
-  
-    sm$X <- NULL
-  
-    G$smooth[[i]] <- sm  ## replace smooth object with transformed version 
-  }
- 
-  G$random <- random
-  G$X <- X  ## fixed effects model matrix
- 
-  G
-} ## end of gamm.setup0
-
-
-
-
 smooth2random <- function(object,vnames,type=1) UseMethod("smooth2random")
 
 smooth2random.fs.interaction <- function(object,vnames,type=1) {
@@ -783,7 +611,8 @@ smooth2random.tensor.smooth <- function(object,vnames,type=1) {
 
 
 
-gamm.setup <- function(formula,pterms,data=stop("No data supplied to gamm.setup"),knots=NULL,
+gamm.setup <- function(formula,pterms,
+                      data=stop("No data supplied to gamm.setup"),knots=NULL,
                      parametric.only=FALSE,absorb.cons=FALSE)
 ## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 ## needed for a gamm fit.
@@ -803,7 +632,8 @@ gamm.setup <- function(formula,pterms,data=stop("No data supplied to gamm.setup"
 { 
   ## first simply call `gam.setup'....
 
-  G <- gam.setup(formula,pterms,data=data,knots=knots,sp=NULL,
+  G <- gam.setup(formula,pterms,
+                 data=data,knots=knots,sp=NULL,
                  min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,gamm.call=TRUE)
  
   if (!is.null(G$L)) stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
@@ -1385,12 +1215,20 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     wisvf <- try(inherits(weights,"varFunc"),silent=TRUE)
     if (inherits(wisvf,"try-error")) wisvf <- FALSE
     if (wisvf) { ## collect its variables
-      vf.for<-attr(weights,"formula")
-      if (!is.null(vf.for)) vf.vars<-all.vars(vf.for)
+      if (inherits(weights,"varComb")) { ## actually a list of varFuncs
+        vf.vars <- rep("",0)
+        for (i in 1:length(weights)) {
+          vf.vars <- c(vf.vars,all.vars(attr(weights[[i]],"formula")))
+        }
+        vf.vars <- unique(vf.vars)
+      } else { ## single varFunc
+        vf.for<-attr(weights,"formula")
+        if (!is.null(vf.for)) vf.vars<-all.vars(vf.for)
+      }
     } else vf.vars <- NULL
 
     # create model frame.....
-    gp<-interpret.gam(formula) # interpret the formula 
+    gp <- interpret.gam(formula) # interpret the formula 
     ##cl<-match.call() # call needed in gamm object for update to work
     mf <- match.call(expand.dots=FALSE)
     mf$formula <- gp$fake.formula
@@ -1431,7 +1269,6 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     pmf$formula <- gp$pf
     pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part 
-
     pTerms <- attr(pmf,"terms")
 
     if (is.character(family)) family<-eval(parse(text=family))
@@ -1440,7 +1277,9 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
   
     # now call gamm.setup 
 
-    G <- gamm.setup(gp,pterms=pTerms,data=mf,knots=knots,parametric.only=FALSE,absorb.cons=TRUE)
+    G <- gamm.setup(gp,pterms=pTerms,
+                    data=mf,knots=knots,parametric.only=FALSE,absorb.cons=TRUE)
+    #G$pterms <- pTerms
     G$var.summary <- var.summary    
     mf <- G$data
 
@@ -1524,7 +1363,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     # now fake a gam object 
     
     object <- list(model=mf,formula=formula,smooth=G$smooth,nsdf=G$nsdf,family=family,
-                 df.null=nrow(G$X),y=G$y,terms=gam.terms,pterms=pTerms,xlevels=G$xlevels,
+                 df.null=nrow(G$X),y=G$y,terms=gam.terms,pterms=G$pterms,xlevels=G$xlevels,
                  contrasts=G$contrasts,assign=G$assign,na.action=attr(mf,"na.action"),
                  cmX=G$cmX,var.summary=G$var.summary,scale.estimated=TRUE)
     

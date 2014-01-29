@@ -326,14 +326,31 @@ void crspl(double *x,int *n,double *xk, int *nk,double *X,double *S, double *F,i
 
 
 
+void MinimumSeparation(double *x,int *n, int *d,double *t,int *m,double *dist) {
+/* For each of n ppoints point x[i,] calculates the minimum Euclidian distance 
+   to a point in m by d matrix t. These distances are stored in dist. 
+*/
+  int one=1,*ni;
+  kdtree_type kd;
+  kd_tree(t,m,d,&kd); /* build kd tree for target points */
+  ni = (int *)R_chk_calloc((size_t)*n,sizeof(int));
+  k_newn_work(x,kd,t,dist,ni,n,m,d,&one);
+  // for (i=0;i<*n;i++) {
+  //  k = closest(&kd,t,x + i * *d,*m,&j,-1); /* index of nearest neighbour of x[i,] */
+  //  dist[i] = xidist(x + i * *d,t,k,*d, *m); /* distance to this nearest neighbour */
+  //}
+  R_chk_free(ni);
+  free_kdtree(kd);
+}
 
-
-void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist)
+void MinimumSeparation_old(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist)
 /* For each point gx[i],gy[i] calculates the minimum  Euclidian distance to a point in dx[], dy[].
    These distances are stored in dist. 
+   Aweful routine:  O(gn * dn) cost!! 
 */
 
-{ double sep,xx,yy,*dum,*xdum,*ydum;
+{ 
+  double sep,xx,yy,*dum,*xdum,*ydum;
   int n,m;
   n = *gn;m = *dn;
   for (dum=dist;dum < dist + n; dum++,gx++,gy++)

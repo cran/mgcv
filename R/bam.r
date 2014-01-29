@@ -31,16 +31,29 @@ chol2qr <- function(XX,Xy) {
 ## takes X'X and X'y and returns R and f
 ## equivalent to qr update. Uses simple
 ## regularization if XX not +ve def. 
+
+  #d <- diag(XX)
+  #ind <- d>0
+  #d[!ind] <- 1;d[ind] <- 1/sqrt(d[ind])
+  #XX <- t(d*t(d*XX)) ## diagonal pre-conditioning
+
   XXeps <- norm(XX)*.Machine$double.eps^.9
   n <- ncol(XX)
   for (i in 0:20) {
     ok <- TRUE
-    R <- try(chol(XX+diag(n)*XXeps*i),silent=TRUE) ## R'R = X'X
+    R <- try(chol(XX+diag(n)*XXeps*i,pivot=TRUE),silent=TRUE) ## R'R = X'X
     if (inherits(R,"try-error")) ok <- FALSE else {
-      f <- try(forwardsolve(t(R),Xy),silent=TRUE)
+      ipiv <- piv <- attr(R,"pivot") 
+      #f <- try(forwardsolve(t(R),(Xy*d)[piv]),silent=TRUE) 
+      f <- try(forwardsolve(t(R),Xy[piv]),silent=TRUE)
       if (inherits(f,"try-error")) ok <- FALSE
     }
-    if (ok) break; ## success
+    if (ok) { 
+      ipiv[piv] <- 1:ncol(R)
+      #R <- t(t(R[,ipiv])/d)
+      R <- R[,ipiv]
+      break; ## success
+    }
   }
   if (i==20 && !ok) stop("Choleski based method failed, switch to QR")
   list(R=R,f=f)
@@ -110,8 +123,13 @@ qr.up <- function(arg) {
 mini.mf <-function(mf,chunk.size) {
 ## takes a model frame and produces a representative subset of it, suitable for 
 ## basis setup.
+  ## first count the minimum number of rows required for representiveness
+  mn <- 0
+  for (j in 1:length(mf)) mn <- mn + if (is.factor(mf[[j]])) length(levels(mf[[j]])) else 2
+  if (chunk.size < mn) chunk.size <- mn
   n <- nrow(mf)
-  if (n<=chunk.size) return(mf)
+  if (n <= chunk.size) return(mf)
+
   seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
   if (inherits(seed,"try-error")) {
      runif(1)
@@ -119,25 +137,60 @@ mini.mf <-function(mf,chunk.size) {
   }
   kind <- RNGkind(NULL)
   RNGkind("default", "default")
-  set.seed(66)
+  set.seed(66)  
+  ## randomly sample from original frame...
   ind <- sample(1:n,chunk.size)
-  RNGkind(kind[1], kind[2])
-  assign(".Random.seed", seed, envir = .GlobalEnv)
-  mf0 <- mf[ind,] ## random sample of rows
-  ## now need to ensure that max and min are in sample for each element of mf0
-  ## note that min and max might occur twice, but this shouldn't matter (and
-  ## is better than min overwriting max, for example)
+  mf0 <- mf[ind,]
+  ## ... now need to ensure certain sorts of representativeness
+
+  ## work through elements collecting the rows containing 
+  ## max and min for each variable, and a random row for each 
+  ## factor level....
+
+  ind <- sample(1:n,n,replace=FALSE) ## randomized index for stratified sampling w.r.t. factor levels
+  fun <- function(X,fac,ind) ind[fac[ind]==X][1] ## stratified sampler
+  k <- 0 
   for (j in 1:length(mf)) if (is.numeric(mf0[[j]])) {
     if (is.matrix(mf0[[j]])) { ## find row containing minimum
       j.min <- min((1:n)[as.logical(rowSums(mf[[j]]==min(mf[[j]])))])
       j.max <- min((1:n)[as.logical(rowSums(mf[[j]]==max(mf[[j]])))])
-      mf0[[j]][1,] <- mf[[j]][j.min,]
-      mf0[[j]][2,] <- mf[[j]][j.max,] 
     } else { ## vector
-      mf0[[j]][1] <- min(mf[[j]])
-      mf0[[j]][2] <- max(mf[[j]]) 
+      j.min <- min(which(mf[[j]]==min(mf[[j]])))
+      j.max <- min(which(mf[[j]]==max(mf[[j]])))
     }
+    k <- k + 1; mf0[k,] <- mf[j.min,]
+    k <- k + 1; mf0[k,] <- mf[j.max,] 
+  } else if (is.factor(mf[[j]])) { ## factor variable...
+    ## randomly sample one row from each factor level...
+    find <- apply(X=as.matrix(levels(mf[[j]])),MARGIN=1,FUN=fun,fac=mf[[j]],ind=ind)
+    nf <- length(find)
+    mf0[(k+1):(k+nf),] <- mf[find,]
+    k <- k + nf
   }
+
+  RNGkind(kind[1], kind[2])
+  assign(".Random.seed", seed, envir = .GlobalEnv)
+
+## problems with the following are...
+## 1. you can produce model frame rows that are wholly un-representative of the 
+##    data for multi dimensional smooths this way, by pairing extreme values
+##    with values of other variables that they never occur near.
+## 2. Nothing is done to ensure that all factor levels are present.  
+#  mf0 <- mf[ind,] ## random sample of rows
+  ## now need to ensure that max and min are in sample for each element of mf0
+  ## note that min and max might occur twice, but this shouldn't matter (and
+  ## is better than min overwriting max, for example)
+#  for (j in 1:length(mf)) if (is.numeric(mf0[[j]])) {
+#    if (is.matrix(mf0[[j]])) { ## find row containing minimum
+#      j.min <- min((1:n)[as.logical(rowSums(mf[[j]]==min(mf[[j]])))])
+#      j.max <- min((1:n)[as.logical(rowSums(mf[[j]]==max(mf[[j]])))])
+#      mf0[[j]][1,] <- mf[[j]][j.min,]
+#      mf0[[j]][2,] <- mf[[j]][j.max,] 
+#    } else { ## vector
+#      mf0[[j]][1] <- min(mf[[j]])
+#      mf0[[j]][2] <- max(mf[[j]]) 
+#    }
+#  }
   mf0
 }
 
@@ -346,7 +399,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 
       if (method=="GCV.Cp") {
          fit <- magic(qrx$f,qrx$R,G$sp,G$S,G$off,L=G$L,lsp0=G$lsp0,rank=G$rank,
-                      H=G$H,C=G$C,gamma=gamma,scale=scale,gcv=(scale<=0),
+                      H=G$H,C=matrix(0,0,ncol(qrx$R)),     ##C=G$C,
+                      gamma=gamma,scale=scale,gcv=(scale<=0),
                       extra.rss=rss.extra,n.score=nobs+nobs.extra)
  
          post <- magic.post.proc(qrx$R,fit,qrx$f*0+1) 
@@ -555,7 +609,8 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
 
       if (method=="GCV.Cp") {
          fit <- magic(qrx$f,qrx$R,G$sp,G$S,G$off,L=G$L,lsp0=G$lsp0,rank=G$rank,
-                      H=G$H,C=G$C,gamma=gamma,scale=scale,gcv=(scale<=0),
+                      H=G$H,C= matrix(0,0,ncol(qrx$R)), ##C=G$C,
+                      gamma=gamma,scale=scale,gcv=(scale<=0),
                       extra.rss=rss.extra,n.score=G$n)
  
          post <- magic.post.proc(qrx$R,fit,qrx$f*0+1) 
@@ -931,7 +986,8 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
  
    if (method=="GCV.Cp") {
      fit <- magic(qrx$f,qrx$R,G$sp,G$S,G$off,L=G$L,lsp0=G$lsp0,rank=G$rank,
-                H=G$H,C=G$C,gamma=gamma,scale=scale,gcv=(scale<=0),
+                H=G$H,C=matrix(0,0,ncol(qrx$R)),  ##C=G$C,
+                gamma=gamma,scale=scale,gcv=(scale<=0),
                 extra.rss=rss.extra,n.score=n)
  
      post <- magic.post.proc(qrx$R,fit,qrx$f*0+1) 
@@ -1088,10 +1144,10 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     method <- "REML"
     warning("sparse=TRUE not supported with fast REML, reset to REML.")
   }
-  gp<-interpret.gam(formula) # interpret the formula 
-  cl<-match.call() # call needed in gam object for update to work
-  mf<-match.call(expand.dots=FALSE)
-  mf$formula<-gp$fake.formula 
+  gp <- interpret.gam(formula) # interpret the formula 
+  cl <- match.call() # call needed in gam object for update to work
+  mf <- match.call(expand.dots=FALSE)
+  mf$formula <- gp$fake.formula 
   mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
   mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$sparse <- mf$cluster <-
   mf$use.chol <- mf$samfrac <- mf$...<-NULL
@@ -1103,6 +1159,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part
   pterms <- attr(pmf,"terms") ## pmf only used for this
   rm(pmf);
+
   if (gc.level>0) gc()
 
   mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
@@ -1131,7 +1188,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     
   if (sparse) sparse.cons <- 2 else sparse.cons <- -1
 
-  G <- gam.setup(gp,pterms=pterms,data=mf0,knots=knots,sp=sp,min.sp=min.sp,
+  G <- gam.setup(gp,pterms=pterms,
+                 data=mf0,knots=knots,sp=sp,min.sp=min.sp,
                  H=NULL,absorb.cons=TRUE,sparse.cons=sparse.cons,select=FALSE,
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
@@ -1141,7 +1199,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
   G$var.summary <- var.summary
   G$family <- family
-  G$terms<-terms;G$pterms<-pterms
+  G$terms<-terms;##G$pterms<-pterms
   pvars <- all.vars(delete.response(terms))
   G$pred.formula <- if (length(pvars)>0) reformulate(pvars) else NULL
 
@@ -1153,12 +1211,12 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   G$offset <- model.offset(mf)  
   if (is.null(G$offset)) G$offset <- rep(0,n)
 
-  if (ncol(G$X)>nrow(mf)+nrow(G$C)) stop("Model has more coefficients than data")
+  if (ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data")      ##+nrow(G$C)) stop("Model has more coefficients than data")
  
   G$cl<-cl;
   G$am <- am
      
-  G$min.edf<-G$nsdf-dim(G$C)[1]
+  G$min.edf<-G$nsdf #-dim(G$C)[1]
   if (G$m) for (i in 1:G$m) G$min.edf<-G$min.edf+G$smooth[[i]]$null.space.dim
 
   G$formula<-formula
@@ -1374,7 +1432,8 @@ bam.update <- function(b,data,chunk.size=10000) {
     if (b$method=="GCV") scale <- -1 else scale = b$sig2
    
     fit <- magic(b$qrx$f,b$qrx$R,b$sp,b$G$S,b$G$off,L=b$G$L,lsp0=b$G$lsp0,rank=b$G$rank,
-               H=b$G$H,C=b$G$C,gamma=b$gamma,scale=scale,gcv=(scale<=0),
+               H=b$G$H,C= matrix(0,0,ncol(b$qrx$R)),##C=b$G$C,
+               gamma=b$gamma,scale=scale,gcv=(scale<=0),
                extra.rss=rss.extra,n.score=n)
  
     post <- magic.post.proc(b$qrx$R,fit,b$qrx$f*0+1) 

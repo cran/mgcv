@@ -2,6 +2,23 @@
 ## Many of the following are simple wrappers for C functions, used largely 
 ## for testing purposes
 
+pinv <- function(X,svd=FALSE) {
+## a pseudoinverse for n by p, n>p matrices
+  qrx <- qr(X,tol=0,LAPACK=TRUE)
+  R <- qr.R(qrx);Q <- qr.Q(qrx) 
+  rr <- Rrank(R) 
+  if (svd&&rr<ncol(R)) {
+    piv <- 1:ncol(X); piv[qrx$pivot] <- 1:ncol(X)
+    er <- svd(R[,piv])
+    d <- er$d*0;d[1:rr] <- 1/er$d[1:rr]
+    X <- Q%*%er$u%*%(d*t(er$v))
+  } else {
+    Ri <- R*0 
+    Ri[1:rr,1:rr] <- backsolve(R[1:rr,1:rr],diag(rr))
+    X[,qrx$pivot] <- Q%*%t(Ri)
+  }
+  X
+} ## end pinv
 
 pqr2 <- function(x,nt=1) {
 ## Function for parallel pivoted qr decomposition of a matrix using LAPACK

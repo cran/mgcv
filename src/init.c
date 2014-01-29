@@ -10,6 +10,7 @@
 R_CallMethodDef CallMethods[] = {
   {"mgcv_pmmult2", (DL_FUNC) &mgcv_pmmult2,5},
   {"mgcv_Rpiqr", (DL_FUNC) &mgcv_Rpiqr,4}, 
+  { "mgcv_tmm",(DL_FUNC)&mgcv_tmm,5},
   {NULL, NULL, 0}
 };
 
@@ -20,15 +21,15 @@ R_CMethodDef CEntries[] = {
     {"construct_tprs", (DL_FUNC) &construct_tprs, 13},
     {"crspl", (DL_FUNC) &crspl,8},
     {"predict_tprs", (DL_FUNC) &predict_tprs, 12},
-    {"MinimumSeparation", (DL_FUNC) &MinimumSeparation, 7},
+    {"MinimumSeparation", (DL_FUNC) &MinimumSeparation, 6},
     {"magic", (DL_FUNC) &magic, 19},
     {"mgcv_mmult", (DL_FUNC) &mgcv_mmult,8},
     {"mgcv_pmmult", (DL_FUNC) &mgcv_pmmult,9},
     {"gdi1",(DL_FUNC) &gdi1,46},
-    {"gdi2",(DL_FUNC) &gdi2,41},
+    {"gdi2",(DL_FUNC) &gdi2,43},
     {"R_cond",(DL_FUNC) &R_cond,5} ,
     {"pls_fit1",(DL_FUNC)&pls_fit1,12},
-    {"tweedious",(DL_FUNC)&tweedious,8},
+    {"tweedious",(DL_FUNC)&tweedious,13},
     {"psum",(DL_FUNC)&psum,4},
     {"get_detS2",(DL_FUNC)&get_detS2,12},
     {"get_stableS",(DL_FUNC)&get_stableS,14},

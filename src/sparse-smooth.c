@@ -51,23 +51,6 @@
 
 */
 
-typedef struct { /* defines structure for kd-tree box */
-  double *lo,*hi;    /* box defining co-ordinates */
-  int parent,child1,child2, /* indices of parent and 2 offspring */
-      p0,p1;         /* indices of first and last point in box */
-} box_type; 
-
-
-
-typedef struct {
-  box_type *box;
-  int *ind, /* index of points in coordinate matrix which tree relates to */
-      *rind, /* where is ith row of X in ind? */
-      n_box, /* number of boxes */
-      d, /* dimension */
-    n; /* number of points that tree relates to */
-  double huge; /* number indicating an open boundary */
-} kdtree_type;
 
 
 void kd_sizes(kdtree_type kd,int *ni,int *nd) {
@@ -490,6 +473,7 @@ int closest(kdtree_type *kd, double *X,double *x,int n,int *ex,int nex) {
    with co-ordinates given by x. kd->d is dimension. n is number
    of rows in X. rows of X are points in tree. 
    if nex>0 then ex is a list of points to exclude.
+   NOTE: may be buggy...
 */
   int bx,ni,i,j,k,d,todo[100],bi,*ind,item,ok=0;
   double nd,d1,dix; 

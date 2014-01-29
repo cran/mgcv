@@ -189,8 +189,6 @@ cSplineDes <- function (x, knots, ord = 4)
 }
 
 
-
-
 get.var <- function(txt,data,vecMat = TRUE)
 # txt contains text that may be a variable name and may be an expression 
 # for creating a variable. get.var first tries data[[txt]] and if that 
@@ -214,16 +212,18 @@ get.var <- function(txt,data,vecMat = TRUE)
 ## functions for use in `gam(m)' formulae ......
 ################################################
 
-ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NULL,sp=NULL) {
+ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL) {
 ## function to use in gam formula to specify a te type tensor product interaction term
 ## ti(x) + ti(y) + ti(x,y) is *much* preferable to te(x) + te(y) + te(x,y), as ti(x,y)
 ## automatically excludes ti(x) + ti(y). Uses general fact about interactions that 
 ## if identifiability constraints are applied to main effects, then row tensor product
 ## of main effects gives identifiable interaction...
+## mc allows selection of which marginals to apply constraints to. Default is all.
   by.var <- deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
   object <- te(...,k=k,bs=bs,m=m,d=d,fx=fx,np=np,xt=xt,id=id,sp=sp)
   object$inter <- TRUE
   object$by <- by.var
+  object$mc <- mc
   substr(object$label,2,2) <- "i"
   object
 }
@@ -503,11 +503,12 @@ s <- function (..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL)
 ## Type 1 tensor product methods start here (i.e. Wood, 2006)
 #############################################################
 
-tensor.prod.model.matrix<-function(X)
+tensor.prod.model.matrix1 <- function(X) {
 # X is a list of model matrices, from which a tensor product model matrix is to be produced.
 # e.g. ith row is basically X[[1]][i,]%x%X[[2]][i,]%x%X[[3]][i,], but this routine works 
 # column-wise, for efficiency
-{ m <- length(X)
+# old version, which is rather slow becuase of using cbind.
+  m <- length(X)
   X1 <- X[[m]]
   n <- nrow(X1)
   if (m>1) for (i in (m-1):1)
@@ -516,6 +517,23 @@ tensor.prod.model.matrix<-function(X)
     X1 <- cbind(X1,X[[i]][,j]*X0)
   }
   X1
+} ## end tensor.prod.model.matrix1
+
+tensor.prod.model.matrix <- function(X) {
+# X is a list of model matrices, from which a tensor product model matrix is to be produced.
+# e.g. ith row is basically X[[1]][i,]%x%X[[2]][i,]%x%X[[3]][i,], but this routine works 
+# column-wise, for efficiency, and does work in compiled code.
+  m <- length(X)              ## number to row tensor product
+  d <- unlist(lapply(X,ncol)) ## dimensions of each X
+  n <- nrow(X[[1]])           ## columns in each X
+  X <- as.numeric(unlist(X))  ## append X[[i]]s columnwise
+  T <- numeric(n*prod(d))     ## storage for result
+  .Call(C_mgcv_tmm,X,T,d,m,n) ## produce product
+  ## Give T attributes of matrix. Note that initializing T as a matrix 
+  ## requires more time than forming the row tensor product itself (R 3.0.1)
+  attr(T,"dim") <- c(n,prod(d)) 
+  class(T) <- "matrix"
+  T
 } ## end tensor.prod.model.matrix
 
 tensor.prod.penalties <- function(S)
@@ -551,6 +569,11 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
 ## the constructor for a tensor product basis object
 { inter <- object$inter ## signal generation of a pure interaction
   m <- length(object$margin)  # number of marginal bases
+  if (inter) { 
+    object$mc <- if (is.null(object$mc)) rep(TRUE,m) else as.logical(object$mc) 
+  } else {
+    object$mc <- rep(FALSE,m)
+  }
   Xm <- list();Sm<-list();nr<-r<-d<-array(0,m)
   C <- NULL
   object$plot.me <- TRUE 
@@ -561,8 +584,9 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
       dat[[term[j]]] <- data[[term[j]]]
       knt[[term[j]]] <- knots[[term[j]]] 
     }
-    if (inter) object$margin[[i]] <- smoothCon(object$margin[[i]],dat,knt,absorb.cons=TRUE,n=length(dat[[1]]))[[1]] else
-               object$margin[[i]] <- smooth.construct(object$margin[[i]],dat,knt)
+    object$margin[[i]] <- 
+    if (object$mc[i]) smoothCon(object$margin[[i]],dat,knt,absorb.cons=TRUE,n=length(dat[[1]]))[[1]] else
+                      smooth.construct(object$margin[[i]],dat,knt)
     Xm[[i]] <- object$margin[[i]]$X
     if (!is.null(object$margin[[i]]$te.ok)) {
       if (object$margin[[i]]$te.ok == 0) stop("attempt to use unsuitable marginal smooth class")
@@ -593,8 +617,8 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
         } 
         pd <- data.frame(knt)
         names(pd) <- object$margin[[i]]$term
-        if (inter) sv <- svd(PredictMat(object$margin[[i]],pd)) else
-                   sv <- svd(Predict.matrix(object$margin[[i]],pd))
+        sv <- if (object$mc[i]) svd(PredictMat(object$margin[[i]],pd)) else
+                                svd(Predict.matrix(object$margin[[i]],pd))
         if (sv$d[np]/sv$d[1]<.Machine$double.eps^.66) { ## condition number rather high
           XP[[i]] <- NULL
           warning("reparameterization unstable for margin: not done")
@@ -638,7 +662,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
   object$null.space.dim <- prod(nr) # penalty null space rank 
   object$rank <- r
   object$XP <- XP
-  object$inter <- inter ## signal pure interaction
+  #object$inter <- inter ## signal pure interaction
   class(object)<-"tensor.smooth"
   object
 }## end smooth.construct.tensor.smooth.spec
@@ -651,8 +675,8 @@ Predict.matrix.tensor.smooth <- function(object,data)
     term <- object$margin[[i]]$term
     dat <- list()
     for (j in 1:length(term)) dat[[term[j]]] <- data[[term[j]]]
-    if (object$inter) X[[i]] <- PredictMat(object$margin[[i]],dat,n=length(dat[[1]])) else
-       X[[i]] <- Predict.matrix(object$margin[[i]],dat)
+    X[[i]] <- if (object$mc[i]) PredictMat(object$margin[[i]],dat,n=length(dat[[1]])) else
+              Predict.matrix(object$margin[[i]],dat)
   }
   mxp <- length(object$XP)
   if (mxp>0) 
@@ -1394,6 +1418,21 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
   object
 }
 
+cwrap <- function(x0,x1,x) {
+## map x onto [x0,x1] in manner suitable for cyclic smooth on
+## [x0,x1].
+  h <- x1-x0
+  if (max(x)>x1) {
+    ind <- x>x1
+    x[ind] <- x0 + (x[ind]-x1)%%h
+  }
+  if (min(x)<x0) {
+    ind <- x<x0
+    x[ind] <- x1 - (x0-x[ind])%%h
+  }
+  x
+}
+
 Predict.matrix.cyclic.smooth<-function(object,data)
 # this is the prediction method for a cyclic cubic regression spline
 { pred.mat<-function(x,knots,BD)
@@ -1402,8 +1441,8 @@ Predict.matrix.cyclic.smooth<-function(object,data)
   { j<-x
     n<-length(knots)
     h<-knots[2:n]-knots[1:(n-1)]
-    if (max(x)>max(knots)||min(x)<min(knots)) 
-    stop("can't predict outside range of knots with periodic smoother")
+    if (max(x)>max(knots)||min(x)<min(knots)) x <- cwrap(min(knots),max(knots),x)
+    ## stop("can't predict outside range of knots with periodic smoother")
     for (i in n:2) j[x<=knots[i]]<-i
     j1<-hj<-j-1
     j[j==n]<-1
@@ -1487,7 +1526,10 @@ smooth.construct.cp.smooth.spec<-function(object,data,knots)
 
 Predict.matrix.cpspline.smooth<-function(object,data)
 ## prediction method function for the cpspline smooth class
-{ X <- cSplineDes(data[[object$term]],object$knots,object$m[1]+2)
+{ x <- data[[object$term]] 
+  k0 <- min(object$knots);k1 <- max(object$knots) 
+  if (min(x)<k0||max(x)>k1) x <- cwrap(k0,k1,x)
+  X <- cSplineDes(x,object$knots,object$m[1]+2)
   X
 }
 
@@ -2821,8 +2863,10 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
     if (sparse.cons<=0) {
       sm$C <- matrix(colMeans(sm$X),1,ncol(sm$X))
      ## following 2 lines implement sweep and drop constraints,
-     ## which are computationally faster than QR null space 
-     if (sparse.cons == -1) {
+     ## which are computationally faster than QR null space
+     ## however note that these are not appropriate for 
+     ## models with by-variables requiring constraint! 
+     if (sparse.cons == -1) { 
        vcol <- apply(sm$X,2,var) ## drop least variable column
        drop <- min((1:length(vcol))[vcol==min(vcol)])
      }
@@ -2902,8 +2946,9 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
   }
   offs <- NULL
   ## pick up "by variables" now, and handle summation convention ...
-  if (matrixArg||(object$by!="NA"&&is.null(sm$by.done))) 
-  { if (is.null(dataX)) by <- get.var(object$by,data) 
+  if (matrixArg||(object$by!="NA"&&is.null(sm$by.done))) {
+    drop <- -1 ## sweep and drop constraints inappropriate
+    if (is.null(dataX)) by <- get.var(object$by,data) 
     else by <- get.var(object$by,dataX)
     if (matrixArg&&is.null(by)) { ## then by to be taken as sequence of 1s
       if (is.null(sm$ind)) by <- rep(1,nrow(sm$X)) else by <- rep(1,length(sm$ind))
@@ -2994,7 +3039,7 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
         }
       } ## end of constraint removal
     }
-  } else {
+  } else { ## no by variables
     sml <- list(sm)
   }
 

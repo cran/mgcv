@@ -88,7 +88,7 @@ double eta_const(int m,int d) {
     k=m-(d-1)/2; /* 1/2 - d = d/2 -m */
     for (i=0;i<k;i++) f/= -0.5-i; /* f = gamma function of d/2-m */
     for (i=0;i<m;i++) f/= 4; /* divide by 2^{2m} */
-    for (i=0;i<d-1;i++) f/=pi;
+    for (i=0;i<d2;i++) f/=pi;
     f /= Ghalf;                /* dividing by (pi^{d/2}) */
     for (i=2;i<m;i++) f/=i;  /* divide by (m-1)! */
   } 

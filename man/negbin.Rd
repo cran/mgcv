@@ -4,8 +4,8 @@
 \title{GAM negative binomial family}
 \description{The \code{gam} modelling function is designed to be able to use 
 the \code{\link{negbin}} family (a modification of MASS library \code{negative.binomial} family 
-by Venables and Ripley), with or without a known \eqn{\theta}{theta} parameter. 
-Two approaches to estimating the \code{theta} parameter are available:
+by Venables and Ripley), with or without a known \eqn{\theta} parameter. \eqn{\theta} is the parameter such that \eqn{var(y) = \mu + \mu^2/\theta}, where \eqn{\mu = E(y)}.
+Two approaches to estimating \code{theta} are available:
 
 \itemize{
 \item If `performance iteration' is used for smoothing parameter estimation 

@@ -1436,15 +1436,15 @@ void sort(matrix a)
 
 
 int real_elemcmp(const void *a,const void *b,int el)
-
+/* declaring this inline static slows it down!! */
 { static int k=0;
-  int i;
-  double *na,*nb;
-  if (el>=0) { k=el;return(0);}
+  double *na,*nb,*nak;
+  if (el>0) { k=el;return(0);}
   na=(*(double **)a);nb=(*(double **)b);
-  for (i=0;i<k;i++) 
-  { if (na[i]<nb[i]) return(-1);
-    if (na[i]>nb[i]) return(1);
+  nak = na + k;
+  for (;na<nak;na++,nb++) { 
+    if (*na < *nb) return(-1);
+    if (*na > *nb) return(1);
   }
   return(0);
 }

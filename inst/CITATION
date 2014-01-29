@@ -1,7 +1,7 @@
 citHeader("2011 for generalized additive model method; 
 2004 for strictly additive GCV based model method and basics of gamm; 
 2006 for overview; 2003 for thin plate regression splines; 
-2000 is the original method, but no longer the default.")
+2000 is the original method, now superceded.")
 
 citEntry(
  entry="Article",

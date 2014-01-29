@@ -191,15 +191,17 @@ k.check <- function(b,subsample=5000,n.rep=400) {
   } else modf <- b$model
   nr <- length(rsd)
   for (k in 1:m) { ## work through smooths
-    dat <- as.data.frame(ExtractData(b$smooth[[k]],modf,NULL)$data)
+    ok <- TRUE
+    dat <- ExtractData(b$smooth[[k]],modf,NULL)$data
+    if (!is.null(attr(dat,"index"))||!is.null(attr(dat[[1]],"matrix"))||is.matrix(dat[[1]])) ok <- FALSE
+    if (ok) dat <- as.data.frame(dat)
     snames[k] <- b$smooth[[k]]$label
     ind <- b$smooth[[k]]$first.para:b$smooth[[k]]$last.para
     kc[k] <- length(ind)
     edf[k] <- sum(b$edf[ind]) 
     nc <- b$smooth[[k]]$dim
-    ok <- TRUE
+    if (ok && ncol(dat)>nc) dat <- dat[,1:nc] ## drop any by variables
     for (j in 1:nc) if (is.factor(dat[[j]])) ok <- FALSE 
-    if (!is.null(attr(dat[[1]],"matrix"))) ok <- FALSE
     if (!ok) {
       p.val[k] <- v.obs[k] <- NA ## can't do this test with summation convention/factors
     } else { ## normal term
@@ -1021,7 +1023,8 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     scheme <- rep(scheme[1],m)
   }
 
-  order <- attr(x$pterms,"order") # array giving order of each parametric term
+  ## array giving order of each parametric term...
+  order <- if (is.list(x$pterms))  unlist(lapply(x$pterms,attr,"order")) else attr(x$pterms,"order")
 
   if (all.terms) # plot parametric terms as well
   n.para <- sum(order==1) # plotable parametric terms   
@@ -1187,9 +1190,11 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   { class(x) <- c("gam","glm","lm") # needed to get termplot to call model.frame.glm 
     if (is.null(select)) {
       attr(x,"para.only") <- TRUE
-      termplot(x,se=se,rug=rug,col.se=1,col.term=1,...)
+      termplot(x,se=se,rug=rug,col.se=1,col.term=1,main=attr(x$pterms,"term.labels"),...)
     } else { # figure out which plot is required
       if (select > m) { 
+        ## can't figure out how to get this to work with more than first linear predictor
+        ## as termplots relies on matching terms to names in original data... 
         select <- select - m # i.e. which parametric term
         term.labels <- attr(x$pterms,"term.labels")
         term.labels <- term.labels[order==1]
@@ -1225,9 +1230,12 @@ exclude.too.far<-function(g1,g2,d1,d2,dist)
   if (m!=length(d2)) stop("data vectors are of different lengths")
   if (dist<0) stop("supplied dist negative")
   distance<-array(0,n)
-  o<-.C(C_MinimumSeparation,as.double(g1),as.double(g2),as.integer(n),as.double(d1),as.double(d2),
-         as.integer(m),distance=as.double(distance))  
-  res<-rep(FALSE,n)
+  o<-.C(C_MinimumSeparation,x=as.double(cbind(g1,g2)),n=as.integer(n), d=as.integer(2),
+                            t=as.double(cbind(d1,d2)),m=as.integer(m),distance=as.double(distance))
+
+  #o<-.C(C_MinimumSeparation,as.double(g1),as.double(g2),as.integer(n),as.double(d1),as.double(d2),
+  #       as.integer(m),distance=as.double(distance))  
+  res <- rep(FALSE,n)
   res[o$distance > dist] <-TRUE
   res
 }
