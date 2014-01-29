@@ -44,63 +44,28 @@ freedom.
 Let \eqn{ {\bf P}_i}{P_i} be the matrix 
 giving the parameters of the ith smooth when applied to the data (or pseudodata in the generalized case) and let \eqn{ {\bf X}}{X} 
 be the design matrix of the model. Then \eqn{ tr({\bf XP}_i )}{tr(XP_i)} is the edf for the ith term. Clearly this 
-definition causes the edf's to add up properly! An alternative version of EDF is more appropriate for p-value computation, and is based 
-on the trace of  \eqn{ 2{\bf A} - {\bf AA}}{2A - AA}.
+definition causes the edf's to add up properly! An alternative version of EDF is more appropriate for p-value computation, and is based on the trace of  \eqn{ 2{\bf A} - {\bf AA}}{2A - AA}.
 
 \code{print.summary.gam} tries to print various bits of summary information useful for term selection in a pretty way.
 
-Unless \code{p.type=5}, p-values for smooth terms are usually based on a 
+P-values for smooth terms are usually based on a 
 test statistic motivated by an extension of Nychka's (1988) analysis of the frequentist properties 
-of Bayesian confidence intervals for smooths. 
+of Bayesian confidence intervals for smooths (Marra and Wood, 2012). 
 These have better frequentist performance (in terms of power and distribution under the null) 
 than the alternative strictly frequentist approximation. When the Bayesian intervals have good 
 across the function properties then the p-values have close to the correct null distribution 
-and reasonable power (but there are no optimality results for the power). Full details are in Wood (2013), 
+and reasonable power (but there are no optimality results for the power). Full details are in Wood (2013b), 
 although what is computed is actually a slight variant in which the components of the test statistic are weighted by the iterative fitting weights. 
 
-Let \eqn{\bf f}{f} denote the vector of 
-values of a smooth term evaluated at the original 
-covariate values and let \eqn{{\bf V}_f}{V_f} denote the corresponding Bayesian covariance matrix. Let 
-\eqn{{\bf V}_f^{r-}}{V*_f} denote the rank \eqn{r}{r} pseudoinverse of \eqn{{\bf V}_f}{V_f}, where \eqn{r}{r} is the 
-EDF for the term. The statistic used is then 
-\deqn{T = {\bf f}^T {\bf V}_f^{r-}{\bf f}}{T = f'V*_f f}
-(this can be calculated efficiently without forming the pseudoinverse explicitly). \eqn{T}{T} is compared to an approximation to
- an appropriate weighted sum of chi-squared random variables.
+Note that for terms with no unpenalized terms (such as Gaussian random effects) the Nychka (1988) requirement for smoothing bias to be substantially less than variance breaks down (see e.g. appendix of Marra and Wood, 2012), and this results in incorrect null distribution for p-values computed using the above approach. In this case it is necessary to use an alternative 
+approach designed for random effects variance components, and this is done. See Wood (2013a) for details: the test is based on a likelihood ratio statistic (with the reference distribution appropriate for the null hypothesis on the boundary of the parameter space).
 
-The non-integer rank truncated inverse is constructed to give an 
-approximation varying smoothly between the bounding integer rank approximations, while yielding test statistics with the correct mean and variance under the null. Alternatively (\code{p.type==1}) \eqn{r}{r} is obtained by 
-biased rounding of the EDF: values less than .05 above the preceding integer are rounded down, while other values are rounded up. Another option (\code{p.type==-1}) uses a statistic of formal rank given by the number of coefficients for the smooth, but with its terms weighted by the eigenvalues of the covariance matrix, so that penalized terms are down-weighted, but the null distribution requires simulation. Other options for \code{p.type} are 2 (naive rounding), 3 (round up), 4 (numerical rank determination): these are poor options for theoretically known reasons, and will generate a warning. 
+All p-values are computed without considering uncertainty in the smoothing parameter estimates.
 
-
-Note that for terms with no unpenalized terms the Nychka (1988) requirement for smoothing bias to be substantially 
-less than variance breaks down (see e.g. appendix of Marra and Wood, 2012), and this results in incorrect null 
-distribution for p-values computed using the above approach. In this case it is necessary to use an alternative 
-approach designed for random effects variance components, and this is done.
-
-In this zero-dimensional null space/random effects case, the p-values are again conditional on the smoothing parameters/variance component estimates,
-and may therefore be somewhat too low when these are subject to large uncertainty. The idea is to condition on the smoothing parameter estimates, and 
-then to use the likelihood ratio test statistic conditional on those estimates. The distribution of this test statistic under the null is computable as a weighted sum of chi-squared random variables. 
-
-
-In simulations the p-values have best behaviour under ML smoothness selection, with REML coming second. In general the p-values 
-behave well, but conditioning on the smoothing parameters means that they may be somewhat too low when smoothing parameters are 
-highly uncertain. High uncertainty happens in particular when smoothing parameters are poorly identified, which can occur with 
-nested smooths or highly correlated covariates (high concurvity).
+In simulations the p-values have best behaviour under ML smoothness selection, with REML coming second. In general the p-values behave well, but neglecting smoothing parameter uncertainty means that they may be somewhat too low when smoothing parameters are highly uncertain. High uncertainty happens in particular when smoothing parameters are poorly identified, which can occur with nested smooths or highly correlated covariates (high concurvity).
 
 If \code{p.type=5} then the frequentist approximation for p-values of smooth terms described in section
-4.8.5 of Wood (2006) is used. The approximation is not great.  If \eqn{ {\bf p}_i}{p_i} 
-is the parameter vector for the ith smooth term, and this term has estimated
-covariance matrix \eqn{ {\bf V}_i}{V_i} then the 
-statistic is \eqn{ {\bf p}_i^\prime {\bf V}_i^{k-} {\bf
-p}_i}{p_i'V_i^{k-}p_i}, where \eqn{ {\bf V}^{k-}_i}{V_i^{k-}} is the rank k 
-pseudo-inverse of \eqn{ {\bf V_i}}{V_i}, and k is estimated rank of  
-\eqn{{\bf V_i}}{V_i}. p-values are obtained as follows. In the case of
-known dispersion parameter, they are obtained by comparing the chi.sq statistic to the 
-chi-squared distribution with k degrees of freedom, where k is the estimated
-rank of  \eqn{ {\bf V_i}}{V_i}. If the dispersion parameter is unknown (in 
-which case it will have been estimated) the statistic is compared
-to an F distribution with k upper d.f.  and lower d.f. given by the residual degrees of freedom for the model. 
-Typically the p-values will be somewhat too low.
+4.8.5 of Wood (2006) is used. The approximation is not as good as the default, and is no longer recommended.
 
 By default the p-values for parametric model terms are also based on Wald tests using the Bayesian 
 covariance matrix for the coefficients. This is appropriate when there are "re" terms present, and is 
@@ -186,14 +151,16 @@ by scale parameter.}
 
 \references{
 
-Wood, S.N. (2013) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
 Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
 
-
 Nychka (1988) Bayesian Confidence Intervals for Smoothing Splines. 
 Journal of the American Statistical Association 83:1134-1143.
+
+Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010
+
+Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
 Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
 and Hall/CRC Press.
@@ -203,8 +170,9 @@ and Hall/CRC Press.
 improvements by Henric Nilsson.}
 
 \section{WARNING }{ 
-The p-values are approximate and conditional on the smoothing parameters, they are likely to be somewhat too low 
-when smoothing parameter estimates are highly uncertain: do read the details section. 
+The p-values are approximate and neglect smoothing parameter uncertainty. They are likely to be somewhat too low 
+when smoothing parameter estimates are highly uncertain: do read the details section. If the exact values matter,
+read Wood (2013a or b). 
 
 P-values for terms penalized via `paraPen' are unlikely to be correct.
 } 
@@ -235,10 +203,6 @@ b <- gam(y~s(x0,m=1)+s(x1)+s(x2)+s(x3)+s(fac,bs="re"),data=dat)
 ## Here s(x0,m=1) can be penalized to zero, so p-value approximation
 ## cruder than usual...
 summary(b) 
-## Now force summary to report approximate p-value for "re" 
-## terms as well. In this case the p-value is OK, since the
-## random effect structure is so simple.
-summary(b,all.p=TRUE) 
 
 ## p-value check - increase k to make this useful!
 k<-20;n <- 200;p <- rep(NA,k)
@@ -250,7 +214,6 @@ for (i in 1:k)
 plot(((1:k)-0.5)/k,sort(p))
 abline(0,1,col=2)
 ks.test(p,"punif") ## how close to uniform are the p-values?
-
 
 
 }

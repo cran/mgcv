@@ -44,13 +44,10 @@ can be greatly overstated: i.e. p-values are often substantially too low. This c
 Note also that in the multi-model call to \code{anova.gam}, it is quite possible for a model with more terms to end up with lower effective degrees of freedom, but better fit, than the notionally null model with fewer terms. In such cases it is very rare that it makes sense to perform any sort of test, since there is then no basis on which to accept the notional null model. 
 
 If only one model is provided then the significance of each model term
-is assessed using Wald tests, conditional on the smoothing parameter estimates: see \code{\link{summary.gam}} 
-and Wood (in press) for details. The p-values  provided here are better justified than in the multi model case, and have close to the 
+is assessed using Wald like tests, conditional on the smoothing parameter estimates: see \code{\link{summary.gam}} 
+and Wood (2013a,b) for details. The p-values  provided here are better justified than in the multi model case, and have close to the 
 correct distribution under the null, unless smoothing parameters are poorly identified. ML or REML smoothing parameter selection leads to 
-the best results in simulations as they tend to avoid occasional severe undersmoothing. In replication of the full simulation study of Scheipl et al. 
-(2008) the tests give almost indistinguishable power to the method recommended there, but slightly too low p-values under the null in their 
-section 3.1.8 test for a smooth interaction (the Scheipl et al. recommendation is not used directly, because it only applies in the Gaussian case,
-and requires model refits, but it is available in package \code{RLRsim}). 
+the best results in simulations as they tend to avoid occasional severe undersmoothing. In replication of the full simulation study of Scheipl et al. (2008) the tests give almost indistinguishable power to the method recommended there, but slightly too low p-values under the null in their section 3.1.8 test for a smooth interaction (the Scheipl et al. recommendation is not used directly, because it only applies in the Gaussian case, and requires model refits, but it is available in package \code{RLRsim}). 
 
 In the single model case \code{print.anova.gam} is used as the printing method. 
 
@@ -77,7 +74,9 @@ which is in fact an object returned from \code{\link{summary.gam}}.
 Scheipl, F., Greven, S. and Kuchenhoff, H. (2008) Size and power of tests for a zero random effect variance or polynomial 
 regression in additive and linear mixed models. Comp. Statist. Data Anal. 52, 3283-3299
 
-Wood, S.N. (2013) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
+Wood, S.N. (2013a) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
+
+Wood, S.N. (2013b) A simple test for random effects in regression models. Biometrika 100:1005-1010
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial

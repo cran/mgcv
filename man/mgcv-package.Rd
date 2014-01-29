@@ -9,7 +9,7 @@
 generalized additive mixed modelling (\code{\link{gamm}}, and \code{\link{random.effects}}). The term GAM is taken to include 
 any GLM estimated by quadratically penalized (possibly quasi-) likelihood maximization.
 
-Particular features of the package are facilities for automatic smoothness selection, 
+Particular features of the package are facilities for automatic smoothness selection (Wood, 2004, 2011), 
 and the provision of a variety of smooths of more than one variable. User defined 
 smooths can be added. A Bayesian approach to confidence/credible interval calculation is
 provided. Linear functionals of smooths, penalization of parametric model terms and linkage 
@@ -42,13 +42,13 @@ While a number of types of smoother are built into the package, it is also
 extendable with user defined smooths, see \code{\link{smooth.construct}}, for example.
 
 A Bayesian approach to smooth modelling is used to derive standard errors on
-predictions, and hence credible intervals. The Bayesian covariance matrix for
+predictions, and hence credible intervals (see Marra and Wood, 2012). The Bayesian covariance matrix for
 the model coefficients is returned in \code{Vp} of the
 \code{\link{gamObject}}. See \code{\link{predict.gam}} for examples of how
 this can be used to obtain credible regions for any quantity derived from the
 fitted model, either directly, or by direct simulation from the posterior
 distribution of the model coefficients. Approximate p-values can also be obtained for testing 
-individual smooth terms for equality to the zero function, using similar ideas. Frequentist
+individual smooth terms for equality to the zero function, using similar ideas (see Wood, 2013a,b). Frequentist
 approximations can be used for hypothesis testing based model comparison. See \code{\link{anova.gam}} and
 \code{\link{summary.gam}} for more on hypothesis testing.
 
@@ -86,6 +86,8 @@ Maintainer: Simon Wood <simon.wood@r-project.org>
 
 }
 \references{
+These provide details for the underlying mgcv methods, and fuller 
+references to the large literature on which the methods are based. 
 
 Wood, S.N. (2011) Fast stable restricted maximum likelihood 
 and marginal likelihood estimation of semiparametric generalized linear 
@@ -93,6 +95,13 @@ models. Journal of the Royal Statistical Society (B) 73(1):3-36
 
 Wood, S.N. (2004) Stable and efficient multiple smoothing parameter estimation for
 generalized additive models. J. Amer. Statist. Ass. 99:673-686. 
+
+Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
+Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
+
+Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010
+
+Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
 Wood, S.N. (2006) \emph{Generalized Additive Models: an introduction with R},
 CRC

@@ -41,7 +41,7 @@ last knot locations.}
  ## check that the ends match up....
  ee <- X[1,]-X[n,];ee 
  tol <- .Machine$double.eps^.75
- if (all.equal(ee,ee*0,tol=tol)!=TRUE) 
+ if (all.equal(ee,ee*0,tolerance=tol)!=TRUE) 
    stop("cyclic spline ends don't match!")
  
  ## similar with uneven data spacing...
@@ -51,7 +51,7 @@ last knot locations.}
  plot(x,X[,1],type="l"); for (i in 2:ncol(X)) lines(x,X[,i],col=i)
  ee <- X[1,]-X[n,];ee ## do ends match??
  tol <- .Machine$double.eps^.75
- if (all.equal(ee,ee*0,tol=tol)!=TRUE) 
+ if (all.equal(ee,ee*0,tolerance=tol)!=TRUE) 
    stop("cyclic spline ends don't match!")
 }
 

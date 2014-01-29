@@ -19,7 +19,7 @@ Sl.setup <- function(G) {
 ##   - Applies to cols/params from start:stop.
 ##   - If numeric then X[,start:stop]%*%diag(D) is repara X[,start:stop],
 ##     b.orig = D*b.repara
-##   - If matrix then X[,start:stop]%*%diag(D) is repara X[,start:stop],
+##   - If matrix then X[,start:stop]%*%D is repara X[,start:stop],
 ##     b.orig = D%*%b.repara
 ## The penalties in Sl are in the same order as those in G
 ## Also returns attribute "E" a square root of the well scaled total
@@ -109,9 +109,10 @@ Sl.setup <- function(G) {
         for (j in 1:m) {
           Sl[[b]] <- list()
           ind <- sbStart[j]:sbStop[j]
-          Sl[[b]]$S <- list(G$smooth[[i]]$S[[j]][ind,ind])
+          Sl[[b]]$S <- list(G$smooth[[i]]$S[[j]][ind,ind,drop=FALSE])
           Sl[[b]]$start <- G$smooth[[i]]$first.para + sbStart[j]-1
           Sl[[b]]$stop <- G$smooth[[i]]$first.para + sbStop[j]-1
+          Sl[[b]]$rank <- G$smooth[[i]]$rank[j]
           b <- b + 1
         }
       } else { ## not possible to split
@@ -151,9 +152,11 @@ Sl.setup <- function(G) {
         ind <- rep(FALSE,length(D))
         ind[1:Sl[[b]]$rank] <- TRUE ## index penalized elements
         D[ind] <- 1/sqrt(D[ind]);D[!ind] <- 1
-        D <- t(D*t(U)) ## D <- U%*%diag(D)
+        Sl[[b]]$D <- t(D*t(U)) ## D <- U%*%diag(D)
+        Sl[[b]]$Di <- t(U)/D
         ## so if X is smooth model matrix X%*%D is re-parameterized form 
-        Sl[[b]]$D <- D; Sl[[b]]$ind <- ind
+        ## Sl[[b]]$D <- D; 
+        Sl[[b]]$ind <- ind
       }
       ## add penalty square root into E  
       ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind]
@@ -198,20 +201,36 @@ Sl.setup <- function(G) {
   Sl ## the penalty list
 } ## end of Sl.setup
 
-Sl.initial.repara <- function(Sl,X,inverse=FALSE) {
+Sl.initial.repara <- function(Sl,X,inverse=FALSE,both.sides=TRUE,cov=TRUE) {
 ## Routine to apply initial Sl re-parameterization to model matrix X,
 ## or, if inverse==TRUE, to apply inverse re-para to parameter vector 
-## or cov matrix
+## or cov matrix. if inverse is TRUE and both.sides=FALSE then 
+## re-para only applied to rhs, as appropriate for a choleski factor.
   if (inverse) { ## apply inverse re-para
-    if (is.matrix(X)) { ## then assume it's a covariance matrix
-      for (b in 1:length(Sl)) { 
-        ind <- Sl[[b]]$start:Sl[[b]]$stop
-        if (is.matrix(Sl[[b]]$D)) { 
-          X[ind,] <- Sl[[b]]$D%*%X[ind,,drop=FALSE]
-          X[,ind] <- X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) 
-        } else {
-          X[,ind] <- t(Sl[[b]]$D * t(X[,ind,drop=FALSE]))
-          X[ind,] <- Sl[[b]]$D * X[ind,,drop=FALSE]
+    if (is.matrix(X)) { 
+      if (cov) { ## then it's a covariance matrix
+        for (b in 1:length(Sl)) { 
+          ind <- Sl[[b]]$start:Sl[[b]]$stop
+          if (is.matrix(Sl[[b]]$D)) { 
+            if (both.sides) X[ind,] <- Sl[[b]]$D%*%X[ind,,drop=FALSE]
+            X[,ind] <- X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) 
+          } else { ## Diagonal D
+            X[,ind] <- t(Sl[[b]]$D * t(X[,ind,drop=FALSE]))
+            if (both.sides) X[ind,] <- Sl[[b]]$D * X[ind,,drop=FALSE]
+          } 
+        } 
+      } else { ## regular matrix: need to use Di
+         for (b in 1:length(Sl)) { 
+          ind <- Sl[[b]]$start:Sl[[b]]$stop
+          if (is.matrix(Sl[[b]]$D)) { 
+            Di <- if(is.null(Sl[[b]]$Di)) t(Sl[[b]]$D) else Sl[[b]]$Di
+            if (both.sides) X[ind,] <- t(Di)%*%X[ind,,drop=FALSE]
+            X[,ind] <- X[,ind,drop=FALSE]%*%Di 
+          } else { ## Diagonal D
+            Di <- 1/Sl[[b]]$D
+            X[,ind] <- t(Di * t(X[,ind,drop=FALSE]))
+            if (both.sides) X[ind,] <- Di * X[ind,,drop=FALSE]
+          } 
         } 
       }
     } else { ## it's a parameter vector
@@ -227,15 +246,18 @@ Sl.initial.repara <- function(Sl,X,inverse=FALSE) {
     X[,ind] <- t(Sl[[b]]$D*t(X[,ind,drop=FALSE])) ## X[,ind]%*%diag(Sl[[b]]$D)
   }
   X
-} ## end Sl.initial.repra
+} ## end Sl.initial.repara
 
 ldetS <- function(Sl,rho,fixed,np,root=FALSE) {
 ## Get log generalized determinant of S stored blockwise in an Sl list.
 ## Any multi-term blocks will be re-parameterized using gam.reparam, and
 ## a re-parameterization object supplied in the returned object.
+## rho contains log smoothing parameters, fixed is an array indicating whether they 
+## are fixed (or free). np is the number of coefficients. root indicates
+## whether or not to return E. 
 ## Returns: Sl, with modified rS terms, if needed and rho added to each block
 ##          rp, a re-parameterization list
-##          E a total penalty square root such that E'E = S_tot
+##          E a total penalty square root such that E'E = S_tot (if root==TRUE)
 ##          ldetS,ldetS1,ldetS2 the value, grad vec and Hessian
   n.deriv <- sum(!fixed)
   k.deriv <- k.sp <- k.rp <- 1
@@ -295,15 +317,17 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE) {
   list(ldetS=ldS,ldet1=d1.ldS,ldet2=d2.ldS,Sl=Sl,rp=rp,E=E)
 } ## end ldetS
 
-Sl.repara <- function(rp,X,inverse=FALSE) {
-## Apply re-parameterization from ldetS to X, blockwise
-## if inverse==TRUE applies the inverse of the re-para to
-## vector X or cov matrix X...
+Sl.repara <- function(rp,X,inverse=FALSE,both.sides=TRUE) {
+## Apply re-parameterization from ldetS to X, blockwise.
+## If X is a matrix it is assumed to be a model matrix
+## whereas if X is a vector it is assumed to be a parameter vector.
+## If inverse==TRUE applies the inverse of the re-para to
+## parameter vector X or cov matrix X...
   nr <- length(rp);if (nr==0) return(X)
   if (inverse) {
     if (is.matrix(X)) { ## X is a cov matrix
       for (i in 1:nr) {
-        X[rp[[i]]$ind,]  <- 
+        if (both.sides) X[rp[[i]]$ind,]  <- 
                      rp[[i]]$Qs %*% X[rp[[i]]$ind,,drop=FALSE]
         X[,rp[[i]]$ind]  <- 
                      X[,rp[[i]]$ind,drop=FALSE] %*% t(rp[[i]]$Qs)
@@ -312,7 +336,11 @@ Sl.repara <- function(rp,X,inverse=FALSE) {
      for (i in 1:nr) X[rp[[i]]$ind]  <- rp[[i]]$Qs %*% X[rp[[i]]$ind]
     }
   } else { ## apply re-para to X
-    for (i in 1:nr) X[,rp[[i]]$ind]  <- X[,rp[[i]]$ind]%*%rp[[i]]$Qs
+    if (is.matrix(X)) {
+      for (i in 1:nr) X[,rp[[i]]$ind]  <- X[,rp[[i]]$ind]%*%rp[[i]]$Qs
+    } else {
+      for (i in 1:nr) X[rp[[i]]$ind]  <- t(rp[[i]]$Qs) %*% X[rp[[i]]$ind]
+    }
   }
   X
 } ## end Sl.repara
@@ -393,11 +421,11 @@ Sl.termMult <- function(Sl,A,full=FALSE) {
       ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind]
       if (full) { ## return zero answer with all zeroes in place
         B <- A*0
-        if (Amat) B[ind,] <- Sl[[b]]$lambda*A[ind,] else  
+        if (Amat) B[ind,] <- Sl[[b]]$lambda*A[ind,,drop=FALSE] else  
                   B[ind] <- Sl[[b]]$lambda*A[ind]
         SA[[k]] <- B
       } else { ## strip zero rows from answer
-        if (Amat) SA[[k]] <- Sl[[b]]$lambda*A[ind,] else
+        if (Amat) SA[[k]] <- Sl[[b]]$lambda*A[ind,,drop=FALSE] else
                   SA[[k]] <- as.numeric(Sl[[b]]$lambda*A[ind])
         attr(SA[[k]],"ind") <- ind
       }
@@ -407,11 +435,11 @@ Sl.termMult <- function(Sl,A,full=FALSE) {
         k <- k + 1
         if (full) { ## return answer with all zeroes in place
           B <- A*0
-          if (Amat) B[ind,] <- Sl[[b]]$Srp[[i]]%*%A[ind,] else  
+          if (Amat) B[ind,] <- Sl[[b]]$Srp[[i]]%*%A[ind,,drop=FALSE] else  
                     B[ind] <- Sl[[b]]$Srp[[i]]%*%A[ind]
           SA[[k]] <- B
         } else { ## strip zero rows from answer
-          if (Amat) SA[[k]] <- Sl[[b]]$Srp[[i]]%*%A[ind,] else
+          if (Amat) SA[[k]] <- Sl[[b]]$Srp[[i]]%*%A[ind,,drop=FALSE] else
                     SA[[k]] <- as.numeric(Sl[[b]]$Srp[[i]]%*%A[ind])
           attr(SA[[k]],"ind") <- ind
         }
@@ -432,7 +460,7 @@ d.detXXS <- function(Sl,PP) {
     d1[i] <- sum(diag(SPP[[i]][,indi,drop=FALSE]))
     for (j in i:nd) {
       indj <- attr(SPP[[j]],"ind")
-      d2[i,j] <- d2[j,i] <- -sum(t(SPP[[i]][,indj])*SPP[[j]][,indi])
+      d2[i,j] <- d2[j,i] <- -sum(t(SPP[[i]][,indj,drop=FALSE])*SPP[[j]][,indi,drop=FALSE])
     }
     d2[i,i] <- d2[i,i] + d1[i]
   }

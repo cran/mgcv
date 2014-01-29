@@ -1,6 +1,47 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-28
+
+* exclude.too.far updated to use kd-tree instead of inefficient search for 
+  neighbours. This can make plot.gam *much* faster for large datasets.
+
+* Change in smoothCon, so that sweep and drop constraints (default for bam
+  for efficiency reasons) are no longer allowed with by variables and matrix 
+  arguments (could lead to confusing results with factor by variables in bam). 
+
+* 'ti' terms now allow control of which marginals to constrain, via 'mc'.
+  Allows e.g. y ~ ti(x) + ti(x,z,mc=c(0,1)) - for experts only! 
+
+* tensor.prod.model.matrix re-written to call C code. Around 5-10 times
+  faster than old version for large data sets.
+
+* re-write of mini.mf function used by bam to generate a reduced size 
+  model frame for model setup. New version ensures that all factor levels 
+  are present in reduced frame, and avoids production of unrealistic
+  combinations of variables in multi-dimensional smooths which could occur
+  with old version. 
+
+* bam models could fail if a penalty matrix was 1 by 1, or if multiple 
+  penalties on a smooth were in fact seperable into single penalties. 
+  Fixed. Thanks to Martijn weiling for reporting.
+
+* Constant in tps basis computation was different to published version 
+  for odd dimensions - makes no difference to fit, but annoying if you 
+  are trying to test a re-implementation. Thanks to Weijie Cai at SAS. 
+
+* prediction for "cc" and "cp" classes is now cyclic - values outside the
+  range of knots are wrapped back into the interval.
+
+* ldTweedie now returns derivatives w.r.t. a transform of p as well as 
+  w.r.t log of scale parameter phi.
+
+* gamm can now handle 'varComb' variance functions (thanks Sven Neulinger
+  for reporting that it didn't).
+
+* fix of a bug which could cause bam to seg fault for a model with no smooths 
+  (insufficient storage allocated in C in this case). Thanks Martijn Weiling.
+
 1.7-27
 
 * Further multi-threading in gam fits - final two leading order matrix

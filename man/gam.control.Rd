@@ -10,7 +10,7 @@ loss of numerical stability during fitting.  To change the default
 choise of fitting method, see \code{\link{gam}} arguments \code{method} and \code{optimizer}.
 }
 \usage{
-gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-06, maxit = 100,
+gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 100,
             mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,
             nlm=list(),optim=list(),newton=list(),

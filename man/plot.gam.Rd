@@ -30,7 +30,7 @@ estimates fixed (i.e. the estimates for the term plus the residuals).}
 \item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
  at the foot of each plot of a 1-d smooth, and the locations of the
  covariates are plotted as points on the contour plot representing a 2-d
- smooth.} 
+ smooth. Setting to \code{FALSE} will speed up plotting for large datasets.} 
   
 \item{se}{ when TRUE (default) upper and lower lines are added to the
   1-d plots at 2 standard errors
@@ -78,7 +78,8 @@ Set to 0 to have the routine leave all graphics settings as they are. }
 \item{too.far}{If greater than 0 then this is used to determine when a location is too
 far from data to be plotted when plotting 2-D smooths. This is useful since smooths tend to go wild away from data.
 The data are scaled into the unit square before deciding what to exclude, and \code{too.far} is a distance 
-within the unit square.}
+within the unit square. Setting to zero can make plotting faster for large datasets, but care then needed with 
+interpretation of plots.}
 
 \item{all.terms}{if set to \code{TRUE} then the partial effects of parametric
 model components are also plotted, via a call to \code{\link{termplot}}. Only
@@ -170,7 +171,6 @@ Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
 Model Components. Scandinavian Journal of Statistics.
 
-
 Nychka (1988) Bayesian Confidence Intervals for Smoothing Splines. 
 Journal of the American Statistical Association 83:1134-1143.
 
@@ -189,6 +189,10 @@ Chambers and Hastie (1993) (but is not a clone).
 
 \section{WARNING }{ Note that the behaviour of this function is not identical to 
 \code{plot.gam()} in S-PLUS.
+
+Plotting can be slow for models fitted to large datasets. Set \code{rug=FALSE} to improve matters. 
+If it's still too slow set \code{too.far=0}, but then take care not to overinterpret smooths away from 
+supporting data.
 
 Plots of 2-D smooths with standard error contours shown can not easily be customized.
 

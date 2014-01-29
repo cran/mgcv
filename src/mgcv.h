@@ -14,12 +14,12 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	  int *REML,int *fisher,int *fixed_penalty,int *nthreads);     
 
 void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
-	  double *sp,double *theta,double *z,double *w,
+	  double *sp,double *theta,double *z,double *w,double *wf,
           double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
           double *Det2_th,double *Det3,double *Det_th2,
           double *Det4, double *Det3_th, double *Det2_th2,
           double *beta,double *D1,double *D2,double *P,double *P1,double *P2,
-          double *ldet, double *ldet1,double *ldet2,
+          double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
 	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
 	  int *fixed_penalty,int *nt);
@@ -36,7 +36,9 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
 		 double *r_tol,int *fixed_penalty);
 
 /* various service routines */
-void  tweedious(double *w,double *w1,double *w2,double *y,double *phi,double *p,double *eps,int *n);
+void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
+	       double *y,double *eps,int *n,
+               double *th,double *rho,double *a, double *b);
 void psum(double *y, double *x,int *index,int *n);
 void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
@@ -44,7 +46,8 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol)
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
-void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);
+/*void MinimumSeparation(double *gx,double *gy,int *gn,double *dx,double *dy, int *dn,double *dist);*/
+void MinimumSeparation(double *x,int *n, int *d,double *t,int *m,double *dist);
 void rksos(double *x,int *n,double *eps);
 void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse);
 
@@ -79,7 +82,7 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt);
 void getRpqr(double *R,double *x,int *r, int *c,int *rr,int *nt);
 void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,int *nt);
 SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT);
-
+void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N);
 
 /* basis constructor/prediction routines*/
 
@@ -96,10 +99,33 @@ void gridder(double *z,double *x,double *y,int *n,double *g, int *G,int *nx, int
 void pde_coeffs(int *G,double *x,int *ii,int *jj,int *n,int *nx,int *ny,double *dx,double *dy);
 
 /* sparse smooth related routines */
+typedef struct { /* defines structure for kd-tree box */
+  double *lo,*hi;    /* box defining co-ordinates */
+  int parent,child1,child2, /* indices of parent and 2 offspring */
+      p0,p1;         /* indices of first and last point in box */
+} box_type; 
+
+
+
+typedef struct {
+  box_type *box;
+  int *ind, /* index of points in coordinate matrix which tree relates to */
+      *rind, /* where is ith row of X in ind? */
+      n_box, /* number of boxes */
+      d, /* dimension */
+    n; /* number of points that tree relates to */
+  double huge; /* number indicating an open boundary */
+} kdtree_type;
+
+void k_newn_work(double *Xm,kdtree_type kd,double *X,double *dist,int *ni,int*m,int *n,int *d,int *k);
 void k_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,int *get_a);
 void Rkdtree(double *X,int *n, int *d,int *idat,double *ddat);
 void Rkdnearest(double *X,int *idat,double *ddat,int *n,double *x, int *m, int *ni, double *dist,int *k);
 void Rkradius(double *r,int *idat,double *ddat,double *X,double *x,int *m,int *off,int *ni,int *op);
+double xidist(double *x,double *X,int i,int d, int n);
+int closest(kdtree_type *kd, double *X,double *x,int n,int *ex,int nex);
+void kd_tree(double *X,int *n, int *d,kdtree_type *kd);
+void free_kdtree(kdtree_type kd);
 
 void tri2nei(int *t,int *nt,int *n,int *d,int *off);
 void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
