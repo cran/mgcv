@@ -1,5 +1,5 @@
-984183b5dfa8613c710cce579aa067da *ChangeLog
-df13385f38c692c79bf3f091be66d151 *DESCRIPTION
+28c0bb76bf273faa21523a58407f7913 *ChangeLog
+c4b5b155039f7c2f28626e592653b586 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 c481dc91d92fe1366ba65dac94c4dd97 *NAMESPACE
 eecaba353d94fd7d9cbddcb55cd5a282 *R/bam.r
@@ -127,7 +127,7 @@ d5a0f198090ecbfedaa6549f2918b997 *po/R-po.po
 1a4a267ddcb87bb83f09c291d3e97523 *po/fr.po
 813514ea4e046ecb4563eb3ae8aa202a *po/mgcv.pot
 749ac663240fd6eaa2b725602d47ef2a *po/po.po
-fa59bab566913ff89c255e38326ea830 *src/Makevars
+5d6b6d2ce66b7d3a78ebd10dc0c8da91 *src/Makevars
 8c13279b905295d111f824dfaa457091 *src/gdi.c
 49af97195accb65adc75620183d39a4c *src/general.h
 336b2ab5e56a10dea1124ee9a8c7714f *src/init.c
