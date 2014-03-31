@@ -1,6 +1,11 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.7-29
+
+* Single character change to Makevars file so that openMP multi-threading 
+  actually works.  
+
 1.7-28
 
 * exclude.too.far updated to use kd-tree instead of inefficient search for 
