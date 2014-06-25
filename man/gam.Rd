@@ -5,7 +5,8 @@
 \title{Generalized additive models with integrated smoothness estimation}
 
 \description{ Fits a generalized additive model (GAM) to
-data, the term `GAM' being taken to include any quadratically penalized GLM.  
+data, the term `GAM' being taken to include any quadratically penalized GLM and a variety of 
+other models estimated by a quadratically penalised likelihood type approach (see \code{\link{family.mgcv}}).  
 The degree of smoothness of model terms is estimated as part of
 fitting. \code{gam} can also fit any GLM subject to multiple quadratic penalties (including 
 estimation of degree of penalization). Isotropic or scale invariant smooths of any number of variables are
@@ -42,9 +43,9 @@ to the right hand side to specify that the linear predictor depends on smooth fu
 
 \item{family}{
 This is a family object specifying the distribution and link to use in
-fitting etc. See \code{\link{glm}} and \code{\link{family}} for more
-details. A negative binomial family is provided: see \code{\link{negbin}}. 
-\code{quasi} families actually result in the use of extended quasi-likelihood 
+fitting etc (see \code{\link{glm}} and \code{\link{family}}). See 
+\code{\link{family.mgcv}} for a full list of what is available, which goes well beyond exponential family.
+Note that \code{quasi} families actually result in the use of extended quasi-likelihood 
 if \code{method} is set to a RE/ML method (McCullagh and Nelder, 1989, 9.6).
 } 
 
@@ -74,7 +75,8 @@ included in \code{formula}: this conforms to the behaviour of
 \item{method}{The smoothing parameter estimation method. \code{"GCV.Cp"} to use GCV for unknown scale parameter and
 Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using GACV in place of GCV. \code{"REML"} 
 for REML estimation, including of unknown scale, \code{"P-REML"} for REML estimation, but using a Pearson estimate 
-of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likelihood in place of REML. }
+of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likelihood in place of REML. Beyond the 
+exponential family \code{"REML"} is the default, and the only other option is \code{"ML"}.}
 
 \item{optimizer}{An array specifying the numerical optimization method to use to optimize the smoothing 
 parameter estimation criterion (given by \code{method}). \code{"perf"} for performance iteration. \code{"outer"} 
@@ -193,10 +195,8 @@ just AIC rescaled, but is only used when \eqn{s}{s} is known.
 
 Alternatives are GACV, or a Laplace approximation to REML. There
 is some evidence that the latter may actually be the most effective choice. 
-
-Smoothing parameters are chosen to 
-minimize the GCV, UBRE/AIC, GACV or REML scores for the model, and the main computational challenge solved 
-by the \code{mgcv} package is to do this efficiently and reliably. Various
+The main computational challenge solved 
+by the \code{mgcv} package is to optimize the smoothness selection criteria efficiently and reliably. Various
 alternative numerical methods are provided which can be set by argument \code{optimizer}.
 
 
@@ -205,7 +205,8 @@ coefficient matrices for each smooth term in the model formula, obtaining a mode
 the strictly parametric part of the model formula, and combining these to obtain a 
 complete model matrix (/design matrix) and a set of penalty matrices for the smooth terms. 
 Some linear identifiability constraints are also obtained at this point. The model is 
-fit using \code{\link{gam.fit}}, a modification of \code{\link{glm.fit}}. The GAM 
+fit using \code{\link{gam.fit}}, \code{\link{gam.fit3}} or varaints, which are modifications 
+of \code{\link{glm.fit}}. The GAM 
 penalized likelihood maximization problem is solved by Penalized Iteratively 
 Reweighted  Least Squares (P-IRLS) (see e.g. Wood 2000). 
 Smoothing parameter selection is integrated in one of two ways. (i)
@@ -216,7 +217,7 @@ parameter estimates converge. (ii) Alternatively the P-IRLS scheme is iterated t
 convergence for each trial set of smoothing parameters, and GCV, UBRE or REML scores
 are only evaluated on convergence - optimization is then `outer' to the P-IRLS
 loop: in this case the P-IRLS iteration has to be differentiated, to
-facilitate optimization, and \code{\link{gam.fit3}} is used in place of
+facilitate optimization, and \code{\link{gam.fit3}} or one of its variants is used in place of
 \code{gam.fit}. The default is the second method, outer iteration.
 
 
@@ -238,12 +239,13 @@ Note that \code{gam} assumes a very inclusive definition of what counts as a GAM
 basically any penalized GLM can be used: to this end \code{gam} allows the non smooth model 
 components to be penalized via argument \code{paraPen} and allows the linear predictor to depend on 
 general linear functionals of smooths, via the summation convention mechanism described in 
-\code{\link{linear.functional.terms}}.
+\code{\link{linear.functional.terms}}. \code{link{family.mgcv}} details what is available beyond GLMs 
+and the exponential family.
      
 Details of the default underlying fitting methods are given in Wood (2011
 and 2004). Some alternative methods are discussed in Wood (2000 and 2006). 
 
-\code{gam()} is not a clone of Trevor Hastie's oroginal (as supplied in S-PLUS or package \link[gam]{gam}) The major
+\code{gam()} is not a clone of Trevor Hastie's original (as supplied in S-PLUS or package \link[gam]{gam}). The major
 differences are (i) that by default estimation of the
 degree of smoothness of model terms is part of model fitting, (ii) a
 Bayesian approach to variance estimation is employed that makes for easier
@@ -252,11 +254,12 @@ can depend on any (bounded) linear functional of smooth terms, (iv) the parametr
 (v) simple random effects can be incorporated, and 
 (vi) the facilities for incorporating smooths of more than one variable are
 different: specifically there are no \code{lo} smooths, but instead (a) \code{\link{s}}
-terms can have more than one argument, implying an isotropic smooth and (b) \code{\link{te}} or \code{\link{t2}} smooths are
+terms can have more than one argument, implying an isotropic smooth and (b) \code{\link{te}}, 
+\code{\link{ti}} or \code{\link{t2}} smooths are
 provided as an effective means for modelling smooth interactions of any
 number of variables via scale invariant tensor product smooths. Splines on the sphere, Duchon splines 
-and Gaussian Markov Random Fields are also available. See \link[gam]{gam} 
-from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
+and Gaussian Markov Random Fields are also available. (vii) Models beyond the exponential family are available. 
+See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
 }
 
 
@@ -358,6 +361,9 @@ an infinite range on the linear predictor scale.
  }
 
 \examples{
+## see also examples in ?gam.models (e.g. 'by' variables, 
+## random effects and tricks for large binary datasets)
+
 library(mgcv)
 set.seed(2) ## simulate some data... 
 dat <- gamSim(1,n=400,dist="normal",scale=2)
@@ -376,7 +382,9 @@ print(b)
 
 ## change the smoothness selection method to REML
 b0 <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="REML")
-plot(b0,pages=1,scheme=1)
+## use alternative plotting scheme, and way intervals include
+## smoothing parameter uncertainty...
+plot(b0,pages=1,scheme=1,unconditional=TRUE) 
 
 ## Would a smooth interaction of x0 and x1 be better?
 ## Use tensor product smooth of x0 and x1, basis 
@@ -396,7 +404,7 @@ summary(bt)
 ## If it is believed that x0 and x1 are naturally on 
 ## the same scale, and should be treated isotropically 
 ## then could try...
-bs <- gam(y~s(x0,x1,k=50)+s(x2)+s(x3),data=dat,
+bs <- gam(y~s(x0,x1,k=40)+s(x2)+s(x3),data=dat,
           method="REML")
 plot(bs,pages=1)
 AIC(b0,bt,bs) ## additive still better. 
@@ -427,13 +435,13 @@ print(b0);print(bp)
 
 ## now a GAM with 3df regression spline term & 2 penalized terms
 
-b0<-gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15),data=dat)
+b0 <- gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15),data=dat)
 plot(b0,pages=1)
 
 ## now simulate poisson data...
-dat <- gamSim(1,n=4000,dist="poisson",scale=.1)
+dat <- gamSim(1,n=2000,dist="poisson",scale=.1)
 
-## use "cr" basis to save time, with 4000 data...
+## use "cr" basis to save time, with 2000 data...
 b2<-gam(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+
         s(x3,bs="cr"),family=poisson,data=dat,method="REML")
 plot(b2,pages=1)
@@ -492,21 +500,11 @@ lr.fit2 <- gam(y~s(x1)+s(x2),family=binomial,
                data=dat,method="REML")
 AIC(lr.fit,lr.fit1,lr.fit2)
 
-## A Gamma example, by modify `gamSim' output...
- 
-dat <- gamSim(1,n=400,dist="normal",scale=1)
-dat$f <- dat$f/4 ## true linear predictor 
-Ey <- exp(dat$f);scale <- .5 ## mean and GLM scale parameter
-## Note that `shape' and `scale' in `rgamma' are almost
-## opposite terminology to that used with GLM/GAM...
-dat$y <- rgamma(Ey*0,shape=1/scale,scale=Ey*scale)
-bg <- gam(y~ s(x0)+ s(x1)+s(x2)+s(x3),family=Gamma(link=log),
-          data=dat,method="REML")
-plot(bg,pages=1,scheme=1)
+## For a Gamma example, see ?summary.gam...
 
 ## For inverse Gaussian, see ?rig
 
-## now a 2D smoothing example...
+## now 2D smoothing...
 
 eg <- gamSim(2,n=500,scale=.1)
 attach(eg)
@@ -527,11 +525,12 @@ par(op)
 ##################################################
 
 par(mfrow=c(2,2))
-eg <- gamSim(2,n=10000,scale=.5)
+n <- 5000
+eg <- gamSim(2,n=n,scale=.5)
 attach(eg)
 
-ind<-sample(1:10000,1000,replace=FALSE)
-b5<-gam(y~s(x,z,k=50),data=data,
+ind<-sample(1:n,200,replace=FALSE)
+b5<-gam(y~s(x,z,k=40),data=data,
         knots=list(x=data$x[ind],z=data$z[ind]))
 ## various visualizations
 vis.gam(b5,theta=30,phi=30)
@@ -541,48 +540,14 @@ plot(b5,scheme=2)
 
 par(mfrow=c(1,1))
 ## and a pure "knot based" spline of the same data
-b6<-gam(y~s(x,z,k=100),data=data,knots=list(x= rep((1:10-0.5)/10,10),
-        z=rep((1:10-0.5)/10,rep(10,10))))
+b6<-gam(y~s(x,z,k=64),data=data,knots=list(x= rep((1:8-0.5)/8,8),
+        z=rep((1:8-0.5)/8,rep(8,8))))
 vis.gam(b6,color="heat",theta=30,phi=30)
 
 ## varying the default large dataset behaviour via `xt'
-b7 <- gam(y~s(x,z,k=50,xt=list(max.knots=1000,seed=2)),data=data)
+b7 <- gam(y~s(x,z,k=40,xt=list(max.knots=500,seed=2)),data=data)
 vis.gam(b7,theta=30,phi=30)
 detach(eg)
-
-################################################################
-## Approximate large dataset logistic regression for rare events
-## based on subsampling the zeroes, and adding an offset to
-## approximately allow for this.
-## Doing the same thing, but upweighting the sampled zeroes
-## leads to problems with smoothness selection, and CIs.
-################################################################
-n <- 100000  ## simulate n data 
-dat <- gamSim(1,n=n,dist="binary",scale=.33)
-p <- binomial()$linkinv(dat$f-6) ## make 1's rare
-dat$y <- rbinom(p,1,p)      ## re-simulate rare response
-
-## Now sample all the 1's but only proportion S of the 0's
-S <- 0.02                   ## sampling fraction of zeroes
-dat <- dat[dat$y==1 | runif(n) < S,] ## sampling
-
-## Create offset based on total sampling fraction
-dat$s <- rep(log(nrow(dat)/n),nrow(dat))
-
-lr.fit <- gam(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+s(x3,bs="cr")+
-              offset(s),family=binomial,data=dat,method="REML")
-
-## plot model components with truth overlaid in red
-op <- par(mfrow=c(2,2))
-fn <- c("f0","f1","f2","f3");xn <- c("x0","x1","x2","x3")
-for (k in 1:4) {
-       plot(lr.fit,select=k,scale=0)
-       ff <- dat[[fn[k]]];xx <- dat[[xn[k]]]
-       ind <- sort.int(xx,index.return=TRUE)$ix
-       lines(xx[ind],(ff-mean(ff))[ind]*.33,col=2)
-}
-par(op)
-rm(dat)
 
 }
 

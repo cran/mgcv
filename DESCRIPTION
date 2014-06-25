@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.7-29
+Version: 1.8-0
 Author: Simon Wood <simon.wood@r-project.org>
 Maintainer: Simon Wood <simon.wood@r-project.org>
 Title: Mixed GAM Computation Vehicle with GCV/AIC/REML smoothness
@@ -10,11 +10,11 @@ Description: Routines for GAMs and other generalized ridge regression
 Priority: recommended
 Depends: R (>= 2.14.0), nlme (>= 3.1-64)
 Imports: methods, stats, graphics, Matrix
-Suggests: splines, parallel
+Suggests: splines, parallel, survival, MASS
 LazyLoad: yes
 ByteCompile: yes
 License: GPL (>= 2)
-Packaged: 2014-03-30 21:09:39 UTC; sw283
+Packaged: 2014-06-25 05:49:03 UTC; sw283
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2014-03-31 08:57:05
+Date/Publication: 2014-06-25 09:05:33

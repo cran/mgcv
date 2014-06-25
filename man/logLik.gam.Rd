@@ -1,9 +1,11 @@
 \name{logLik.gam}
 \alias{logLik.gam}
+\alias{AIC.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Extract the log likelihood for a fitted GAM}
+\title{Log likelihood for a fitted GAM, for AIC}
 \description{ Function to extract the log-likelihood for a fitted \code{gam}
 model (note that the models are usually fitted by penalized likelihood maximization). 
+Used by \code{\link{AIC}}.
 }
 \usage{
 \method{logLik}{gam}(object,...)
@@ -22,10 +24,12 @@ The function is provided so that \code{\link{AIC}} functions correctly with
 for penalization). Note,  when using \code{AIC} for penalized models, that the
 degrees of freedom are the effective degrees of freedom and not the number of
 parameters, and the model maximizes the penalized likelihood, not the actual
-likelihood! This seems to be reasonably well founded for the known scale
-parameter case (see Hastie and Tibshirani, 1990, section 6.8.3 and also Wood 2008), 
-and in fact in this case the default smoothing parameter estimation criterion is
-effectively this modified AIC.  
+likelihood. (See e.g. Hastie and Tibshirani, 1990, section 6.8.3 and also Wood 2008), 
+
+By default this routine uses a definition of the effective degrees of freedom that 
+includes smoothing parameter uncertainty, if this is available (i.e. if smoothing 
+parameter selection is by some variety of marginal likelihood).
+  
 }
 
 \value{ Standard \code{logLik} object: see \code{\link{logLik}}.

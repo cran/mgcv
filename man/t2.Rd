@@ -231,7 +231,7 @@ vis.gam(b,cond=list(u=.67),color="heat",zlim=c(-0.2,3.5))
 vis.gam(b,cond=list(u=1),color="heat",zlim=c(-0.2,3.5))
 par(op)
 
-b <- gam(y~t2(v,w,u,k=c(30,5),d=c(2,1),bs=c("tp","cr"),full=TRUE),
+b <- gam(y~t2(v,w,u,k=c(25,5),d=c(2,1),bs=c("tp","cr"),full=TRUE),
          method="ML")
 ## more penalties now. numbers in labels like "r1" indicate which 
 ## basis function of a null space is involved in the term. 

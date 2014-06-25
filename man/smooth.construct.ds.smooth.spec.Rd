@@ -10,18 +10,19 @@ general class can be invoked by terms like \code{s(x,z,bs="ds",m=c(1,.5)} in a \
 In the notation of Duchon (1977) m is given by \code{m[1]} (default value 2), while s is given by \code{m[2]} (default value 0).
 
 Duchon's (1977) construction generalizes the usual thin plate spline penalty as follows. The usual TPS penalty is given by the integral 
-of the squared Euclidian norm of a vector of mixed partial derivatives of the function w.r.t. its arguments. Duchon re-expresses 
+of the squared Euclidian norm of a vector of mixed partial mth order derivatives of the function w.r.t. its arguments. Duchon re-expresses 
 this penalty in the Fourier domain, and then weights the squared norm in the integral by the Euclidean norm of the fourier frequencies, 
-raised to the power 2s. s is a user selected constant taking integer values divided by 2. If d is the numberof arguments of the smooth, 
+raised to the power 2s. s is a user selected constant taking integer values divided by 2. If d is the number of arguments of the smooth, 
 then it is required that -d/2 < s < d/2. To obtain continuous functions we further require that m + s > d/2. If s=0 then the usual thin plate 
-spline is recovered.
+spline is recovered. 
 
 The construction is amenable to exactly the low rank approximation method given in Wood (2003) to thin plate splines, with similar 
 optimality properties, so this approach to low rank smoothing is used here. For large datasets the same subsampling approach as is used in the 
 \code{\link{tprs}} case is employed here to reduce computational costs. 
 
 These smoothers allow the use of lower orders of derivative in the penalty than conventional thin plate splines, 
-while still yielding continuous functions. 
+while still yielding continuous functions. For example, we can set m = 1 and s = d/2 - .5 in order to use first derivative penalization 
+for any d (which has the advantage that the dimension of the null space of unpenalized functions is only d+1). 
 
 }
 
@@ -84,6 +85,7 @@ faster, but gives poorer results (and the user must be quite careful in choosing
 
 
 }
+\seealso{\code{\link{Spherical.Spline}}}
 
 \references{
 Duchon, J. (1977) Splines minimizing rotation-invariant semi-norms in Solobev spaces. in W. Shemp and K. Zeller (eds) 

@@ -32,10 +32,6 @@ chol2qr <- function(XX,Xy) {
 ## equivalent to qr update. Uses simple
 ## regularization if XX not +ve def. 
 
-  #d <- diag(XX)
-  #ind <- d>0
-  #d[!ind] <- 1;d[ind] <- 1/sqrt(d[ind])
-  #XX <- t(d*t(d*XX)) ## diagonal pre-conditioning
 
   XXeps <- norm(XX)*.Machine$double.eps^.9
   n <- ncol(XX)
@@ -44,13 +40,11 @@ chol2qr <- function(XX,Xy) {
     R <- try(chol(XX+diag(n)*XXeps*i,pivot=TRUE),silent=TRUE) ## R'R = X'X
     if (inherits(R,"try-error")) ok <- FALSE else {
       ipiv <- piv <- attr(R,"pivot") 
-      #f <- try(forwardsolve(t(R),(Xy*d)[piv]),silent=TRUE) 
       f <- try(forwardsolve(t(R),Xy[piv]),silent=TRUE)
       if (inherits(f,"try-error")) ok <- FALSE
     }
     if (ok) { 
       ipiv[piv] <- 1:ncol(R)
-      #R <- t(t(R[,ipiv])/d)
       R <- R[,ipiv]
       break; ## success
     }
@@ -97,7 +91,6 @@ qr.up <- function(arg) {
   dev <- 0    
   for (b in 1:arg$n.block) {
     ind <- arg$start[b]:arg$stop[b]
-    ##arg$G$model <- arg$mf[ind,]
     X <- predict(arg$G,newdata=arg$mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
     rownames(X) <- NULL
     if (is.null(arg$coef)) eta1 <- arg$eta[ind] else eta1 <- drop(X%*%arg$coef) + arg$offset[ind]
@@ -315,9 +308,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
        dev <- 0
        if (n.threads == 1) { ## use original serial update code     
          for (b in 1:n.block) {
-        
            ind <- start[b]:stop[b]
-           ##G$model <- mf[ind,]
            X <- predict(G,newdata=mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
            rownames(X) <- NULL
            if (is.null(coef)) eta1 <- eta[ind] else eta1 <- drop(X%*%coef) + offset[ind]
@@ -386,7 +377,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
       
       if (control$trace)
-         cat("Deviance =", dev, "Iterations -", iter,"\n")
+         gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
 
       if (!is.finite(dev)) stop("Non-finite deviance")
 
@@ -420,7 +411,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
                              log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
                              nobs =nobs+nobs.extra,Mp=um$Mp)
         res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=FALSE)
-        object <- list(coefficients=res$beta,
+        object <- list(coefficients=res$beta,db.drho=fit$d1b,
                        gcv.ubre=fit$reml,mgcv.conv=list(iter=fit$iter,
                        message=fit$conv),rank=ncol(um$X),
                        Ve=NULL,scale.estimated = scale<=0,outer.info=fit$outer.info,
@@ -457,7 +448,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         object$coefficients <- fit$b
         object$edf <- post$edf 
         object$edf1 <- post$edf1
-        object$F <- post$F
+        ##object$F <- post$F
         object$full.sp <- fit$sp.full
         object$gcv.ubre <- fit$score
         object$hat <- post$hat
@@ -476,8 +467,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         
       if (any(!is.finite(coef))) {
           conv <- FALSE
-          warning("non-finite coefficients at iteration ",
-                  iter)
+          warning(gettextf("non-finite coefficients at iteration %d",
+                  iter))
           break
       }
     } ## end fitting iteration
@@ -486,10 +477,12 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale)
       object$edf <- res$edf
       object$edf1 <- res$edf1
-      object$F <- res$F
+      object$edf2 <- res$edf2
+      ##object$F <- res$F
       object$hat <- res$hat
       object$Vp <- res$Vp
       object$Ve <- res$Ve
+      object$Vc <- res$Vc
     }
 
     if (!conv)
@@ -596,7 +589,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
       rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
       
       if (control$trace)
-         cat("Deviance =", dev, "Iterations -", iter,"\n")
+         gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
 
       if (!is.finite(dev)) stop("Non-finite deviance")
 
@@ -634,7 +627,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
         object$coefficients <- fit$b
         object$edf <- post$edf
         object$edf1 <- post$edf1
-        object$F <- post$F
+        #object$F <- post$F
         object$full.sp <- fit$sp.full
         object$gcv.ubre <- fit$score
         object$hat <- post$hat
@@ -1002,10 +995,12 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
             log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
             nobs =n,Mp=um$Mp)
      res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale)
-     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,F=res$F,
+     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,edf2=res$edf2,##F=res$F,
+                    db.drho=fit$d1b,
                     gcv.ubre=fit$reml,hat=res$hat,mgcv.conv=list(iter=fit$iter,
                     message=fit$conv),rank=ncol(um$X),
-                    Ve=res$Ve,Vp=res$Vp,scale.estimated = scale<=0,outer.info=fit$outer.info,
+                    Ve=res$Ve,Vp=res$Vp,Vc=res$Vc,
+                    scale.estimated = scale<=0,outer.info=fit$outer.info,
                     optimizer=c("perf","newton"))
      if (scale<=0) { ## get sp's and scale estimate
        nsp <- length(fit$rho)
@@ -1050,7 +1045,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
      object$coefficients <- fit$b
      object$edf <- post$edf
      object$edf1 <- post$edf1
-     object$F <- post$F
+     ##object$F <- post$F
      object$full.sp <- fit$sp.full
      object$gcv.ubre <- fit$score
      object$hat <- post$hat
@@ -1201,7 +1196,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   G$family <- family
   G$terms<-terms;##G$pterms<-pterms
   pvars <- all.vars(delete.response(terms))
-  G$pred.formula <- if (length(pvars)>0) reformulate(pvars) else NULL
+  G$pred.formula <- gp$pred.formula # if (length(pvars)>0) reformulate(pvars) else NULL
 
   n <- nrow(mf)
   
@@ -1302,7 +1297,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$offset <- G$offset
   object$prior.weights <- G$w
   object$pterms <- G$pterms
-  object$pred.formula <- G$pred.formula
+  object$pred.formula <- G$pred.formula 
   object$smooth <- G$smooth
 
   object$terms <- G$terms
@@ -1452,10 +1447,10 @@ bam.update <- function(b,data,chunk.size=10000) {
      res <- Sl.postproc(b$Sl,fit,um$undrop,b$qrx$R,cov=TRUE,scale=scale)
 
 
-     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,F=res$F,
+     object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,edf2=res$edf2,##F=res$F,
                     gcv.ubre=fit$reml,hat=res$hat,outer.info=list(iter=fit$iter,
                     message=fit$conv),optimizer="fast-REML",rank=ncol(um$X),
-                    Ve=NULL,Vp=res$V,scale.estimated = scale<=0)
+                    Ve=NULL,Vp=res$V,Vc=res$Vc,db.drho=fit$d1b,scale.estimated = scale<=0)
      if (scale<=0) { ## get sp's and scale estimate
        nsp <- length(fit$rho)
        object$sig2 <- object$scale <- exp(fit$rho[nsp])
@@ -1504,7 +1499,7 @@ bam.update <- function(b,data,chunk.size=10000) {
     b$coefficients <- fit$b
     b$edf <- post$edf
     b$edf1 <- post$edf1
-    b$F <- post$F
+    ##b$F <- post$F
     b$full.sp <- fit$sp.full
     b$gcv.ubre <- fit$score
     b$hat <- post$hat
@@ -1520,7 +1515,7 @@ bam.update <- function(b,data,chunk.size=10000) {
     b$coefficients <- object$coefficients
     b$edf <- object$edf
     b$edf1 <- object$edf1
-    b$F <- object$F
+    ##b$F <- object$F
     b$full.sp <- object$sp.full
     b$gcv.ubre <- object$gcv.ubre
     b$hat <- object$hat

@@ -7,7 +7,7 @@ parameters or frequentist covariance matrix of the parameter estimators
 from a fitted \code{gam} object.
 }
 \usage{
-\method{vcov}{gam}(object, freq = FALSE, dispersion = NULL, ...)
+\method{vcov}{gam}(object, freq = FALSE, dispersion = NULL,unconditional=FALSE, ...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -16,6 +16,9 @@ from a fitted \code{gam} object.
 parameter estimators, \code{FALSE} to return the Bayesian posterior covariance
 matrix of the parameters.} 
 \item{dispersion}{ a value for the dispersion parameter: not normally used.}
+\item{unconditional}{ if \code{TRUE} (and \code{freq==FALSE}) then the Bayesian 
+smoothing parameter 
+uncertainty corrected covariance matrix is returned, if available. }
 \item{...}{ other arguments, currently ignored.}
 }
 \details{ Basically, just extracts \code{object$Ve} or \code{object$Vp} from a \code{\link{gamObject}}.

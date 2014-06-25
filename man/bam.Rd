@@ -8,7 +8,7 @@
 data set, the term `GAM' being taken to include any quadratically penalized GLM.  
 The degree of smoothness of model terms is estimated as part of
 fitting. In use the function is much like \code{\link{gam}}, except that the numerical methods
-are designed for datasets containing upwards of several tens of thousands of data. The advantage 
+are designed for datasets containing upwards of several tens of thousands of data (see Wood, Goude and Shaw, 2014). The advantage 
 of \code{bam} is much lower memory footprint than \code{\link{gam}}, but it can also be much faster, 
 for large datasets. \code{bam} can also compute on a cluster set up by the \link[parallel]{parallel} package.
 
@@ -150,6 +150,8 @@ Smoothness selection is performed on the working model at each stage (performanc
 small memory footprint. This is trivial to justify in the case of GCV or Cp/UBRE/AIC based model selection, and 
 for REML/ML is justified via the asymptotic multivariate normality of Q'z where z is the IRLS pseudodata. 
 
+For full method details see Wood, Goude and Shaw (2014).
+
 Note that POI is not as stable as the default nested iteration used with \code{\link{gam}}, but that for very large, information rich,
 datasets, this is unlikely to matter much. 
 
@@ -172,7 +174,7 @@ by this approach, while the computation is less stable than the default, and the
 
 
 \references{
-\url{http://www.maths.bath.ac.uk/~sw283/}
+Wood, S.N., Goude, Y. & Shaw S. (2014) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C, in press.  
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
@@ -192,6 +194,8 @@ This routine is less stable than `gam' for the same dataset.
 
 The negbin family is only supported for the *known theta* case.
 
+AIC computation does not currently take account of an AR1 model, if used.
+
 } 
 
 \seealso{\code{\link{mgcv-package}}, \code{\link{gamObject}}, \code{\link{gam.models}}, \code{\link{smooth.terms}},
@@ -204,14 +208,17 @@ The negbin family is only supported for the *known theta* case.
 
 \examples{
 library(mgcv)
+## See help("mgcv-parallel") for using bam in parallel
+
 ## Some examples are marked 'Not run' purely to keep 
 ## checking load on CRAN down. Sample sizes are small for 
 ## the same reason.
+
 set.seed(3)
-dat <- gamSim(1,n=15000,dist="normal",scale=20)
-bs <- "cr";k <- 20
-b <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)+
-           s(x3,bs=bs,k=k),data=dat)
+dat <- gamSim(1,n=25000,dist="normal",scale=20)
+bs <- "cr";k <- 12
+b <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k)+
+           s(x3,bs=bs),data=dat)
 summary(b)
 plot(b,pages=1,rug=FALSE)  ## plot smooths, but not rug
 plot(b,pages=1,rug=FALSE,seWithMean=TRUE) ## `with intercept' CIs
@@ -224,33 +231,12 @@ summary(ba)}
 ## A Poisson example...
 
 k <- 15
-dat <- gamSim(1,n=11000,dist="poisson",scale=.1)
-system.time(b1 <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k),
+dat <- gamSim(1,n=21000,dist="poisson",scale=.1)
+
+system.time(b1 <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k),
             data=dat,family=poisson()))
 b1
 
-## repeat on a cluster (need much larger n to be worthwhile!)
-require(parallel)  
-nc <- 2   ## cluster size, set for example portability
-if (detectCores()>1) { ## no point otherwise
-  cl <- makeCluster(nc) 
-  ## could also use makeForkCluster, but read warnings first!
-} else cl <- NULL
-  
-system.time(b2 <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)
-            ,data=dat,family=poisson(),cluster=cl))
-
-## ... first call has startup overheads, repeat shows speed up...
-
-\dontrun{
-system.time(b2 <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)
-            ,data=dat,family=poisson(),cluster=cl))
-}
-
-fv <- predict(b2,cluster=cl) ## parallel prediction
-
-if (!is.null(cl)) stopCluster(cl)
-b2
 
 ## Sparse smoother example...
 \dontrun{

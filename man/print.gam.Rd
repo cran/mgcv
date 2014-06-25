@@ -18,6 +18,10 @@ of what the object contains. \code{\link{summary.gam}} provides more detail.
 Note that the optimized smoothing parameter selection criterion reported is one of GCV, UBRE(AIC), GACV, 
 negative log marginal likelihood (ML), or negative log restricted likelihood (REML).
 
+If rank deficiency of the model was detected then the apparent rank is reported, along with the length of the cofficient vector 
+(rank in absense of rank deficieny). Rank deficiency occurs when not all coefficients are identifiable given the data. Although 
+the fitting routines (except \code{gamm}) deal gracefully with rank deficiency, interpretation of rank deficient models may be difficult. 
+
 }
 
 

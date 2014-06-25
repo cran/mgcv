@@ -29,7 +29,7 @@ USA.*/
 #include "matrix.h"
 #include "general.h"
 #define RANGECHECK
-#define PAD 1L
+#define PAD 1
 
 #define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
 
@@ -55,32 +55,30 @@ void ErrorMessage(char *msg,int fatal);
 matrix null_mat;
 MREC *top,*bottom;
 
-matrix initmat(rows,cols) long rows,cols;
-
+matrix initmat(int rows,int cols)
 /* Don't alter this without altering freemat() as well !! */
-
-{ matrix A;long i,j,pad;
+{ matrix A;int i,j,pad;
 #ifdef RANGECHECK
   pad=PAD;
 #else
-  pad=0L;
+  pad=0;
 #endif
   A.vec=0;
   A.M=(double **)R_chk_calloc((size_t)(rows+2*pad),sizeof(double *));
-  if ((cols==1L)||(rows==1L))
+  if ((cols==1)||(rows==1))
   { if (A.M)
     A.M[0]=(double *)R_chk_calloc((size_t)(cols*rows+2*pad),sizeof(double));
-    for (i=1L;i<rows+2*pad;i++)
+    for (i=1;i<rows+2*pad;i++)
     A.M[i]=A.M[0]+i*cols;A.vec=1;
   } else
   { if (A.M)
-    for (i=0L;i<rows+2*pad;i++)
+    for (i=0;i<rows+2*pad;i++)
     A.M[i]=(double *)R_chk_calloc((size_t)(cols+2*pad),sizeof(double));
   }
-  A.mem=rows*cols*sizeof(double);
+  A.mem=(long)(rows*cols*sizeof(double));
   memused+=A.mem;matrallocd++;
   A.original_r=A.r=rows;A.original_c=A.c=cols;
-  if (((!A.M)||(!A.M[rows-1+2*pad]))&&(rows*cols>0L))
+  if (((!A.M)||(!A.M[rows-1+2*pad]))&&(rows*cols>0))
   { ErrorMessage(_("Failed to initialize memory for matrix."),1);}
   if (pad)  /* This lot is debugging code that checks out matrix errors
 		       on allocation and release */
@@ -113,18 +111,18 @@ matrix initmat(rows,cols) long rows,cols;
   return(A);
 }
 
-matrix initvec(rows) long rows;
+matrix initvec(int rows)
 
-{ return(initmat(1L,rows));}
+{ return(initmat(1,rows));}
 
-void freemat(A) matrix A;
+void freemat(matrix A)
 
-{ long i,j,pad;int ok=1;
+{ int i,j,pad;int ok=1;
   MREC *delet;
 #ifdef RANGECHECK
   pad=PAD;
 #else
-  pad=0L;
+  pad=0;
 #endif
 /*  if (A.original_r*A.original_c!=0L) */
   { if (pad)
@@ -146,7 +144,7 @@ void freemat(A) matrix A;
       { ErrorMessage(_("An out of bound write to matrix has occurred!"),1);
       }
       /* find the matrix being deleted in the linked list of extant matrices */
-      i=0L;delet=bottom;
+      i=0;delet=bottom;
       while ((i<matrallocd)&&(delet->mat.M!=A.M)) { i++;delet=delet->fp;}
       if (i==matrallocd)
       { ErrorMessage(_("INTEGRITY PROBLEM in the extant matrix list."),1);
@@ -178,8 +176,7 @@ void matrixintegritycheck()
    of bounds from the matrix */
 
 { MREC *B;
-  int ok=1;
-  long pad=PAD,i,j,k=0L;
+  int ok=1,pad=PAD,i,j,k=0;
   matrix A;
 #ifndef RANGECHECK
   ErrorMessage(_("You are trying to check matrix integrity without defining RANGECHECK."));
@@ -220,7 +217,7 @@ void vmult(matrix *A,matrix *b,matrix *c,int t)
 /* fast multiplication of vector by matrix c=Ab if t==0 c=A'b otherwise*/
 
 { double **AM,*bV,*cV,*p;
-  long i,j,cr,br;
+  int i,j,cr,br;
   cr=c->r;br=b->r;
   AM=A->M;bV=b->V;cV=c->V;
   if (t) /* then A transposed */
@@ -242,7 +239,7 @@ void mcopy(matrix *A,matrix *B)
 
 /* copies A into B */
 
-{ long Ac;
+{ int Ac;
   double *pA,*pB,**AM,**BM;
   if (A->r>B->r||A->c>B->c) ErrorMessage(_("Target matrix too small in mcopy"),1);
   BM=B->M;Ac=A->c;
@@ -258,7 +255,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
 /* Puts A*B in C. A will be transposed in this calculation if tA is not zero.
    B will be transposed if tB is not zero */
 
-{ long i,j,k;
+{ int i,j,k;
   double temp,*p,*p1,*p2,**CM,**AM,**BM;
   AM=A.M;BM=B.M;CM=C.M; /* Saves address calculation involved in C.M */
   if (tA)
@@ -312,7 +309,7 @@ void mtest()
 { matrix M[1000];
   int i,n=1000,j,k;
   for (i=0;i<n;i++)
-  { M[i]=initmat(30L,30L);
+  { M[i]=initmat(30,30);
     for (j=0;j<30;j++)
     for (k=0;k<30;k++)
     M[i].M[j][k]=(double) k*i;
@@ -332,7 +329,7 @@ void multi(int n,matrix C,...)
    THIS FUNCTION HAS NOT BEEN TRIED USING SUN C */
 
 { matrix temp0,temp1,*M;
-  long r,c;
+  int r,c;
   int *t,i;
   va_list argptr;
 
@@ -476,7 +473,7 @@ void tricholeski(matrix *T,matrix *l0,matrix *l1)
  */
 
 { double **TM,*l1V,*l0V,z=1.0;
-  long k1,k;
+  int k1,k;
   TM=T->M;l0V=l0->V;l1V=l1->V;
   l0V[0]=sqrt(TM[0][0]);
   for (k=1;k<T->r;k++)
@@ -494,7 +491,7 @@ void tricholeski(matrix *T,matrix *l0,matrix *l1)
 
 double dot(a,b) matrix a,b;
 
-{ long i,k=0L;double c=0.0,*p,*p1;
+{ int i,k=0;double c=0.0,*p,*p1;
   if (a.vec) { p1=b.V;for (p=a.V;p<a.V+a.c*a.r;p++) c+=(*p)*(*p1++);}
   else
   for (i=0;i<a.r;i++) for (p=a.M[i];p<(a.M[i]+a.c);p++)
@@ -521,7 +518,7 @@ double enorm(d) matrix d;
 /* Euclidian norm of vector d, or rms for matrix */
 
 { double e=0.0,m=0.0,y,*p;
-  long i;
+  int i;
   if (d.vec) for (p=d.V;p<d.V+d.r*d.c;p++) { y=fabs(*p); if (y>m) m=y; }
   else for (i=0;i<d.r;i++) for (p=d.M[i];p<d.M[i]+d.c;p++) 
   { y=fabs(*p);if (y>m) m=y;}/* m=max(m,fabs(*p)); */
@@ -538,13 +535,13 @@ double enorm(d) matrix d;
 
 
 
-void householder(u,a,b,t1) matrix *u,a,b;long t1;
+void householder(u,a,b,t1) matrix *u,a,b;int t1;
 
 /* transforms a to b, iff they are of equal Euclidian length. u is the
    (t1+1) vector such that the full post multiplying householder matrix is
    H' = [ I - vv' ]   where v'  = [u',0] where 0 is a vector of zeroes.   */
 
-{ long i;double v,*aV,*bV,*uV;
+{ int i;double v,*aV,*bV,*uV;
   aV=a.V;bV=b.V;uV=u->V;
   u->r=t1+1;
   for (i=0;i<u->r;i++) uV[i]=aV[i]-bV[i];
@@ -559,7 +556,7 @@ void Hmult(C,u) matrix C,u;
 /* This routine is for post multiplication by Housholder matrices only */
 
 { double temp,*p,*p1,*uV,**CuM,**CM;
-  long i,j;
+  int i,j;
   matrix Cu;
   Cu=initmat(C.r,u.c);
   uV=u.V;CuM=Cu.M;CM=C.M;
@@ -596,8 +593,8 @@ void HQmult(C,U,p,t) matrix C,U;int p,t;
 
 { double *u,*CuV,**CM;
   matrix Cu;
-  long i,j,k;
-  if (p) Cu=initmat(C.c,1L);else Cu=initmat(C.r,1L);
+  int i,j,k;
+  if (p) Cu=initmat(C.c,1);else Cu=initmat(C.r,1);
   CuV=Cu.V;CM=C.M;
   if (p)
   { if (t)
@@ -656,7 +653,7 @@ void QT(Q,A,fullQ) matrix Q,A;int fullQ;
 /* flow protected, cancellation error free, but still behaves as before.   */
 /* Tested using variety of random matrices.                                */
 
-{ long i,j,Ar,Ac,k;
+{ int i,j,Ar,Ac,k;
   double lsq,*p,*p1,**QM,**AM,g,x,m;
   QM=Q.M;AM=A.M;Ar=A.r;Ac=A.c;
   if (fullQ) for (i=0;i<Ac;i++) 
@@ -717,7 +714,7 @@ void OrthoMult(matrix *Q,matrix *A,int off,int rows,int t,int pre,int o_pre)
 */
 
 { double au,*u,*a,**AtM=NULL,**AM,**QM;
-  long i,j,k,Ar,Qc,kk;
+  int i,j,k,Ar,Qc,kk;
   matrix At;
   if (o_pre) t=1-t; /* default assumption is that creation was for post mult. */
   if (pre) /* use fact that QA=(A'Q')' and Q'A=(A'Q)' */
@@ -755,7 +752,7 @@ void Rsolv(matrix *R,matrix *p,matrix *y, int transpose)
 { int i,j,k;
   double x,*pV,*yV,*RMi,**RM,*dum,**pM,**yM;
   pV=p->V;yV=y->V;
-  if (y->r==1L) /* then p and y are vectors */
+  if (y->r==1) /* then p and y are vectors */
   { if (transpose) /* solve R'p=y for p */
     { RM=R->M;
       for (i=0;i<R->r;i++)
@@ -805,7 +802,7 @@ int QR(matrix *Q,matrix *R)
    
 */
 
-{ long i,j,k,n,Rr;
+{ int i,j,k,n,Rr;
   double *u,t,z,**RM,*p,m;
   RM=R->M;Rr=R->r;
   if (Rr<R->c) n=Rr; else n=R->c;
@@ -837,7 +834,7 @@ int QR(matrix *Q,matrix *R)
 }
 
 
-void interchange(matrix *M,long i,long j,int col)
+void interchange(matrix *M,int i,int j,int col)
 
 /* interchanges rows i and j of M if col==0 otherwise cols i and j */
 
@@ -868,7 +865,7 @@ void UTU(matrix *T,matrix *U)
    OrthoMult() works with U storage convention used here.
 */
 
-{ long i,j,k;
+{ int i,j,k;
   double *u,*t,lt,x,m;
   for (i=0;i<T->r-2;i++)
   { u=U->M[i];t=T->M[i];lt=0.0;
@@ -927,7 +924,7 @@ void root(matrix *M,matrix *C,double tol)
 */
 
 { matrix T,U,u0,u1;
-  long i,j,k,rows;
+  int i,j,k,rows;
   int fswap=0,ok;
   double max,uc,*u,x,m;
   T=initmat(M->r,M->c);
@@ -937,7 +934,7 @@ void root(matrix *M,matrix *C,double tol)
   /* make absolutely symmetric */
   for (i=0;i<T.r-1;i++) T.M[i][i+1]=T.M[i+1][i]=(T.M[i+1][i]+T.M[i][i+1])*0.5;
   rows=T.r;
-  u0=initmat(T.r,1L);u1=initmat(T.r-1,1L);
+  u0=initmat(T.r,1);u1=initmat(T.r-1,1);
   u0.r=T.c=T.r=rows;u1.r=rows-1;
   tricholeski(&T,&u0,&u1);
   /* now check result, since I'm not quite happy with step 4 of theoretical justification
@@ -990,7 +987,7 @@ void root(matrix *M,matrix *C,double tol)
   }
   C->c=k;
   if (fswap)
-  { interchange(C,1L,0L,0);}
+  { interchange(C,1,0,0);}
   freemat(T);freemat(U);freemat(u0);freemat(u1);
 }
 
@@ -1363,7 +1360,7 @@ void svd(matrix *A, matrix *w, matrix *V)
     V->M[0][0]=1.0;
     return;
   }
-  ws=initmat(w->r-1,1L);
+  ws=initmat(w->r-1,1);
   /* bi-diagonalize A, so A=UWV', w = l.diag(W), ws=l.super.diag(W), A contains U   */
   bidiag(A,w,&ws,V);  
   U=A;
@@ -1384,13 +1381,13 @@ matrix svdroot(matrix A,double reltol)
 /* Finds smallest squareroot of a non-negative definite matrix. reltol is
    used to decide which columns to remove... */
 
-{ long k=0l,i,j;
+{ int k=0l,i,j;
   double tol=0.0,prod;
   char err[100];
   matrix a,v,w;
   a=initmat(A.r,A.c);mcopy(&A,&a);
   v=initmat(A.r,A.c);
-  w=initmat(A.r,1L);
+  w=initmat(A.r,1);
   svd(&a,&w,&v);   /*a * diag(w) * v' */
   for (i=0;i<w.r;i++) { w.V[i]=sqrt(w.V[i]);if (w.V[i]>tol) tol=w.V[i];}
   tol*=sqrt(reltol);
@@ -1468,7 +1465,7 @@ void msort(matrix a)
   qsort(a.M,(size_t)a.r,sizeof(a.M[0]),melemcmp);
 }
 
-void RArrayFromMatrix(double *a,long r,matrix *M)
+void RArrayFromMatrix(double *a,int r,matrix *M)
 
 /* copies matrix *M into R array a where r is the number of rows of A treated as
   a matrix by R */
@@ -1478,7 +1475,7 @@ void RArrayFromMatrix(double *a,long r,matrix *M)
 }
 
 
-matrix Rmatrix(double *A,long r,long c)
+matrix Rmatrix(double *A,int r,int c)
 
 /* produces a matrix from the array containing a (default) R matrix stored:
    A[0,0], A[1,0], A[2,0] .... etc */

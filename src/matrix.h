@@ -7,7 +7,7 @@
 #define VEC M[0]
 
 typedef struct
-{ int vec;long r,c,mem,original_r,original_c;double **M,*V;} matrix;
+{ int vec, r,c,original_r,original_c;long mem;double **M,*V;} matrix;
 
 extern matrix null_mat;
 
@@ -18,7 +18,7 @@ extern long matrallocd;
 void mtest(void);
 void mcopy(matrix *A,matrix *B);
 void sort(matrix);
-matrix initmat(long rows,long cols);
+matrix initmat(int rows,int cols);
 void freemat(matrix A);
 void vmult(matrix *A,matrix *b,matrix *c,int t);
 void matmult(matrix C,matrix A,matrix B,int tA,int tB);
@@ -27,7 +27,7 @@ void invert(matrix *a);
 void tricholeski(matrix *T,matrix *l0,matrix *l1);
 double dot(matrix a,matrix b);
 double enorm(matrix d);
-void householder(matrix *u,matrix a,matrix b,long t1);
+void householder(matrix *u,matrix a,matrix b,int t1);
 void Hmult(matrix C,matrix u);
 void HQmult(matrix C,matrix U,int p,int t);
 void QT(matrix Q,matrix A,int Qfull);
@@ -44,6 +44,9 @@ void svd(matrix *a,matrix *w,matrix *v);
 matrix svdroot(matrix A,double reltol);
 void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V);
 void msort(matrix a);
-void RArrayFromMatrix(double *a,long r,matrix *M);
-matrix Rmatrix(double *A,long r,long c);
+void RArrayFromMatrix(double *a,int r,matrix *M);
+matrix Rmatrix(double *A,int r,int c);
+matrix initvec(int rows);
+void interchange(matrix *M,int i,int j,int col);
+
 #endif

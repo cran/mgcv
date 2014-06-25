@@ -1,11 +1,11 @@
 
 ## Example simulated data for gam.models (c) Simon N. Wood 2008
 
-gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
+gamSim <- function(eg=1,n=400,dist="normal",scale=2,verbose=TRUE) {
 
   if (eg==1||eg==7) { ## 4 term Gu  and Wahba example
-    if (eg==1) cat("Gu & Wahba 4 term additive model\n")
-    else  cat("Gu & Wahba 4 term additive model, correlated predictors\n")
+    if (eg==1) { if (verbose) cat("Gu & Wahba 4 term additive model\n") }
+    else  { if (verbose) cat("Gu & Wahba 4 term additive model, correlated predictors\n")}
     x0 <- runif(n, 0, 1)
     if (eg==7) x1 <- x0*.7 + runif(n, 0, .3) else
     x1 <- runif(n,0,1)
@@ -32,7 +32,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     data <- data.frame(y=y,x0=x0,x1=x1,x2=x2,x3=x3,f=f,f0=f0(x0),f1=f1(x1),f2=f2(x2),f3=x3*0)
     return(data)
   } else if (eg==2) { ## Simple 2D smoothing example
-    cat("Bivariate smoothing example\n")
+    if (verbose) cat("Bivariate smoothing example\n")
     test1<-function(x,z,sx=0.3,sz=0.4)  
     { (pi**sx*sz)*(1.2*exp(-(x-0.2)^2/sx^2-(z-0.3)^2/sz^2)+
       0.8*exp(-(x-0.7)^2/sx^2-(z-0.8)^2/sz^2))
@@ -47,7 +47,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     truth <- list(x=xs,z=zs,f=truth)
     return(list(data=data,truth=truth,pr=pr))
   } else if (eg==3) { ## continuous `by' variable
-    cat("Continuous `by' variable example\n")
+    if (verbose) cat("Continuous `by' variable example\n")
     x1 <- runif(n, 0, 1)
     x2 <- sort(runif(n, 0, 1))
     f <-  0.2 * x2^11 * (10 * (1 - x2))^6 + 
@@ -57,7 +57,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     y <- f*x1 + e
     return(data.frame(y=y,x1=x1,x2=x2,f=f))
   } else if (eg==4) { ## factor `by' variable
-    cat("Factor `by' variable example\n")
+    if (verbose) cat("Factor `by' variable example\n")
     n <- 400   
     x0 <- runif(n, 0, 1)
     x1 <- runif(n, 0, 1)
@@ -73,7 +73,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     y<-f1*fac.1+f2*fac.2+f3*fac.3+ e 
     return(data.frame(y=y,x0=x0,x1=x1,x2=x2,fac=fac,f1=f1,f2=f2,f3=f3))
   } else if (eg==5) { ## additive + factor
-    cat("Additive model + factor\n")
+    if (verbose) cat("Additive model + factor\n")
     x0 <- rep(1:4,50)
     x1 <- runif(n, 0, 1)
     x2 <- runif(n, 0, 1)
@@ -86,7 +86,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2) {
     x0<-as.factor(x0)
     return(data.frame(y=y,x0=x0,x1=x1,x2=x2,x3=x3))
   } else if (eg==6) { ## Gu and Wahba + a random factor
-    cat("4 term additive + random effect")
+    if (verbose)  cat("4 term additive + random effect")
     dat <- gamSim(1,n=n,scale=0)
     fac <- rep(1:4,n/4)
     dat$f <- dat$f + fac*3

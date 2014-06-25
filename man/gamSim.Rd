@@ -8,7 +8,7 @@ the length of the example code sections.
 
 }
 
-\usage{gamSim(eg=1,n=400,dist="normal",scale=2)}
+\usage{gamSim(eg=1,n=400,dist="normal",scale=2,verbose=TRUE)}
 
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -21,6 +21,7 @@ the response.}
 
 \item{scale}{Used to set noise level.}
 
+\item{verbose}{Should information about simulation type be printed?}
   }
 
 \details{See the source code for exactly what is simulated in each case. 

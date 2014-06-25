@@ -42,7 +42,7 @@ void read_mat(double *M,int *r,int*c,char *path) {
              as.character("/home/sw283/tmp/badmat.dat"),PACKAGE="mgcv")
    M <- matrix(oo$M,oo$r,oo$c)
 */
- int j;
+ size_t j;
  FILE *mf;
  mf = fopen("/home/sw283/tmp/badmat.dat","rb"); 
  if (mf == NULL) { 
@@ -223,7 +223,11 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
 SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
 /* parallel matrix multiplication using .Call interface */
   double *A,*B,*C;
-  int r,col,n,nt,Ct,Bt,m;
+  int r,col,n,nt,Ct,Bt;
+  #ifdef SUPPORT_OPENMP
+  int m;
+  #endif
+
   SEXP a; 
  
   nt = asInteger(nthreads);
@@ -247,7 +251,9 @@ SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
   #ifdef SUPPORT_OPENMP
   m = omp_get_num_procs(); /* detected number of processors */
   if (nt > m || nt < 1) nt = m; /* no point in more threads than m */
+  /*Rprintf("\n open mp %d cores, %d used\n",m,nt);*/
   #else
+  /*Rprintf("\n no openmp\n");*/
   nt = 1; /* no openMP support - turn off threading */
   #endif
   mgcv_pmmult(A,B,C,&Bt,&Ct,&r,&col,&n,&nt);
@@ -272,7 +278,7 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   #endif
 
   c =(double *)R_chk_calloc((size_t) p,sizeof(double)); 
-  work =(double *)R_chk_calloc((size_t) p*nt,sizeof(double));
+  work =(double *)R_chk_calloc((size_t) (p*nt),sizeof(double));
   k=0;tau=0.0;
   /* find column norms O(np) */
   for (p0=x,i=0;i<p;i++) {
@@ -759,7 +765,7 @@ void mgcv_tri_diag(double *S,int *n,double *tau)
   double *work,work1,*e,*d;
   char uplo='U';
   d = (double *)R_chk_calloc((size_t)*n,sizeof(double));
-  e = (double *)R_chk_calloc((size_t)*n-1,sizeof(double));
+  e = (double *)R_chk_calloc((size_t)(*n-1),sizeof(double));
   /* work space query... */
   F77_CALL(dsytrd)(&uplo,n,S,n,d,e,tau,&work1,&lwork,&info);
   lwork=(int)floor(work1);if (work1-lwork>0.5) lwork++;
@@ -864,7 +870,7 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse) {
   if (nbf) { /* only do this if final block shorter than rest */
     ns_main = (*r * *c) / *nb; /* full segments fitting in x */
     ns_extra = ns - ns_main; /* segments requiring extra storage */
-    extra = (double *) R_chk_calloc((size_t) *nb * ns_extra,sizeof(double));
+    extra = (double *) R_chk_calloc((size_t) (*nb * ns_extra),sizeof(double));
     x0 = extra + *nb * ns_extra - 1; /* end of extra */ 
     x1 = x + *r * *c -1 ; /* end of x */
 
@@ -906,9 +912,9 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse) {
   /* now re-arrange row-block wise... */
 
   /* a[i] is original segment now in segment i... */ 
-  a = (int *) R_chk_calloc((size_t) k * *c,sizeof(int));
+  a = (int *) R_chk_calloc((size_t) (k * *c),sizeof(int));
   /* s[i] is segment now containing original segment i */
-  s = (int *) R_chk_calloc((size_t) k * *c,sizeof(int));
+  s = (int *) R_chk_calloc((size_t) (k * *c),sizeof(int));
   for (i=0;i<k * *c;i++) s[i] = a[i] = i;
   ti=0; /* target segment */
   for (i=0;i<k;i++) for (j=0;j<*c;j++,ti++) {
@@ -958,8 +964,8 @@ int get_qpr_k(int *r,int *c,int *nt) {
 /* For a machine with nt available cores, computes k, the best number of threads to 
    use for a parallel QR.
 */
-  int k;double kd,fkd,x,ckd;
   #ifdef SUPPORT_OPENMP
+  int k;double kd,fkd,x,ckd;
   kd = sqrt(*r/(double)*c); /* theoretical optimum */
   if (kd <= 1.0) k = 1; else
     if (kd > *nt) k = *nt; else {
@@ -1027,7 +1033,7 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
 
   nb = (int)ceil(*r/(double)k); /* block size - in rows */
   nbf = *r - (k-1)*nb; /* end block size */ 
-  Qb = (double *)R_chk_calloc((size_t) k * *c * *cb,sizeof(double));
+  Qb = (double *)R_chk_calloc((size_t) (k * *c * *cb),sizeof(double));
   nq = *c * k;
   if (*tp) { /* Q'b */
     /* first the component Q matrices are applied to the blocks of b */
@@ -1117,7 +1123,7 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
     nbf = *r - (k-1)*nb; /* end block size */
     /* need to re-arrange row blocks so that they can be split between qr calls */
     row_block_reorder(x,r,c,&nb,&FALSE); 
-    piv = (int *)R_chk_calloc((size_t) k * *c,sizeof(int));
+    piv = (int *)R_chk_calloc((size_t) (k * *c),sizeof(int));
     R = x + *r * *c ; /* pointer to combined unpivoted R matrix */
     nr = *c * k; /* number of rows in R */
     #ifdef SUPPORT_OPENMP
@@ -1132,7 +1138,7 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
         xi = x + nb * i * *c; /* current block */
         mgcv_qr(xi,&n,c,piv + i * *c,tau + i * *c);
         /* and copy the R factors, unpivoted into a new matrix */
-        R1 = (double *)R_chk_calloc((size_t)*c * *c,sizeof(double));
+        R1 = (double *)R_chk_calloc((size_t)(*c * *c),sizeof(double));
         for (l=0;l<*c;l++) for (j=l;j<*c;j++) R1[l + *c * j] = xi[l + n * j]; 
         /* What if final nbf is less than c? - can't happen  */
         pivoter(R1,c,c,piv + i * *c,&TRUE,&TRUE); /* unpivoting the columns of R1 */
@@ -1349,7 +1355,7 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
   double work1,*work,dum1=0,abstol=0.0,*Z,*dum2,x,*p,*p1,*p2,*Acopy;
   int lwork = -1,liwork = -1,iwork1,info,*iwork,dumi=0,n_eval=0,*isupZ,i,j,k,debug=0;
   if (debug && *get_vectors) { /* need a copy to dump in case of trouble */
-    Acopy = (double *)R_chk_calloc((size_t)*n * *n,sizeof(double));
+    Acopy = (double *)R_chk_calloc((size_t)(*n * *n),sizeof(double));
     for (p2=Acopy,p=A,p1=A+ *n * *n;p<p1;p++,p2++) *p2 = *p;
   }
 
@@ -1407,7 +1413,7 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
        x = ev[i]; ev[i] = ev[*n-i-1];ev[*n-i-1] = x;
   }
   if (debug && *get_vectors) { /* are the eigenvectors really orthogonal?? */
-    p = (double *)R_chk_calloc((size_t)*n * *n,sizeof(double));
+    p = (double *)R_chk_calloc((size_t)(*n * *n),sizeof(double));
     getXtX(p,A,n,n); /* cross prod of eigenvec matrix - should be I */
     x=0.0;k=0;
     for (i=0;i<*n;i++) for (j=0;j<i;j++)  if (fabs(p[i + *n * j])>1e-14) { 
@@ -1599,7 +1605,7 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol)
       /* set up storage for eigen vectors */
       if (vlength) R_chk_free(v); /* free up first */
       vlength=j+1; 
-      v = (double *)R_chk_calloc((size_t)vlength*vlength,sizeof(double));
+      v = (double *)R_chk_calloc((size_t)(vlength*vlength),sizeof(double));
  
       /* obtain eigen values/vectors of T_j in O(j^2) flops */
     

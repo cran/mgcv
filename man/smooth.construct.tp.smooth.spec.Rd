@@ -9,7 +9,7 @@
 \code{s(x,z,bs="tp",m=3)} (or just \code{s(x,z)} as this is the default basis). These terms are based on thin plate 
 regression splines. \code{m} specifies the order of the derivatives in the thin plate spline penalty. If \code{m} is 
 a vector of length 2 and the second element is zero, then the penalty null space of the smooth is not included in
-the smooth.  
+the smooth: this is useful if you need to test whether a smooth could be replaced by a linear term, for example.  
 
  Thin plate regression splines are constructed by starting with the
   basis and penalty for a full thin plate spline and then truncating this basis in
@@ -115,6 +115,12 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
+require(mgcv); n <- 100; set.seed(2)
+x <- runif(n); y <- x + x^2*.2 + rnorm(n) *.1
+## is smooth significantly different from straight line?
+summary(gam(y~s(x,m=c(2,0))+x,method="REML")) ## not quite
+## is smooth significatly different from zero?
+summary(gam(y~s(x),method="REML")) ## yes!
 ## see ?gam
 }
 \keyword{models} \keyword{regression}%-- one or more ..

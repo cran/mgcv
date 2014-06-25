@@ -43,6 +43,8 @@ cases, not at the MLE.}
             Only included if \code{\link{gam}} \code{control} argument element 
             \code{keepData} is set to \code{TRUE} (default is \code{FALSE}).}
 
+\item{db.drho}{matrix of first derivatives of model coefficients w.r.t. log smoothing parameters.}
+
 \item{deviance}{model deviance (not penalized deviance).}
 
 \item{df.null}{null degrees of freedom.} 
@@ -53,6 +55,9 @@ cases, not at the MLE.}
 means that many of these are less than 1.}
 
 \item{edf1}{similar, but using alternative estimate of EDF. Useful for testing.}
+
+\item{edf2}{if estimation is by ML or REML then an edf that accounts for smoothing parameter
+uncertainty can be computed, this is it. \code{edf1} is a heuristic upper bound for \code{edf2}.}
 
 \item{family}{family object specifying distribution and link used.}
 
@@ -169,11 +174,14 @@ is the mean, nearest observed value to median and maximum, as a numeric vector. 
 estimators. Particularly useful for testing whether terms are zero. Not so
 useful for CI's as smooths are usually biased.}
 
-
 \item{Vp}{estimated covariance matrix for the parameters. This is a Bayesian
 posterior covariance matrix that results from adopting a particular Bayesian
 model of the smoothing process. Paricularly useful for creating
 credible/confidence intervals.}
+
+\item{Vc}{Under ML or REML smoothing parameter estimation it is possible to correct the covariance
+matrix \code{Vp} for smoothing parameter uncertainty. This is the corrected version.
+}
 
 \item{weights}{final weights used in IRLS iteration.}
 

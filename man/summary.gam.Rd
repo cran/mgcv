@@ -111,6 +111,10 @@ explained is probably more appropriate for non-normal errors. Note that \code{r.
 
 \item{n}{number of data.}
 
+\item{np}{number of model coefficients (regression coefficients, not smoothing parameters or other parameters of likelihood).}
+
+\item{rank}{apparent model rank.}
+
 \item{method}{The smoothing selection criterion used.}
 
 \item{sp.criterion}{The minimized value of the smoothness selection criterion. Note that for ML and REML methods, 
@@ -183,6 +187,7 @@ P-values for terms penalized via `paraPen' are unlikely to be correct.
 \examples{
 library(mgcv)
 set.seed(0)
+
 dat <- gamSim(1,n=200,scale=2) ## simulate data
 
 b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
@@ -215,6 +220,17 @@ plot(((1:k)-0.5)/k,sort(p))
 abline(0,1,col=2)
 ks.test(p,"punif") ## how close to uniform are the p-values?
 
+## A Gamma example, by modify `gamSim' output...
+ 
+dat <- gamSim(1,n=400,dist="normal",scale=1)
+dat$f <- dat$f/4 ## true linear predictor 
+Ey <- exp(dat$f);scale <- .5 ## mean and GLM scale parameter
+## Note that `shape' and `scale' in `rgamma' are almost
+## opposite terminology to that used with GLM/GAM...
+dat$y <- rgamma(Ey*0,shape=1/scale,scale=Ey*scale)
+bg <- gam(y~ s(x0)+ s(x1)+s(x2)+s(x3),family=Gamma(link=log),
+          data=dat,method="REML")
+summary(bg)
 
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...
