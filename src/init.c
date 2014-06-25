@@ -15,6 +15,10 @@ R_CallMethodDef CallMethods[] = {
 };
 
 R_CMethodDef CEntries[] = {
+    {"coxpred", (DL_FUNC) &coxpred, 13},
+    {"coxpp", (DL_FUNC) &coxpp, 10},
+    {"coxlpl", (DL_FUNC) &coxlpl, 17},
+    {"mvn_ll", (DL_FUNC) &mvn_ll,15},
     {"RMonoCon", (DL_FUNC) &RMonoCon, 7},
     {"RuniqueCombs", (DL_FUNC) &RuniqueCombs, 4},
     {"RPCLS", (DL_FUNC) &RPCLS, 14},
@@ -25,8 +29,8 @@ R_CMethodDef CEntries[] = {
     {"magic", (DL_FUNC) &magic, 19},
     {"mgcv_mmult", (DL_FUNC) &mgcv_mmult,8},
     {"mgcv_pmmult", (DL_FUNC) &mgcv_pmmult,9},
-    {"gdi1",(DL_FUNC) &gdi1,46},
-    {"gdi2",(DL_FUNC) &gdi2,43},
+    {"gdi1",(DL_FUNC) &gdi1,47},
+    {"gdi2",(DL_FUNC) &gdi2,44},
     {"R_cond",(DL_FUNC) &R_cond,5} ,
     {"pls_fit1",(DL_FUNC)&pls_fit1,12},
     {"tweedious",(DL_FUNC)&tweedious,13},

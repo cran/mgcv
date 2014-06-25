@@ -22,6 +22,7 @@ USA.*/
 #include "mgcv.h"
 #include "matrix.h"
 #include "general.h"
+#include "tprs.h"
 #include <R_ext/BLAS.h>
 /* Code for thin plate regression splines */
 
@@ -184,10 +185,10 @@ void tpsT(matrix *T,matrix *X,int m,int d)
   /* pin=(int **)R_chk_calloc((size_t)M,sizeof(int *)); 
      for (i=0;i<M;i++) pin[i]=(int *)R_chk_calloc((size_t)d,sizeof(int));*/
 
-  pin = (int *)R_chk_calloc((size_t) M * d,sizeof(int));
+  pin = (int *)R_chk_calloc((size_t) (M * d),sizeof(int));
   gen_tps_poly_powers(pin, &M, &m, &d); /* pin[][] contains powers of polynomials in unpenalized basis */
   
-  (*T)=initmat(X->r,(long)M);
+  (*T)=initmat(X->r,M);
   for (i=0;i<T->r;i++)
   for (j=0;j<M;j++)
   { x=1.0;/* for (k=0;k<d;k++) for (z=0;z<pin[j][k];z++) x *= X->M[i][k]; */
@@ -253,7 +254,7 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,double *b,int constant)
       for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
       /* pin=(int **)R_chk_calloc((size_t)M,sizeof(int *)); 
          for (i=0;i<M;i++) pin[i]=(int *)R_chk_calloc((size_t)d,sizeof(int));*/
-      pin=(int *)R_chk_calloc((size_t)M*d,sizeof(int)); 
+      pin=(int *)R_chk_calloc((size_t)(M*d),sizeof(int)); 
       gen_tps_poly_powers(pin, &M, &m, &d);
       eta0 = eta_const(m,d); /* constant multiplying eta */
     } else return(0.0);
@@ -399,10 +400,10 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   tol = pow(tol,.7);
 
   if (n_knots<k) /* then use the covariate points as knots */
-  { *Xu=initmat((long)n,(long)d+1);
+  { *Xu=initmat(n,d+1);
     for (i=0;i<n;i++) { for (j=0;j<d;j++) Xu->M[i][j]=x[j][i];Xu->M[i][d]=(double)i;}
   } else /* knot locations supplied */
-  { *Xu=initmat((long)n_knots,(long)d+1);
+  { *Xu=initmat(n_knots,d+1);
     for (i=0;i<n_knots;i++) { for (j=0;j<d;j++) Xu->M[i][j]=knt[j][i];Xu->M[i][d]=(double)i;}
   }
   /* Now the number of unique covariate "points" must be obtained */
@@ -431,15 +432,15 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     for (i=0;i<T.r;i++) for (j=0;j<T.c;j++) TU.M[j][i]=T.M[i][j];
     QT(*UZ,TU,1); /* UZ is now simply Z - but needs to be full, not just HH's */
     for (i=0;i<T.r;i++) for (j=0;j<T.c;j++) TU.M[j][i]=T.M[i][j];
-    Z=initmat((long)M,T.r);
+    Z=initmat(M,T.r);
     QT(Z,TU,0);  /* Still need Z as HH's for later */
   } else
-  { v=initmat((long)k,1L);    /* eigen-value matrix for E */
+  { v=initmat(k,1);    /* eigen-value matrix for E */
 
   
       nk = E.r;
-      Ea = (double *) R_chk_calloc((size_t) nk*nk,sizeof(double));
-      Ua = (double *) R_chk_calloc((size_t) nk*k,sizeof(double));
+      Ea = (double *) R_chk_calloc((size_t) (nk*nk),sizeof(double));
+      Ua = (double *) R_chk_calloc((size_t) (nk*k),sizeof(double));
       RArrayFromMatrix(Ea,nk,&E);
       minus = -1;kk=k; 
   
@@ -449,12 +450,12 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     
   
     /* Now form the constraint matrix for the truncated problem T'U */
-    TU=initmat((long)M,k);
+    TU=initmat(M,k);
     matmult(TU,T,U,1,0);
     /* Now TU \delta_k =0 is the constraint for this problem. To impose it use  */
     /* a QT factorization on TU. i.e. TU Q = [0,B] where B is M by M and Q */
     /* can be written Q=[Z,Y], where Z is the null space of the constraints. */
-    Z=initmat((long)M,TU.c);
+    Z=initmat(M,TU.c);
     QT(Z,TU,0);  /* Z now contains null space as series of householder rotations */
     *UZ=initmat(U.r+M-1+constant,U.c);UZ->r=U.r;
     mcopy(&U,UZ);
@@ -468,7 +469,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   
   /* Now construct the design matrix X = [Udiag(v)Z,T] .... */
   if (n_knots<k&&!pure_knot) /* then the basis prior to truncation is pure spline basis: 6/5/2002 - !pure_knots added as bug fix*/
-  { X1=initmat(U.r,(long)k);
+  { X1=initmat(U.r,k);
     mcopy(&U,&X1); /* now form Udiag(v) */
     for (i=0;i<X1.r;i++) for (j=0;j<X1.c;j++) X1.M[i][j]*=v.V[j];
     HQmult(X1,Z,0,0);  /* form Udiag(v)Z */
@@ -480,22 +481,22 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     { for (i=0;i<X1.r;i++) for (j=1;j<T.c;j++) X1.M[i][X1.c-M+j-1]=T.M[i][j];X1.c--;}
     /* now map the design matrix back onto the design matrix for the original data */
     /* undoing what had to be done to deal with tied covariates ...... */
-    *X=initmat((long)n,X1.c);
+    *X=initmat(n,X1.c);
     for (i=0;i<n;i++)
     { l=yxindex[i];
       for (j=0;j<X1.c;j++) X->M[i][j]=X1.M[l][j];
     }
     freemat(X1);
   } else /* the user supplied a set of knots to generate the original un-truncated basis */
-  { p.r=0L; /* don't want a value from tps_g() */
+  { p.r=0; /* don't want a value from tps_g() */
     xc=(double *)R_chk_calloc((size_t)d,sizeof(double));
     kk = (int) UZ->r;
     b=(double *)R_chk_calloc((size_t)kk,sizeof(double));  /* initmat((long)UZ->r,1L);*/
-    *X=initmat((long)n,(long)k);
+    *X=initmat(n,k);
     a = (double *)R_chk_calloc((size_t)k,sizeof(double));
     /* following loop can dominate computational cost, so it is worth 
        using BLAS routines and paying some attention to efficiency */
-    uz = (double *) R_chk_calloc((size_t)kk*k,sizeof(double));
+    uz = (double *) R_chk_calloc((size_t)(kk*k),sizeof(double));
     RArrayFromMatrix(uz,kk,UZ);
     for (i=0;i<n;i++) { 
       for (j=0;j<d;j++) xc[j]=x[j][i];
@@ -517,7 +518,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     R_chk_free(xc);R_chk_free(b);R_chk_free(a);R_chk_free(uz);
   }
   /* Next, create the penalty matrix...... */
-  *S=initmat((long)k,(long)k); /* form Z'SZ */
+  *S=initmat(k,k); /* form Z'SZ */
   if (pure_knot) mcopy(&E,S);
   else for (i=0;i<v.r;i++) S->M[i][i]=v.V[i];
   HQmult(*S,Z,0,0);HQmult(*S,Z,1,1);
@@ -602,7 +603,7 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
 
   if (2 * *m <= *d && *d > 0) { *m = 0;while ( 2 * *m < *d+2) (*m)++;} 
   /* get null space polynomial powers */
-  pin=(int *)R_chk_calloc((size_t) *M * *d,sizeof(int)); 
+  pin=(int *)R_chk_calloc((size_t) (*M * *d),sizeof(int)); 
   gen_tps_poly_powers(pin, M, m, d);
   eta0 = eta_const(*m,*d);
 

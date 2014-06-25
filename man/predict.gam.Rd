@@ -14,7 +14,8 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 
 \usage{
 \method{predict}{gam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,...)
+        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,
+        unconditional=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -65,6 +66,10 @@ for required predictors, gives rise to \code{NA} predictions (even if the term c
 dropping of \code{newdata} rows, if they contain any \code{NA} values for
 required predictors. If \code{newdata} is missing then \code{NA} handling is 
 determined from \code{object$na.action}.}
+
+\item{unconditional}{if \code{TRUE} then the smoothing parameter uncertainty corrected covariance
+matrix is used, when available, otherwise the covariance matrix conditional on the estimated 
+smoothing parameters is used. }
 
 \item{...}{ other arguments.}
 

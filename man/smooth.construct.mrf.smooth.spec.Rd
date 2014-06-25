@@ -6,7 +6,8 @@
 \title{Markov Random Field Smooths}
 
 \description{For data observed over discrete spatial units, a simple Markov random field 
-smoother is sometimes appropriate. These functions provide such a smoother class for \code{mgcv}.
+smoother is sometimes appropriate. These functions provide such a smoother class for \code{mgcv}. 
+See details for how to deal with regions with missing data.
 }
 
 \usage{
@@ -81,10 +82,14 @@ Note that smooths of this class have a built in plot method, and that the utilit
 can be useful for working with discrete area data. The plot method has two schemes, \code{scheme==0} is colour, 
 \code{scheme==1} is grey scale.
 
+The situation in which there are areas with no data requires special handling. Create one dummy observation for each 
+such area, but give the corresponding data frame row a weight of zero during fitting (using the \code{weight} 
+argument to \code{gam}). In this case the basis dimension, \code{k}, must be set to less than (or at most equal to) the number of areas with data.
+
 }
 
 \references{
-Wood S.N. (2006) Generalized additive models: an intriduction with R CRC.
+Wood S.N. (2006) Generalized additive models: an introduction with R. CRC.
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} and Thomas Kneib

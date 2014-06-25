@@ -1,6 +1,35 @@
-## (c) Simon N. Wood 2011-2013
+## (c) Simon N. Wood 2011-2014
 ## Many of the following are simple wrappers for C functions, used largely 
 ## for testing purposes
+
+
+mvn.ll <- function(y,X,beta,dbeta=NULL) {
+## to facilitate testing of MVN routine mvn_ll.
+## X is a sequence of m model matrices bound columnwise, with m dim attribute lpi
+##   indicating where the next starts in all cases.
+## beta is parameter vector - last m*(m+1)/2 elements are chol factor of precision params.
+## y is m by n data matrix.
+  lpi <- attr(X,"lpi")-1;m <- length(lpi)
+  nb <- length(beta)
+  if (is.null(dbeta)) {
+    nsp = 0;dbeta <- dH <- 0
+  } else {
+    nsp = ncol(dbeta)
+    dH = rep(0,nsp*nb*nb)
+  }
+  oo <- .C(C_mvn_ll,y=as.double(y),X=as.double(X),XX=as.double(crossprod(X)),beta=as.double(beta),n=as.integer(nrow(X)),
+                  lpi=as.integer(lpi),m=as.integer(m),ll=as.double(0),lb=as.double(beta*0),
+                  lbb=as.double(rep(0,nb*nb)), dbeta = as.double(dbeta), dH = as.double(dH), 
+                  deriv = as.integer(nsp>0),nsp = as.integer(nsp),nt=as.integer(1))
+  if (nsp==0) dH <- NULL else {
+    dH <- list();ind <- 1:(nb*nb)
+    for (i in 1:nsp) { 
+      dH[[i]] <- matrix(oo$dH[ind],nb,nb)
+      ind <- ind + nb*nb
+    }
+  }
+  list(l=oo$ll,lb=oo$lb,lbb=matrix(oo$lbb,nb,nb),dH=dH)
+}
 
 pinv <- function(X,svd=FALSE) {
 ## a pseudoinverse for n by p, n>p matrices

@@ -7,7 +7,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
 void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	  double *sp,double *z,double *w,double *wf,double *alpha,double *mu,double *eta, double *y,
 	 double *p_weights,double *g1,double *g2,double *g3,double *g4,double *V0,
-	 double *V1,double *V2,double *V3,double *beta,double *D1,double *D2,
+	  double *V1,double *V2,double *V3,double *beta,double *b1,double *D1,double *D2,
          double *P0, double *P1,double *P2,double *trA,
          double *trA1,double *trA2,double *rV,double *rank_tol,double *conv_tol, int *rank_est,
 	 int *n,int *q, int *M,int *Mp,int *Enrow,int *rSncol,int *deriv,
@@ -18,7 +18,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
           double *Det2_th,double *Det3,double *Det_th2,
           double *Det4, double *Det3_th, double *Det2_th2,
-          double *beta,double *D1,double *D2,double *P,double *P1,double *P2,
+          double *beta,double *b1,double *D1,double *D2,double *P,double *P1,double *P2,
           double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
 	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
@@ -35,7 +35,24 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
                double *det, double *det1, double *det2, double *d_tol,
 		 double *r_tol,int *fixed_penalty);
 
+/* cox model routines */
+
+void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,double *q,
+             double *tr,int *n,int *p, int *nt,double *s,double *se);
+void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
+	   int *n,int *p, int *nt);
+void coxlpl(double *eta,double *X,int *r, int *d,double *tr, 
+            int *n,int *p, int *nt,double *lp,double *g,double *H,
+            double *d1beta,double *d1H,double *d2beta,
+            double *d2H,int *n_sp,int *deriv);
+
+/* MVN smooth additive */
+void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
+            int *m,double *ll,double *lb,double *lbb,double *dbeta,
+            double *dH,int *deriv,int *nsp,int *nt);
+
 /* various service routines */
+
 void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
 	       double *y,double *eps,int *n,
                double *th,double *rho,double *a, double *b);

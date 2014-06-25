@@ -11,7 +11,8 @@ Not normally called directly.
 
 \usage{interpret.gam(gf)}
 
-\arguments{\item{gf}{A GAM formula as supplied to \code{\link{gam}} or \code{\link{gamm}}.}
+\arguments{\item{gf}{A GAM formula as supplied to \code{\link{gam}} or \code{\link{gamm}}, or a 
+list of such formulae, as supplied for some \code{\link{gam}} families.}
 
 }
 

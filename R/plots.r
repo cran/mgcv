@@ -1,4 +1,4 @@
-##  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
+#  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
 ##  With contributions from Henric Nilsson
 
 
@@ -200,7 +200,7 @@ k.check <- function(b,subsample=5000,n.rep=400) {
     kc[k] <- length(ind)
     edf[k] <- sum(b$edf[ind]) 
     nc <- b$smooth[[k]]$dim
-    if (ok && ncol(dat)>nc) dat <- dat[,1:nc] ## drop any by variables
+    if (ok && ncol(dat)>nc) dat <- dat[,1:nc,drop=FALSE] ## drop any by variables
     for (j in 1:nc) if (is.factor(dat[[j]])) ok <- FALSE 
     if (!ok) {
       p.val[k] <- v.obs[k] <- NA ## can't do this test with summation convention/factors
@@ -258,11 +258,13 @@ gam.check <- function(b, old.style=FALSE,
                       k.sample=5000,k.rep=200,
 		      ## arguments passed to qq.gam() {w/o warnings !}:
 		      rep=0, level=.9, rl.col=2, rep.col="gray80", ...)
-# takes a fitted gam object and produces some standard diagnostic plots
+## takes a fitted gam object and produces some standard diagnostic plots
 {
   type <- match.arg(type)
   resid <- residuals(b, type=type)
-  linpred <- napredict(b$na.action, b$linear.predictors)
+  linpred <- if (is.matrix(b$linear.predictors)&&!is.matrix(resid)) 
+             napredict(b$na.action, b$linear.predictors[,1]) else 
+             napredict(b$na.action, b$linear.predictors)
 ##  if (b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","mle.REML","mle.ML","PQL")) { 
     old.par<-par(mfrow=c(2,2))
     if (old.style)
@@ -272,7 +274,9 @@ gam.check <- function(b, old.style=FALSE,
     plot(linpred, resid,main="Resids vs. linear pred.",
          xlab="linear predictor",ylab="residuals",...)
     hist(resid,xlab="Residuals",main="Histogram of residuals",...)
-    plot(fitted(b), napredict(b$na.action, b$y),
+    fv <- if (inherits(b$family,"extended.family")) predict(b,type="response") else fitted(b)
+    if (is.matrix(fv)&&!is.matrix(b$y)) fv <- fv[,1]
+    plot(fv, napredict(b$na.action, b$y),
          xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values",...)
     if (!(b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","fREML"))) { ## gamm `gam' object
        par(old.par)
@@ -309,6 +313,10 @@ gam.check <- function(b, old.style=FALSE,
                    " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
       }
     }
+    if (!is.null(b$rank)) {
+      cat("Model rank = ",b$rank,"/",length(b$coefficients),"\n")
+    }
+
     cat("\n")
     ## now check k
     kchck <- k.check(b,subsample=k.sample,n.rep=k.rep)
@@ -339,6 +347,7 @@ plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2
       X <- diag(p)   # prediction matrix for this term
       if (is.null(xlab)) xlabel<- "Gaussian quantiles" else xlabel <- xlab
       if (is.null(ylab)) ylabel <- "effects" else ylabel <- ylab
+      if (!is.null(main)) label <- main
       return(list(X=X,scale=FALSE,se=FALSE,raw=raw,xlab=xlabel,ylab=ylabel,
              main=label))
 
@@ -474,6 +483,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
  
     dat <- data.frame(la=um$la*180/pi,lo=um$lo*180/pi)
     names(dat) <- x$term
+    if (x$by!="NA") dat[[x$by]] <- la*0+1    
 
     X <- PredictMat(x,dat)   # prediction matrix for this term
 
@@ -968,7 +978,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,scheme=0,...)
+                     shift=0,trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,scheme=0,...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -1006,6 +1016,11 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   ## start of main function
   #########################
 
+  if (unconditional) {
+    if (is.null(x$Vc)) warning("Smoothness uncertainty corrected covariance not available") else 
+    x$Vp <- x$Vc ## cov matrix reset to full Bayesian
+  }
+
   w.resid<-NULL
   if (length(residuals)>1) # residuals supplied 
   { if (length(residuals)==length(x$residuals)) 
@@ -1041,12 +1056,17 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   }
 
   if (partial.resids) { ## getting information needed for partial residuals...
-    fv.terms <- predict(x,type="terms")
-    if (is.null(w.resid)) w.resid<-x$residuals*sqrt(x$weights) # weighted working residuals
+    if (is.null(w.resid)) { ## produce working resids if info available
+      if (is.null(x$residuals)||is.null(x$weights)) partial.resids <- FALSE else {
+        wr <- sqrt(x$weights)
+        w.resid <- x$residuals*wr/mean(wr) # weighted working residuals
+      }
+    }
+    if (partial.resids) fv.terms <- predict(x,type="terms") ## get individual smooth effects
   }
 
-  pd<-list(); ## plot data list
-  i<-1 # needs a value if no smooths, but parametric terms ...
+  pd <- list(); ## plot data list
+  i <- 1 # needs a value if no smooths, but parametric terms ...
 
   ##################################################
   ## First the loop to get the data for the plots...
@@ -1075,13 +1095,14 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
       if (se && P$se) { ## get standard errors for fit
         ## test whether mean variability to be added to variability (only for centred terms)
         if (seWithMean && attr(x$smooth[[i]],"nCons")>0) {
+          if (length(x$cmX) < ncol(x$Vp)) x$cmX <- c(x$cmX,rep(0,ncol(x$Vp)-length(x$cmX)))
           X1 <- matrix(x$cmX,nrow(P$X),ncol(x$Vp),byrow=TRUE)
           meanL1 <- x$smooth[[i]]$meanL1
           if (!is.null(meanL1)) X1 <- X1 / meanL1
           X1[,first:last] <- P$X
-          se.fit <- sqrt(rowSums((X1%*%x$Vp)*X1))
+          se.fit <- sqrt(pmax(0,rowSums((X1%*%x$Vp)*X1)))
         } else se.fit <- ## se in centred (or anyway unconstained) space only
-        sqrt(rowSums((P$X%*%x$Vp[first:last,first:last,drop=FALSE])*P$X))
+        sqrt(pmax(0,rowSums((P$X%*%x$Vp[first:last,first:last,drop=FALSE])*P$X)))
         if (!is.null(P$exclude)) P$se.fit[P$exclude] <- NA
       } ## standard errors for fit completed
       if (partial.resids) { P$p.resid <- fv.terms[,length(order)+i] + w.resid }
@@ -1144,7 +1165,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   if (scale==-1&&is.null(ylim)) {
     k <- 0
     if (m>0) for (i in 1:m) if (pd[[i]]$plot.me&&pd[[i]]$scale) { ## loop through plot data 
-      if (se&&pd[[i]]$se) { ## require CIs on plots
+      if (se&&length(pd[[i]]$se)>1) { ## require CIs on plots
         ul<-pd[[i]]$fit+pd[[i]]$se
         ll<-pd[[i]]$fit-pd[[i]]$se
         if (k==0) { 
@@ -1289,8 +1310,9 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     }
     if (k<2) stop("Model does not seem to have enough terms to do anything useful")
   } else { 
-    if (sum(view%in%v.names)!=2) stop(
-        paste(c("view variables must be one of",v.names),collapse=", "))
+    if (sum(view%in%v.names)!=2) stop(gettextf("view variables must be one of %s", 
+                                      paste(v.names, collapse = ", ")))
+
     for (i in 1:2) 
     if  (!inherits(x$var.summary[[view[i]]],c("numeric","factor"))) 
     stop("Don't know what to do with parametric terms that are not simple numeric or factor variables")
@@ -1302,9 +1324,9 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
   } else {
     if (length(unique(x$var.summary[[view[i]]]))<=1) ok <- FALSE 
   }
-  if (!ok) 
-  stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
-
+  if (!ok) stop(gettextf("View variables must contain more than one value. view = c(%s,%s).",
+                view[1], view[2]))
+ 
   # now get the values of the variables which are not the arguments of the plotted surface
 #  marg<-x$model[1,]
 #  m.name<-names(x$model)
@@ -1416,7 +1438,7 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     } else
     { stub <- paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
                     ifelse("ylab" %in% dnm, "" , ",ylab=view[2]"),
-                    ifelse("main" %in% dnm, "" , ",zlab=zlab"),",...)",sep="")
+                    ifelse("zlab" %in% dnm, "" , ",zlab=zlab"),",...)",sep="")
       if (color=="bw")
       { op <- par(bg="white")
         txt <- paste("persp(m1,m2,z,col=\"white\",zlim=c(min.z,max.z) ",stub,sep="") # assemble persp() call

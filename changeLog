@@ -1,10 +1,80 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
-1.7-29
+1.8-0
 
-* Single character change to Makevars file so that openMP multi-threading 
-  actually works.  
+*** Cox Proportional Hazard family 'cox.ph' added as example of general
+  penalized likelihood families now useable with 'gam'.
+
+*** 'ocat', 'tw', 'nb', 'betar', 'ziP' and 'scat' families added for 
+  ordered categorical data, Tweedie with estimation of 'p', negative binomial 
+  with (fast) estimation of 'theta', beta regression for proportions, simple
+  zero inflated Poisson regression and heavy tailed regression with scaled t 
+  distribution. These are all examples of 'extended families' now useable 
+  with 'gam'.
+
+*** 'gaulss' and 'ziplss' families, implementing models with multiple linear 
+  predictors. For gaulss there is a linear predictor for the Gaussian mean
+  and another for the standard deviation. For ziplss there is a linear
+  predictor controlling `presence' and another controlling 
+  the Poisson parameter, given presence. 
+
+*** 'mvn' family for multivariate normal additive models.
+
+** AIC computation changed for bam and gam models estimated by REML/ML
+   to account for smoothing parameter uncertainty in degrees of freedom
+   term.
+
+* With REML/ML smoothness selection in gam/bam an extra covariance matrix 'Vc'
+  is now computed which allows for smoothing parameter uncertainty. See
+  the 'unconditional' arguments to 'predict.gam' and 'plot.gam' to use this. 
+
+* 'gam.vcomp' bug fix. Computed intervals for families with fixed scale 
+   parameter were too wide. 
+
+* gam now defaults to the Pearson estimator of the scale parameter to avoid
+  poor scale estimates in the quasipoisson case with low counts (and possibly
+  elsewhere). Gaussian, Poisson and binomial inference invariant to change. 
+  Thanks to Greg Dropkin, for reporting the issue.
+
+* Polish translation added thanks to Lukasz Daniel.
+
+* gam.fit3 now forces eta and mu to be consistent with coef and valid on
+  return (previously could happen that if step halving was used in final
+  iteration then eta or mu could be invalid, e.g. when using identity link
+  with non-negative data)
+
+* gam.fit3 now bases its convergence criteria on grad deviance w.r.t. model 
+  coefs, rather than changes in model coefs. This prevents problems when 
+  there is rank deficiency but different coefs get dropped at different 
+  iterations. Thanks to Kristynn Sullivan.
+
+* If mgcv is not on the search path then interpret.gam now tries to 
+  evaluate in namespace of mgcv with environment of formula as enclosing 
+  environment, if evaluation in the environment of the formula fails. 
+
+* bug fix to sos plotting method so that it now works with 'by' variables.
+
+* 'plot.gam' now weights partial residuals by *normalized* square root 
+  iterative weights so that the average weight is 1 and the residuals 
+  should have constant variance if all is ok.
+
+* 'pcls' now reports if the initial point is not feasible.
+
+* 'print.gam' and 'summary.gam' now report the rank of the model if it is
+   rank deficient. 'gam.check' reports the model rank whenever it is 
+   available.
+
+* fix of bug in 'k.check' called by 'gam.check' that gave an error for 
+  smooths with by variables.
+
+* predict.gam now checks that factors in newdata do not contain more
+  levels than those used in fitting.
+
+* predict.gam could fail for type "terms" with no intercept - fixed.
+
+* 'bfgs' now uses a finite difference approximation for the initial inverse 
+  Hessian. 
 
 1.7-28
 

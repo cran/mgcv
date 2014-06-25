@@ -1,5 +1,5 @@
-\name{mgcv-FAQ}
-\alias{mgcv-FAQ}
+\name{mgcv.FAQ}
+\alias{mgcv.FAQ}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Frequently Asked Questions for package mgcv}
 \description{ This page provides answers to some of the questions that get asked most often about mgcv}
@@ -22,6 +22,8 @@ If derivatives are required then the simplest approach is to use finite differen
 SEs etc to be calculated).
 
 \item \bold{Some of my smooths are estimated to be straight lines and their confidence intervals vanish at some point in the middle. What is wrong?} Nothing. Smooths are subject to sum-to-zero identifiability constraints. If a smooth is estimated to be a straight line then it consequently has one degree of freedom, and there is no choice about where it passes through zero --- so the CI must vanish at that point. 
+
+\item \bold{How do I test whether a smooth is significantly different from a straight line}. See \code{\link{tprs}} and the example therein.
 
 \item \bold{Some code from Wood (2006) causes an error: why?} The book was written using mgcv version 1.3. To allow for 
 REML estimation of smoothing parameters in versions 1.5, some changes had to be made to the syntax. In particular the 
@@ -51,7 +53,7 @@ Which you use should depend on which model you really think is appropriate. In a
 different. The mixed model AIC uses the marginal liklihood and the corresponding number of model parameters. The gam model 
 uses the penalized likelihood and the effective degrees of freedom. 
 
-\item \bold{What does 'mgcv' stand for?} '\bold{M}ixed \bold{G}AM \bold{C}omputation \bold{V}ehicle', is my current best effort (let me know if you can do better). Originally it stood for `Multiple GCV', which has long since ceased to be usefully descriptive, (and I can't really change 'mgcv' now without causing disruption).
+\item \bold{What does 'mgcv' stand for?} '\bold{M}ixed \bold{G}AM \bold{C}omputation \bold{V}ehicle', is my current best effort (let me know if you can do better). Originally it stood for `Multiple GCV', which has long since ceased to be usefully descriptive, (and I can't really change 'mgcv' now without causing disruption). On a bad inbox day '\bold{M}ad \bold{G}AM \bold{C}omputing \bold{V}ulture'.
 
 
 \item \bold{My new method is failing to beat mgcv, what can I do?} If speed is the problem, then make sure that you use the 

@@ -96,12 +96,15 @@ pdConstruct.pdTens <-
     lform <- "y ~ as.numeric(S[[1]])"
     if (m>1) for (i in 2:m) lform <- paste(lform," + as.numeric(S[[",i,"]])",sep="")
     lform <- formula(paste(lform,"-1"))
-    mod1<-lm(lform)
+    mod1 <- lm(lform)
+    mod1.r2 <- 1-sum(residuals(mod1)^2)/sum((y-mean(y))^2)
     y <- as.numeric(solve(crossprod(val))) ## ignore codetools complaint about this
-    mod2<-lm(lform)
+    mod2 <- lm(lform)
+    mod2.r2 <- 1-sum(residuals(mod2)^2)/sum((y-mean(y))^2)
     ## `value' and `val' can relate to the cov matrix or its inverse:
     ## the following seems to be only way to tell which.
-    if (summary(mod2)$r.sq>summary(mod1)$r.sq) mod1<-mod2
+    #if (summary(mod2)$r.sq>summary(mod1)$r.sq) mod1<-mod2
+    if (mod2.r2 > mod1.r2) mod1 <- mod2
     value <- coef(mod1)  
     value[value <=0] <- .Machine$double.eps * mean(as.numeric(lapply(S,function(x) max(abs(x)))))
     value <- notLog2(value)
@@ -112,8 +115,7 @@ pdConstruct.pdTens <-
   m <- length(attr(form,"S"))
   if ((aux <- length(val)) > 0) {
     if (aux && (aux != m)) {
-      stop(paste("An object of length", aux,
-		 "does not match the required parameter size"))
+      stop(gettextf("An object of length %d does not match the required parameter size",aux))
     }
   }
   class(val) <- c("pdTens","pdMat")
@@ -1160,7 +1162,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
   converged <- FALSE 
 
   for (i in 1:niter) {
-    if (verbose) message("iteration ", i)
+    if (verbose) message(gettextf("iteration %d", i))
     fit <- lme(fixed=fixed,random=random,data=data,correlation=correlation,
              control=control,weights=varFixed(w.formula),method="ML",...)
     etaold <- eta

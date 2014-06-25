@@ -67,6 +67,7 @@ contour plot. lat, lon gridlines are also plotted.
 plotting method with \code{scheme} decremented by 2.
  
 }
+\seealso{\code{\link{Duchon.spline}}}
 
 \references{
 Wahba, G. (1981) Spline interpolation and smoothing on the sphere. SIAM J. Sci. Stat. Comput. 2(1):5-16

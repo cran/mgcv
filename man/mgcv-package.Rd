@@ -1,4 +1,5 @@
-\name{mgcv-package}
+\name{mgcv.package}
+\alias{mgcv.package}
 \alias{mgcv-package}
 \alias{mgcv}
 \docType{package}
@@ -7,7 +8,7 @@
 \description{
 \code{mgcv} provides functions for generalized additive modelling (\code{\link{gam}} and \code{\link{bam}})  and
 generalized additive mixed modelling (\code{\link{gamm}}, and \code{\link{random.effects}}). The term GAM is taken to include 
-any GLM estimated by quadratically penalized (possibly quasi-) likelihood maximization.
+any model dependent on unknown smooth functions of predictors and estimated by quadratically penalized (possibly quasi-) likelihood maximization. Available distributions are covered in \code{\link{family.mgcv}}.
 
 Particular features of the package are facilities for automatic smoothness selection (Wood, 2004, 2011), 
 and the provision of a variety of smooths of more than one variable. User defined 
@@ -70,13 +71,13 @@ that can not be more conventiently accessed via \code{\link{gam}} .
 Penalized weighted least squares with linear equality and inequality constraints is provided by 
 \code{\link{pcls}}.
 
-For a complete list of functions type \code{library(help=mgcv)}. See also \code{\link{mgcv-FAQ}}.
+For a complete list of functions type \code{library(help=mgcv)}. See also \code{\link{mgcv.FAQ}}.
 
 }
 \author{
-Simon Wood <simon.wood@r-project.org>
+Simon Wood <simon.wood@r-project.org> 
 
-with contributions and/or help from Thomas Kneib, Kurt Hornik, Mike Lonergan, Henric Nilsson,
+with contributions and/or help from Natalya Pya, Thomas Kneib, Kurt Hornik, Mike Lonergan, Henric Nilsson,
 Fabian Scheipl and Brian Ripley. 
 
 Polish translation - Lukasz Daniel; German translation - Chris Leick, Detlef Steuer; 

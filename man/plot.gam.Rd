@@ -11,7 +11,7 @@
          n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade=FALSE,shade.col="gray80",
-         shift=0,trans=I,seWithMean=FALSE,by.resids=FALSE,
+         shift=0,trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,
          scheme=0,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -102,6 +102,10 @@ intervals that include the uncertainty about the overall mean. If \code{FALSE} t
 uncertainty relates purely to the centred smooth itself. Marra and Wood (2012) suggests 
 that \code{TRUE} results in better coverage performance,
 and this is also suggested by simulation.}
+
+\item{unconditional}{if \code{TRUE} then the smoothing parameter uncertainty corrected 
+covariance matrix is used to compute uncertainty bands, if available. Otherwise the bands
+treat the smoothing parameters as fixed.}
 
 \item{by.resids}{Should partial residuals be plotted for terms with \code{by} variables? 
 Usually the answer is no, they would be meaningless.}
