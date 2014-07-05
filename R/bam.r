@@ -29,29 +29,18 @@ rwMatrix <- function(stop,row,weight,X) {
 
 chol2qr <- function(XX,Xy) {
 ## takes X'X and X'y and returns R and f
-## equivalent to qr update. Uses simple
-## regularization if XX not +ve def. 
-
-
-  XXeps <- norm(XX)*.Machine$double.eps^.9
-  n <- ncol(XX)
-  for (i in 0:20) {
-    ok <- TRUE
-    R <- try(chol(XX+diag(n)*XXeps*i,pivot=TRUE),silent=TRUE) ## R'R = X'X
-    if (inherits(R,"try-error")) ok <- FALSE else {
-      ipiv <- piv <- attr(R,"pivot") 
-      f <- try(forwardsolve(t(R),Xy[piv]),silent=TRUE)
-      if (inherits(f,"try-error")) ok <- FALSE
-    }
-    if (ok) { 
-      ipiv[piv] <- 1:ncol(R)
-      R <- R[,ipiv]
-      break; ## success
-    }
-  }
-  if (i==20 && !ok) stop("Choleski based method failed, switch to QR")
+## equivalent to qr update.  
+  op <- options(warn = -1) ## otherwise warns if +ve semidef
+  R <- chol(XX,pivot=TRUE)
+  options(op)
+  p <- length(Xy)
+  ipiv <- piv <- attr(R,"pivot");ipiv[piv] <- 1:p
+  rank <- attr(R,"rank");ind <- 1:rank
+  if (rank<p) R[(rank+1):p,] <- 0 ## chol is buggy (R 3.1.0) with pivot=TRUE
+  f <- c(forwardsolve(t(R[ind,ind]),Xy[piv[ind]]),rep(0,p-rank))[ipiv]
+  R <- R[ipiv,ipiv]
   list(R=R,f=f)
-}
+} ## chol2qr
 
 qr.update <- function(Xn,yn,R=NULL,f=rep(0,0),y.norm2=0,use.chol=FALSE)
 ## Let X = QR and f = Q'y. This routine updates f and R
