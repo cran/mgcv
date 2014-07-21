@@ -1739,7 +1739,7 @@ variable.summary <- function(pf,dl,n) {
 gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
                 method="GCV.Cp",optimizer=c("outer","newton"),control=list(),#gam.control(),
                 scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,
-                paraPen=NULL,G=NULL,in.out=NULL,...) {
+                paraPen=NULL,G=NULL,in.out=NULL,drop.unused.levels=TRUE,...) {
 ## Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 ## interpreted to figure out which bits relate to smooth terms and which to parametric terms.
 ## Basic steps:
@@ -1765,7 +1765,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     mf$formula <- gp$fake.formula 
     mf$family <- mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp<-mf$H<-mf$select <-
                  mf$gamma<-mf$method<-mf$fit<-mf$paraPen<-mf$G<-mf$optimizer <- mf$in.out <- mf$...<-NULL
-    mf$drop.unused.levels <- TRUE
+    mf$drop.unused.levels <- drop.unused.levels
     mf[[1]] <- as.name("model.frame")
     pmf <- mf
     mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
@@ -1926,7 +1926,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
                          rank.tol=.Machine$double.eps^0.5,
                          nlm=list(),optim=list(),newton=list(),outerPIsteps=0,
                          idLinksBases=TRUE,scalePenalty=TRUE,
-                         keepData=FALSE) 
+                         keepData=FALSE,scale.est="pearson") 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -1936,7 +1936,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
 # rank.tol is the tolerance to use for rank determination
 # outerPIsteps is the number of performance iteration steps used to intialize
 #                         outer iteration
-{   
+{   scale.est <- match.arg(scale.est,c("robust","pearson","deviance"))
     if (!is.numeric(nthreads) || nthreads <1) stop("nthreads must be a positive integer") 
     if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
@@ -1982,7 +1982,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
          rank.tol=rank.tol,nlm=nlm,
          optim=optim,newton=newton,outerPIsteps=outerPIsteps,
          idLinksBases=idLinksBases,scalePenalty=scalePenalty,
-         keepData=as.logical(keepData[1]))
+         keepData=as.logical(keepData[1]),scale.est=scale.est)
     
 }
 
@@ -2177,7 +2177,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         G$X<-X[good,,drop=FALSE]  # truncated design matrix       
      
         # must set G$sig2 to scale parameter or -1 here....
-        G$sig2<-scale
+        G$sig2 <- scale
 
 
         if (sum(!is.finite(G$y))+sum(!is.finite(G$w))>0) 
@@ -2215,7 +2215,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         eta <- linkfun(mu) # force eta/mu consistency even if linkinv truncates
         dev <- sum(dev.resids(y, mu, weights))
         if (control$trace) 
-            gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
+            message(gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv"))
         boundary <- FALSE
         if (!is.finite(dev)) {
             if (is.null(coefold))
@@ -2330,7 +2330,7 @@ model.matrix.gam <- function(object,...)
 
 
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-                       block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,
+                       block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
                        unconditional=FALSE,...) {
 
 # This function is used for predicting from a GAM. 'object' is a gam object, newdata a dataframe to
@@ -2442,7 +2442,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     if (!is.null(attr(newdata,"terms"))) nd.is.mf <- TRUE
     response <- newdata[[yname]]
   }
-  
+
+
   ## now check the factor levels and split into blocks...
 
   if (new.data.ok) {
@@ -2465,7 +2466,29 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     if (is.null(dim(newdata[[1]]))) np <- length(newdata[[1]]) 
     else np <- dim(newdata[[1]])[1] 
     nb <- length(object$coefficients)
+    if (is.null(block.size)) block.size <- 1000
     if (block.size < 1) block.size <- np
+#    n.blocks <- np %/% block.size
+#    b.size <- rep(block.size,n.blocks)
+#    last.block <- np-sum(b.size)
+#    if (last.block>0) {
+#      n.blocks <- n.blocks+1  
+#      b.size[n.blocks] <- last.block
+#    }
+  } else { # no new data, just use object$model
+    np <- nrow(object$model)
+    nb <- length(object$coefficients)
+#    n.blocks <- 1
+#    b.size <- array(np,1)
+  }
+  
+  ## split prediction into blocks, to avoid running out of memory
+  if (is.null(block.size)) { 
+    ## use one block as predicting using model frame
+    ## and no block size supplied... 
+    n.blocks <- 1
+    b.size <- array(np,1)
+  } else {
     n.blocks <- np %/% block.size
     b.size <- rep(block.size,n.blocks)
     last.block <- np-sum(b.size)
@@ -2473,12 +2496,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       n.blocks <- n.blocks+1  
       b.size[n.blocks] <- last.block
     }
-  } else { # no new data, just use object$model
-    np <- nrow(object$model)
-    nb <- length(object$coefficients)
-    n.blocks <- 1
-    b.size <- array(np,1)
   }
+
 
   # setup prediction arrays...
 

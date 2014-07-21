@@ -1,6 +1,38 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-2
+
+* For exponential family gams, fitted by outer iteration, a warning is now
+  generated if the Pearson scale parameter estimate is more than twice
+  a robust estimate. This may indicate an unstable Pearson estimate.
+
+* 'gam.control' now has an option 'scale.est' to allow selection of the 
+  estimator to use for the scale parameter in exponential family GAMs. 
+  See ?gam.scale. Thanks to Trevor Davies for providing a clear unstable 
+  Pearson estimate example.
+
+* drop.unused.levels argument added to gam, bam and gamm to allow 
+  "mrf" (and "re") terms to have unobserved factor levels.
+
+* "mrf" constructor modified to deal properly with regions that contain no 
+  observations.
+
+* "fs" smooths are no longer eligible to have side conditions set, since 
+  they are fully penalized terms and hence always identifiable (in theory).
+
+* predict.bam was not declared as a method in NAMESPACE - fixed
+
+* predict.bam modified to strip down object to save memory (especially in 
+  parallel).
+
+* predict.gam now has block.size=NULL as default. This implies a block
+  size of 1000 when newdata supplied, and use of a single block if no
+  new data was supplied. 
+
+* some messages were not printing correctly after a change in 
+  message handling to facilitate easier translation. Now fixed.
+
 1.8-1
 
 * bam modified so that choleski based fitting works properly with rank 

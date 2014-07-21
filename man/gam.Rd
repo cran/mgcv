@@ -30,7 +30,7 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,offset=NULL,method="GCV.Cp",
     optimizer=c("outer","newton"),control=list(),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
-    fit=TRUE,paraPen=NULL,G=NULL,in.out,...)
+    fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -143,6 +143,9 @@ all smoothing parameters, whether fixed or to be estimated, but those for
 fixed s.p.s are not used); \code{scale} is the typical scale of the GCV/UBRE function,
 for passing to the outer optimizer, or the the initial value of the scale parameter, if this is to
 be estimated by RE/ML.}
+
+\item{drop.unused.levels}{by default unused levels are dropped from factors before fitting. For some smooths 
+involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }

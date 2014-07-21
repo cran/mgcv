@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-06-22 22:21\n"
+"POT-Creation-Date: 2014-07-21 09:50\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10,9 +10,6 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-
-msgid "Choleski based method failed, switch to QR"
-msgstr ""
 
 msgid "'family' argument seems not to be a valid family object"
 msgstr ""
@@ -197,6 +194,9 @@ msgstr ""
 msgid "Algorithm stopped at boundary value"
 msgstr ""
 
+msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
+msgstr ""
+
 msgid "deriv should be 1 or 2"
 msgstr ""
 
@@ -284,7 +284,7 @@ msgstr ""
 msgid "step failed: max abs grad ="
 msgstr ""
 
-msgid "iteration limit reached: max abs grad ="
+msgid "iteration limit reached: max abs grad = %g"
 msgstr ""
 
 msgid "gaulss requires 2 links specified as character strings"
@@ -605,9 +605,6 @@ msgstr ""
 msgid "nothing to do for this model"
 msgstr ""
 
-msgid "residuals not available"
-msgstr ""
-
 msgid "Pearson residuals not available for this family - returning deviance residuals"
 msgstr ""
 
@@ -873,6 +870,9 @@ msgid "knot range is so wide that there is *no* information about some basis coe
 msgstr ""
 
 msgid "penalty order too high for basis dimension"
+msgstr ""
+
+msgid "basis dimension is larger than number of unique covariates"
 msgstr ""
 
 msgid "fs smooths can only have one factor argument"

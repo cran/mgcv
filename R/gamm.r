@@ -1188,7 +1188,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
       subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B"),
-      niterPQL=20,verbosePQL=TRUE,method="ML",...)
+      niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,...)
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
@@ -1241,7 +1241,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       mf$correlation <- mf$random <- mf$family <- mf$control <- mf$scale <- mf$knots <- mf$sp <-
       mf$min.sp <- mf$H <- mf$gamma <- mf$fit <- mf$niterPQL <- mf$verbosePQL <- mf$G <- mf$method <- mf$... <- NULL
     }
-    mf$drop.unused.levels <- TRUE
+    mf$drop.unused.levels <- drop.unused.levels
     mf[[1]] <- as.name("model.frame")
     pmf <- mf
     gmf <- eval(mf, parent.frame()) # the model frame now contains all the data, for the gam part only 

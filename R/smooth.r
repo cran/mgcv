@@ -1568,7 +1568,7 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
   if (!is.null(k)) {
     if (sum(colSums(object$X)==0)>0) warning("knot range is so wide that there is *no* information about some basis coefficients")
   }  
-
+  if (length(unique(x)) < object$bs.dim) warning("basis dimension is larger than number of unique covariates")
   ## now construct penalty        
   S<-diag(object$bs.dim);
   if (m[2]) for (i in 1:m[2]) S <- diff(S)
@@ -1729,7 +1729,7 @@ smooth.construct.fs.smooth.spec<-function(object,data,knots) {
     object$te.ok <- 0
     object$rank <- c(object$rank*nf,rep(nf,null.d))
   }
- 
+  object$side.constrain <- FALSE ## don't apply side constraints - these are really random effects
   object$null.space.dim <- 0
   object$C <- matrix(0,0,ncol(object$X)) # null constraint matrix
   object$plot.me <- TRUE
@@ -2002,7 +2002,7 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
   class(object)<-"random.effect"  # Give object a class
 
   object
-}
+} ## smooth.construct.re.smooth.spec
 
 
 
@@ -2175,12 +2175,17 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   ## natural parameterization given in Wood (2006) 4.1.14
 
   if (object$bs.dim<length(levels(k))) { ## use low rank approx
-    rp <- nat.param(object$X,object$S[[1]],type=0)
+    mi <- which(colSums(object$X)==0) ## any regions missing observations? 
     np <- ncol(object$X)
+    if (length(mi)>0) { ## create dummy obs for missing...
+      object$X <- rbind(matrix(0,length(mi),np),object$X)
+      for (i in 1:length(mi)) object$X[i,mi[i]] <- 1
+    } 
+    rp <- nat.param(object$X,object$S[[1]],type=0)
     ## now retain only bs.dim least penalized elements
     ## of basis, which are the final bs.dim cols of rp$X
     ind <- (np-object$bs.dim+1):np
-    object$X <- rp$X[,ind] ## model matrix
+    object$X <- if (length(mi)) rp$X[-(1:length(mi)),ind] else  rp$X[,ind] ## model matrix
     object$P <- rp$P[,ind] ## re-para matrix
     ##ind <- ind[ind <= rp$rank] ## drop last element as zeros not returned in D
     object$S[[1]] <- diag(c(rp$D[ind[ind <= rp$rank]],rep(0,sum(ind>rp$rank))))

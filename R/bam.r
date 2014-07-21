@@ -366,7 +366,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
       
       if (control$trace)
-         gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
+         message(gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv"))
 
       if (!is.finite(dev)) stop("Non-finite deviance")
 
@@ -578,7 +578,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
       rss.extra <- qrx$y.norm2 - sum(qrx$f^2)
       
       if (control$trace)
-         gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
+         message(gettextf("Deviance = %s Iterations - %d\n", dev, iter, domain = "R-mgcv"))
 
       if (!is.finite(dev)) stop("Non-finite deviance")
 
@@ -724,6 +724,12 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
                         block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,
                         cluster=NULL,...) {
 ## function for prediction from a bam object, possibly in parallel
+  ## remove some un-needed stuff from object
+  object$Sl <- object$qrx <- object$R <- object$F <- object$Ve <-
+  object$Vc <- object$G <- object$residuals <- object$fitted.values <-
+  object$linear.predictors <- NULL
+  gc()
+
   if (!is.null(cluster)&&inherits(cluster,"cluster")) { 
      require(parallel)
      n.threads <- length(cluster)
@@ -757,7 +763,12 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         arg[[i]]$newdata <- newdata[ind,]
       }
     } ## finished setting up arguments
+    ## newdata and object no longer needed - all info in thread lists...
+    if (!missing(newdata)) rm(newdata)
+    rm(object)
+    gc()
     res <- parLapply(cluster,arg,pabapr) ## perform parallel prediction
+    gc()
     ## and splice results back together...
     if (type=="lpmatrix") {
       X <- res[[1]]
@@ -1100,7 +1111,7 @@ sparse.model.matrix <- function(G,mf,chunk.size) {
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),scale=0,gamma=1,knots=NULL,
                 sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
-                gc.level=1,use.chol=FALSE,samfrac=1,...)
+                gc.level=1,use.chol=FALSE,samfrac=1,drop.unused.levels=TRUE,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -1135,7 +1146,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
   mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$sparse <- mf$cluster <-
   mf$use.chol <- mf$samfrac <- mf$...<-NULL
-  mf$drop.unused.levels<-TRUE
+  mf$drop.unused.levels <- drop.unused.levels
   mf[[1]]<-as.name("model.frame")
   pmf <- mf
  
