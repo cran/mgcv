@@ -82,9 +82,10 @@ Note that smooths of this class have a built in plot method, and that the utilit
 can be useful for working with discrete area data. The plot method has two schemes, \code{scheme==0} is colour, 
 \code{scheme==1} is grey scale.
 
-The situation in which there are areas with no data requires special handling. Create one dummy observation for each 
-such area, but give the corresponding data frame row a weight of zero during fitting (using the \code{weight} 
-argument to \code{gam}). In this case the basis dimension, \code{k}, must be set to less than (or at most equal to) the number of areas with data.
+The situation in which there are areas with no data requires special handling. You should set \code{drop.unused.levels=FALSE} in 
+the model fitting function, \code{\link{gam}}, \code{\link{bam}} or \code{\link{gamm}}, having first ensured that any fixed effect 
+factors do not contain unobserved levels. Also make sure that the basis dimension is set to ensure that the total number of 
+coefficients is less than the number of observations. 
 
 }
 

@@ -14,7 +14,7 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 
 \usage{
 \method{predict}{gam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-        block.size=1000,newdata.guaranteed=FALSE,na.action=na.pass,
+        block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
         unconditional=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -52,7 +52,8 @@ will be returned.}
 
 \item{block.size}{maximum number of predictions to process per call to underlying
 code: larger is quicker, but more memory intensive. Set to < 1 to use total number
-of predictions as this.}
+of predictions as this. If \code{NULL} then block size is 1000 if new data supplied, 
+and the number of rows in the model frame otherwise. }
 
 \item{newdata.guaranteed}{Set to \code{TRUE} to turn off all checking of
 \code{newdata} except for sanity of factor levels: this can speed things up

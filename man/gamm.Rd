@@ -33,7 +33,7 @@ To use this function effectively it helps to be quite familiar with the use of
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
 control=list(niterEM=0,optimMethod="L-BFGS-B"),
-niterPQL=20,verbosePQL=TRUE,method="ML",...)
+niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,...)
 }
 
 \arguments{ 
@@ -101,6 +101,10 @@ version of R does not have the \code{nlminb} optimizer function.}
 \item{method}{Which of \code{"ML"} or \code{"REML"} to use in the Gaussian
 additive mixed model case when \code{lme} is called directly. Ignored in the
 generalized case (or if the model has an offset), in which case \code{gammPQL} is used.}
+
+\item{drop.unused.levels}{by default unused levels are dropped from factors before fitting. For some smooths 
+involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
+
 
 \item{...}{further arguments for passing on e.g. to \code{lme}} 
 }

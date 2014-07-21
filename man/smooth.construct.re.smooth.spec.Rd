@@ -56,6 +56,10 @@ may therefore be relatively inefficient for models with large numbers of random 
 or \code{\link{gamm}} may be better alternatives. Note also that \code{\link{gam}} will not support 
 models with more coefficients than data. 
 
+The situation in which factor variable random effects intentionally have unobserved levels requires special handling. 
+You should set \code{drop.unused.levels=FALSE} in the model fitting function, \code{\link{gam}}, \code{\link{bam}} 
+or \code{\link{gamm}}, having first ensured that any fixed effect factors do not contain unobserved levels.
+
 }
 
 \references{

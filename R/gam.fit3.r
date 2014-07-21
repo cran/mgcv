@@ -76,6 +76,35 @@ get.Eb <- function(rS,rank)
   t(mroot(S,rank=rank)) ## E such that E'E = S
 } ## get.Eb
 
+
+gam.scale <- function(wp,wd,dof,extra=0) {
+## obtain estimates of the scale parameter, using the weighted Pearson and 
+## deviance residuals and the residual effective degrees of freedom.
+## Problem is that Pearson is unbiased, but potentially unstable (e.g. 
+## when count is 1 but mean is tiny, so that pearson residual is enormous,
+## although deviance residual is much less extreme). 
+  pearson <- (sum(wp^2)+extra)/dof
+  deviance <- (sum(wd^2)+extra)/dof
+  ## now scale deviance residuals to have magnitude similar
+  ## to pearson and compute new estimator. 
+  kd <- wd
+  ind <- wd > 0
+  kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
+  ind <- wd < 0
+  kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
+  robust <- (sum(kd^2)+extra)/dof
+  ## force estimate to lie between deviance and pearson estimators
+  if (pearson > deviance) {
+    if (robust < deviance) robust <- deviance
+    if (robust > pearson) robust <- pearson
+  } else {
+    if (robust > deviance) robust <- deviance
+    if (robust < pearson) robust <- pearson
+  }
+  list(pearson=pearson,deviance=deviance,robust=robust)
+}
+
+
 gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             weights = rep(1, nobs), start = NULL, etastart = NULL, 
             mustart = NULL, offset = rep(0, nobs),U1=diag(ncol(x)), Mp=-1, family = gaussian(), 
@@ -370,7 +399,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            dev <- sum(dev.resids(y, mu, weights))
           
            if (control$trace) 
-             gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv")
+             message(gettextf("Deviance = %s Iterations - %d", dev, iter, domain = "R-mgcv"))
             boundary <- FALSE
             
             if (!is.finite(dev)) {
@@ -421,7 +450,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             pdev <- dev + penalty  ## the penalized deviance 
 
             if (control$trace) 
-                gettextf("penalized deviance = %s", pdev, domain = "R-mgcv")
+                message(gettextf("penalized deviance = %s", pdev, domain = "R-mgcv"))
                
 
             div.thresh <- 10*(.1+abs(old.pdev))*.Machine$double.eps^.5 
@@ -444,7 +473,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
                   dev <- sum(dev.resids(y, mu, weights))
                   pdev <- dev + t(start)%*%St%*%start ## the penalized deviance
                 if (control$trace) 
-                  gettextf("Step halved: new penalized deviance = %g", pdev, "\n")
+                  message(gettextf("Step halved: new penalized deviance = %g", pdev, "\n"))
               }
             } 
             
@@ -475,8 +504,10 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             }
         } ### end main loop 
        
-        dev <- sum(dev.resids(y, mu, weights)) 
-       
+        wdr <- dev.resids(y, mu, weights)
+        dev <- sum(wdr) 
+        wdr <- sign(y-mu)*sqrt(pmax(wdr,0)) ## used below in scale estimation 
+  
         ## Now call the derivative calculation scheme. This requires the
         ## following inputs:
         ## z and w - the pseudodata and weights
@@ -595,9 +626,18 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            mu <- linkinv(eta)
          }
          trA <- oo$trA;
-         pearson <- sum(weights*(y-mu)^2/family$variance(mu)) ## Pearson statistic
+         
+         wpr <- (y-mu) *sqrt(weights/family$variance(mu)) ## weighted pearson residuals
+         se <- gam.scale(wpr,wdr,n.true-trA,dev.extra) ## get scale estimates
+         pearson.warning <- NULL
+         if (control$scale.est=="pearson") { 
+           scale.est <- se$pearson
+           if (scale.est > 4 * se$robust) pearson.warning <- TRUE
+         } else scale.est <- if (control$scale.est=="deviance") se$deviance else se$robust
 
-         scale.est <- (pearson+dev.extra)/(n.true-trA)
+         #pearson <- sum(weights*(y-mu)^2/family$variance(mu)) ## Pearson statistic
+
+         #scale.est <- (pearson+dev.extra)/(n.true-trA)
 
          #scale.est <- (dev+dev.extra)/(n.true-trA)
          reml.scale <- NA  
@@ -755,7 +795,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
     list(coefficients = coef, residuals = residuals, fitted.values = mu, 
          family = family, linear.predictors = eta, deviance = dev, 
         null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights, 
-        df.null = nulldf, y = y, converged = conv,
+        df.null = nulldf, y = y, converged = conv,pearson.warning = pearson.warning,
         boundary = boundary,D1=D1,D2=D2,P=P,P1=P1,P2=P2,trA=trA,trA1=trA1,trA2=trA2,
         GCV=GCV,GCV1=GCV1,GCV2=GCV2,GACV=GACV,GACV1=GACV1,GACV2=GACV2,UBRE=UBRE,
         UBRE1=UBRE1,UBRE2=UBRE2,REML=REML,REML1=REML1,REML2=REML2,rV=rV,db.drho=db.drho,
@@ -774,6 +814,10 @@ gam.fit3.post.proc <- function(X,L,object) {
   F <- .Call(C_mgcv_pmmult2,PKt,sqrt(object$weights)*X,0,0,object$control$nthreads)
   edf <- diag(F) ## effective degrees of freedom
   edf1 <- 2*edf - rowSums(t(F)*F) ## alternative
+
+  ## check on plausibility of scale (estimate)
+  if (object$scale.estimated&&!is.null(object$pearson.warning)) warning("Pearson scale estimate maybe unstable. See ?gam.scale.")
+
   ## edf <- rowSums(PKt*t(sqrt(object$weights)*X))
   ## Ve <- PKt%*%t(PKt)*object$scale  ## frequentist cov
   Ve <- F%*%Vb ## not quite as stable as above, but quicker
