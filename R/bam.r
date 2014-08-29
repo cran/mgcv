@@ -322,7 +322,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         }
       } else { ## use new parallel accumulation 
          for (i in 1:length(arg)) arg[[i]]$coef <- coef
-         res <- parLapply(cl,arg,qr.up) 
+         res <- parallel::parLapply(cl,arg,qr.up) 
          ## single thread debugging version 
          #res <- list()
          #for (i in 1:length(arg)) {
@@ -767,7 +767,7 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     if (!missing(newdata)) rm(newdata)
     rm(object)
     gc()
-    res <- parLapply(cluster,arg,pabapr) ## perform parallel prediction
+    res <- parallel::parLapply(cluster,arg,pabapr) ## perform parallel prediction
     gc()
     ## and splice results back together...
     if (type=="lpmatrix") {
@@ -916,7 +916,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
         }
      } else { ## use parallel accumulation
      
-       res <- parLapply(cl,arg,ar.qr.up)
+       res <- parallel::parLapply(cl,arg,ar.qr.up)
        ## Single thread de-bugging...
        # res <- list()
        # for (i in 1:length(arg)) {
@@ -1207,7 +1207,12 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (is.null(G$offset)) G$offset <- rep(0,n)
 
   if (ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data")      ##+nrow(G$C)) stop("Model has more coefficients than data")
- 
+  
+  if (ncol(G$X) > chunk.size) { ## no sense having chunk.size < p
+    chunk.size <- 4*ncol(G$X)
+    warning(gettextf("chunk.size < number of coefficients. Reset to %d",chunk.size))    
+  }
+
   G$cl<-cl;
   G$am <- am
      

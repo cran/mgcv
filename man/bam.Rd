@@ -17,8 +17,8 @@ for large datasets. \code{bam} can also compute on a cluster set up by the \link
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
-    chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,gc.level=1,
-    use.chol=FALSE,samfrac=1,drop.unused.levels=TRUE,...)
+    chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
+    gc.level=1,use.chol=FALSE,samfrac=1,drop.unused.levels=TRUE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -103,7 +103,8 @@ if smooths share smoothing parameters).}
 \code{\link{gam.models}} explains more.}
 
 
-\item{chunk.size}{The model matrix is created in chunks of this size, rather than ever being formed whole.}
+\item{chunk.size}{The model matrix is created in chunks of this size, rather than ever being formed whole. 
+Reset to \code{4*p} if \code{chunk.size < 4*p} where \code{p} is the number of coefficients.}
 
 \item{rho}{An AR1 error model can be used for the residuals (based on dataframe order), of Gaussian-identity 
            link models. This is the AR1 correlation parameter.}

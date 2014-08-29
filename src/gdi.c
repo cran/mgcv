@@ -71,12 +71,14 @@ double diagABt(double *d,double *A,double *B,int *r,int *c)
    r by c stored column-wise.
 */
 { int j;
-  double tr,*pa,*pb,*p1,*pd;
-  for (pa=A,pb=B,p1=pa + *r,pd=d;pa<p1;pa++,pb++,pd++) *pd = *pa * *pb;
-  for (j=1;j < *c;j++)
-  for (p1=d + *r,pd=d;pd<p1;pa++,pb++,pd++) *pd += *pa * *pb;
-  /* d now contains diag(AB') */
-  for (tr=0.0,pd=d,p1=d + *r;pd < p1;pd++) tr += *pd;
+  double tr=0.0,*pa,*pb,*p1,*pd;
+  if (*c>0) {
+    for (pa=A,pb=B,p1=pa + *r,pd=d;pa<p1;pa++,pb++,pd++) *pd = *pa * *pb;
+    for (j=1;j < *c;j++)
+    for (p1=d + *r,pd=d;pd<p1;pa++,pb++,pd++) *pd += *pa * *pb;
+    /* d now contains diag(AB') */
+    for (pd=d,p1=d + *r;pd < p1;pd++) tr += *pd;
+  }
   return(tr);
 }
 
@@ -1108,7 +1110,9 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   
   
   rSoff =  (int *)R_chk_calloc((size_t)*M,sizeof(int));
-  rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
+  if (*M>0) {
+    rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
+  }
   tid = 0;
   #ifdef SUPPORT_OPENMP
   #pragma omp parallel private(m,bt,ct,tid) num_threads(nthreads)

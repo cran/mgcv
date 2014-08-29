@@ -1,8 +1,8 @@
-10b8bc7c708c2f3d89cc69d8bd67f3e3 *ChangeLog
-ad04030a1a5f9a3888602dee013351e7 *DESCRIPTION
+c0324227202a615e286343615936dd1b *ChangeLog
+149d2f3b36649e882a15d0092cf01f55 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 870396939733c58c9d523cbc41f9da59 *NAMESPACE
-ca641f4a3db11cd9494762ad2286665c *R/bam.r
+b5f01a8f420b0d296352d500b75e4c35 *R/bam.r
 9d5bb48cc0072b9ba638567986928a73 *R/coxph.r
 d6f40f3d2acd3e30f3a59cbc85da6bc3 *R/efam.r
 2fb8891700c1a813dc387cdce8dd817b *R/fast-REML.r
@@ -15,7 +15,7 @@ ee07c79f181f6cc17edeafc8a33ae51b *R/mgcv.r
 ed2cdcfa5c0f772bb75eee723b7294cd *R/misc.r
 c287514d201a02f060fee98aab1e93c8 *R/mvam.r
 4b0df0a2310fba6b38ea8164f76d0ccd *R/plots.r
-8d3e8c0e0009b8028bf08a2b1919f850 *R/smooth.r
+3f10d9fbae29ae28bf89499b874f9aa4 *R/smooth.r
 90f72ef91dfc2a25c262fc002f781bf7 *R/soap.r
 0c5d2acdc985d2af9de6bb736d4df2ab *R/sparse.r
 e468195a83fab90da8e760c2c3884bd3 *data/columb.polys.rda
@@ -28,7 +28,7 @@ e9b0a2e31b130cf2cb38618ec50d1919 *man/Predict.matrix.soap.film.Rd
 f12468625253dd3603907de233762fd6 *man/Rrank.Rd
 f6cadda5999c35800fd65c08d6812f7b *man/Tweedie.Rd
 80f8763baa4987579e2aa56073a9e94e *man/anova.gam.Rd
-49fe84873e296267a96ed44c044d71c4 *man/bam.Rd
+9c392eb571b80b00fc6fada9d502b69f *man/bam.Rd
 71bde8b8caa24a36529ce7e0ac3165d8 *man/bam.update.Rd
 a2beb811b1093c5e82ef32d7de1f7d32 *man/cSplineDes.Rd
 9b4d616d1b6c4a46ca77d16cded3f806 *man/choose.k.Rd
@@ -118,7 +118,7 @@ a8d5eb4772641567fee15714f01a4727 *man/smooth.construct.so.smooth.spec.Rd
 8672633a1fad8df3cb1f53d7fa883620 *man/smooth.construct.tensor.smooth.spec.Rd
 3e6d88ef6a8ab21bd6f120120602dcf6 *man/smooth.construct.tp.smooth.spec.Rd
 75a042d74460dd0c6e0c0a95c1f5d3f7 *man/smooth.terms.Rd
-0d12daea17e0b7aef8ab89b5f801adf1 *man/smoothCon.Rd
+3064042473b909ba6bbd160c476059d3 *man/smoothCon.Rd
 b55a396da77559dac553613146633f97 *man/sp.vcov.Rd
 83bd8e097711bf5bd0fff09822743d43 *man/spasm.construct.Rd
 700699103b50f40d17d3824e35522c85 *man/step.gam.Rd
@@ -145,11 +145,11 @@ bd5ec325242ca6e41056c2f1f7f05bfe *po/pl.po
 749ac663240fd6eaa2b725602d47ef2a *po/po.po
 03972284b3400cf82cacd5d2dc4b8cb3 *src/Makevars
 56d501c682dc6699ff0803f25533e849 *src/coxph.c
-c8dbbf1178ace1131a5d6d7ccfc2b905 *src/gdi.c
+114701c0d407f946ac693da55da864da *src/gdi.c
 49af97195accb65adc75620183d39a4c *src/general.h
 94a7b06d798739744ef9342a6a7051ec *src/init.c
 6dbd109048a3bd18b67db6230c064c21 *src/magic.c
-5b3879c26540dc9eb1d4a8a9a575e975 *src/mat.c
+a6527e26dde591b838d4c3c3f5a4e036 *src/mat.c
 02122df2193f86e2a08f68fe5b8ff972 *src/matrix.c
 6b781cbd5b9cfee68ad30bb7ce31ef3a *src/matrix.h
 7a12ef0cbd8f5312cd67669a36d75ebf *src/mgcv.c
