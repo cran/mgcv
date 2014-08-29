@@ -179,10 +179,10 @@ cSplineDes <- function (x, knots, ord = 4)
   ## copy end intervals to start, for wrapping purposes...
   knots <- c(k1-(knots[nk]-knots[(nk-ord+1):(nk-1)]),knots)
   ind <- x>xc ## index for x values where wrapping is needed
-  X1 <- splineDesign(knots,x,ord,outer.ok=TRUE)
+  X1 <- splines::splineDesign(knots,x,ord,outer.ok=TRUE)
   x[ind] <- x[ind] - max(knots) + k1
   if (sum(ind)) {
-    X2 <- splineDesign(knots,x[ind],ord,outer.ok=TRUE) ## wrapping part
+    X2 <- splines::splineDesign(knots,x[ind],ord,outer.ok=TRUE) ## wrapping part
     X1[ind,] <- X1[ind,] + X2
   }
   X1 ## final model matrix
@@ -1564,7 +1564,7 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
     if (length(k)!=nk+2*m[1]+2) 
     stop(paste("there should be ",nk+2*m[1]+2," supplied knots"))
   }
-  object$X <- spline.des(k,x,m[1]+2,x*0)$design # get model matrix
+  object$X <- splines::spline.des(k,x,m[1]+2,x*0)$design # get model matrix
   if (!is.null(k)) {
     if (sum(colSums(object$X)==0)>0) warning("knot range is so wide that there is *no* information about some basis coefficients")
   }  
@@ -1596,12 +1596,12 @@ Predict.matrix.pspline.smooth<-function(object,data)
   n <- length(x)
   ind <- x<=ul & x>=ll ## data in range
   if (sum(ind)==n) { ## all in range
-    X <- spline.des(object$knots,x,m)$design
+    X <- splines::spline.des(object$knots,x,m)$design
   } else { ## some extrapolation needed 
     ## matrix mapping coefs to value and slope at end points...
-    D <- spline.des(object$knots,c(ll,ll,ul,ul),m,c(0,1,0,1))$design
+    D <- splines::spline.des(object$knots,c(ll,ll,ul,ul),m,c(0,1,0,1))$design
     X <- matrix(0,n,ncol(D)) ## full predict matrix
-    X[ind,] <- spline.des(object$knots,x[ind],m)$design ## interior rows
+    X[ind,] <- splines::spline.des(object$knots,x[ind],m)$design ## interior rows
     ## Now add rows for linear extrapolation...
     ind <- x < ll 
     if (sum(ind)>0) X[ind,] <- cbind(1,x[ind]-ll)%*%D[1:2,]

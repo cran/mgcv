@@ -1,10 +1,21 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-3
+
+* Fix of two illegal read/write bugs with extended family models with no
+  smooths. (Thanks to Julian Faraway for reporting beta regr problem).
+
+* bam now checks that chunk.size > number of parameters and resets the 
+  chunk.size if not.
+
+* Examples of use of smoothCon and PredictMat for setting up bases 
+  for use outside mgcv (and then predicting) added to ?smoothCon.
+
 1.8-2
 
 * For exponential family gams, fitted by outer iteration, a warning is now
-  generated if the Pearson scale parameter estimate is more than twice
+  generated if the Pearson scale parameter estimate is more than 4 times
   a robust estimate. This may indicate an unstable Pearson estimate.
 
 * 'gam.control' now has an option 'scale.est' to allow selection of the 

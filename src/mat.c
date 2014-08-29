@@ -577,7 +577,7 @@ void getXtWX(double *XtWX, double *X,double *w,int *r,int *c,double *work)
     else for (j=0;j<=i;j++) XtWX[i * *c + j] = w2[j];
   }
   /* now fill in the other triangle */
-  *XtWX = xx;
+  if (*r * *c > 0) *XtWX = xx;
   for (i=0;i< *c;i++) for (j=0;j<i;j++) XtWX[j * *c + i] =  XtWX[i * *c + j];
 }
 
