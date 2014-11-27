@@ -59,7 +59,7 @@ void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *
 void psum(double *y, double *x,int *index,int *n);
 void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
-void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol);
+void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,int *nt);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,double *Afd,double *Hd,double *Sd,int *off,int *dim,double *theta, int *m,int *nar);
 void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double *upper,int *n);
@@ -98,8 +98,11 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse);
 void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt);
 void getRpqr(double *R,double *x,int *r, int *c,int *rr,int *nt);
 void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,int *nt);
-SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT);
+SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT,SEXP NB);
 void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N);
+void mgcv_Rpbsi(SEXP A, SEXP NT);
+void mgcv_RPPt(SEXP a,SEXP r, SEXP NT);
+SEXP mgcv_Rpchol(SEXP Amat,SEXP PIV,SEXP NT,SEXP NB);
 
 /* basis constructor/prediction routines*/
 

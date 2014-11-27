@@ -9,8 +9,11 @@
 
 R_CallMethodDef CallMethods[] = {
   {"mgcv_pmmult2", (DL_FUNC) &mgcv_pmmult2,5},
-  {"mgcv_Rpiqr", (DL_FUNC) &mgcv_Rpiqr,4}, 
-  { "mgcv_tmm",(DL_FUNC)&mgcv_tmm,5},
+  {"mgcv_Rpiqr", (DL_FUNC) &mgcv_Rpiqr,5}, 
+  { "mgcv_tmm",(DL_FUNC)&mgcv_tmm,5}, 
+  { "mgcv_Rpbsi",(DL_FUNC)&mgcv_Rpbsi,2},
+  { "mgcv_RPPt",(DL_FUNC)&mgcv_RPPt,3},
+  { "mgcv_Rpchol",(DL_FUNC)&mgcv_Rpchol,4},
   {NULL, NULL, 0}
 };
 
@@ -43,7 +46,7 @@ R_CMethodDef CEntries[] = {
     {"read_mat",(DL_FUNC)&read_mat,4},
     {"rwMatrix",(DL_FUNC)&rwMatrix,6},
     {"in_out",(DL_FUNC)&in_out,8},
-    {"Rlanczos",(DL_FUNC)&Rlanczos,7},
+    {"Rlanczos",(DL_FUNC)&Rlanczos,8},
     {"rksos",(DL_FUNC)&rksos,3},
     {"gen_tps_poly_powers",(DL_FUNC)&gen_tps_poly_powers,4},
     {"k_nn",(DL_FUNC)&k_nn,8},

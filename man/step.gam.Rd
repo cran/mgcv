@@ -27,7 +27,7 @@ smooth which penalizes the space of functions of zero wiggliness according to it
 If all the smoothing parameters for such a term tend to infinity then the term is penalized to zero, 
 and is effectively dropped from the model. The advantage of this approach is that it can be 
 implemented automatically for any smooth. The \code{select} argument to \code{\link{gam}} causes 
-this latter approach to be used.}
+this latter approach to be used. Unpenalized terms (e.g. \code{s(x,fx=TRUE)}) remain unpenalized. }
 }
 
 REML and ML smoothness selection are equivalent under this approach, and simulation evidence suggests 

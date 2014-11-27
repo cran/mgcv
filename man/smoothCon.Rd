@@ -16,7 +16,8 @@ although this behaviour can be over-ridden.
 \usage{
 smoothCon(object,data,knots,absorb.cons=FALSE,
           scale.penalty=TRUE,n=nrow(data),dataX=NULL,
-          null.space.penalty=FALSE,sparse.cons=0)
+          null.space.penalty=FALSE,sparse.cons=0,
+          diagonal.penalty=FALSE)
 PredictMat(object,data,n=nrow(data))
 }
 %- maybe also `usage' for other objects documented here.
@@ -45,6 +46,11 @@ drop sum to zero constraints are used (default with \code{\link{bam}}). If \code
 coefficient is set to zero as constraint for sparse smooths. If \code{2} then sparse coefficient sum to zero 
 constraints are used for sparse smooths. None of these options has an effect if the smooth supplies its own 
 constraint.}
+
+\item{diagonal.penalty}{ If \code{TRUE} then the smooth is reparameterized to turn the penalty into an identity matrix, 
+with the final diagonal elements zeroed (corresponding to the penalty nullspace). May result in a matrix \code{diagRP} in the returned object for use by \code{PredictMat}. 
+
+}
 
 }
 

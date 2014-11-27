@@ -1,6 +1,59 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-4
+
+** JAGS/BUGS support added, enabling auto-generation of code and data
+  required to used mgcv type GAMs with JAGS. Useful for complex random 
+  effects structures, for example.
+
+* smoothCon failed if selection penalties requested, but term was unpenalized.
+  Now fixed (no selection penalties on unpenalized terms.)
+  
+* gam.check would fail for tensor product smooths with by variables - fixed.
+
+* predict.gam would fail when predicting for more data than the blocksize
+  but selecting only some terms. Fixed thanks to Scott Kostyshak.
+
+* smoothCon now has an argument `diagonal.penalty' allowing single penalty 
+  smooths to be re-parameterized in order to diagonalize the penalty matrix.
+  PredictMat is modified to apply the same reparameterization, making it
+  user transparent. Facilitates the setup of smooths for export to other 
+  packages.
+
+* predict.bam now exported in response to a request from another 
+  package maintainer.
+
+* 1.8 allows some prediction tasks for some families (e.g. cox.ph) to 
+  require response variables to be supplied. NAs in these then messed up 
+  prediction when they were not needed (e.g. if response variables with
+  NAs were provided to predict.gam for a simple exponential family GAM). 
+  Response NAs now passed to the family specific prediction code, restoring 
+  the previous behaviour for most models. Thanks Casper Wilestofte Berg.
+
+* backend parallel QR code used by gam modified to use a pivoted block
+  algorithm.
+
+* nthreads argument added to 'bam' to allow for parallel computation 
+  for computations in the main process (serial on any cluster nodes).
+  e.g. QR based combination of results from cluster nodes is now
+  parallel.
+
+* fREML computation now partly in parallel (controlled by 'nthreads' 
+  argument to 'bam')
+
+* slanczos now accepts an nt argument allowing parallel computation of 
+  main O(n^2) step.
+
+* fix to newton logic problem, which could cause an attempt to use 'score2'
+  before definition.
+
+* fix to fREML code which could cause matrix square root to lose dimensions 
+  and cause an error. 
+
+* initial.sp could perform very poorly for very low basis dimensions - could 
+  set initial sp to effective infinity. 
+
 1.8-3
 
 * Fix of two illegal read/write bugs with extended family models with no
@@ -49,8 +102,9 @@
 * bam modified so that choleski based fitting works properly with rank 
   deficient model matrix (without regularization).
 
-* fix of 1.8-0 bug - gam prior weights mishandled in computation of cov matrix.
-  Thanks Fabian Scheipl.
+* fix of 1.8-0 bug - gam prior weights mishandled in computation of cov matrix,
+  resulting in incorrect variance estimates (even without prior weights 
+  specified). Thanks Fabian Scheipl.
 		
 1.8-0
 
@@ -126,6 +180,11 @@
 
 * 'bfgs' now uses a finite difference approximation for the initial inverse 
   Hessian. 
+
+1.7-29
+
+* Single character change to Makevars file so that openMP multi-threading 
+  actually works.  
 
 1.7-28
 

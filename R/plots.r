@@ -192,6 +192,7 @@ k.check <- function(b,subsample=5000,n.rep=400) {
   nr <- length(rsd)
   for (k in 1:m) { ## work through smooths
     ok <- TRUE
+    b$smooth[[k]]$by <- "NA" ## can't deal with by variables
     dat <- ExtractData(b$smooth[[k]],modf,NULL)$data
     if (!is.null(attr(dat,"index"))||!is.null(attr(dat[[1]],"matrix"))||is.matrix(dat[[1]])) ok <- FALSE
     if (ok) dat <- as.data.frame(dat)

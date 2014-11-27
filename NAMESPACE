@@ -8,19 +8,19 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        gam2objective,
        gamm, gam.check, gam.control,gam.fit3,
        gam.fit, gam.outer,gam.vcomp, gamSim , 
-       gaulss,
+       gaulss,gam.side,get.var,
        influence.gam, 
-       in.out,inSide,interpret.gam, 
-       gam.side,
-       get.var,ldTweedie,
-       initial.sp,logLik.gam,ls.size,
+       in.out,inSide,interpret.gam,initial.sp,
+       jagam, 
+       ldTweedie,
+       logLik.gam,ls.size,
        magic, magic.post.proc, model.matrix.gam, 
-        mono.con, mroot, mvn, nb, negbin, new.name, 
+       mono.con, mroot, mvn, nb, negbin, new.name, 
        notExp,notExp2,notLog,notLog2,pcls,null.space.dimension, 
        ocat,
        pen.edf,pdIdnot,pdTens,
        place.knots, plot.gam, polys.plot,print.anova.gam,
-       print.gam,print.summary.gam,predict.gam,
+       print.gam,print.summary.gam,predict.gam,predict.bam,
        PredictMat,Predict.matrix,Predict.matrix2,
        Predict.matrix.cr.smooth,
        Predict.matrix.duchon.spline,
@@ -40,6 +40,7 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        qq.gam,
        residuals.gam,rig,rTweedie, 
        Rrank,s,scat,
+       sim2jam,
        slanczos,
        smoothCon,smooth.construct,smooth.construct2,
        smooth.construct.cc.smooth.spec,
@@ -81,14 +82,18 @@ S3method(formula, gam)
 S3method(logLik, gam)
 S3method(model.matrix,gam)
 S3method(plot, gam)
+S3method(plot, jam)
 S3method(predict, gam)
 S3method(predict, bam)
+S3method(predict, jam)
 S3method(print, anova.gam)
 S3method(print, gam)
+S3method(print, jam)
 S3method(print, summary.gam)
 S3method(residuals, gam)
 S3method(summary, gam)
 S3method(vcov,gam)
+S3method(vcov,jam)
 
 S3method(coef,pdTens)
 S3method(pdConstruct,pdTens)

@@ -107,6 +107,8 @@ Wood, S.N. (2013b) On p-values for smooth components of an extended generalized 
 Wood, S.N. (2006) \emph{Generalized Additive Models: an introduction with R},
 CRC
 
+Development of mgcv version 1.8 was part funded by EPSRC grants EP/K005251/1 and EP/I000917/1.
+
 }
 \keyword{ package }
 \keyword{models} 
