@@ -1,10 +1,11 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2011
+##  R routines for the package mgcv (c) Simon Wood 2000-2014
 
 ##  This file is primarily concerned with defining classes of smoother,
 ##  via constructor methods and prediction matrix methods. There are
 ##  also wrappers for the constructors to automate constraint absorption,
 ##  `by' variable handling and the summation convention used for general
-##  linear functional terms. 
+##  linear functional terms. SmoothCon, PredictMat and the generics are
+##  at the end of the file.
 
 
 ##############################
@@ -151,20 +152,20 @@ mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
 } ## end mono.con
 
 
-uniquecombs<-function(x) {
+uniquecombs <- function(x) {
 ## takes matrix x and counts up unique rows
 ## `unique' now does this in R
-if (is.null(x)) stop("x is null")
-if (is.null(nrow(x))) stop("x has no row attribute")
-if (is.null(ncol(x))) stop("x has no col attribute")
-ind <- rep(0,nrow(x))
-res<-.C(C_RuniqueCombs,x=as.double(x),ind=as.integer(ind),
-        r=as.integer(nrow(x)),c=as.integer(ncol(x)))
-n <- res$r*res$c
-x <- matrix(res$x[1:n],res$r,res$c)
-attr(x,"index") <- res$ind+1 ## C to R index gotcha
-x
-}
+  if (is.null(x)) stop("x is null")
+  if (is.null(nrow(x))) stop("x has no row attribute")
+  if (is.null(ncol(x))) stop("x has no col attribute")
+  ind <- rep(0,nrow(x))
+  res<-.C(C_RuniqueCombs,x=as.double(x),ind=as.integer(ind),
+          r=as.integer(nrow(x)),c=as.integer(ncol(x)))
+  n <- res$r*res$c
+  x <- matrix(res$x[1:n],res$r,res$c)
+  attr(x,"index") <- res$ind+1 ## C to R index gotcha 
+  x
+} ## uniquecombs
 
 cSplineDes <- function (x, knots, ord = 4)
 { ## cyclic version of spline design...
@@ -186,7 +187,7 @@ cSplineDes <- function (x, knots, ord = 4)
     X1[ind,] <- X1[ind,] + X2
   }
   X1 ## final model matrix
-}
+} ## cSplineDes
 
 
 get.var <- function(txt,data,vecMat = TRUE)
@@ -206,7 +207,7 @@ get.var <- function(txt,data,vecMat = TRUE)
   if (vecMat&&is.matrix(x)) x <- as.numeric(x)
   if (ismat) attr(x,"matrix") <- TRUE
   x
-}
+} ## get.var
 
 ################################################
 ## functions for use in `gam(m)' formulae ......
@@ -226,7 +227,7 @@ ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NUL
   object$mc <- mc
   substr(object$label,2,2) <- "i"
   object
-}
+} ## ti
 
 te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL)
 # function for use in gam formulae to specify a tensor product smooth term.
@@ -975,7 +976,7 @@ split.t2.smooth <- function(object) {
      class(sm[[i]]) <- "t2.frag"
    }
    sm
-}
+} ## split.t2.smooth
 
 expand.t2.smooths <- function(sm) {
 ## takes a list that may contain `t2.smooth' objects, and expands it into 
@@ -998,7 +999,7 @@ expand.t2.smooths <- function(sm) {
     } else { k <- k+1; smr[[k]] <- sm[[i]] } 
   }
   smr ## return expanded list
-}
+} ## expand.t2.smooths
 
 ##########################################################
 ## Thin plate regression splines (tprs) methods start here
@@ -1023,11 +1024,11 @@ null.space.dimension <- function(d,m)
   { M[ind] <- M[ind]/i;ind <- d>i;i <- i+1   
   }
   M
-}
+} ## null.space.dimension
 
 
 
-smooth.construct.tp.smooth.spec<-function(object,data,knots)
+smooth.construct.tp.smooth.spec <- function(object,data,knots)
 ## The constructor for a t.p.r.s. basis object.
 { shrink <- attr(object,"shrink")
   ## deal with possible extra arguments of "tp" type smooth
@@ -1160,18 +1161,18 @@ smooth.construct.tp.smooth.spec<-function(object,data,knots)
   }
   class(object) <- "tprs.smooth"
   object
-}
+} ## smooth.construct.tp.smooth.spec
 
-smooth.construct.ts.smooth.spec<-function(object,data,knots)
+smooth.construct.ts.smooth.spec <- function(object,data,knots)
 # implements a class of tprs like smooths with an additional shrinkage
 # term in the penalty... this allows for fully integrated GCV model selection
 { attr(object,"shrink") <- 1e-1
   object <- smooth.construct.tp.smooth.spec(object,data,knots)
   class(object) <- "ts.smooth"
   object
-}
+} ## smooth.construct.ts.smooth.spec
 
-Predict.matrix.tprs.smooth<-function(object,data)
+Predict.matrix.tprs.smooth <- function(object,data)
 # prediction matrix method for a t.p.r.s. term 
 { x<-array(0,0)
   for (i in 1:object$dim) 
@@ -1207,13 +1208,13 @@ Predict.matrix.tprs.smooth<-function(object,data)
     }
   }
   X
-}
+} ## Predict.matrix.tprs.smooth
 
-Predict.matrix.ts.smooth<-function(object,data)
+Predict.matrix.ts.smooth <- function(object,data)
 # this is the prediction method for a t.p.r.s
 # with shrinkage
 { Predict.matrix.tprs.smooth(object,data)
-}
+} ## Predict.matrix.ts.smooth
 
 
 #############################################
@@ -1221,7 +1222,7 @@ Predict.matrix.ts.smooth<-function(object,data)
 #############################################
 
 
-smooth.construct.cr.smooth.spec<-function(object,data,knots) {
+smooth.construct.cr.smooth.spec <- function(object,data,knots) {
 # this routine is the constructor for cubic regression spline basis objects
 # It takes a cubic regression spline specification object and returns the 
 # corresponding basis object. Efficient code.
@@ -1292,21 +1293,21 @@ smooth.construct.cr.smooth.spec<-function(object,data,knots) {
   object$F <- oo$F # f'' = t(F)%*%f (at knots) - helps prediction 
   class(object) <- "cr.smooth"
   object
-} # end smooth.construct.cr.smooth.spec
+} ## smooth.construct.cr.smooth.spec
 
 
 
-smooth.construct.cs.smooth.spec<-function(object,data,knots)
+smooth.construct.cs.smooth.spec <- function(object,data,knots)
 # implements a class of cr like smooths with an additional shrinkage
 # term in the penalty... this allows for fully integrated GCV model selection
 { attr(object,"shrink") <- .1
   object <- smooth.construct.cr.smooth.spec(object,data,knots)
   class(object) <- "cs.smooth"
   object
-}
+} ## smooth.construct.cs.smooth.spec
 
-Predict.matrix.cr.smooth<-function(object,data) {
-# this is the prediction method for a cubic regression spline, efficient code.
+Predict.matrix.cr.smooth <- function(object,data) {
+## this is the prediction method for a cubic regression spline, efficient code.
 
   x <- data[[object$term]]
   if (length(x)<1) stop("no data to predict at")
@@ -1325,21 +1326,21 @@ Predict.matrix.cr.smooth<-function(object,data) {
   X <- matrix(oo$X,nx,nk) # the prediction matrix
 
   X
-}
+} ## Predict.matrix.cr.smooth
 
 
-Predict.matrix.cs.smooth<-function(object,data)
+Predict.matrix.cs.smooth <- function(object,data)
 # this is the prediction method for a cubic regression spline 
 # with shrinkage
 { Predict.matrix.cr.smooth(object,data)
-}
+} ## Predict.matrix.cs.smooth
 
 #####################################################
 ## Cyclic cubic regression spline methods starts here
 #####################################################
 
 
-place.knots<-function(x,nk)
+place.knots <- function(x,nk)
 # knot placement code. x is a covariate array, nk is the number of knots,
 # and this routine spaces nk knots evenly throughout the x values, with the 
 # endpoints at the extremes of the data.
@@ -1355,9 +1356,9 @@ place.knots<-function(x,nk)
   knot[nk]<-x[n];knot[1]<-x[1]
   knot[2:(nk-1)]<-x[lbi]*(1-frac)+x.shift[lbi]*frac
   knot
-}
+} ## place.knots
 
-smooth.construct.cc.smooth.spec<-function(object,data,knots)
+smooth.construct.cc.smooth.spec <- function(object,data,knots)
 # constructor function for cyclic cubic splines
 { getBD<-function(x)
   # matrices B and D in expression Bm=Dp where m are s"(x_i) and 
@@ -1416,7 +1417,7 @@ smooth.construct.cc.smooth.spec<-function(object,data,knots)
   object$null.space.dim <- 1  
   class(object)<-"cyclic.smooth"
   object
-}
+} ## smooth.construct.cc.smooth.spec
 
 cwrap <- function(x0,x1,x) {
 ## map x onto [x0,x1] in manner suitable for cyclic smooth on
@@ -1431,9 +1432,9 @@ cwrap <- function(x0,x1,x) {
     x[ind] <- x1 - (x0-x[ind])%%h
   }
   x
-}
+} ## cwrap
 
-Predict.matrix.cyclic.smooth<-function(object,data)
+Predict.matrix.cyclic.smooth <- function(object,data)
 # this is the prediction method for a cyclic cubic regression spline
 { pred.mat<-function(x,knots,BD)
   # BD is B^{-1}D. Basis as given in Lancaster and Salkauskas (1986)
@@ -1460,14 +1461,14 @@ Predict.matrix.cyclic.smooth<-function(object,data)
   X <- pred.mat(x,object$xp,object$BD)
 
   X
-}
+} ## Predict.matrix.cyclic.smooth
 
 #####################################
 ## Cyclic P-spline methods start here
 #####################################
 
 
-smooth.construct.cp.smooth.spec<-function(object,data,knots)
+smooth.construct.cp.smooth.spec <- function(object,data,knots)
 ## a cyclic p-spline constructor method function
 ## something like `s(x,bs="cp",m=c(2,1))' to invoke, (which 
 ## would couple a cubic B-spline basis with a 1st order difference 
@@ -1522,22 +1523,22 @@ smooth.construct.cp.smooth.spec<-function(object,data,knots)
   object$knots <- k; object$m <- m      # store p-spline specific info.
   class(object)<-"cpspline.smooth"  # Give object a class
   object
-}
+} ## smooth.construct.cp.smooth.spec
 
-Predict.matrix.cpspline.smooth<-function(object,data)
+Predict.matrix.cpspline.smooth <- function(object,data)
 ## prediction method function for the cpspline smooth class
 { x <- data[[object$term]] 
   k0 <- min(object$knots);k1 <- max(object$knots) 
   if (min(x)<k0||max(x)>k1) x <- cwrap(k0,k1,x)
   X <- cSplineDes(x,object$knots,object$m[1]+2)
   X
-}
+} ## Predict.matrix.cpspline.smooth
 
 ##############################
 ## P-spline methods start here
 ##############################
 
-smooth.construct.ps.smooth.spec<-function(object,data,knots)
+smooth.construct.ps.smooth.spec <- function(object,data,knots)
 # a p-spline constructor method function
 { require(splines)
   if (length(object$p.order)==1) m <- rep(object$p.order,2) 
@@ -1585,7 +1586,7 @@ smooth.construct.ps.smooth.spec<-function(object,data,knots)
 
 
 
-Predict.matrix.pspline.smooth<-function(object,data)
+Predict.matrix.pspline.smooth <- function(object,data)
 # prediction method function for the p.spline smooth class
 { require(splines)
   m <- object$m[1]+1
@@ -1601,7 +1602,8 @@ Predict.matrix.pspline.smooth<-function(object,data)
     ## matrix mapping coefs to value and slope at end points...
     D <- splines::spline.des(object$knots,c(ll,ll,ul,ul),m,c(0,1,0,1))$design
     X <- matrix(0,n,ncol(D)) ## full predict matrix
-    X[ind,] <- splines::spline.des(object$knots,x[ind],m)$design ## interior rows
+    if (sum(ind)>0) X[ind,] <- 
+         splines::spline.des(object$knots,x[ind],m)$design ## interior rows
     ## Now add rows for linear extrapolation...
     ind <- x < ll 
     if (sum(ind)>0) X[ind,] <- cbind(1,x[ind]-ll)%*%D[1:2,]
@@ -1609,13 +1611,13 @@ Predict.matrix.pspline.smooth<-function(object,data)
     if (sum(ind)>0) X[ind,] <- cbind(1,x[ind]-ul)%*%D[3:4,]
   }
   X
-}
+} ## Predict.matrix.pspline.smooth
 
 #######################################################################
 # Smooth-factor interactions. Efficient alternative to s(x,by=fac,id=1) 
 #######################################################################
 
-smooth.construct.fs.smooth.spec<-function(object,data,knots) {
+smooth.construct.fs.smooth.spec <- function(object,data,knots) {
 ## Smooths in which one covariate is a factor. Generates a smooth
 ## for each level of the factor, with penalties on null space 
 ## components. Smooths are not centred. xt element specifies basis
@@ -1757,7 +1759,7 @@ Predict.matrix.fs.interaction <- function(object,data)
     X <- cbind(X,Xb * as.numeric(fac==object$flev[i]))
   }
   X
-}
+} ## Predict.matrix.fs.interaction
 
 
 ##########################################
@@ -1772,7 +1774,7 @@ mfil <- function(M,i,j,m) {
   k <- (j-1)*nr+i
   a[k] <- m
   matrix(a,nrow(M),ncol(M))
-}
+} ## mfil
 
 
 D2 <- function(ni=5,nj=5) {
@@ -1831,9 +1833,9 @@ D2 <- function(ni=5,nj=5) {
 
   list(Dcc=Dcc,Drr=Drr,Dcr=Dcr,rr.ri=rr.ri,rr.ci=rr.ci,cc.ri=cc.ri,
                 cc.ci=cc.ci,cr.ri=cr.ri,cr.ci=cr.ci,rmt=rmt,cmt=cmt)
-}
+} ## D2
 
-smooth.construct.ad.smooth.spec<-function(object,data,knots)
+smooth.construct.ad.smooth.spec <- function(object,data,knots)
 ## an adaptive p-spline constructor method function
 ## This is the simplifies and more efficient version...
 
@@ -2006,11 +2008,11 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
 
 
 
-Predict.matrix.random.effect<-function(object,data)
+Predict.matrix.random.effect <- function(object,data)
 # prediction method function for the random effect class
 { X <- model.matrix(object$form,data)
   X
-}
+} ## Predict.matrix.random.effect
 
 ########################################################
 # Markov random fields start here. Plot method in plot.r
@@ -2200,16 +2202,16 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   object$df <- ncol(object$X)
   class(object)<-"mrf.smooth"
   object
-}
+} ## smooth.construct.mrf.smooth.spec
 
-Predict.matrix.mrf.smooth<-function(object, data) { 
+Predict.matrix.mrf.smooth <- function(object, data) { 
   
   x <- factor(data[[object$term]],levels=levels(object$knots))
   ##levels(x) <- levels(object$knots)
   X <- model.matrix(~x-1)
   if (!is.null(object$P)) X <- X%*%object$P
   X 
-} 
+} ## Predict.matrix.mrf.smooth
 
 
 #############################
@@ -2313,7 +2315,7 @@ makeR <- function(la,lo,lak,lok,m=2) {
     attr(R,"Tc") <- matrix(1,ncol(R),1) ## constraint
     return(R)
   }
-}
+} ## makeR
 
 smooth.construct.sos.smooth.spec<-function(object,data,knots)
 ## The constructor for a spline on the sphere basis object.
@@ -2439,7 +2441,7 @@ smooth.construct.sos.smooth.spec<-function(object,data,knots)
 
 
 
-Predict.matrix.sos.smooth<-function(object,data)
+Predict.matrix.sos.smooth <- function(object,data)
 # prediction method function for the spline on the sphere smooth class
 { nk <- length(object$knt)/2 ## number of 'knots'
   la <- data[[object$term[1]]];lo <- data[[object$term[2]]] ## eval points
@@ -2470,7 +2472,7 @@ Predict.matrix.sos.smooth<-function(object,data)
   if (!is.null(object$xc.scale))
   X <- t(t(X)*object$xc.scale) ## apply column scaling
   X 
-}
+} ## Predict.matrix.sos.smooth
 
 
 ###########################
@@ -2485,7 +2487,7 @@ poly.pow <- function(m,d) {
   p <- matrix(0,M,d)
   oo <- .C(C_gen_tps_poly_powers,p=as.integer(p),M=as.integer(M),m=as.integer(m),d=as.integer(d))
   matrix(oo$p,M,d)
-}
+} ## poly.pow
 
 DuchonT <- function(x,m=2,n=1) {
 ## Get null space basis for Duchon '77 construction...
@@ -2502,7 +2504,7 @@ DuchonT <- function(x,m=2,n=1) {
     T[,i] <- y
   }
   T
-}
+} ## DuchonT
 
 DuchonE <- function(x,xk,m=2,s=0,n=1) {
 ## Get the r.k. matrix for a Duchon '77 construction...
@@ -2522,7 +2524,7 @@ DuchonE <- function(x,xk,m=2,s=0,n=1) {
   signE <- 1-2*((floor(k/2)+1)%%2) 
   rm(d)
   E*signE
-}
+} ## DuchonE
 
 smooth.construct.ds.smooth.spec <- function(object,data,knots)
 ## The constructor for a Duchon 1977 smoother
@@ -2722,12 +2724,9 @@ Predict.matrix.duchon.spline <- function(object,data)
 } ## end of Predict.matrix.duchon.spline
 
 
-############################
-# Soap film smoothers
-############################
-
-
-
+###################################
+# Soap film smoothers are in soap.r
+###################################
 
 ############################
 ## The generics and wrappers
@@ -2752,7 +2751,7 @@ smooth.construct2 <- function(object,data,knots) {
   } 
   class(object) <- c(class(object),"mgcv.smooth")
   object
-}
+} ## smooth.construct2
 
 smooth.construct3 <- function(object,data,knots) {
 ## This routine does not require that `data' contains only
@@ -2769,7 +2768,7 @@ smooth.construct3 <- function(object,data,knots) {
   object$ind <- ind
   class(object) <- c(class(object),"mgcv.smooth")
   object
-}
+} ## smooth.construct3
 
 
 Predict.matrix <- function(object,data) UseMethod("Predict.matrix")
@@ -2784,7 +2783,7 @@ Predict.matrix2 <- function(object,data) {
      if (!is.null(offs)) attr(X,"offset") <- offs[ind]
    } 
    X
-}
+} ## Predict.matrix2
 
 Predict.matrix3 <- function(object,data) {
 ## version of Predict.matrix matching smooth.construct3
@@ -2792,7 +2791,7 @@ Predict.matrix3 <- function(object,data) {
    X <- Predict.matrix(object,dk$data)
    ind <- attr(dk$data,"index") ## repeats index
    list(X=X,ind=ind)
-}
+} ## Predict.matrix3
 
 
 
@@ -2830,7 +2829,7 @@ ExtractData <- function(object,data,knots) {
      }
    }
    return(list(data=dat,knots=knt))
-}
+} ## ExtractData
 
 
 #########################################################################
@@ -2839,7 +2838,7 @@ ExtractData <- function(object,data,knots) {
 #########################################################################
 
 smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=nrow(data),
-                      dataX = NULL,null.space.penalty = FALSE,sparse.cons=0)
+                      dataX = NULL,null.space.penalty = FALSE,sparse.cons=0,diagonal.penalty=FALSE)
 ## wrapper function which calls smooth.construct methods, but can then modify
 ## the parameterization used. If absorb.cons==TRUE then a constraint free
 ## parameterization is used. 
@@ -3124,8 +3123,8 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
             qrc<-qr(t(sm$C)) 
             for (i in 1:length(sml)) { ## loop through smooth list
               if (length(sm$S)>0)
-              for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
-              { ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
+              for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
+                ZSZ<-qr.qty(qrc,sm$S[[l]])[(j+1):k,]
                 sml[[i]]$S[[l]]<-t(qr.qty(qrc,t(ZSZ))[(j+1):k,]) ## Z'SZ
               }
               sml[[i]]$X <- t(qr.qty(qrc,t(sml[[i]]$X))[(j+1):k,]) ## form XZ
@@ -3152,8 +3151,8 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
     } else if (sm$C>0) { ## set to zero constraints
        for (i in 1:length(sml)) { ## loop through smooth list
           if (length(sm$S)>0)
-          for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
-          { sml[[i]]$S[[l]] <- sml[[i]]$S[[l]][-sm$C,-sm$C]
+          for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
+            sml[[i]]$S[[l]] <- sml[[i]]$S[[l]][-sm$C,-sm$C]
           }
           sml[[i]]$X <- sml[[i]]$X[,-sm$C]
           attr(sml[[i]],"qrc") <- sm$C
@@ -3167,8 +3166,8 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
     } else if (sm$C <0) { ## params sum to zero 
        for (i in 1:length(sml)) { ## loop through smooth list
           if (length(sm$S)>0)
-          for (l in 1:length(sm$S)) # some smooths have > 1 penalty 
-          { sml[[i]]$S[[l]] <- diff(t(diff(sml[[i]]$S[[l]])))
+          for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
+            sml[[i]]$S[[l]] <- diff(t(diff(sml[[i]]$S[[l]])))
           }
           sml[[i]]$X <- t(diff(t(sml[[i]]$X)))
           attr(sml[[i]],"qrc") <- sm$C
@@ -3190,28 +3189,72 @@ smoothCon <- function(object,data,knots,absorb.cons=FALSE,scale.penalty=TRUE,n=n
       }
     }
 
-
   } else for (i in 1:length(sml)) attr(sml[[i]],"qrc") <-NULL ## no absorption
+
+  ## now convert single penalties to identity matrices, if requested.
+  ## This is relatively expensive, so is not routinely done. However
+  ## for expensive inference methods, such as MCMC, it is often worthwhile
+  ## as in speeds up sampling much more than it slows down setup 
+
+  if (diagonal.penalty && length(sml[[1]]$S)==1) { 
+    ## recall that sml is a list that may contain several 'cloned' smooths 
+    ## if there was a factor by variable. They have the same penalty matrices
+    ## but different model matrices. So cheapest re-para is to use a version
+    ## that does not depend on the model matrix (e.g. type=2)
+    S11 <- sml[[1]]$S[[1]][1,1];rank <- sml[[1]]$rank;
+    p <- ncol(sml[[1]]$X)
+    if (is.null(rank) || max(abs(sml[[1]]$S[[1]] - diag(c(rep(S11,rank),rep(0,p-rank))))) > 
+        abs(S11)*.Machine$double.eps^.8 ) {
+      np <- nat.param(sml[[1]]$X,sml[[1]]$S[[1]],rank=sml[[1]]$rank,type=2,unit.fnorm=FALSE) 
+      sml[[1]]$X <- np$X;sml[[1]]$S[[1]] <- diag(p)
+      diag(sml[[1]]$S[[1]]) <- c(np$D,rep(0,p-np$rank))
+      sml[[1]]$diagRP <- np$P
+      if (length(sml)>1) for (i in 2:length(sml)) {
+        sml[[i]]$X <- sml[[i]]$X%*%np$P ## reparameterized model matrix
+        sml[[i]]$S <- sml[[1]]$S ## diagonalized penalty (unpenalized last)
+        sml[[i]]$diagRP <- np$P  ## re-parameterization matrix for use in PredictMat
+      }
+    } ## end of if, otherwise was already diagonal, and there is nothing to do
+  }
 
   ## The idea here is that term selection can be accomplished as part of fitting 
   ## by applying penalties to the null space of the penalty... 
 
   if (null.space.penalty) { ## then an extra penalty on the un-penalized space should be added 
-    St <- sml[[1]]$S[[1]]
-    if (length(sml[[1]]$S)>1) for (i in 1:length(sml[[1]]$S)) St <- St + sml[[1]]$S[[i]]
-    es <- eigen(St,symmetric=TRUE)
-    ind <- es$values<max(es$values)*.Machine$double.eps^.66
-    if (sum(ind)) { ## then there is an unpenalized space remaining
-      U <- es$vectors[,ind,drop=FALSE]
-      Sf <- U%*%t(U) ## penalty for the unpenalized components
-      M <- length(sm$S)
-      for (i in 1:length(sml)) {
-        sml[[i]]$S[[M+1]] <- Sf
-        sml[[i]]$rank[M+1] <- sum(ind)
-        sml[[i]]$null.space.dim <- 0
+    ## first establish if there is a quick method for doing this
+    nsm <- length(sml[[1]]$S)
+    if (nsm==1) { ## only have quick method for single penalty
+      S11 <- sml[[1]]$S[[1]][1,1]
+      rank <- sml[[1]]$rank;
+      p <- ncol(sml[[1]]$X)
+      if (is.null(rank) || max(abs(sml[[1]]$S[[1]] - diag(c(rep(S11,rank),rep(0,p-rank))))) > 
+        abs(S11)*.Machine$double.eps^.8 ) need.full <- TRUE else {
+        need.full <- FALSE ## matrix is already a suitable diagonal
+        if (p>rank) for (i in 1:length(sml)) {
+          sml[[i]]$S[[2]] <- diag(c(rep(0,rank),rep(1,p-rank)))
+          sml[[i]]$rank[2] <- p-rank
+          sml[[i]]$null.space.dim <- 0
+        }
       }
-    }
-  }
+    } else need.full <- if (nsm > 0) TRUE else FALSE
+
+    if (need.full) {
+      St <- sml[[1]]$S[[1]]
+      if (length(sml[[1]]$S)>1) for (i in 1:length(sml[[1]]$S)) St <- St + sml[[1]]$S[[i]]
+      es <- eigen(St,symmetric=TRUE)
+      ind <- es$values<max(es$values)*.Machine$double.eps^.66
+      if (sum(ind)) { ## then there is an unpenalized space remaining
+        U <- es$vectors[,ind,drop=FALSE]
+        Sf <- U%*%t(U) ## penalty for the unpenalized components
+        M <- length(sm$S)
+        for (i in 1:length(sml)) {
+          sml[[i]]$S[[M+1]] <- Sf
+          sml[[i]]$rank[M+1] <- sum(ind)
+          sml[[i]]$null.space.dim <- 0
+        }
+      }
+    } ## if (need.full)
+  } ## if (null.space.penalty)
 
   sml
 } ## end of smoothCon
@@ -3325,6 +3368,10 @@ PredictMat <- function(object,data,n=nrow(data))
       }
     }
   }
+  ## apply any reparameterization that resulted from diagonalizing penalties 
+  ## in smoothCon ...
+  if (!is.null(object$diagRP)) X <- X %*% object$diagRP
+
   ## drop columns eliminated by side-conditions...
   del.index <- attr(object,"del.index") 
   if (!is.null(del.index)) X <- X[,-del.index]

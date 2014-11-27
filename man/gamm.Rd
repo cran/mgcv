@@ -278,10 +278,14 @@ e <- rnorm(n,0,sig)
 for (i in 2:n) e[i] <- 0.6*e[i-1] + e[i]
 y <- f + e
 op <- par(mfrow=c(2,2))
+## Fit model with AR1 residuals
 b <- gamm(y~s(x,k=20),correlation=corAR1())
 plot(b$gam);lines(x,f-mean(f),col=2)
-b <- gamm(y~s(x,k=20))
-plot(b$gam);lines(x,f-mean(f),col=2)
+## Raw residuals still show correlation, of course...
+acf(residuals(b$gam),main="raw residual ACF")
+## But standardized are now fine...
+acf(residuals(b$lme,type="normalized"),main="standardized residual ACF")
+## compare with model without AR component...
 b <- gam(y~s(x,k=20))
 plot(b);lines(x,f-mean(f),col=2)
 

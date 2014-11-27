@@ -444,7 +444,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
       RArrayFromMatrix(Ea,nk,&E);
       minus = -1;kk=k; 
   
-      Rlanczos(Ea,Ua,v.M[0],&nk, &kk, &minus,&tol);
+      Rlanczos(Ea,Ua,v.M[0],&nk, &kk, &minus,&tol,&one); // final '&one' is for single thread version
 
       U = Rmatrix(Ua,E.r,k);R_chk_free(Ea);R_chk_free(Ua);
     

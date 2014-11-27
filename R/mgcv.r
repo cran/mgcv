@@ -15,7 +15,7 @@ Rrank <- function(R,tol=.Machine$double.eps^.9) {
   rank
 }
  
-slanczos <- function(A,k=10,kl=-1,tol=.Machine$double.eps^.5) {
+slanczos <- function(A,k=10,kl=-1,tol=.Machine$double.eps^.5,nt=1) {
 ## Computes truncated eigen decomposition of symmetric A by 
 ## Lanczos iteration. If kl < 0 then k largest magnitude
 ## eigenvalues returned, otherwise k highest and kl lowest.
@@ -36,7 +36,7 @@ slanczos <- function(A,k=10,kl=-1,tol=.Machine$double.eps^.5) {
    if (n != ncol(A)) stop("A not square")
    if (m>n) stop("Can not have more eigenvalues than nrow(A)")
    oo <- .C(C_Rlanczos,A=as.double(A),U=as.double(rep(0,n*m)),D=as.double(rep(0,m)),
-            n=as.integer(n),m=as.integer(k),ml=as.integer(kl),tol=as.double(tol))
+            n=as.integer(n),m=as.integer(k),ml=as.integer(kl),tol=as.double(tol),nt=as.integer(nt))
    list(values = oo$D,vectors = matrix(oo$U,n,m),iter=oo$n) 
 }
 
@@ -708,7 +708,8 @@ gam.setup.list <- function(formula,pterms,
 gam.setup <- function(formula,pterms,
                      data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
-                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=FALSE)
+                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=FALSE,
+                    diagonal.penalty=FALSE) 
 ## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 ## needed for a gam fit.
 ## elements of returned object:
@@ -846,12 +847,12 @@ gam.setup <- function(formula,pterms,
     id <- split$smooth.spec[[i]]$id
     if (is.null(id)||!idLinksBases) { ## regular evaluation
       sml <- smoothCon(split$smooth.spec[[i]],data,knots,absorb.cons,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons) 
+                       null.space.penalty=select,sparse.cons=sparse.cons,diagonal.penalty=diagonal.penalty) 
     } else { ## it's a smooth with an id, so basis setup data differs from model matrix data
       names(id.list[[id]]$data) <- split$smooth.spec[[i]]$term ## give basis data suitable names
       sml <- smoothCon(split$smooth.spec[[i]],id.list[[id]]$data,knots,
                        absorb.cons,n=nrow(data),dataX=data,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons)
+                       null.space.penalty=select,sparse.cons=sparse.cons,diagonal.penalty=diagonal.penalty)
     }
     for (j in 1:length(sml)) {
       newm <- newm + 1
@@ -2372,8 +2373,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     object$Vp <- object$Vc
   }
 
-  if (type!="link"&&type!="terms"&&type!="iterms"&&type!="response"&&type!="lpmatrix")  
-  { warning("Unknown type, reset to terms.")
+  if (type!="link"&&type!="terms"&&type!="iterms"&&type!="response"&&type!="lpmatrix")  { 
+    warning("Unknown type, reset to terms.")
     type<-"terms"
   }
   if (!inherits(object,"gam")) stop("predict.gam can only be used to predict from gam objects")
@@ -2415,10 +2416,21 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         ## get names of required variables, less response, but including offset variable
         ## see ?terms.object and ?terms for more information on terms objects
         yname <- all.vars(object$terms)[attr(object$terms,"response")]
-        if (!is.null(newdata[[yname]])) { ## response provided...
+        naresp <- FALSE
+        if (!is.null(object$family$predict)&&!is.null(newdata[[yname]])) { 
+          ## response provided, and potentially needed for prediction (e.g. Cox PH family)
           if (!is.null(object$pred.formula)) object$pred.formula <- attr(object$pred.formula,"full")
           response <- TRUE
           Terms <- terms(object)
+          resp <- newdata[[yname]]
+          if (sum(is.na(resp))>0) {
+            naresp <- TRUE ## there are NAs in supplied response
+            ## replace them with a numeric code, so that rows are not dropped below
+            rar <- range(resp,na.rm=TRUE)
+            thresh <- rar[1]*1.01-rar[2]*.01
+            resp[is.na(resp)] <- thresh
+            newdata[[yname]] <- thresh 
+          } 
         } else { ## response not provided
           response <- FALSE 
           Terms <- delete.response(terms(object))
@@ -2427,10 +2439,12 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         if (length(allNames) > 0) { 
           ff <- if (is.null(object$pred.formula)) reformulate(allNames) else  object$pred.formula
           if (sum(!(allNames%in%names(newdata)))) { 
-          warning("not all required variables have been supplied in  newdata!\n")}
+            warning("not all required variables have been supplied in  newdata!\n")
+          }
           ## note that `xlev' argument not used here, otherwise `as.factor' in 
           ## formula can cause a problem ... levels reset later.
-          newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame()) 
+          newdata <- eval(model.frame(ff,data=newdata,na.action=na.act),parent.frame())
+          if (naresp) newdata[[yname]][newdata[[yname]]<=thresh] <- NA ## reinstate as NA  
         } ## otherwise it's intercept only and newdata can be left alone
         na.act <- attr(newdata,"na.action")
         response <- if (response) newdata[[yname]] else NULL
@@ -2651,16 +2665,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         se <- se[,order==1,drop=FALSE]
         colnames(se) <- term.labels } 
       }
-      if (!is.null(terms)) { # return only terms requested via `terms'
-        if (sum(!(terms %in%colnames(fit)))) 
-          warning("non-existent terms requested - ignoring")
-        else { 
-          fit <- fit[,terms,drop=FALSE]
-          if (se.fit) {## se <- as.matrix(as.matrix(se)[,terms])
-            se <- se[,terms,drop=FALSE]
-          }
-        }
-      }
+     
     } else { ## "link" or "response" case
       fam <- object$family
       k <- attr(attr(object$model,"terms"),"offset")
@@ -2736,6 +2741,18 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     rm(X)
    
   } ## end of prediction block loop
+
+  if ((type=="terms"||type=="iterms")&&!is.null(terms)) { # return only terms requested via `terms'
+    if (sum(!(terms %in%colnames(fit)))) 
+      warning("non-existent terms requested - ignoring")
+    else { 
+      fit <- fit[,terms,drop=FALSE]
+      if (se.fit) {
+        se <- se[,terms,drop=FALSE]
+      }
+    }
+  }
+
   if (type=="response"&&!is.null(fit1)) {
     fit <- fit1
     if (se.fit) se <- se1
@@ -3953,8 +3970,9 @@ initial.sp <- function(X,S,off,expensive=FALSE)
       maS <- max(abs(S[[i]])) 
       rsS <- rowMeans(abs(S[[i]]))
       csS <- colMeans(abs(S[[i]]))
-      thresh <- .Machine$double.eps*maS*10
-      ind <- rsS > thresh & csS > thresh # only these columns really penalize
+      dS <- diag(abs(S[[i]])) ## new 1.8-4
+      thresh <- .Machine$double.eps^.8 * maS ## .Machine$double.eps*maS*10
+      ind <- rsS > thresh & csS > thresh & dS > thresh # only these columns really penalize
       ss <- diag(S[[i]])[ind] # non-zero elements of l.d. S[[i]]
       start <- off[i];finish <- start+ncol(S[[i]])-1
       xx <- ldxx[start:finish]

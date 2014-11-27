@@ -1323,7 +1323,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     } else if (score1>=score) { ## initial step failed to improve score, try step halving ...
       step <- Nstep ## start with the (pseudo) Newton direction
       ##sc.extra <- 1e-4*sum(grad*step) ## -ve sufficient decrease 
-      while (score1>score && ii < maxHalf) {
+      while (score1>=score && ii < maxHalf) {
         if (ii==3&&i<10) { ## Newton really not working - switch to SD, but keeping step length 
           s.length <- min(sum(step^2)^.5,maxSstep)
           step <- Sstep*s.length/sum(Sstep^2)^.5 ## use steepest descent direction
@@ -1349,7 +1349,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
           score1 <- b1$UBRE
         } else score1 <- b1$GCV
         ##sc.extra <- 1e-4*sum(grad*Nstep) ## -ve sufficient decrease 
-        if (score1 <= score) { ## accept
+        if (score1 < score) { ## accept
           if (pdef||!sd.unused) { ## then accept and compute derivatives
             b <- gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
                  offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
@@ -1383,7 +1383,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
           }
           score1 <- score - abs(score) - 1 ## make sure that score1 < score
         }  # end of if (score1<= score ) # accept
-        if (score1>score) ii <- ii + 1
+        if (score1>=score) ii <- ii + 1
       } ## end while (score1>score && ii < maxHalf)
       if (!pdef&&sd.unused&&ii<maxHalf) score1 <- score2
     } ## end of step halving branch

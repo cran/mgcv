@@ -6,7 +6,7 @@
 }
 
 \usage{
-slanczos(A,k=10,kl=-1,tol=.Machine$double.eps^.5)
+slanczos(A,k=10,kl=-1,tol=.Machine$double.eps^.5,nt=1)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -24,6 +24,8 @@ negative \code{kl} signals that the \code{k} largest magnitude eigenvalues shoul
 \item{tol}{tolerance to use for convergence testing of eigenvalues. Error in eigenvalues will be less 
     than the magnitude of the dominant eigenvalue multiplied by \code{tol} (or the machine precision!).}
 
+\item{nt}{number of threads to use for leading order iterative multiplication of A by vector. May show no 
+          speed improvement on two processor machine.}
 }
 
 \details{ If \code{kl} is non-negative, returns the highest \code{k} and lowest \code{kl} eigenvalues, 

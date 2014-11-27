@@ -97,6 +97,7 @@ cox.ph <- function (link = "identity") {
     predict <- function(family,se=FALSE,eta=NULL,y=NULL,
                X=NULL,beta=NULL,off=NULL,Vb=NULL) {
       ## prediction function.
+      if (sum(is.na(y))>0) stop("NA times supplied for cox.ph prediction")
       ii <- order(y,decreasing=TRUE) ## C code expects non-increasing
       n <- nrow(X)
       oo <- .C("coxpred",as.double(X[ii,]),t=as.double(y[ii]),as.double(beta),as.double(Vb),
