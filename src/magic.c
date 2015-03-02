@@ -22,7 +22,6 @@ USA. */
 #include "general.h"
 #include "mgcv.h"
 #include "matrix.h"
-#include <Rconfig.h>
 #ifdef SUPPORT_OPENMP
 #include <omp.h>
 #endif
@@ -202,6 +201,9 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
 
 { double *p,*p1,*p2,*p3,*p4,xx,xx1,x1,x2,*VSi;
   int i,j,*ip,bt,ct,r,c,tid=0; 
+  #ifdef OMP_REPORT
+  Rprintf("magic_gH");
+  #endif
   /* U_1'U_1 U1 is q by rank ... */
   getXtX(U1U1,U1,&q,&rank);
   /* for (p=S,ip=cS,i=0;ip<cS+m;p+= *ip *q,ip++,i++) */ /* work through all smooths */ 
@@ -272,7 +274,10 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
     { grad[i]=( dnorm[i] - 2* *scale*ddelta[i])/ n;
       for (j=0;j<=i;j++) hess[i][j]=hess[j][i]=(d2norm[i][j]-2* *scale*d2delta[i][j])/ n;
     }
-  }
+  } 
+  #ifdef OMP_REPORT
+  Rprintf("end\n");
+  #endif
 } /* magic_gH */
 
 

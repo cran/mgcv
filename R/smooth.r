@@ -169,7 +169,7 @@ uniquecombs <- function(x) {
 
 cSplineDes <- function (x, knots, ord = 4)
 { ## cyclic version of spline design...
-  require(splines)
+  ##require(splines)
   nk <- length(knots)
   if (ord<2) stop("order too low")
   if (nk<ord) stop("too few knots")
@@ -312,7 +312,7 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
   margin <- list()
   for (i in 1:n.bases)
   { j1<-j+d[i]-1
-    if (is.null(xt)) xt1 <- NULL else xt1 <- xtra[[i]]
+    if (is.null(xt)) xt1 <- NULL else xt1 <- xtra[[i]] ## ignore codetools
     stxt<-"s("
     for (l in j:j1) stxt<-paste(stxt,term[l],",",sep="")
     stxt<-paste(stxt,"k=",deparse(k[i],backtick=TRUE),",bs=",deparse(bs[i],backtick=TRUE),
@@ -414,7 +414,7 @@ t2 <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,id=NULL,sp=NULL,full=FA
   margin<-list()
   for (i in 1:n.bases)
   { j1<-j+d[i]-1
-    if (is.null(xt)) xt1 <- NULL else xt1 <- xtra[[i]]
+    if (is.null(xt)) xt1 <- NULL else xt1 <- xtra[[i]] ## ignore codetools
     stxt<-"s("
     for (l in j:j1) stxt<-paste(stxt,term[l],",",sep="")
     stxt<-paste(stxt,"k=",deparse(k[i],backtick=TRUE),",bs=",deparse(bs[i],backtick=TRUE),
@@ -891,7 +891,7 @@ smooth.construct.t2.smooth.spec <- function(object,data,knots)
   ## Create identifiability constraint. Key feature is that it 
   ## only affects the unpenalized parameters...
   nup <- sum(sub.cols[1:nsc]) ## range space rank
-  X.shift <- NULL
+  ##X.shift <- NULL
   if (is.null(C)) { ## if not null then already determined that constraint not needed
     if (object$null.space.dim==0) { C <- matrix(0,0,0) } else { ## no null space => no constraint
       if (object$null.space.dim==1) C <- ncol(X) else ## might as well use set to zero
@@ -1540,7 +1540,7 @@ Predict.matrix.cpspline.smooth <- function(object,data)
 
 smooth.construct.ps.smooth.spec <- function(object,data,knots)
 # a p-spline constructor method function
-{ require(splines)
+{ ##require(splines)
   if (length(object$p.order)==1) m <- rep(object$p.order,2) 
   else m <- object$p.order  # m[1] - basis order, m[2] - penalty order
   m[is.na(m)] <- 2 ## default
@@ -1588,7 +1588,7 @@ smooth.construct.ps.smooth.spec <- function(object,data,knots)
 
 Predict.matrix.pspline.smooth <- function(object,data)
 # prediction method function for the p.spline smooth class
-{ require(splines)
+{ ##require(splines)
   m <- object$m[1]+1
   ## find spline basis inner knot range...
   ll <- object$knots[m+1];ul <- object$knots[length(object$knots)-m]
@@ -1879,10 +1879,10 @@ smooth.construct.ad.smooth.spec <- function(object,data,knots)
         V <- ps2$X
       }
       Db<-diff(diff(diag(nk))) ## base difference matrix
-      D <- list()
+      ##D <- list()
      # for (i in 1:k) D[[i]] <- as.numeric(V[,i])*Db
      # L <- matrix(0,k*(k+1)/2,k)
-      S <- list();l<-0
+      S <- list()
       for (i in 1:k) {
         S[[i]] <- t(Db)%*%(as.numeric(V[,i])*Db)
         ind <- rowSums(abs(S[[i]]))>0
@@ -1935,7 +1935,7 @@ smooth.construct.ad.smooth.spec <- function(object,data,knots)
           if (sum(kp<2)) ok <- FALSE
          
           if (!ok) stop("penalty basis too small")
-          m <- min(min(kp)-2,1); m<-c(m,m);j<-1
+          m <- min(min(kp)-2,1); m<-c(m,m);j <- 1
           ps2 <- smooth.construct(te(i,j,bs=bsp,k=kp,fx=TRUE,m=m,np=FALSE),
                                 data=data.frame(i=Db$rmt,j=Db$cmt),knots=NULL) 
           Vrr <- Predict.matrix(ps2,data.frame(i=Db$rr.ri,j=Db$rr.ci))
@@ -2032,7 +2032,8 @@ pol2nb <- function(pc) {
 
   ## work through list of list of polygons, computing bounding boxes
 
-  a.ind <- p.ind <- lo1 <- hi1 <- lo2 <- hi2 <- rep(0,n.poly)
+  ## a.ind <- p.ind <- 
+  lo1 <- hi1 <- lo2 <- hi2 <- rep(0,n.poly)
   k <- 0
   for (i in 1:n.poly) {
     ## bounding box limits...
@@ -2097,8 +2098,9 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
  
   x <- as.factor(data[[object$term]])
   k <- knots[[object$term]]
-  if (is.null(k))
+  if (is.null(k)) {
     k <- as.factor(levels(x)) # default knots = all regions in the data
+  }
   else k <- as.factor(k)
   
   if (object$bs.dim<0)
@@ -2112,7 +2114,7 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   ##levels(x) <- levels(k) ## to allow for regions with no data
   x <- factor(x,levels=levels(k)) ## to allow for regions with no data
 
-  object$X <- model.matrix(~x-1,) ## model matrix
+  object$X <- model.matrix(~x-1,data.frame(x=x)) ## model matrix
  
   ## now set up the penalty...
 

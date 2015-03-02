@@ -185,13 +185,13 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
     weights <- G$w
     conv <- FALSE
     nobs <- nrow(mf)
-    nvars <- ncol(G$X)
+    ##nvars <- ncol(G$X)
     offset <- G$offset
     family <- G$family
     G$family <- gaussian() ## needed if REML/ML used
     variance <- family$variance
     dev.resids <- family$dev.resids
-    aic <- family$aic
+    ## aic <- family$aic
     linkinv <- family$linkinv
     mu.eta <- family$mu.eta
     if (!is.function(variance) || !is.function(linkinv))
@@ -211,7 +211,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         mustart <- mukeep
     }
  
-    coefold <- NULL
+    ##coefold <- NULL
     eta <- if (!is.null(etastart))
          etastart
     else family$linkfun(mustart)
@@ -220,7 +220,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
     if (!(validmu(mu) && valideta(eta)))
        stop("cannot find valid starting values: please specify some")
     dev <- sum(dev.resids(y, mu, weights))*2 ## just to avoid converging at iter 1
-    boundary <- conv <- FALSE
+    ##boundary <- 
+    conv <- FALSE
    
     G$coefficients <- rep(0,ncol(G$X))
     class(G) <- "gam"  
@@ -506,13 +507,13 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
     weights <- G$w
     conv <- FALSE
     nobs <- nrow(mf)
-    nvars <- ncol(G$X)
+    ##nvars <- ncol(G$X)
     offset <- G$offset
     family <- G$family
     G$family <- gaussian() ## needed if REML/ML used
     variance <- family$variance
     dev.resids <- family$dev.resids
-    aic <- family$aic
+    ##aic <- family$aic
     linkinv <- family$linkinv
     mu.eta <- family$mu.eta
     if (!is.function(variance) || !is.function(linkinv))
@@ -532,7 +533,7 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
         mustart <- mukeep
     }
  
-    coefold <- NULL
+    ##coefold <- NULL
     eta <- if (!is.null(etastart))
          etastart
     else family$linkfun(mustart)
@@ -541,7 +542,8 @@ bgam.fit2 <- function (G, mf, chunk.size, gp ,scale ,gamma,method, etastart = NU
     if (!(validmu(mu) && valideta(eta)))
        stop("cannot find valid starting values: please specify some")
     dev <- sum(dev.resids(y, mu, weights))*2 ## just to avoid converging at iter 1
-    boundary <- conv <- FALSE
+    ##boundary <- 
+    conv <- FALSE
 
     G$n <- nobs
     X <- G$X 
@@ -733,7 +735,7 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
   gc()
 
   if (!is.null(cluster)&&inherits(cluster,"cluster")) { 
-     require(parallel)
+     ## require(parallel)
      n.threads <- length(cluster)
   } else n.threads <- 1
   if (missing(newdata)) n <- nrow(object$model) else n <- nrow(newdata)
@@ -814,7 +816,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
 
    if (n>chunk.size) { ## then use QR accumulation approach
      if (!is.null(cl)&&inherits(cl,"cluster")) { 
-       require(parallel)
+       ## require(parallel)
        n.threads <- length(cl)
      } else n.threads <- 1
 
@@ -926,7 +928,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
        # }
 
        ## now consolidate the results from the parallel threads...
-       R <- res[[1]]$R;f <- res[[1]]$f;dev <- res[[1]]$dev
+       R <- res[[1]]$R;f <- res[[1]]$f; ## dev <- res[[1]]$dev
        y.norm2 <- res[[1]]$y.norm2
        for (i in 2:n.threads) {
          if (use.chol) {
@@ -1195,15 +1197,15 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
                  H=NULL,absorb.cons=TRUE,sparse.cons=sparse.cons,select=FALSE,
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
+  
 
   ## no advantage to "fREML" with no free smooths...
   if (((!is.null(G$L)&&ncol(G$L) < 1)||(length(G$sp)==0))&&method=="fREML") method <- "REML"
 
   G$var.summary <- var.summary
   G$family <- family
-  G$terms<-terms;##G$pterms<-pterms
-  pvars <- all.vars(delete.response(terms))
-  G$pred.formula <- gp$pred.formula # if (length(pvars)>0) reformulate(pvars) else NULL
+  G$terms<-terms;
+  G$pred.formula <- gp$pred.formula
 
   n <- nrow(mf)
   
@@ -1227,8 +1229,11 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (G$m) for (i in 1:G$m) G$min.edf<-G$min.edf+G$smooth[[i]]$null.space.dim
 
   G$formula<-formula
-  environment(G$formula)<-environment(formula)
-  
+  ## environment(G$formula)<-environment(formula)
+  environment(G$pterms) <- environment(G$terms) <- environment(G$pred.formula) <- 
+  environment(G$formula) <- .BaseNamespaceEnv
+
+ 
   G$conv.tol<-control$mgcv.tol      # tolerence for mgcv
   G$max.half<-control$mgcv.half     # max step halving in bfgs optimization
 
@@ -1297,7 +1302,6 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$family <- family
   object$formula<-G$formula 
  
-  #object$linear.predictors <- NA
   if (method=="GCV.Cp") {
     if (scale<=0) object$method <- "GCV" else object$method <- "UBRE"
   } else {
@@ -1345,6 +1349,9 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (length(object$full.sp)==length(object$sp)&&
         all.equal(object$sp,object$full.sp)==TRUE) object$full.sp <- NULL
   }
+  environment(object$formula) <- environment(object$pred.formula) <-
+  environment(object$terms) <- environment(object$pterms) <- 
+  environment(attr(object$model,"terms"))  <- .GlobalEnv
   object
 } ## end of bam
 
@@ -1451,7 +1458,6 @@ bam.update <- function(b,data,chunk.size=10000) {
   } else if (method=="fREML") { ## fast REML
 
      um <- Sl.Xprep(b$Sl,b$qrx$R)
-     lambda.0 <- initial.sp(b$qrx$R,b$G$S,b$G$off)
      lsp0 <- log(b$sp) ## initial s.p.
      log.phi <- log(b$sig2) ## initial or fixed scale
      fit <- fast.REML.fit(um$Sl,um$X,b$qrx$f,rho=lsp0,L=b$G$L,rho.0=b$G$lsp0,

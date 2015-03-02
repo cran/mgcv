@@ -33,8 +33,8 @@ unconstrain <- function(object,beta) {
             beta <- qr.qy(qrc,c(rep(0,j),beta)) 
         } else { ## only some parameters are subject to constraint
           ## NOTE: this branch not fully tested
-          nx <- length(indi)
-          nc <- j;nz <- nx - nc
+          ##nx <- length(indi)
+          ##nc <- j;nz <- nx - nc
           Xbeta <- qr.qy(qrc,c(rep(0,j),beta[indi]))
           beta.full <- rep(0,length(beta)+j)
           ib <- 1;ii <- 1

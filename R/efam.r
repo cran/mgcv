@@ -58,12 +58,13 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
   }
   if (is.null(theta)&&is.null(R)) stop("Must supply theta or R to ocat")
   if (!is.null(theta)) R <- length(theta) + 2 ## number of catergories
-  Theta <-  NULL;n.theta <- R-2
+  ## Theta <-  NULL;
+  n.theta <- R-2
   ## NOTE: data based initialization is in preinitialize...
   if (!is.null(theta)&&sum(theta==0)==0) {
     if (sum(theta<0)) iniTheta <- log(abs(theta)) ## initial theta supplied
     else { 
-      iniTheta <- Theta <- log(theta) ## fixed theta supplied
+      iniTheta <- log(theta) ## fixed theta supplied
       n.theta <- 0
     }
   } else iniTheta <- rep(-1,length=R-2) ## inital log theta value
@@ -128,12 +129,12 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     ## logistic regression....
     s <- sign((al1 + al0)/2-mu) ## sign for deviance residuals
     al1mu <- al1-mu;al0mu <- al0-mu
-    f1 <- F(al1mu);f0 <- F(al0mu);
+    ## f1 <- F(al1mu);f0 <- F(al0mu);
     ##f <- pmax(f1 - f0,.Machine$double.eps)
     f <- Fdiff(al0mu,al1mu)
     ##a1 <- f1^2 - f1;a0 <- f0^2 - f0; a <- a1 -a0
     al1al0 <- (al1-al0)/2;al0al1 <- (al0-al1)/2
-    g1 <- F(al1al0);g0 <- F(al0al1)
+    ##g1 <- F(al1al0);g0 <- F(al0al1)
     ##A <- pmax(g1 - g0,.Machine$double.eps)
     A <- Fdiff(al0al1,al1al0)
     rsd <- 2*(log(A)-log(f))
@@ -198,7 +199,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     } 
     al1 <- alpha[y+1];al0 = alpha[y]
     al1mu <- al1-mu;al0mu <- al0 - mu
-    f1 <- F(al1mu);f0 <- F(al0mu);
+    ##f1 <- F(al1mu);f0 <- F(al0mu);
     ##f <- pmax(f1 - f0,.Machine$double.eps)
     f <- pmax(Fdiff(al0mu,al1mu),.Machine$double.xmin)
     r1 <- abcd(al1mu,level); a1 <- r1$aj
@@ -207,7 +208,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     a <- a1 - a0
     
     al1al0 <- (al1-al0)/2; al0al1 <- (al0-al1)/2
-    g1 <- F(al1al0);g0 <- F(al0al1)
+    ##g1 <- F(al1al0);g0 <- F(al0al1)
     ##A <- pmax(g1 - g0,.Machine$double.eps)
     A <- Fdiff(al0al1,al1al0)
     if (level>=0) {
@@ -603,10 +604,11 @@ nb <- function (theta = NULL, link = "log") {
         }
         else stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
   }
-  Theta <-  NULL;n.theta <- 1
+  ## Theta <-  NULL;
+  n.theta <- 1
   if (!is.null(theta)&&theta!=0) {
       if (theta>0) { 
-        iniTheta <- Theta <- log(theta) ## fixed theta supplied
+        iniTheta <- log(theta) ## fixed theta supplied
         n.theta <- 0 ## signal that there are no theta parameters to estimate
       } else iniTheta <- log(-theta) ## initial theta supplied
   } else iniTheta <- 0 ## inital log theta value
@@ -629,7 +631,7 @@ nb <- function (theta = NULL, link = "log") {
     
     Dd <- function(y, mu, theta, wt, level=0) {
     ## derivatives of the deviance...
-      ltheta <- theta
+      ##ltheta <- theta
       theta <- exp(theta)
       yth <- y + theta
       muth <- mu + theta
@@ -752,11 +754,12 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
         else  stop(gettextf("link \"%s\" not available for Tweedie family.", 
                 linktemp, collapse = ""), domain = NA)
   }
-  Theta <-  NULL;n.theta <- 1
+  ## Theta <-  NULL;
+  n.theta <- 1
   if (!is.null(theta)&&theta!=0) {
       if (abs(theta)<=a||abs(theta)>=b) stop("Tweedie p must be in interval (a,b)")
       if (theta>0) { ## fixed theta supplied
-        iniTheta <- Theta <- log((theta-a)/(b-theta)) 
+        iniTheta <- log((theta-a)/(b-theta)) 
         n.theta <- 0 ## so no theta to estimate
       } else iniTheta <- log((-theta-a)/(b+theta)) ## initial theta supplied
   } else iniTheta <- 0 ## inital log theta value
@@ -813,7 +816,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
     if (level>0) { ## quantities needed for first derivatives
         i1p <- 1/(1-p)
         y1 <- y + (y==0)
-        ylogy <- y*log(y1)
+        ##ylogy <- y*log(y1)
         logmu <- log(mu)
         mu2p <- mu * mu1p
         r$Dth <- 2 * wt * ( (y^(2-p)*log(y1) - mu2p*logmu)/(2-p) + 
@@ -898,7 +901,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
 
 ## beta regression
 
-betar <- function (theta = NULL, link = "logit") { 
+betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) { 
 ## Extended family object for beta regression
 ## length(theta)=1; log theta supplied
 ## This serves as a prototype for working with -2logLik
@@ -920,16 +923,17 @@ betar <- function (theta = NULL, link = "logit") {
         else stop(linktemp, " link not available for beta regression; available links are  \"logit\", \"probit\", \"cloglog\" and \"cauchit\"")
     }
    
-    Theta <-  NULL; n.theta <- 1
+    n.theta <- 1
     if (!is.null(theta)&&theta!=0) {
        if (theta>0) {
-           iniTheta <- Theta <- log(theta) ## fixed theta supplied
+           iniTheta <- log(theta) ## fixed theta supplied
            n.theta <- 0 ## signal that there are no theta parameters to estimate
        } else iniTheta <- log(-theta) ## initial theta supplied
     } else iniTheta <- 0 ##  inital log theta value
     
     env <- new.env(parent = .GlobalEnv)
     assign(".Theta", iniTheta, envir = env)
+    assign(".betarEps",eps, envir = env)
     getTheta <- function(trans=FALSE) if (trans) exp(get(".Theta")) else get(".Theta") 
     putTheta <- function(theta) assign(".Theta", theta,envir=environment(sys.function()))
 
@@ -945,16 +949,16 @@ betar <- function (theta = NULL, link = "logit") {
       if (is.null(theta)) theta <- get(".Theta")
       theta <- exp(theta) ## note log theta supplied
       muth <- mu*theta
-      yth <- y*theta
+      ## yth <- y*theta
       2* wt * (-lgamma(theta) +lgamma(muth) + lgamma(theta - muth) - muth*log(y/(1-y)) - theta*log(1-y) + log(y*(1-y))) 
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
     ## derivatives of the -2*loglik...
-      ltheta <- theta
+      ## ltheta <- theta
       theta <- exp(theta)
       onemu <- 1 - mu;  oney <- 1 - y
-      muth <- mu*theta; yth <- y*theta
+      muth <- mu*theta; ## yth <- y*theta
       onemuth <- onemu*theta  ## (1-mu)*theta
       psi0.th <- digamma(theta)
       psi1.th <- trigamma(theta)
@@ -1011,13 +1015,17 @@ betar <- function (theta = NULL, link = "logit") {
 
    
     ## preinitialization to reset G$y values of <=0 and >=1... 
-    preinitialize <- expression({
-     ## code to evaluate in estimate.gam...
-     ## reset G$y values of <=0 and >= 1 to eps and 1-eps...
-      eps <- 1e-7 
-      G$y[G$y >= 1-eps] <- 1 - eps
-      G$y[G$y<= eps] <- eps
-    })
+    ## code to evaluate in estimate.gam...
+    ## reset G$y values of <=0 and >= 1 to eps and 1-eps... 
+    preinitialize <- NULL ## keep codetools happy
+    eval(parse(text=paste("preinitialize <- expression({\n eps <- ",eps,
+         "\n G$y[G$y >= 1-eps] <- 1 - eps\n  G$y[G$y<= eps] <- eps })")))
+    
+ #   preinitialize <- expression({
+ #     eps <- 1e-7 
+ #     G$y[G$y >= 1-eps] <- 1 - eps
+ #     G$y[G$y<= eps] <- eps
+ #   })
 
     saturated.ll <- function(y,wt,theta=NULL){
     ## function to find the saturated loglik by Newton method,
@@ -1045,7 +1053,7 @@ betar <- function (theta = NULL, link = "logit") {
         list(l=l,g=g,h=h,mu=mu)
       } ## gbh 
       ## now Newton loop...
-      eps <- 1e-7
+      eps <- get(".betarEps")
       eta <- y
       a <- eps;b <- 1 - eps
       y[y<eps] <- eps;y[y>1-eps] <- 1-eps
@@ -1054,7 +1062,7 @@ betar <- function (theta = NULL, link = "logit") {
       eta <- log((eta-a)/(b-eta)) 
       mu <- LS <- ii <- 1:length(y)
       for (i in 1:200) {
-        ls <- gbh(y,eta,theta,TRUE)
+        ls <- gbh(y,eta,theta,TRUE,a=eps/10)
         conv <- abs(ls$g)<mean(abs(ls$l)+.1)*1e-8
         if (sum(conv)>0) { ## some convergences occured
           LS[ii[conv]] <- ls$l[conv] ## store converged
@@ -1071,13 +1079,13 @@ betar <- function (theta = NULL, link = "logit") {
         delta <- ls$g/h   ## step
         ind <- abs(delta)>2
         delta[ind] <- sign(delta[ind])*2 ## step length limit
-        ls1 <- gbh(y,eta+delta,theta,FALSE); ## did it work?
+        ls1 <- gbh(y,eta+delta,theta,FALSE,a=eps/10); ## did it work?
         ind <- ls1$l<ls$l ## failure index
         k <- 0
         while (sum(ind)>0&&k<20) { ## step halve only failed steps
           k <- k + 1
           delta[ind] <- delta[ind]/2
-          ls1$l[ind] <- gbh(y[ind],eta[ind]+delta[ind],theta,FALSE)$l
+          ls1$l[ind] <- gbh(y[ind],eta[ind]+delta[ind],theta,FALSE,a=eps/10)$l
           ind <- ls1$l<ls$l
         }
         eta <- eta + delta
@@ -1123,7 +1131,7 @@ betar <- function (theta = NULL, link = "logit") {
         y <- object$y
         mu <- object$fitted.values
         wts <- object$prior.weights
-        sim <- attr(y,"simula")
+     #   sim <- attr(y,"simula")
      #   if (!is.null(sim)) {  ## if response values simulated, Newton search called to get saturated log.lik
            lf <- object$family$saturated.ll(y, wts,object$family$getTheta(TRUE))
            object$family$data$ls <- lf$term  
@@ -1143,7 +1151,7 @@ betar <- function (theta = NULL, link = "logit") {
      ## simulate data given fitted latent variable in mu 
       Theta <- exp(get(".Theta"))
       r <- rbeta(mu,shape1=Theta*mu,shape2=Theta*(1-mu))
-      eps <- 1e-7 ;
+      eps <- get(".betarEps")
       r[r>=1-eps] <- 1 - eps
       r[r<eps] <- eps
       r
@@ -1152,7 +1160,7 @@ betar <- function (theta = NULL, link = "logit") {
     qf <- function(p,mu,wt,scale) {
       Theta <- exp(get(".Theta"))
       q <- qbeta(p,shape1=Theta*mu,shape2=Theta*(1-mu))
-      eps <- 1e-7 ;
+      eps <-  get(".betarEps")
       q[q>=1-eps] <- 1 - eps
       q[q<eps] <- eps
       q
@@ -1169,6 +1177,7 @@ betar <- function (theta = NULL, link = "logit") {
         validmu = validmu, valideta = stats$valideta, n.theta=n.theta,  
         ini.theta = iniTheta,putTheta=putTheta,getTheta=getTheta,rd=rd,qf=qf), 
         class = c("extended.family","family"))
+    
 } ## betar
 
 
@@ -1193,13 +1202,14 @@ scat <- function (theta = NULL, link = "identity") {
         }
         else stop(linktemp, " link not available for scaled t distribution; available links are \"identity\", \"log\",  and \"inverse\"")
     }
-    Theta <-  NULL;n.theta <- 2
+    ## Theta <-  NULL;
+    n.theta <- 2
     if (!is.null(theta)&&sum(theta==0)==0) {
       if (abs(theta[1]<2)) stop("scaled t df must be >2")
       if (sum(theta<0)) { 
         iniTheta <- c(log(abs(theta[1])-2),log(abs(theta[2]))) ## initial theta supplied
       } else { ## fixed theta supplied
-        iniTheta <- Theta <- c(log(theta[1]-2),log(theta[2])) 
+        iniTheta <- c(log(theta[1]-2),log(theta[2])) 
         n.theta <- 0 ## no thetas to estimate
       }
     } else iniTheta <- c(-2,-1) ## inital log theta value
@@ -1230,7 +1240,7 @@ scat <- function (theta = NULL, link = "identity") {
     
     Dd <- function(y, mu, theta, wt, level=0) {
     ## derivatives of the deviance...
-      ltheta <- theta
+      ## ltheta <- theta
       nu <- exp(theta[1])+2; sig <- exp(theta[2])
       nu1 <- nu + 1;  ym <- y - mu; nu2 <- nu - 2;
       a <- 1 + (ym/sig)^2/nu
@@ -1263,7 +1273,8 @@ scat <- function (theta = NULL, link = "identity") {
         oo$Dmu2th[,2] <- 4*wt*(-nu1nusig2a + ff1*5 - 4*ff1*f1ym)
       } 
       if (level>1) { ## whole lot
-        nu1nu2 <- nu1*nu2; nu1nu <- nu1/nu
+        ## nu1nu2 <- nu1*nu2; 
+        nu1nu <- nu1/nu
         fymf1ym <- fym*f1ym; f1ymf1 <- f1ym*f1
         oo$Dmu4 <- 12 * wt * (-nu1nusig2a/nusig2a + 8*ff1/nusig2a - 8*ff1 *f1^2) 
         n2d <- 3 # number of the 2nd order derivatives
@@ -1452,10 +1463,11 @@ ziP <- function (theta = NULL, link = "identity") {
   if (linktemp %in% c("identity")) { 
     stats <- make.link(linktemp)
   } else  stop(linktemp, " link not available for zero inflated; available link for `lambda' is only  \"loga\"")
-  Theta <-  NULL;n.theta <- 2
+  ## Theta <-  NULL;
+  n.theta <- 2
   if (!is.null(theta)) {
       ## fixed theta supplied
-      iniTheta <- Theta <- c(theta[1],theta[2])
+      iniTheta <-  c(theta[1],theta[2])
       n.theta <- 0 ## no thetas to estimate
   } else iniTheta <- c(0,0) ## inital theta value - start at Poisson
 
@@ -1552,6 +1564,10 @@ ziP <- function (theta = NULL, link = "identity") {
 
     initialize <- expression({
         if (any(y < 0)) stop("negative values not allowed for the zero inflated Poisson family")
+        if (all.equal(y,round(y))!=TRUE) {
+          stop("Non-integer response variables are not allowed with ziP ")
+        }
+        if ((min(y)==0&&max(y)==1)) stop("Using ziP for binary data makes no sense")
         n <- rep(1, nobs)
         mustart <- log(y + (y==0)/5) 
     })

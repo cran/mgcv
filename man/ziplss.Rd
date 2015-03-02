@@ -6,6 +6,8 @@
 controls the probability of presence  and the other controls the mean given  presence.
 Useable only with \code{\link{gam}}, the linear predictors are specified via a list of formulae. 
 Should be used with care: simply having a large number of zeroes is not an indication of zero inflation. 
+
+Requires integer count data.
 }
 
 \usage{

@@ -20,13 +20,14 @@ USA. */
 #include <stdio.h>
 #include <math.h>
 #include <R.h>
-#include <Rconfig.h>
+#include "mgcv.h"
+
 #ifdef SUPPORT_OPENMP
 #include <omp.h>
 #endif
 #define ANSI
 /*#define DEBUG*/
-#include "mgcv.h"
+
 
 
 double trBtAB(double *A,double *B,int *n,int*m) 
@@ -68,7 +69,8 @@ void multSk(double *y,double *x,int *xcol,int k,double *rS,int *rSncol,int *q,do
 
 double diagABt(double *d,double *A,double *B,int *r,int *c)
 /* obtain diag(AB') as efficiently as possible, and return tr(AB') A and B are
-   r by c stored column-wise.
+   r by c stored column-wise. 
+   Thread safety: Modifies d. rest unmodified
 */
 { int j;
   double tr=0.0,*pa,*pb,*p1,*pd;
@@ -908,6 +910,9 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
 { double *diagKKt,xx,*KtTK,*PtrSm,*PtSP,*trPtSP,*work,*pdKK,*p1,*pTkm;
   int m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,max_col;
   int tid;
+  #ifdef OMP_REPORT
+  Rprintf("get_ddetXWXpS0...");
+  #endif 
   if (nthreads<1) nthreads = 1;
 
   if (*deriv==2) deriv2=1; else deriv2=0;
@@ -985,13 +990,14 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   R_chk_free(rSoff);
   /* Now accumulate the second derivatives */
 
-  #ifdef SUPPORT_OPENMP
-  #pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
-  #endif
+  //  #ifdef SUPPORT_OPENMP
+  //#pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
+  //#endif
+  if (deriv2) 
   { /* start of parallel section */ 
-    if (deriv2) 
+    // if (deriv2) 
     #ifdef SUPPORT_OPENMP
-    #pragma omp for
+    #pragma omp  parallel for private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
     #endif
     for (m=0;m < *M;m++) {
       #ifdef SUPPORT_OPENMP
@@ -1029,7 +1035,9 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   if (deriv2) {R_chk_free(PtSP);R_chk_free(KtTK);}
   R_chk_free(diagKKt);R_chk_free(work);
   R_chk_free(PtrSm);R_chk_free(trPtSP);
-
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif 
 } /* end get_ddetXWXpS0 */
 
 
@@ -1139,13 +1147,14 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   R_chk_free(rSoff);
   /* Now accumulate the second derivatives */
 
-  #ifdef SUPPORT_OPENMP
-  #pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
-  #endif
+  //  #ifdef SUPPORT_OPENMP
+  //#pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
+  //#endif
+  if (deriv2)
   { /* start of parallel section */ 
-    if (deriv2) 
+    //if (deriv2) 
     #ifdef SUPPORT_OPENMP
-    #pragma omp for
+    #pragma omp parallel for private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
     #endif
     for (m=0;m < Mtot;m++) {
       #ifdef SUPPORT_OPENMP
@@ -1213,7 +1222,9 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
 { double *diagKKt,*diagKKtKKt,xx,*KtTK,*KtTKKtK,*KKtK,*KtK,*work,*pTk,*pTm,*pdKKt,*pdKKtKKt,*p0,*p1,*p2,*p3,*pd,
     *PtrSm,*PtSP,*KPtrSm,*diagKPtSPKt,*diagKPtSPKtKKt,*PtSPKtK, *KtKPtrSm, *KKtKPtrSm,*Ip,*IpK/*,lowK,hiK*/;
     int i,m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,neg_w=0,tid=0;
-
+  #ifdef OMP_REPORT
+    Rprintf("get_trA2 (d=%d)...",*deriv);
+  #endif
   if (*deriv==2) deriv2=1; else deriv2=0;
   /* Get the sign array for negative w_i */
   Ip = (double *)R_chk_calloc((size_t)*n,sizeof(double));
@@ -1226,7 +1237,10 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
     for (*trA=0.0,p0=diagKKt,p1=p0 + *n,p2=Ip;p0<p1;p0++,p2++) *trA += *p2 * *p0;
   }
   if (!*deriv) {
-    R_chk_free(Ip);R_chk_free(diagKKt);
+    R_chk_free(Ip);R_chk_free(diagKKt); 
+    #ifdef OMP_REPORT
+    Rprintf("done\n");
+    #endif 
     return;
   }
 
@@ -1360,7 +1374,10 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
 
   if (!deriv2) { /* trA1 finished, so return */
     R_chk_free(PtrSm);R_chk_free(KPtrSm);R_chk_free(diagKPtSPKt);
-    R_chk_free(work);R_chk_free(KtK);R_chk_free(KKtK);
+    R_chk_free(work);R_chk_free(KtK);R_chk_free(KKtK); 
+    #ifdef OMP_REPORT
+    Rprintf("done\n");
+    #endif 
     return;
   }
   /* now use these terms to finish off the Hessian of tr(F) */ 
@@ -1396,6 +1413,9 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
    R_chk_free(PtrSm);R_chk_free(KPtrSm);R_chk_free(PtSP);R_chk_free(KtKPtrSm);R_chk_free(diagKPtSPKt);
    R_chk_free(diagKPtSPKtKKt);R_chk_free(work);R_chk_free(KtK);R_chk_free(KKtK);R_chk_free(PtSPKtK);R_chk_free(KKtKPtrSm);
    R_chk_free(Ip);  
+   #ifdef OMP_REPORT
+    Rprintf("done\n");
+   #endif 
 } /* end get_trA2 */
 
 

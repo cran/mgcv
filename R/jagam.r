@@ -26,7 +26,7 @@ write.jagslp <- function(resp,family,file,use.weights,offset=FALSE) {
     cat("  for (i in 1:n) { mu[i] <- ",iltab[family$link],"} ## expected response\n",file=file,append=TRUE)
   }
   ## code the response given mu and any scale parameter prior...
-  scale <- TRUE ## is scale parameter free?
+  #scale <- TRUE ## is scale parameter free?
   cat("  for (i in 1:n) { ",file=file,append=TRUE)
   if (family$family=="gaussian") {
     if (use.weights) cat(resp,"[i] ~ dnorm(mu[i],tau*w[i]) } ## response \n",sep="",file=file,append=TRUE)
@@ -34,12 +34,12 @@ write.jagslp <- function(resp,family,file,use.weights,offset=FALSE) {
     cat("  scale <- 1/tau ## convert tau to standard GLM scale\n",file=file,append=TRUE) 
     cat("  tau ~ dgamma(.05,.005) ## precision parameter prior \n",file=file,append=TRUE)
   } else if (family$family=="poisson") {
-    scale <- FALSE
+   # scale <- FALSE
     cat(resp,"[i] ~ dpois(mu[i]) } ## response \n",sep="",file=file,append=TRUE)
     if (use.weights) warning("weights ignored") 
     use.weights <- FALSE
   } else if (family$family=="binomial") {
-    scale <- FALSE
+   # scale <- FALSE
     cat(resp,"[i] ~ dbin(mu[i],w[i]) } ## response \n",sep="",file=file,append=TRUE)
     use.weights <- TRUE
   } else if (family$family=="Gamma") {
@@ -57,7 +57,7 @@ jini <- function(G,lambda) {
   y <- G$y; nobs <- length(y); p <- ncol(G$X)
   family <- G$family
   weights <- G$w
-  start <- mustart <- etastart <- NULL
+  start <- mustart <- etastart <- NULL ## ignore codetools warning - needed for eval
   eval(G$family$initialize)
   w <- as.numeric(G$w * family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart)) 
   w <- sqrt(w)
@@ -75,7 +75,7 @@ jini <- function(G,lambda) {
     X[(nobs+1):(nobs+jj),uoff[i]:(uoff[i]+ncol(S)-1)] <- S
     nobs <- nobs + jj
   }
-  b <- qr.coef(qr(X),z)
+  qr.coef(qr(X),z)
 } ## jini
 
 jagam <- function(formula,family=gaussian,data=list(),file,weights=NULL,na.action,
@@ -138,8 +138,8 @@ sp.prior = "gamma",diagonalize=FALSE) {
                  H=NULL,absorb.cons=centred,sparse.cons=FALSE,select=TRUE,
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  diagonal.penalty=diagonalize)
-  G$model <- mf;G$terms <- terms;G$family=family
-
+  G$model <- mf;G$terms <- terms;G$family <- family;G$call <- cl
+  G$var.summary <- var.summary
   ## write JAGS code producing linear predictor and linking linear predictor to 
   ## response....
 

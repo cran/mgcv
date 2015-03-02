@@ -637,7 +637,7 @@ gam.setup.list <- function(formula,pterms,
               idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept)
   G$pterms <- pterms
   G$offset <- list(G$offset)
-  G$contrasts <- list(G$contrasts)
+  #G$contrasts <- list(G$contrasts)
   G$xlevels <- list(G$xlevels)
   G$assign <- list(G$assign)
   lpi <- list(1:ncol(G$X)) ## lpi[[j]] is index of cols for jth linear predictor 
@@ -654,7 +654,8 @@ gam.setup.list <- function(formula,pterms,
     lpi[[i]] <- pof + 1:ncol(um$X)
     if (mv.response) G$y <- cbind(G$y,um$y)
     G$offset[[i]] <- um$offset
-    G$contrasts[[i]] <- um$contrasts
+    #G$contrasts[[i]] <- um$contrasts
+    if (!is.null(um$contrasts)) G$contrasts <- c(G$contrasts,um$contrasts)
     G$xlevels[[i]] <- um$xlevels
     G$assign[[i]] <- um$assign
     G$rank <- c(G$rank,um$rank)
@@ -765,6 +766,7 @@ gam.setup <- function(formula,pterms,
 
   G$intercept <-  attr(attr(mf,"terms"),"intercept")>0
   G$offset <- model.offset(mf)   # get the model offset (if any)
+  if (!is.null(G$offset))  G$offset <- as.numeric(G$offset) 
 
   # construct strictly parametric model matrix.... 
   if (drop.intercept) attr(pterms,"intercept") <- 1 ## ensure there is an intercept to drop
@@ -1357,7 +1359,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
  
   family <- fix.family.link(family)
   family <- fix.family.var(family)
-  if (method%in%c("REML","ML","P-REML","P-ML")) {reml <- TRUE; family <- fix.family.ls(family)} else reml <- FALSE 
+  if (method%in%c("REML","ML","P-REML","P-ML")) family <- fix.family.ls(family)
   
 
   if (nbGetTheta) {
@@ -1391,7 +1393,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   } else { ## methods calling gam.fit3 
     args <- list(X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,offset=G$offset,U1=G$U1,Mp=G$Mp,family=family,
              weights=G$w,control=control,scoreType=criterion,gamma=gamma,scale=scale,
-             L=G$L,lsp0=G$lsp0,null.coef=G$null.coef)
+             L=G$L,lsp0=G$lsp0,null.coef=G$null.coef,n.true=G$n.true)
   
     if (optimizer[2]=="nlm") {
        b <- nlm(gam4objective, lsp, typsize = lsp, fscale = fscale, 
@@ -1451,7 +1453,7 @@ get.null.coef <- function(G,start=NULL,etastart=NULL,mustart=NULL,...) {
 ## Get an estimate of the coefs corresponding to maximum reasonable deviance...
   y <- G$y
   weights <- G$w
-  nobs <- G$n
+  nobs <- G$n ## ignore codetools warning!!
   ##start <- etastart <- mustart <- NULL
   family <- G$family
   eval(family$initialize) ## have to do this to ensure y numeric
@@ -1835,9 +1837,8 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         (!is.list(formula)&&!is.null(family$npl)&&(family$npl>1))) stop("incorrect number of linear predictors for family")
 
     if (ncol(G$X)>nrow(G$X)) stop("Model has more coefficients than data") 
-        ## +nrow(G$C)) stop("Model has more coefficients than data")
-
-    G$terms<-terms;##G$pterms<-pterms
+       
+    G$terms<-terms;
     G$mf<-mf;G$cl<-cl;
     G$am <- am
 
@@ -1889,6 +1890,10 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$call <- G$cl # needed for update() to work
   class(object) <- c("gam","glm","lm")
   if (is.null(object$deviance)) object$deviance <- sum(residuals(object,"deviance")^2)
+  environment(object$formula) <- environment(object$pred.formula) <-
+  environment(object$terms) <- environment(object$pterms) <- .GlobalEnv
+  if (!is.null(object$model))  environment(attr(object$model,"terms"))  <- .GlobalEnv
+  if (!is.null(attr(object$pred.formula,"full"))) environment(attr(object$pred.formula,"full")) <- .GlobalEnv
   object
 } ## gam
 
@@ -2168,7 +2173,7 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
         }
    
         mevg <- mu.eta.val[good];mug <- mu[good];yg <- y[good]
-        weg <- weights[good];etag <- eta[good]
+        weg <- weights[good];##etag <- eta[good]
         var.mug<-variance(mug)
 
         G$y <- z <- (eta - offset)[good] + (yg - mug)/mevg
@@ -2792,9 +2797,9 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
       H <- napredict(na.act,H)
     }
   }
-  if (type=="terms"||type=="iterms") attr(H,"constant") <- object$coefficients[1]
+  if ((type=="terms"||type=="iterms")&&attr(object$terms,"intercept")==1) attr(H,"constant") <- object$coefficients[1]
   H # ... and return
-} ## end of gam.fit
+} ## end of predict.gam
 
 
 
@@ -2828,7 +2833,7 @@ concurvity <- function(b,full=TRUE) {
   n.measures <- 3
   measure.names <- c("worst","observed","estimate")
 
-  n <- nrow(X)
+  ##n <- nrow(X)
   if (full) { ## get dependence of each smooth on all the rest...
     conc <- matrix(0,n.measures,m)
     for (i in 1:m) {
@@ -2939,7 +2944,7 @@ smoothTest <- function(b,X,V,eps=.Machine$double.eps^.5) {
   V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
-  k <- n <- length(ed$values)
+  k <- length(ed$values)
   ## could truncate, but it doesn't improve power in correlated case!
   f <- t(ed$vectors[,1:k])%*%R%*%b
   t <- sum(f^2)
@@ -3782,15 +3787,15 @@ logLik.gam <- function (object,...)
    # if (length(list(...)))
    #     warning("extra arguments discarded")
    
-    fam <- family(object)$family
-    p <- sum(object$edf) 
+    ##fam <- family(object)$family
+    sc.p <- as.numeric(object$scale.estimated)
+    p <- sum(object$edf) + sc.p
     val <- p - object$aic/2
     #if (fam %in% c("gaussian", "Gamma", "inverse.gaussian","Tweedie"))
     #    p <- p + 1
-    if (!is.null(object$edf2)) p <- sum(object$edf2)
-    np <- length(object$coefficients) 
+    if (!is.null(object$edf2)) p <- sum(object$edf2) + sc.p
+    np <- length(object$coefficients) + sc.p 
     if (p > np) p <- np 
-    if (object$scale.estimated) p <- p + 1
     if (inherits(object$family,"extended.family")&&!is.null(object$family$n.theta)) p <- p + object$family$n.theta 
     attr(val, "df") <- p
     class(val) <- "logLik"
@@ -3901,7 +3906,7 @@ initial.spg <- function(x,y,weights,family,S,off,L=NULL,lsp0=NULL,type=1,
   ## Get the initial weights...
   if (length(S)==0) return(rep(0,0))
   ## start <- etastart <- mustart <- NULL
-  nobs <- nrow(x) 
+  nobs <- nrow(x) ## ignore codetools warning - required for initialization
   if (is.null(mustart)) mukeep <- NULL else mukeep <- mustart 
   eval(family$initialize) 
   if (inherits(family,"general.family")) { ## Cox, gamlss etc...   

@@ -17,7 +17,8 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 
 \usage{
 \method{predict}{bam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-        block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,cluster=NULL,...)
+        block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,
+        cluster=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

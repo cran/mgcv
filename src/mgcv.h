@@ -1,5 +1,22 @@
 /* main method routines */
 #include <Rinternals.h>
+#include <Rconfig.h>
+/* Rconfig.h sometimes doesn't define SUPPORT_OPENMP although
+   support is available (e.g. on Windows). Doesn't quite match 
+   documentation in `Writing R extensions', but is apparently 
+   intentional. However, most compilers with openMP support supply 
+   a pre-defined compiler macro _OPENMP. So... */
+#if (!defined SUPPORT_OPENMP && defined _OPENMP)
+#define SUPPORT_OPENMP 1 
+#endif
+/* ... note also that there is no actual *need* to protect #pragmas with 
+  #ifdef SUPPORT_OPENMP, since C ignores undefined pragmas, but failing 
+  to do so may produce alot of compilation warnings if openMP is not supported. 
+  In contrast functions from omp.h must be protected, and there is 
+  non-avoidable use of these in the mgcv code. */
+
+//#define OMP_REPORT // define to have all routines using omp report on start and end.
+
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
 	   double *lsp0,double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score,int *nt);
@@ -69,10 +86,11 @@ void rksos(double *x,int *n,double *eps);
 void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse);
 
 /* Routines for linear algebra with direct access to linpack and lapack */
-
+void mgcv_omp(int *a);
 void mgcv_chol(double *a,int *pivot,int *n,int *rank);
 void mgcv_svd(double *x,double *u, double *d,int *r,int *c);
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
+void mgcv_qrqy0(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
 void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
 void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
 void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau);

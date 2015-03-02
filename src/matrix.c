@@ -50,8 +50,6 @@ struct mrec
 };
 typedef struct mrec MREC;
 
-void ErrorMessage(char *msg,int fatal);
-
 matrix null_mat;
 MREC *top,*bottom;
 
@@ -79,7 +77,7 @@ matrix initmat(int rows,int cols)
   memused+=A.mem;matrallocd++;
   A.original_r=A.r=rows;A.original_c=A.c=cols;
   if (((!A.M)||(!A.M[rows-1+2*pad]))&&(rows*cols>0))
-  { ErrorMessage(_("Failed to initialize memory for matrix."),1);}
+  { error(_("Failed to initialize memory for matrix."));}
   if (pad)  /* This lot is debugging code that checks out matrix errors
 		       on allocation and release */
   { if (A.vec)
@@ -141,13 +139,13 @@ void freemat(matrix A)
 	     }
       }
       if (!ok)
-      { ErrorMessage(_("An out of bound write to matrix has occurred!"),1);
+      { error(_("An out of bound write to matrix has occurred!"),1);
       }
       /* find the matrix being deleted in the linked list of extant matrices */
       i=0;delet=bottom;
       while ((i<matrallocd)&&(delet->mat.M!=A.M)) { i++;delet=delet->fp;}
       if (i==matrallocd)
-      { ErrorMessage(_("INTEGRITY PROBLEM in the extant matrix list."),1);
+      { error(_("INTEGRITY PROBLEM in the extant matrix list."));
       } else
       { if (i)
 	     delet->bp->fp=delet->fp;
@@ -179,7 +177,7 @@ void matrixintegritycheck()
   int ok=1,pad=PAD,i,j,k=0;
   matrix A;
 #ifndef RANGECHECK
-  ErrorMessage(_("You are trying to check matrix integrity without defining RANGECHECK."));
+  error(_("You are trying to check matrix integrity without defining RANGECHECK."));
 #endif
   B=bottom;
   while (k<matrallocd)
@@ -203,7 +201,7 @@ void matrixintegritycheck()
       }
     }
     if (!ok)
-    { ErrorMessage(_("An out of bound write to matrix has occurred!"),1);
+    { error(_("An out of bound write to matrix has occurred!"));
     }
     k++;B=B->fp;
   }
@@ -241,7 +239,7 @@ void mcopy(matrix *A,matrix *B)
 
 { int Ac;
   double *pA,*pB,**AM,**BM;
-  if (A->r>B->r||A->c>B->c) ErrorMessage(_("Target matrix too small in mcopy"),1);
+  if (A->r>B->r||A->c>B->c) error(_("Target matrix too small in mcopy"));
   BM=B->M;Ac=A->c;
   for (AM=A->M;AM<A->M+A->r;AM++)
   { pB= *BM;
@@ -261,7 +259,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
   if (tA)
   { if (tB)
     { if ((A.r!=B.c)||(A.c!=C.r)||(B.r!=C.c))
-      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
+      { error(_("Incompatible matrices in matmult."));}
       for (i=0;i<A.c;i++) for (j=0;j<B.r;j++)
       { p2=CM[i]+j;(*p2)=0.0;p=BM[j];
 	for (k=0;k<A.r;k++)
@@ -269,7 +267,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
       }
     } else
     { if ((A.r!=B.r)||(A.c!=C.r)||(B.c!=C.c))
-      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
+      { error(_("Incompatible matrices in matmult."));}
       for (i=0;i<A.c;i++)
       for (p=CM[i];p<(CM[i]+C.c);p++)
       (*p)=0.0;
@@ -282,7 +280,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
   } else
   { if (tB)
     { if ((A.c!=B.c)||(A.r!=C.r)||(B.r!=C.c))
-      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
+      { error(_("Incompatible matrices in matmult."));}
       for (i=0;i<A.r;i++) for (j=0;j<B.r;j++)
       { p2=CM[i]+j;*p2=0.0;p1=BM[j];
 	for (p=AM[i];p<(AM[i]+A.c);p++)
@@ -290,7 +288,7 @@ void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
       }
     } else
     { if ((A.c!=B.r)||(C.r!=A.r)||(C.c!=B.c))
-      { ErrorMessage(_("Incompatible matrices in matmult."),1);}
+      { error(_("Incompatible matrices in matmult."));}
       for (i=0;i<A.r;i++) for (p=CM[i];p<(CM[i]+B.c);p++) *p=0.0;
       for (k=0;k<A.c;k++) for (i=0;i<A.r;i++)
       { p1=BM[k];temp=AM[i][k];
@@ -377,7 +375,7 @@ void invert(matrix *A)
 
 { double **AM,*p,*p1,max,x;
   int *c,*rp,*cp,i,j,k,pr=0,pc=0,*d,cj,ck;
-  if (A->r!=A->c) ErrorMessage(_("Attempt to invert() non-square matrix"),1);
+  if (A->r!=A->c) error(_("Attempt to invert() non-square matrix"));
   c=(int *)R_chk_calloc((size_t)A->c,sizeof(int)); /* index of columns, used for column pivoting */
   d=(int *)R_chk_calloc((size_t)A->c,sizeof(int));
   rp=(int *)R_chk_calloc((size_t)A->c,sizeof(int)); /* row changes */
@@ -399,7 +397,7 @@ void invert(matrix *A)
     cj=c[j]; /* save time */
     /* Now reduce the column */
     x=AM[j][cj];
-    if (x==0.0) ErrorMessage(_("Singular Matrix passed to invert()"),1);
+    if (x==0.0) error(_("Singular Matrix passed to invert()"));
     for (p=AM[j];p<AM[j]+A->c;p++) *p/=x; /* divide row j by pivot element */
     AM[j][cj]=1.0/x;
     for (i=0;i<A->r;i++) /* work down rows eliminating column j */
@@ -950,8 +948,7 @@ void root(matrix *M,matrix *C,double tol)
   }
   if (m>10.0*DOUBLE_EPS*max) ok=0;
   if (!ok)
-  { /*ErrorMessage("Using svd to find root of penalty!",0);*/ 
-    (*C)=svdroot(*M,tol);
+  { (*C)=svdroot(*M,tol);
     freemat(U);freemat(T);freemat(u0);freemat(u1);
     return; 
   }
@@ -1320,7 +1317,7 @@ void svd_bidiag(matrix *U, matrix *w, matrix *ws,matrix *V)
       }
     }  
     if (k==maxreps) 
-    ErrorMessage(_("svd() not converged"),1);
+    error(_("svd() not converged"));
   }
   /* make all singular values  non-negative */
   for (i=0;i<w->r;i++) 
@@ -1397,7 +1394,7 @@ matrix svdroot(matrix A,double reltol)
       prod=0.0;for (j=0;j<a.r;j++) prod+=a.M[j][i]*v.M[j][i];
       if (prod<0.0) 
 	  { sprintf(err,_("svdroot matrix not +ve semi def. %g"),w.V[i]*w.V[i]);
-		ErrorMessage(err,1); 
+		error(err); 
 	  }
     }
   }
@@ -1424,7 +1421,7 @@ void sort(matrix a)
 { int i;
   qsort(a.V,(size_t)a.r*a.c,sizeof(a.V[0]),elemcmp);
   for (i=0;i<a.r*a.c-1;i++) if (a.V[i]>a.V[i+1])
-  ErrorMessage(_("Sort failed"),1);
+  error(_("Sort failed"));
 
 }
 

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-19\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2009-09-06 21:52\n"
+"POT-Creation-Date: 2015-03-02 20:44\n"
 "PO-Revision-Date: 2012-08-31 17:12+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -13,6 +13,249 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2)\n"
 "X-Poedit-SourceCharset: iso-8859-1\n"
+
+# Recommended/mgcv/R/mgcv.r: 3151
+# stop("argument is not a gam object")
+#, fuzzy
+msgid "'family' argument seems not to be a valid family object"
+msgstr "argument nie jest obiektem klasy \"gam\""
+
+# Recommended/mgcv/R/mgcv.r: 1861
+# stop("Can't find valid starting values: please specify some")
+# Recommended/mgcv/R/gam.fit3.r: 255
+# stop("Can't find valid starting values: please specify some")
+#, fuzzy
+msgid "cannot find valid starting values: please specify some"
+msgstr ""
+"Nie można znaleźć poprawnych wartości startowych: proszę określić kilka"
+
+msgid "Deviance = %s Iterations - %d"
+msgstr ""
+
+msgid "Non-finite deviance"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 1934
+# warning(paste("Non-finite coefficients at iteration",iter))
+# Recommended/mgcv/R/gam.fit3.r: 324
+# warning("Non-finite coefficients at iteration ",
+#                   iter)
+#, fuzzy
+msgid "non-finite coefficients at iteration %d"
+msgstr "Nieskończone współczynniki w iteracji"
+
+# Recommended/mgcv/R/mgcv.r: 1999
+# warning("Algorithm did not converge")
+# Recommended/mgcv/R/gam.fit3.r: 652
+# warning("Algorithm did not converge")
+#, fuzzy
+msgid "algorithm did not converge"
+msgstr "Algorytm nie uzbieżnił się"
+
+# Recommended/mgcv/R/bam.r: 445
+# warning("fitted probabilities numerically 0 or 1 occurred")
+# Recommended/mgcv/R/bam.r: 611
+# warning("fitted probabilities numerically 0 or 1 occurred")
+# Recommended/mgcv/R/mgcv.r: 2006
+# warning("fitted probabilities numerically 0 or 1 occurred")
+# Recommended/mgcv/R/gam.fit3.r: 658
+# warning("fitted probabilities numerically 0 or 1 occurred")
+msgid "fitted probabilities numerically 0 or 1 occurred"
+msgstr ""
+"dopasowane prawdopodobieństwa okazały się być numerycznie równe 0 lub 1"
+
+# Recommended/mgcv/R/bam.r: 449
+# warning("fitted rates numerically 0 occurred")
+# Recommended/mgcv/R/bam.r: 615
+# warning("fitted rates numerically 0 occurred")
+# Recommended/mgcv/R/mgcv.r: 2010
+# warning("fitted rates numerically 0 occurred")
+# Recommended/mgcv/R/gam.fit3.r: 662
+# warning("fitted rates numerically 0 occurred")
+msgid "fitted rates numerically 0 occurred"
+msgstr "dopasowane wskaźniki numerycznie okazały się być równe 0"
+
+# Recommended/mgcv/R/mgcv.r: 1934
+# warning(paste("Non-finite coefficients at iteration",iter))
+# Recommended/mgcv/R/gam.fit3.r: 324
+# warning("Non-finite coefficients at iteration ",
+#                   iter)
+#, fuzzy
+msgid "non-finite coefficients at iteration"
+msgstr "Nieskończone współczynniki w iteracji"
+
+# Recommended/mgcv/R/bam.r: 1048
+# stop("family not recognized")
+# Recommended/mgcv/R/mgcv.r: 1546
+# stop("family not recognized")
+# Recommended/mgcv/R/gamm.r: 1416
+# stop("family not recognized")
+msgid "family not recognized"
+msgstr "'family' nie został rozpoznany"
+
+# Recommended/mgcv/R/mgcv.r: 1259
+# stop("unknown smoothness selection criterion")
+#, fuzzy
+msgid "un-supported smoothness selection method"
+msgstr "nieznane kryterium wyboru wygładzania"
+
+msgid "min.sp not supported with fast REML computation, and ignored."
+msgstr ""
+
+msgid "sparse=TRUE not supported with fast REML, reset to REML."
+msgstr ""
+
+# Recommended/mgcv/R/bam.r: 1080
+# stop("Not enough (non-NA) data to do anything meaningful")
+# Recommended/mgcv/R/mgcv.r: 1522
+# stop("Not enough (non-NA) data to do anything meaningful")
+# Recommended/mgcv/R/gamm.r: 1397
+# stop("Not enough (non-NA) data to do anything meaningful")
+msgid "Not enough (non-NA) data to do anything meaningful"
+msgstr ""
+"Brak wystarczającej (nie NA) liczby danych, aby wykonać cokolwiek sensownego"
+
+msgid "AR.start must be logical"
+msgstr ""
+
+# Recommended/mgcv/R/bam.r: 1123
+# stop("Model has more coefficients than data")
+# Recommended/mgcv/R/mgcv.r: 1561
+# stop("Model has more coefficients than data")
+msgid "Model has more coefficients than data"
+msgstr "Model posiada więcej współczynników niż danych"
+
+msgid "chunk.size < number of coefficients. Reset to %d"
+msgstr ""
+
+msgid "model matrix too dense for any possible benefit from sparse"
+msgstr ""
+
+msgid "AR1 parameter rho unused with sparse fitting"
+msgstr ""
+
+msgid "AR1 parameter rho unused with generalized model"
+msgstr ""
+
+msgid "samfrac too small - ignored"
+msgstr ""
+
+msgid "Model can not be updated"
+msgstr ""
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
+msgid "link not available for coxph family; available link is \"identity\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+msgid "NA times supplied for cox.ph prediction"
+msgstr ""
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
+msgid ""
+"link not available for ordered categorical family; available links are "
+"\"identity\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+msgid "Must supply theta or R to ocat"
+msgstr ""
+
+# Recommended/mgcv/R/smooth.r: 177
+# stop("x out of range")
+#, fuzzy
+msgid "values out of range"
+msgstr "'x' jest poza zakresem"
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+msgid ""
+"link not available for negative binomial family; available links are "
+"\"identity\", \"log\" and \"sqrt\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+# Recommended/mgcv/R/gam.fit3.r: 2094
+# stop("negative values not allowed for the negative binomial family")
+msgid "negative values not allowed for the negative binomial family"
+msgstr "ujemne wartości nie są dozwolone dla rozkładu z rodziny Pascala"
+
+# Recommended/mgcv/R/gam.fit3.r: 2266
+# stop(gettextf("link \"%s\" not available for poisson family.",
+#                 linktemp, collapse = ""),domain = NA)
+#, fuzzy
+msgid "link \"%s\" not available for Tweedie family."
+msgstr "połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny Poissona."
+
+msgid "Tweedie p must be in interval (a,b)"
+msgstr ""
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
+msgid ""
+"link not available for beta regression; available links are  \"logit\", "
+"\"probit\", \"cloglog\" and \"cauchit\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+msgid "saturated likelihood may be inaccurate"
+msgstr ""
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
+msgid ""
+"link not available for scaled t distribution; available links are \"identity"
+"\", \"log\",  and \"inverse\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+# Recommended/mgcv/R/mgcv.r: 1657
+# stop("value of epsilon must be > 0")
+#, fuzzy
+msgid "scaled t df must be >2"
+msgstr "wartość 'epsilon' musi być > 0"
+
+# Recommended/mgcv/R/gam.fit3.r: 2094
+# stop("negative values not allowed for the negative binomial family")
+#, fuzzy
+msgid "NA values not allowed for the scaled t family"
+msgstr "ujemne wartości nie są dozwolone dla rozkładu z rodziny Pascala"
+
+# Recommended/mgcv/R/gam.fit3.r: 2061
+# stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
+msgid ""
+"link not available for zero inflated; available link for `lambda' is only  "
+"\"loga\""
+msgstr ""
+"połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
+"połączenia to \"identity\", \"log\" oraz \"sqrt\""
+
+# Recommended/mgcv/R/gam.fit3.r: 2094
+# stop("negative values not allowed for the negative binomial family")
+#, fuzzy
+msgid "negative values not allowed for the zero inflated Poisson family"
+msgstr "ujemne wartości nie są dozwolone dla rozkładu z rodziny Pascala"
+
+msgid "Non-integer response variables are not allowed with ziP"
+msgstr ""
+
+msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "fast REML optimizer reached iteration limit"
+msgstr ""
 
 # Recommended/mgcv/R/gam.fit3.r: 117
 # stop("unsupported order of differentiation requested of gam.fit3")
@@ -36,19 +279,11 @@ msgstr "Niepoprawne wartości liniowej zmiennej niezależnej w pustym modelu"
 msgid "Invalid fitted means in empty model"
 msgstr "Niepoprawnie dopasowane średnie w pustym modelu"
 
-# Recommended/mgcv/R/mgcv.r: 1850
-# stop(paste("Length of start should equal", nvars,
-#         "and correspond to initial coefs."))
 # Recommended/mgcv/R/gam.fit3.r: 243
 # stop("Length of start should equal ", nvars,
 #                   " and correspond to initial coefs for ", deparse(xnames))
-msgid "Length of start should equal"
-msgstr "Długość 'start' powinna wynosić"
-
-# Recommended/mgcv/R/gam.fit3.r: 243
-# stop("Length of start should equal ", nvars,
-#                   " and correspond to initial coefs for ", deparse(xnames))
-msgid "and correspond to initial coefs for"
+#, fuzzy
+msgid "Length of start should equal %d and correspond to initial coefs for %s"
 msgstr "oraz odpowiadać początkowym współczynnikom dla"
 
 # Recommended/mgcv/R/mgcv.r: 1861
@@ -91,7 +326,8 @@ msgstr "wartości NA w 'd(mu)/d(eta)'"
 #                 iter))
 # Recommended/mgcv/R/gam.fit3.r: 283
 # warning("No observations informative at iteration ", iter)
-msgid "No observations informative at iteration"
+#, fuzzy
+msgid "No observations informative at iteration %d"
 msgstr "Brak informacyjnych obserwacji w iteracji"
 
 # Recommended/mgcv/R/gam.fit3.r: 302
@@ -104,7 +340,8 @@ msgstr "Zbyt mało informacyjnych obserwacji."
 # Recommended/mgcv/R/gam.fit3.r: 324
 # warning("Non-finite coefficients at iteration ",
 #                   iter)
-msgid "Non-finite coefficients at iteration"
+#, fuzzy
+msgid "Non-finite coefficients at iteration %d"
 msgstr "Nieskończone współczynniki w iteracji"
 
 # Recommended/mgcv/R/mgcv.r: 1949
@@ -147,10 +384,16 @@ msgstr "Rozmiar kroku przycięty: poza granicami"
 msgid "inner loop 2; can't correct step size"
 msgstr "wewnętrzna pętla 2; nie można poprawić rozmiaru kroku"
 
+msgid "penalized deviance = %s"
+msgstr ""
+
 # Recommended/mgcv/R/gam.fit3.r: 397
 # stop("inner loop 3; can't correct step size")
 msgid "inner loop 3; can't correct step size"
 msgstr "wewnętrzna pętla 3; nie można poprawić rozmiaru kroku"
+
+msgid "Step halved: new penalized deviance = %g"
+msgstr ""
 
 # Recommended/mgcv/R/gam.fit3.r: 556
 # stop("Non finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam.contol'")
@@ -188,28 +431,8 @@ msgstr "Algorytm nie uzbieżnił się"
 msgid "Algorithm stopped at boundary value"
 msgstr "Algorytm zatrzymał się na wartości granicznej"
 
-# Recommended/mgcv/R/bam.r: 445
-# warning("fitted probabilities numerically 0 or 1 occurred")
-# Recommended/mgcv/R/bam.r: 611
-# warning("fitted probabilities numerically 0 or 1 occurred")
-# Recommended/mgcv/R/mgcv.r: 2006
-# warning("fitted probabilities numerically 0 or 1 occurred")
-# Recommended/mgcv/R/gam.fit3.r: 658
-# warning("fitted probabilities numerically 0 or 1 occurred")
-msgid "fitted probabilities numerically 0 or 1 occurred"
+msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
 msgstr ""
-"dopasowane prawdopodobieństwa okazały się być numerycznie równe 0 lub 1"
-
-# Recommended/mgcv/R/bam.r: 449
-# warning("fitted rates numerically 0 occurred")
-# Recommended/mgcv/R/bam.r: 615
-# warning("fitted rates numerically 0 occurred")
-# Recommended/mgcv/R/mgcv.r: 2010
-# warning("fitted rates numerically 0 occurred")
-# Recommended/mgcv/R/gam.fit3.r: 662
-# warning("fitted rates numerically 0 occurred")
-msgid "fitted rates numerically 0 occurred"
-msgstr "dopasowane wskaźniki numerycznie okazały się być równe 0"
 
 # Recommended/mgcv/R/gam.fit3.r: 766
 # stop("deriv should be 1 or 2")
@@ -255,6 +478,9 @@ msgstr "'L' musi mieć co najmniej tyle wierszy co kolumn."
 msgid "L has inconsistent dimensions."
 msgstr "'L' ma niespójne wymiary."
 
+msgid "link not implemented for extended families"
+msgstr ""
+
 # Recommended/mgcv/R/gam.fit3.r: 1790
 # stop("fam not a family object")
 # Recommended/mgcv/R/gam.fit3.r: 1912
@@ -299,17 +525,13 @@ msgstr "'theta' musi być określone"
 
 # Recommended/mgcv/R/gam.fit3.r: 2061
 # stop(linktemp, " link not available for negative binomial family; available links are \"identity\", \"log\" and \"sqrt\"")
+#, fuzzy
 msgid ""
-"link not available for negative binomial family; available links are "
+"%s link not available for negative binomial family; available links are "
 "\"identity\", \"log\" and \"sqrt\""
 msgstr ""
 "połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
 "połączenia to \"identity\", \"log\" oraz \"sqrt\""
-
-# Recommended/mgcv/R/gam.fit3.r: 2094
-# stop("negative values not allowed for the negative binomial family")
-msgid "negative values not allowed for the negative binomial family"
-msgstr "ujemne wartości nie są dozwolone dla rozkładu z rodziny Pascala"
 
 # Recommended/mgcv/R/gam.fit3.r: 2124
 # stop("H has wrong dimension")
@@ -317,6 +539,15 @@ msgstr "ujemne wartości nie są dozwolone dla rozkładu z rodziny Pascala"
 # stop("H has wrong dimension")
 msgid "H has wrong dimension"
 msgstr "'H' ma niepoprawny wymiar"
+
+# Recommended/mgcv/R/gam.fit3.r: 2184
+# stop("only scalar `p' and `phi' allowed.")
+#, fuzzy
+msgid "only scalar `rho' and `theta' allowed."
+msgstr "tylko skalarne `p' oraz `phi' są dozwolone."
+
+msgid "1<a<b<2 (strict) required"
+msgstr ""
 
 # Recommended/mgcv/R/gam.fit3.r: 2184
 # stop("only scalar `p' and `phi' allowed.")
@@ -343,20 +574,96 @@ msgstr "'y' musi być całkowitą wielokrotnością 'phi' dla 'Tweedie(p=1)'"
 msgid "Only 1<p<=2 supported"
 msgstr "Wspierane jest tylko 1<p<=2"
 
+# Recommended/mgcv/R/gam.fit3.r: 2185
+# stop("p must be in [1,2]")
+#, fuzzy
+msgid "p must be in (1,2)"
+msgstr "'p' musi być w przedziale [1,2]"
+
+# Recommended/mgcv/R/mgcv.r: 853
+# stop("elements of min.sp must be non negative.")
+#, fuzzy
+msgid "mean, mu, must be non negative"
+msgstr "elementy 'min.sp' muszą być nieujemne."
+
+msgid "scale parameter must be positive"
+msgstr ""
+
+msgid "emtpy models not available"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 1850
+# stop(paste("Length of start should equal", nvars,
+#         "and correspond to initial coefs."))
+# Recommended/mgcv/R/gam.fit3.r: 243
+# stop("Length of start should equal ", nvars,
+#                   " and correspond to initial coefs for ", deparse(xnames))
+msgid "Length of start should equal"
+msgstr "Długość 'start' powinna wynosić"
+
+# Recommended/mgcv/R/gam.fit3.r: 243
+# stop("Length of start should equal ", nvars,
+#                   " and correspond to initial coefs for ", deparse(xnames))
+msgid "and correspond to initial coefs for"
+msgstr "oraz odpowiadać początkowym współczynnikom dla"
+
+# Recommended/mgcv/R/mgcv.r: 1934
+# warning(paste("Non-finite coefficients at iteration",iter))
+# Recommended/mgcv/R/gam.fit3.r: 324
+# warning("Non-finite coefficients at iteration ",
+#                   iter)
+msgid "Non-finite coefficients at iteration"
+msgstr "Nieskończone współczynniki w iteracji"
+
+msgid "indefinite penalized likelihood in gam.fit5"
+msgstr ""
+
+msgid "step failed: max abs grad ="
+msgstr ""
+
+msgid "iteration limit reached: max abs grad = %g"
+msgstr ""
+
+# Recommended/mgcv/R/gam.sim.r: 31
+# stop("dist not recognised")
+msgid "dist not recognised"
+msgstr "'dist' nie został rozpoznany"
+
+msgid "gaulss requires 2 links specified as character strings"
+msgstr ""
+
 # Recommended/mgcv/R/gam.fit3.r: 2266
 # stop(gettextf("link \"%s\" not available for poisson family.",
 #                 linktemp, collapse = ""),domain = NA)
-msgid "link \"%s\" not available for poisson family."
+#, fuzzy
+msgid "link not available for mu parameter of gaulss"
 msgstr "połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny Poissona."
 
-# Recommended/mgcv/R/gamm.r: 115
-# stop(paste("An object of length", aux,
-# 		 "does not match the required parameter size"))
-# Recommended/mgcv/R/gamm.r: 244
-# stop(paste("An object of length", length(val),
-# 	       "does not match the required parameter size"))
-msgid "An object of length"
-msgstr "Obiekt długości"
+# Recommended/mgcv/R/gam.fit3.r: 2266
+# stop(gettextf("link \"%s\" not available for poisson family.",
+#                 linktemp, collapse = ""),domain = NA)
+#, fuzzy
+msgid "link not available for precision parameter of gaulss"
+msgstr "połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny Poissona."
+
+msgid "ziplss requires 2 links specified as character strings"
+msgstr ""
+
+# Recommended/mgcv/R/gam.fit3.r: 2266
+# stop(gettextf("link \"%s\" not available for poisson family.",
+#                 linktemp, collapse = ""),domain = NA)
+#, fuzzy
+msgid "link not available for"
+msgstr "połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny Poissona."
+
+msgid "parameter of ziplss"
+msgstr ""
+
+msgid "Non-integer response variables are not allowed with ziplss"
+msgstr ""
+
+msgid "Using ziplss for binary data makes no sense"
+msgstr ""
 
 # Recommended/mgcv/R/gamm.r: 115
 # stop(paste("An object of length", aux,
@@ -364,7 +671,8 @@ msgstr "Obiekt długości"
 # Recommended/mgcv/R/gamm.r: 244
 # stop(paste("An object of length", length(val),
 # 	       "does not match the required parameter size"))
-msgid "does not match the required parameter size"
+#, fuzzy
+msgid "An object of length %d does not match the required parameter size"
 msgstr "nie zgadza się z wymaganym rozmiarem parametru"
 
 # Recommended/mgcv/R/gamm.r: 132
@@ -396,6 +704,24 @@ msgstr "Nie można wyodrębnić macierzy z niezainicjalizowanego obiektu 'pdMAt'
 msgid "Cannot extract the matrix with uninitialized dimensions"
 msgstr "Nie można wyodrębnić macierzy z niezainicjalizowanymi wymiarami"
 
+# Recommended/mgcv/R/gamm.r: 115
+# stop(paste("An object of length", aux,
+# 		 "does not match the required parameter size"))
+# Recommended/mgcv/R/gamm.r: 244
+# stop(paste("An object of length", length(val),
+# 	       "does not match the required parameter size"))
+msgid "An object of length"
+msgstr "Obiekt długości"
+
+# Recommended/mgcv/R/gamm.r: 115
+# stop(paste("An object of length", aux,
+# 		 "does not match the required parameter size"))
+# Recommended/mgcv/R/gamm.r: 244
+# stop(paste("An object of length", length(val),
+# 	       "does not match the required parameter size"))
+msgid "does not match the required parameter size"
+msgstr "nie zgadza się z wymaganym rozmiarem parametru"
+
 # Recommended/mgcv/R/gamm.r: 248
 # stop(paste("Must give names when initializing pdIdnot from parameter.",
 # 	       "without a formula"))
@@ -418,23 +744,11 @@ msgstr "Nie można wyodrębnić wymiarów"
 msgid "Cannot extract the inverse from an uninitialized object"
 msgstr "Nie można wyodrębnić odwrotności z niezainicjalizowanego obiektu"
 
-# Recommended/mgcv/R/gamm.r: 341
-# stop("No data supplied to gamm.setup")
-# Recommended/mgcv/R/gamm.r: 786
-# stop("No data supplied to gamm.setup")
-msgid "No data supplied to gamm.setup"
-msgstr "Nie dostarczono danych do gamm.setup"
-
-# Recommended/mgcv/R/gamm.r: 364
-# stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
-# Recommended/mgcv/R/gamm.r: 809
-# stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
-msgid ""
-"gamm can not handle linked smoothing parameters (probably from use of `id' "
-"or adaptive smooths)"
+msgid "Can not convert this smooth class to a random effect"
 msgstr ""
-"gamm nie może obsłużyć dołączonych parametrów wygładzania (prawdopodobnie z "
-"użycia 'id' lub adaptacyjnych wygładzeń)"
+
+msgid "te smooths not useable with gamm4: use t2 instead"
+msgstr ""
 
 # Recommended/mgcv/R/gamm.r: 400
 # warning("gamm can not fix only some margins of tensor product.")
@@ -456,6 +770,30 @@ msgstr ""
 "Produkt tensorowy rang kar wydaje się być zbyt niski: proszę przesłać email "
 "na adresSimon.Wood@R-project.org ze szczegółami."
 
+# Recommended/mgcv/R/gamm.r: 341
+# stop("No data supplied to gamm.setup")
+# Recommended/mgcv/R/gamm.r: 786
+# stop("No data supplied to gamm.setup")
+msgid "No data supplied to gamm.setup"
+msgstr "Nie dostarczono danych do gamm.setup"
+
+# Recommended/mgcv/R/gamm.r: 364
+# stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
+# Recommended/mgcv/R/gamm.r: 809
+# stop("gamm can not handle linked smoothing parameters (probably from use of `id' or adaptive smooths)")
+msgid ""
+"gamm can not handle linked smoothing parameters (probably from use of `id' "
+"or adaptive smooths)"
+msgstr ""
+"gamm nie może obsłużyć dołączonych parametrów wygładzania (prawdopodobnie z "
+"użycia 'id' lub adaptacyjnych wygładzeń)"
+
+msgid "only one level of smooth nesting is supported by gamm"
+msgstr ""
+
+msgid "side conditions not allowed for nested smooths"
+msgstr ""
+
 # Recommended/mgcv/R/gamm.r: 966
 # stop("object does not appear to be of class lme")
 # Recommended/mgcv/R/gamm.r: 1142
@@ -470,13 +808,12 @@ msgstr "wewnętrzne grupowanie nie jest zagnieżdżone w zewnętrznym grupowaniu
 
 # Recommended/mgcv/R/gamm.r: 1310
 # message("iteration ", i)
-msgid "iteration"
+#, fuzzy
+msgid "iteration %d"
 msgstr "iteracja"
 
-# Recommended/mgcv/R/gamm.r: 1343
-# stop("gamm() requires package nlme to be installed")
-msgid "gamm() requires package nlme to be installed"
-msgstr "'gamm()' wymaga, aby pakiet 'nlme' został zainstalowany"
+msgid "gamm not converged, try increasing niterPQL"
+msgstr ""
 
 # Recommended/mgcv/R/gamm.r: 1349
 # stop("random argument must be a *named* list.")
@@ -494,25 +831,6 @@ msgid "gamm() can only handle random effects defined as named lists"
 msgstr ""
 "'gamm()' może obsłużyć jedynie efekty losowe zdefiniowane jaki nazwane listy"
 
-# Recommended/mgcv/R/bam.r: 1080
-# stop("Not enough (non-NA) data to do anything meaningful")
-# Recommended/mgcv/R/mgcv.r: 1522
-# stop("Not enough (non-NA) data to do anything meaningful")
-# Recommended/mgcv/R/gamm.r: 1397
-# stop("Not enough (non-NA) data to do anything meaningful")
-msgid "Not enough (non-NA) data to do anything meaningful"
-msgstr ""
-"Brak wystarczającej (nie NA) liczby danych, aby wykonać cokolwiek sensownego"
-
-# Recommended/mgcv/R/bam.r: 1048
-# stop("family not recognized")
-# Recommended/mgcv/R/mgcv.r: 1546
-# stop("family not recognized")
-# Recommended/mgcv/R/gamm.r: 1416
-# stop("family not recognized")
-msgid "family not recognized"
-msgstr "'family' nie został rozpoznany"
-
 # Recommended/mgcv/R/gamm.r: 1427
 # stop("gamm models must have at least 1 smooth with unknown smoothing parameter or at least one other random effect")
 msgid ""
@@ -527,10 +845,73 @@ msgstr ""
 msgid "weights must be like glm weights for generalized case"
 msgstr "wagi muszą być jak wagi w 'glm' dla ogólnego przypadku"
 
-# Recommended/mgcv/R/gam.sim.r: 31
-# stop("dist not recognised")
-msgid "dist not recognised"
-msgstr "'dist' nie został rozpoznany"
+msgid "Nested smooths must be fully random"
+msgstr ""
+
+msgid "sorry link not yet handled"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 3080
+# warning("test argument ignored")
+#, fuzzy
+msgid "weights ignored"
+msgstr "argument 'test' został zignorowany"
+
+# Recommended/mgcv/R/gam.fit3.r: 1967
+# stop("family not recognised")
+# Recommended/mgcv/R/gam.fit3.r: 2036
+# stop("family not recognised")
+#, fuzzy
+msgid "family not implemented yet"
+msgstr "rodzina nie została rozpoznana"
+
+msgid "jagam requires a file for the JAGS model specification"
+msgstr ""
+
+msgid "smoothing parameter prior choise not recognised, reset to gamma"
+msgstr ""
+
+msgid "coefficient simulation data is missing"
+msgstr ""
+
+msgid "burnin too large, reset"
+msgstr ""
+
+msgid "rho missing from simulation data edf.type reset to 2"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 3080
+# warning("test argument ignored")
+#, fuzzy
+msgid "residuals argument not supported"
+msgstr "argument 'test' został zignorowany"
+
+msgid "unconditional argument not meaningful here"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 3080
+# warning("test argument ignored")
+#, fuzzy
+msgid "by.resids argument not supported"
+msgstr "argument 'test' został zignorowany"
+
+# Recommended/mgcv/R/mgcv.r: 3080
+# warning("test argument ignored")
+#, fuzzy
+msgid "all.terms argument not supported"
+msgstr "argument 'test' został zignorowany"
+
+msgid "silly tolerance supplied"
+msgstr ""
+
+msgid "argument k must be positive."
+msgstr ""
+
+msgid "A not square"
+msgstr ""
+
+msgid "Can not have more eigenvalues than nrow(A)"
+msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 93
 # stop("nrow(M$X) != length(M$y)")
@@ -559,6 +940,18 @@ msgstr "nrow(M$Ain) != length(M$p)"
 
 # Recommended/mgcv/R/mgcv.r: 102
 # warning("initial parameters very close to inequality constraints")
+#, fuzzy
+msgid "initial parameters not feasible"
+msgstr "początkowe parametry bardzo blisko więzów nierowności"
+
+# Recommended/mgcv/R/mgcv.r: 102
+# warning("initial parameters very close to inequality constraints")
+#, fuzzy
+msgid "initial point very close to some inequality constraints"
+msgstr "początkowe parametry bardzo blisko więzów nierowności"
+
+# Recommended/mgcv/R/mgcv.r: 102
+# warning("initial parameters very close to inequality constraints")
 msgid "initial parameters very close to inequality constraints"
 msgstr "początkowe parametry bardzo blisko więzów nierowności"
 
@@ -579,18 +972,9 @@ msgstr "M$sp ma inną długość niż M$S oraz M$off"
 
 # Recommended/mgcv/R/mgcv.r: 116
 # stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
-msgid "M$S["
-msgstr "M$S["
-
-# Recommended/mgcv/R/mgcv.r: 116
-# stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
-msgid "] is too large given M$off["
+#, fuzzy
+msgid "M$S[%d] is too large given M$off[%d]"
 msgstr "] jest zbyt duże dla podanego M$off["
-
-# Recommended/mgcv/R/mgcv.r: 116
-# stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
-msgid "]"
-msgstr "]"
 
 # Recommended/mgcv/R/mgcv.r: 120
 # stop("Penalized model matrix must have no more columns than rows")
@@ -601,10 +985,6 @@ msgstr "Macierz modelu kary nie może mieć więcej kolumn niż wierszy"
 # stop("Model matrix not full column rank")
 msgid "Model matrix not full column rank"
 msgstr "Macierz modelu nie ma pełnej rangi kolumny"
-
-msgid "Can't mix fixed and estimated penalties in mgcv() - use magic()"
-msgstr ""
-"Nie można mieszać stałych oraz oszacowanych kar w 'mgcv()' - użyj magic()"
 
 # Recommended/mgcv/R/mgcv.r: 347
 # stop("model has repeated 1-d smooths of same variable.")
@@ -646,6 +1026,12 @@ msgstr "'sp' jest zbyt krótkie"
 # stop("No data supplied to gam.setup")
 msgid "No data supplied to gam.setup"
 msgstr "Nie dostarczono danych do gam.setup"
+
+msgid "paraPen not supported for multi-formula models"
+msgstr ""
+
+msgid "absorb.cons must be TRUE for multi-formula models"
+msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 559
 # stop("First argument is no sort of formula!")
@@ -701,6 +1087,10 @@ msgstr "wartości NA w 'min.sp'."
 msgid "elements of min.sp must be non negative."
 msgstr "elementy 'min.sp' muszą być nieujemne."
 
+msgid ""
+"`negbin' with unknown theta and outer iteration is deprecated - use `nb'."
+msgstr ""
+
 # Recommended/mgcv/R/mgcv.r: 1130
 # stop("unknown outer optimization method.")
 msgid "unknown outer optimization method."
@@ -726,6 +1116,9 @@ msgstr ""
 "tylko zewnętrzne metody 'newton' oraz 'bfgs' wspierają rodzinę 'negbin' oraz "
 "wybór theta: reset"
 
+msgid "sorry, general families currently ignore offsets"
+msgstr ""
+
 # Recommended/mgcv/R/mgcv.r: 1258
 # stop("unknown optimizer")
 msgid "unknown optimizer"
@@ -746,12 +1139,17 @@ msgstr "Resetowanie optymalizatora na zewnętrzny/newtona"
 msgid "in.out incorrect: see documentation"
 msgstr "'in.out' jest niepoprawne: zobacz dokumentację"
 
-# Recommended/mgcv/R/bam.r: 1123
-# stop("Model has more coefficients than data")
-# Recommended/mgcv/R/mgcv.r: 1561
-# stop("Model has more coefficients than data")
-msgid "Model has more coefficients than data"
-msgstr "Model posiada więcej współczynników niż danych"
+# Recommended/mgcv/R/mgcv.r: 810
+# stop("incorrect number of smoothing parameters supplied for a smooth term")
+# Recommended/mgcv/R/mgcv.r: 818
+# stop("incorrect number of smoothing parameters supplied for a smooth term")
+#, fuzzy
+msgid "incorrect number of linear predictors for family"
+msgstr ""
+"niepoprawna liczba parametrów wygładzających dostarczona do członu 'smooth'"
+
+msgid "nthreads must be a positive integer"
+msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 1655
 # stop("IRLS regularizing parameter must be a non-negative number.")
@@ -794,7 +1192,8 @@ msgstr "'y' musi zawierać jedną zmienną jeśli nie zawiera dwóch"
 # Recommended/mgcv/R/mgcv.r: 1850
 # stop(paste("Length of start should equal", nvars,
 #         "and correspond to initial coefs."))
-msgid "and correspond to initial coefs."
+#, fuzzy
+msgid "Length of start should equal %d and correspond to initial coefs."
 msgstr "oraz odpowiadać początkowym współczynnikom."
 
 # Recommended/mgcv/R/mgcv.r: 1912
@@ -815,6 +1214,9 @@ msgstr "Rozmiar kroku został przycięty: poza zakresem."
 # stop("`object' is not of class \"gam\"")
 msgid "`object' is not of class \"gam\""
 msgstr "'object' nie jest klasy \"gam\""
+
+msgid "Smoothness uncertainty corrected covariance not available"
+msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 2095
 # warning("Unknown type, reset to terms.")
@@ -840,47 +1242,53 @@ msgstr ""
 msgid "not all required variables have been supplied in  newdata!"
 msgstr "nie wszystkie wymagane zmienne zostały dostarczone w \"newdata\"!"
 
+msgid "type iterms not available for multiple predictor cases"
+msgstr ""
+
 # Recommended/mgcv/R/mgcv.r: 2278
 # warning("non-existent terms requested - ignoring")
 msgid "non-existent terms requested - ignoring"
 msgstr "zażądano nieistniejących członów - ignorowanie"
 
-# Recommended/mgcv/R/plots.r: 990
-# warning("residuals argument to plot.gam is wrong length: ignored")
-msgid "residuals argument to plot.gam is wrong length: ignored"
+# Recommended/mgcv/R/mgcv.r: 2052
+# stop("`object' is not of class \"gam\"")
+#, fuzzy
+msgid "requires an object of class gam"
+msgstr "'object' nie jest klasy \"gam\""
+
+msgid "nothing to do for this model"
 msgstr ""
-"argument reszt przekazywany do 'plot.gam' ma niepoprawną długość: zignorowano"
 
-# Recommended/mgcv/R/plots.r: 1078
-# stop("No terms to plot - nothing for plot.gam() to do.")
-msgid "No terms to plot - nothing for plot.gam() to do."
-msgstr "Brak członów do rysowania - nic do wykonania przez 'plot.gam()'."
-
-# Recommended/mgcv/R/plots.r: 1016
-# warning("No variance estimates available")
-msgid "No variance estimates available"
-msgstr "Brak dostępnego oszacowania wariancji"
-
-# Recommended/mgcv/R/plots.r: 860
-# warning("Partial residuals do not have a natural x-axis location for linear functional terms")
 msgid ""
-"Partial residuals do not have a natural x-axis location for linear "
-"functional terms"
+"Pearson residuals not available for this family - returning deviance "
+"residuals"
 msgstr ""
-"Częsciowe reszty nie posiadają naturalnego położenia osi 'x' dla liniowych "
-"członów funkcyjnych"
 
-# Recommended/mgcv/R/plots.r: 894
-# warning("no automatic plotting for smooths of more than two variables")
-msgid "no automatic plotting for smooths of more than two variables"
+msgid "lambda and h should have the same length!"
 msgstr ""
-"brak automatycznego rysowania dla wygładzeń o więcej niż dwóch zmiennych"
 
-# Recommended/mgcv/R/plots.r: 937
-# warning("no automatic plotting for smooths of more than one variable")
-msgid "no automatic plotting for smooths of more than one variable"
+msgid "recov works with fitted gam objects only"
 msgstr ""
-"brak automatycznego rysowania dla wygładzeń o więcej niż jednej zmiennej"
+
+msgid "m can't be in re"
+msgstr ""
+
+msgid "p-values may give low power in some circumstances"
+msgstr ""
+
+msgid "p-values un-reliable"
+msgstr ""
+
+msgid "p-values may give very low power"
+msgstr ""
+
+msgid ""
+"p-values for any terms that can be penalized to zero will be unreliable: "
+"refit model to fix this."
+msgstr ""
+
+msgid "p.type!=0 is deprecated, and liable to be removed in future"
+msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 3071
 # warning("The following arguments to anova.glm(..) are invalid and dropped: ",
@@ -906,15 +1314,117 @@ msgstr "argument 'test' został zignorowany"
 msgid "anova.gam called with non gam object"
 msgstr "'anova.gam' wywołana z obiektem innym niż klasy \"gam\""
 
+# Recommended/mgcv/R/gam.fit3.r: 1790
+# stop("fam not a family object")
+# Recommended/mgcv/R/gam.fit3.r: 1912
+# stop("fam not a family object")
+# Recommended/mgcv/R/gam.fit3.r: 1974
+# stop("fam not a family object")
+# Recommended/mgcv/R/plots.r: 26
+# stop("fam not a family object")
+# Recommended/mgcv/R/plots.r: 53
+# stop("fam not a family object")
+#, fuzzy
+msgid "not a gam object"
+msgstr "'fam' nie jest obiektem rodziny"
+
 # Recommended/mgcv/R/mgcv.r: 3151
 # stop("argument is not a gam object")
 msgid "argument is not a gam object"
 msgstr "argument nie jest obiektem klasy \"gam\""
 
-# Recommended/mgcv/R/mgcv.r: 3282
-# warning("extra arguments discarded")
-msgid "extra arguments discarded"
-msgstr "dodatkowe argumenty zostały odrzucone"
+# Recommended/mgcv/R/mgcv.r: 3331
+# stop("Supplied matrix not symmetric")
+msgid "Supplied matrix not symmetric"
+msgstr "Dostarczona macierz nie jest symetryczna"
+
+# Recommended/mgcv/R/mgcv.r: 3335
+# stop("singular values not returned in order")
+msgid "singular values not returned in order"
+msgstr "osobliwe wartości nie zostały zwrócone w w sposób uporządkowany"
+
+# Recommended/mgcv/R/mgcv.r: 3341
+# stop("Something wrong - matrix probably not +ve semi definite")
+msgid "Something wrong - matrix probably not +ve semi definite"
+msgstr "Coś nie tak - prawdopodobnie macierz nie jest dodatnio określona"
+
+# Recommended/mgcv/R/mgcv.r: 3356
+# stop("method not recognised.")
+msgid "method not recognised."
+msgstr "metoda nie została rozpoznana."
+
+# Recommended/mgcv/R/mgcv.r: 3473
+# stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
+#, fuzzy
+msgid "S[[%d]] matrix is not +ve definite."
+msgstr "]] nie jest dodatnio określona."
+
+# Recommended/mgcv/R/mgcv.r: 3580
+# stop("dimensions of supplied w wrong.")
+msgid "dimensions of supplied w wrong."
+msgstr "wymiary dostarczonego 'w' są niepoprawne."
+
+# Recommended/mgcv/R/mgcv.r: 3584
+# stop("w different length from y!")
+msgid "w different length from y!"
+msgstr "'w' posiada długość inną niż 'y'!"
+
+# Recommended/mgcv/R/mgcv.r: 3591
+# stop("X lost dimensions in magic!!")
+msgid "X lost dimensions in magic!!"
+msgstr "'X' utraciło wymiary w 'magic()!'!"
+
+msgid "a has wrong number of rows"
+msgstr ""
+
+msgid "mvn requires 2 or more dimensional data"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 2052
+# stop("`object' is not of class \"gam\"")
+#, fuzzy
+msgid "object is not a glm or gam"
+msgstr "'object' nie jest klasy \"gam\""
+
+msgid "names of z and pc must match"
+msgstr ""
+
+# Recommended/mgcv/R/plots.r: 860
+# warning("Partial residuals do not have a natural x-axis location for linear functional terms")
+msgid ""
+"Partial residuals do not have a natural x-axis location for linear "
+"functional terms"
+msgstr ""
+"Częsciowe reszty nie posiadają naturalnego położenia osi 'x' dla liniowych "
+"członów funkcyjnych"
+
+# Recommended/mgcv/R/plots.r: 894
+# warning("no automatic plotting for smooths of more than two variables")
+msgid "no automatic plotting for smooths of more than two variables"
+msgstr ""
+"brak automatycznego rysowania dla wygładzeń o więcej niż dwóch zmiennych"
+
+# Recommended/mgcv/R/plots.r: 937
+# warning("no automatic plotting for smooths of more than one variable")
+msgid "no automatic plotting for smooths of more than one variable"
+msgstr ""
+"brak automatycznego rysowania dla wygładzeń o więcej niż jednej zmiennej"
+
+# Recommended/mgcv/R/plots.r: 990
+# warning("residuals argument to plot.gam is wrong length: ignored")
+msgid "residuals argument to plot.gam is wrong length: ignored"
+msgstr ""
+"argument reszt przekazywany do 'plot.gam' ma niepoprawną długość: zignorowano"
+
+# Recommended/mgcv/R/plots.r: 1016
+# warning("No variance estimates available")
+msgid "No variance estimates available"
+msgstr "Brak dostępnego oszacowania wariancji"
+
+# Recommended/mgcv/R/plots.r: 1078
+# stop("No terms to plot - nothing for plot.gam() to do.")
+msgid "No terms to plot - nothing for plot.gam() to do."
+msgstr "Brak członów do rysowania - nic do wykonania przez 'plot.gam()'."
 
 # Recommended/mgcv/R/mgcv.r: 3312
 # stop("grid vectors are different lengths")
@@ -947,7 +1457,8 @@ msgstr ""
 # Recommended/mgcv/R/plots.r: 1258
 # stop(
 #         paste(c("view variables must be one of",v.names),collapse=", "))
-msgid "view variables must be one of"
+#, fuzzy
+msgid "view variables must be one of %s"
 msgstr "zmienne podglądu muszą jednym z"
 
 # Recommended/mgcv/R/plots.r: 1262
@@ -961,13 +1472,9 @@ msgstr ""
 
 # Recommended/mgcv/R/plots.r: 1272
 # stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
-msgid "View variables must contain more than one value. view = c("
+#, fuzzy
+msgid "View variables must contain more than one value. view = c(%s,%s)."
 msgstr "zmienne 'view' muszą zawierać więcej niż jedną wartość. view =c("
-
-# Recommended/mgcv/R/plots.r: 1272
-# stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
-msgid ")."
-msgstr ")."
 
 # Recommended/mgcv/R/plots.r: 1320
 # stop("type must be \"link\" or \"response\"")
@@ -990,51 +1497,6 @@ msgstr "nie rozpoznano schematu kolorów"
 # warning("sorry no option for contouring with errors: try plot.gam")
 msgid "sorry no option for contouring with errors: try plot.gam"
 msgstr "przykro mi, brak opcji rysowania konturu z błędami: spróbuj 'plot.gam'"
-
-# Recommended/mgcv/R/mgcv.r: 3331
-# stop("Supplied matrix not symmetric")
-msgid "Supplied matrix not symmetric"
-msgstr "Dostarczona macierz nie jest symetryczna"
-
-# Recommended/mgcv/R/mgcv.r: 3335
-# stop("singular values not returned in order")
-msgid "singular values not returned in order"
-msgstr "osobliwe wartości nie zostały zwrócone w w sposób uporządkowany"
-
-# Recommended/mgcv/R/mgcv.r: 3341
-# stop("Something wrong - matrix probably not +ve semi definite")
-msgid "Something wrong - matrix probably not +ve semi definite"
-msgstr "Coś nie tak - prawdopodobnie macierz nie jest dodatnio określona"
-
-# Recommended/mgcv/R/mgcv.r: 3356
-# stop("method not recognised.")
-msgid "method not recognised."
-msgstr "metoda nie została rozpoznana."
-
-# Recommended/mgcv/R/mgcv.r: 3473
-# stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
-msgid "S[["
-msgstr "Macierz S[["
-
-# Recommended/mgcv/R/mgcv.r: 3473
-# stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
-msgid "]] matrix is not +ve definite."
-msgstr "]] nie jest dodatnio określona."
-
-# Recommended/mgcv/R/mgcv.r: 3580
-# stop("dimensions of supplied w wrong.")
-msgid "dimensions of supplied w wrong."
-msgstr "wymiary dostarczonego 'w' są niepoprawne."
-
-# Recommended/mgcv/R/mgcv.r: 3584
-# stop("w different length from y!")
-msgid "w different length from y!"
-msgstr "'w' posiada długość inną niż 'y'!"
-
-# Recommended/mgcv/R/mgcv.r: 3591
-# stop("X lost dimensions in magic!!")
-msgid "X lost dimensions in magic!!"
-msgstr "'X' utraciło wymiary w 'magic()!'!"
 
 # Recommended/mgcv/R/smooth.r: 142
 # stop("At least three knots required in call to mono.con.")
@@ -1139,6 +1601,12 @@ msgstr "Powtórzone zmienne jako argumenty wygładzenia nie są dozwolone"
 msgid "only first element of `id' used"
 msgstr "został użyty jedynie pierwszy element 'id'"
 
+msgid "ord is wrong. reset to NULL."
+msgstr ""
+
+msgid "ord contains out of range orders (which will be ignored)"
+msgstr ""
+
 # Recommended/mgcv/R/smooth.r: 454
 # stop("by=. not allowed")
 msgid "by=. not allowed"
@@ -1157,6 +1625,9 @@ msgid "argument k of s() should be integer and has been rounded"
 msgstr ""
 "argument 'k' w 's()' powinie być liczbą calkowitą więc został zaokrąglony"
 
+msgid "attempt to use unsuitable marginal smooth class"
+msgstr ""
+
 # Recommended/mgcv/R/smooth.r: 556
 # stop("Sorry, tensor products of smooths with multiple penalties are not supported.")
 # Recommended/mgcv/R/smooth.r: 798
@@ -1172,12 +1643,23 @@ msgstr ""
 msgid "reparameterization unstable for margin: not done"
 msgstr "ponowna parametryzacja nie jest stabilna dla marginesu: nie wykonano"
 
+msgid ""
+"single penalty tensor product smooths are deprecated and likely to be "
+"removed soon"
+msgstr ""
+
+msgid "fx length wrong from t2 term: ignored"
+msgstr ""
+
+msgid "length of sp incorrect in t2: ignored"
+msgstr ""
+
 # Recommended/mgcv/R/smooth.r: 969
 # stop("d can not be negative in call to null.space.dimension().")
 msgid "d can not be negative in call to null.space.dimension()."
 msgstr ""
-"'d' nie może być ujemne w wywołaniu przekazywanym do 'null.space.dimension"
-"()'."
+"'d' nie może być ujemne w wywołaniu przekazywanym do 'null.space."
+"dimension()'."
 
 # Recommended/mgcv/R/smooth.r: 1007
 # stop("arguments of smooth not same dimension")
@@ -1226,10 +1708,24 @@ msgstr "wymiar podstawy, k, zwiększył się do minimalnego możliwego"
 msgid "no data to predict at"
 msgstr "brak danych na których można oprzeć przewidywanie"
 
+# Recommended/mgcv/R/smooth.r: 1187
+# stop("Basis only handles 1D smooths")
+# Recommended/mgcv/R/smooth.r: 1344
+# stop("Basis only handles 1D smooths")
+# Recommended/mgcv/R/smooth.r: 1425
+# stop("Basis only handles 1D smooths")
+# Recommended/mgcv/R/smooth.r: 1490
+# stop("Basis only handles 1D smooths")
+msgid "Basis only handles 1D smooths"
+msgstr "Podstawa obsługuje jedynie jednowymiarowe wygładzania"
+
 # Recommended/mgcv/R/smooth.r: 1214
 # stop("number of supplied knots != k for a cr smooth")
 msgid "number of supplied knots != k for a cr smooth"
 msgstr "liczba dostarczonych węzłów != k dla wygładzania 'cr'"
+
+msgid "F is missing from cr smooth - refit model with current mgcv"
+msgstr ""
 
 # Recommended/mgcv/R/smooth.r: 1305
 # stop("more knots than unique data values is not allowed")
@@ -1241,11 +1737,6 @@ msgstr ""
 # stop("number of supplied knots != k for a cc smooth")
 msgid "number of supplied knots != k for a cc smooth"
 msgstr "liczba dostarczonych węzłów != k dla wygładzania 'cc'"
-
-# Recommended/mgcv/R/smooth.r: 1388
-# stop("can't predict outside range of knots with periodic smoother")
-msgid "can't predict outside range of knots with periodic smoother"
-msgstr "nie można przewidywać poza zakresem węzłów z periodycznym wygładzaniem"
 
 # Recommended/mgcv/R/smooth.r: 1424
 # stop("basis dimension too small for b-spline order")
@@ -1302,6 +1793,18 @@ msgstr ""
 msgid "penalty order too high for basis dimension"
 msgstr "rząd kar jest zbyt duży dla podstawy wymiaru"
 
+msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "fs smooths can only have one factor argument"
+msgstr ""
+
+msgid "\"fs\" smooth cannot use a multiply penalized basis (wrong basis in xt)"
+msgstr ""
+
+msgid "\"fs\" terms can not be fixed here"
+msgstr ""
+
 # Recommended/mgcv/R/smooth.r: 1761
 # stop("the adaptive smooth class is limited to 1 or 2 covariates.")
 msgid "the adaptive smooth class is limited to 1 or 2 covariates."
@@ -1318,6 +1821,95 @@ msgstr "podstawa kar jest zbyt duża dla podstawy wygładzania"
 # stop("penalty basis too small")
 msgid "penalty basis too small"
 msgstr "podstawa kar jest zbyt mała"
+
+msgid "random effects don't work with ids."
+msgstr ""
+
+msgid "MRF basis dimension set too high"
+msgstr ""
+
+msgid "data contain regions that are not contained in the knot specification"
+msgstr ""
+
+msgid ""
+"penalty matrix, boundary polygons and/or neighbours list must be supplied in "
+"xt"
+msgstr ""
+
+msgid "no spatial information provided!"
+msgstr ""
+
+msgid "mismatch between nb/polys supplied area names and data area names"
+msgstr ""
+
+# Recommended/mgcv/R/smooth.r: 251
+# warning("something wrong with argument d.")
+# Recommended/mgcv/R/smooth.r: 359
+# warning("something wrong with argument d.")
+#, fuzzy
+msgid "Something wrong with auto- penalty construction"
+msgstr "coś nie tak z argumentem 'd'."
+
+# Recommended/mgcv/man/smooth.construct.Rd: 229
+# stop(paste("there should be ",nk," supplied knots"))
+# Recommended/mgcv/R/smooth.r: 1438
+# stop(paste("there should be ",nk," supplied knots"))
+# Recommended/mgcv/R/smooth.r: 1505
+# stop(paste("there should be ",nk+2*m[1]+2," supplied knots"))
+#, fuzzy
+msgid "supplied penalty not square!"
+msgstr "dostarczonych węzłów"
+
+# Recommended/mgcv/R/mgcv.r: 509
+# stop(" a parametric penalty has wrong dimension")
+#, fuzzy
+msgid "supplied penalty wrong dimension!"
+msgstr "parametryczna kara ma niepoprawny wymiar"
+
+msgid "penalty column names don't match supplied area names!"
+msgstr ""
+
+msgid "Can only deal with a sphere"
+msgstr ""
+
+# Recommended/mgcv/R/smooth.r: 1024
+# warning("more knots than data in a tp term: knots ignored.")
+#, fuzzy
+msgid "more knots than data in an sos term: knots ignored."
+msgstr "więcej węzłów niż danych w członie 'tp': węzły zostały zignorowane."
+
+# Recommended/mgcv/R/smooth.r: 1024
+# warning("more knots than data in a tp term: knots ignored.")
+#, fuzzy
+msgid "more knots than data in a ds term: knots ignored."
+msgstr "więcej węzłów niż danych w członie 'tp': węzły zostały zignorowane."
+
+msgid ""
+"A term has fewer unique covariate combinations than specified maximum "
+"degrees of freedom"
+msgstr ""
+
+msgid "s value reduced"
+msgstr ""
+
+msgid "s value increased"
+msgstr ""
+
+msgid "No suitable s (i.e. m[2]) try increasing m[1]"
+msgstr ""
+
+msgid "s value modified to give continuous function"
+msgstr ""
+
+# Recommended/mgcv/R/smooth.r: 1061
+# warning("basis dimension, k, increased to minimum possible\n
+# Recommended/mgcv/R/smooth.r: 1199
+# warning("basis dimension, k, increased to minimum possible\n
+# Recommended/mgcv/R/smooth.r: 1348
+# warning("basis dimension, k, increased to minimum possible\n
+#, fuzzy
+msgid "basis dimension reset to minimum possible"
+msgstr "wymiar podstawy, k, zwiększył się do minimalnego możliwego"
 
 # Recommended/mgcv/R/smooth.r: 2753
 # warning("smooth objects should not have a qrc attribute.")
@@ -1363,13 +1955,121 @@ msgstr "faktoryzacja zmiennych 'by' nie może być użyta z argumentami macierzy
 msgid "`by' variable must be same dimension as smooth arguments"
 msgstr "zmienna `by' musi mieć ten sam wymiar co argumenty wygładzania"
 
-# Recommended/mgcv/R/smooth.r: 1187
-# stop("Basis only handles 1D smooths")
-# Recommended/mgcv/R/smooth.r: 1344
-# stop("Basis only handles 1D smooths")
-# Recommended/mgcv/R/smooth.r: 1425
-# stop("Basis only handles 1D smooths")
-# Recommended/mgcv/R/smooth.r: 1490
-# stop("Basis only handles 1D smooths")
-msgid "Basis only handles 1D smooths"
-msgstr "Podstawa obsługuje jedynie jednowymiarowe wygładzania"
+msgid "Number of prediction and fit constraints must match"
+msgstr ""
+
+msgid "x and y must be same length"
+msgstr ""
+
+msgid "variable names don't match boundary names"
+msgstr ""
+
+msgid "x and y not same length"
+msgstr ""
+
+# Recommended/mgcv/R/mgcv.r: 3534
+# stop("L must be a matrix.")
+# Recommended/mgcv/R/gam.fit3.r: 937
+# stop("L must be a matrix.")
+# Recommended/mgcv/R/gam.fit3.r: 979
+# stop("L must be a matrix.")
+# Recommended/mgcv/R/gam.fit3.r: 1256
+# stop("L must be a matrix.")
+# Recommended/mgcv/R/gam.fit3.r: 1499
+# stop("L must be a matrix.")
+#, fuzzy
+msgid "bnd must be a list."
+msgstr "'L' musi być macierzą."
+
+msgid "lengths of k and bnd are not compatible."
+msgstr ""
+
+msgid "attempt to select non existent basis function"
+msgstr ""
+
+msgid "coefficient vector wrong length"
+msgstr ""
+
+# Recommended/mgcv/man/negbin.Rd: 27
+# stop("'theta' must be specified")
+# Recommended/mgcv/R/gam.fit3.r: 2040
+# stop("'theta' must be specified")
+#, fuzzy
+msgid "knots must be specified for soap"
+msgstr "'theta' musi być określone"
+
+msgid "soap films are bivariate only"
+msgstr ""
+
+msgid "need at least one interior knot"
+msgstr ""
+
+msgid "can't soap smooth without a boundary"
+msgstr ""
+
+msgid "bnd must be a list of boundary loops"
+msgstr ""
+
+msgid "faulty bnd"
+msgstr ""
+
+msgid "k and bnd lengths are inconsistent"
+msgstr ""
+
+msgid "data outside soap boundary"
+msgstr ""
+
+msgid "no free coefs in sf smooth"
+msgstr ""
+
+msgid "only deals with 2D case"
+msgstr ""
+
+msgid "not enough unique values to find k nearest"
+msgstr ""
+
+msgid "cubic spline only deals with 1D data"
+msgstr ""
+
+msgid "object not fully initialized"
+msgstr ""
+
+# Recommended/mgcv/R/gamm.r: 1343
+# stop("gamm() requires package nlme to be installed")
+#~ msgid "gamm() requires package nlme to be installed"
+#~ msgstr "'gamm()' wymaga, aby pakiet 'nlme' został zainstalowany"
+
+# Recommended/mgcv/R/mgcv.r: 116
+# stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
+#~ msgid "M$S["
+#~ msgstr "M$S["
+
+# Recommended/mgcv/R/mgcv.r: 116
+# stop(paste("M$S[",i,"] is too large given M$off[",i,"]",sep=""))
+#~ msgid "]"
+#~ msgstr "]"
+
+#~ msgid "Can't mix fixed and estimated penalties in mgcv() - use magic()"
+#~ msgstr ""
+#~ "Nie można mieszać stałych oraz oszacowanych kar w 'mgcv()' - użyj magic()"
+
+# Recommended/mgcv/R/mgcv.r: 3282
+# warning("extra arguments discarded")
+#~ msgid "extra arguments discarded"
+#~ msgstr "dodatkowe argumenty zostały odrzucone"
+
+# Recommended/mgcv/R/plots.r: 1272
+# stop(paste("View variables must contain more than one value. view = c(",view[1],",",view[2],").",sep=""))
+#~ msgid ")."
+#~ msgstr ")."
+
+# Recommended/mgcv/R/mgcv.r: 3473
+# stop(paste("S[[",i,"]] matrix is not +ve definite.",sep=""))
+#~ msgid "S[["
+#~ msgstr "Macierz S[["
+
+# Recommended/mgcv/R/smooth.r: 1388
+# stop("can't predict outside range of knots with periodic smoother")
+#~ msgid "can't predict outside range of knots with periodic smoother"
+#~ msgstr ""
+#~ "nie można przewidywać poza zakresem węzłów z periodycznym wygładzaniem"

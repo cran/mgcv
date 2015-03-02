@@ -1,6 +1,48 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-5
+
+* scale parameter handling in edf in logLik.gam made consistent with glm 
+  (affects AIC).
+
+* 'bam', 'gam' and 'gamm' modified to often produce smaller files when models 
+  saved (and never to produce absurdly large files). Achieved by setting 
+  environment of formula, terms etc to .GlobalEnv. Previously 'save' could
+  save entire contents of environment of formula/terms with fitted model 
+  object. Note that change can cause failure in user written functions calling 
+  gam/bam and then 'predict' without supplying all prediction variables 
+  (fix obvious).
+
+* A help file 'single.index' supplied illustrating how single index models
+  can be estimated in mgcv.
+
+* predict.gam now only creates a "constant" attribute if the model has one.
+
+* gam.fit4 convergence testing of coefs modified to more robust test of
+  gradients of penalized dev w.r.t. params, rather than change in params,
+  which can fail under rank deficiency.
+
+* mgcv_qrqy was not thread safe. Not noticeable on many platforms as all 
+  threads did exactly the same thing to the same matrix, but very noticeable
+  on Windows. Thread safe mgcv_qrqy0 added and used in any parallel sections.
+
+* Allow openMP support if compiler supports it and provides pre-defined macro 
+  _OPENMP, even if SUPPORT_OPENMP undefined. (Allows multi-threading on 
+   Windows, for example.) 
+
+* 'eps' is now an argument to 'betar' allowing some control on how to 
+  handle response values too close to 0 or 1. Help file expanded to 
+  emphasise the problems with using beta regression with 0s and 1s in 
+  the data.
+
+* fix of bug in multi-formula contrast handling, causing failure of prediction
+  in some  cases.
+
+* ziP and ziplss now check for non-integer (or binary) responses and produce
+  an error message if these are found. Previously this was not trapped and
+  could lead to a segfault. 
+
 1.8-4
 
 ** JAGS/BUGS support added, enabling auto-generation of code and data

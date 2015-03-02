@@ -18,6 +18,9 @@ Note that on Intel and similar processors the maximum performance is usually ach
 
 mgcv's work splitting always makes the simple assumption that all your cores are equal, and you are not sharing them with other floating point intensive threads. 
 
+Note that in addition to hyper-threading several features may lead to apparently poor scaling. The first is that many CPUs have a Turbo mode, whereby a few cores can be run at higher frequency, provided the overall power used by the CPU does not exceed design limits, however it is not possible for all cores on the CPU to run at this frequency. So as you add threads eventually the CPU frequency has to be reduced below the Turbo frequency, with the result that you don't get the expected speed up from adding cores. Secondly, most modern CPUs have their frequency set dynamically according to load. You may need to set the system power management policy to favour high performance in order to maximize the chance that all threads run at the speed you were hoping for (you can turn off dynamic power control in BIOS, but then you turn off the possibility of Turbo also). 
+
+
 Because the computational burden in \code{mgcv} is all in the linear algebra, then parallel computation may provide reduced or no benefit with a tuned BLAS. This is particularly the case if you are using a multi threaded BLAS, but a BLAS that is tuned to make efficient use of a particular cache size may also experience loss of performance if threads have to share the cache.  
 
 }
@@ -42,11 +45,11 @@ require(mgcv);set.seed(9)
 dat <- gamSim(1,n=2000,dist="poisson",scale=.1)
 k <- 12;bs <- "cr";ctrl <- list(nthreads=2)
 
-system.time(b1<-gam(y~s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k)+
-            s(x3,bs=bs,k=k),family=poisson,data=dat,method="REML"))[3]
+system.time(b1<-gam(y~s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k)
+            ,family=poisson,data=dat,method="REML"))[3]
 
-system.time(b2<-gam(y~s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k)+
-s(x3,bs=bs,k=k),family=poisson,data=dat,method="REML",control=ctrl))[3]
+system.time(b2<-gam(y~s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k),
+            family=poisson,data=dat,method="REML",control=ctrl))[3]
 
 ## Poisson example on a cluster with 'bam'. 
 ## Note that there is some overhead in initializing the 
@@ -55,8 +58,8 @@ s(x3,bs=bs,k=k),family=poisson,data=dat,method="REML",control=ctrl))[3]
 ## sample sizes here are very small to keep CRAN happy, but at
 ## this low sample size you see little advantage of parallel computation.
 
-k <- 15
-dat <- gamSim(1,n=8000,dist="poisson",scale=.1)
+k <- 13
+dat <- gamSim(1,n=6000,dist="poisson",scale=.1)
 require(parallel)  
 nc <- 2   ## cluster size, set for example portability
 if (detectCores()>1) { ## no point otherwise
@@ -64,7 +67,7 @@ if (detectCores()>1) { ## no point otherwise
   ## could also use makeForkCluster, but read warnings first!
 } else cl <- NULL
   
-system.time(b3 <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k)
+system.time(b3 <- bam(y ~ s(x0,bs=bs,k=7)+s(x1,bs=bs,k=7)+s(x2,bs=bs,k=k)
             ,data=dat,family=poisson(),chunk.size=5000,cluster=cl))
 
 fv <- predict(b3,cluster=cl) ## parallel prediction

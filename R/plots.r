@@ -111,7 +111,7 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
   if (rep > 0) { ## simulate quantiles
     fam <- fix.family.rd(object$family)
     if (!is.null(fam$rd)) {
-      d <- rep(0,0)
+      ##d <- rep(0,0)
       ## simulate deviates... 
       dm <- matrix(0,n,rep)
       for (i in 1:rep) { 
@@ -169,7 +169,7 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
     points(Dq,sort(D),pch=pch,...)
     return(invisible(Dq))
   } else qqnorm(D,ylab=ylab,pch=pch,...)
-}
+} ## qq.gam
 
 
 k.check <- function(b,subsample=5000,n.rep=400) {
@@ -1372,7 +1372,7 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
   newd[[view[1]]]<-v1
   newd[[view[2]]]<-v2
   # call predict.gam to get predictions.....
-  if (type=="link") zlab<-paste("linear predictor")
+  if (type=="link") zlab<-paste("linear predictor") ## ignore codetools
   else if (type=="response") zlab<-type
   else stop("type must be \"link\" or \"response\"")
   ## turn newd into a model frame, so that names and averages are valid
@@ -1452,11 +1452,11 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     }
   } else # add standard error surfaces
   { if (color=="bw"||color=="gray") 
-    { subs <- paste("grey are +/-",se,"s.e.") 
+    { subs <- paste("grey are +/-",se,"s.e.")  ## ignore codetools
       lo.col <- "gray" ## ignore codetools claims about this
       hi.col <- "gray" ## ignore codetools 
     } else
-    { subs<-paste("red/green are +/-",se,"s.e.")
+    { subs <- paste("red/green are +/-",se,"s.e.")
       lo.col <- "green"
       hi.col <- "red"
     }
