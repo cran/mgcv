@@ -2,6 +2,11 @@
 ## Many of the following are simple wrappers for C functions, used largely 
 ## for testing purposes
 
+mgcv.omp <- function() {
+## does open MP appear to be available?
+  oo <- .C(C_mgcv_omp,a=as.integer(-1))
+  if (oo$a==1) TRUE else FALSE
+}
 
 mvn.ll <- function(y,X,beta,dbeta=NULL) {
 ## to facilitate testing of MVN routine mvn_ll.
@@ -52,7 +57,7 @@ pinv <- function(X,svd=FALSE) {
 pqr2 <- function(x,nt=1,nb=30) {
 ## Function for parallel pivoted qr decomposition of a matrix using LAPACK
 ## householder routines. Currently uses a block algorithm.
-## library(mgcv); n <- 10000;p<-500;x <- matrix(runif(n*p),n,p)
+## library(mgcv); n <- 4000;p<-3000;x <- matrix(runif(n*p),n,p)
 ## system.time(qrx <- qr(x,LAPACK=TRUE))
 ## system.time(qrx2 <- mgcv:::pqr2(x,2)) 
 ## system.time(qrx3 <- mgcv:::pqr(x,2)) 

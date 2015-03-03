@@ -79,7 +79,7 @@ gamlss.etamu <- function(l1,l2,l3=NULL,l4=NULL,ig1,g2,g3=NULL,g4=NULL,i2,i3=NULL
     d1[,i] <- l1[,i]*ig1[,i]
   }
 
-  n <- length(ig1[,1])
+  ##n <- length(ig1[,1])
 
   k <- 0
   d2 <- l2
@@ -659,7 +659,8 @@ zipll <- function(y,g,eta,deriv=0) {
 
    l1 <- El2 <- l2 <- l3 <- l4 <- NULL
    zind <- y == 0 ## the index of the zeroes
-   yz <- y[zind];yp <- y[!zind]
+   ## yz <- y[zind];
+   yp <- y[!zind]
    l <- et <- exp(eta)
    l[zind] <- -et[zind] # -exp(eta[ind])
    l[!zind] <- l1ee(eta[!zind]) + yp*g[!zind] - lee1(g[!zind]) - lgamma(yp+1)
@@ -873,8 +874,8 @@ ziplss <-  function(link=list("identity","identity")) {
     eta1 <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] 
     p <-  family$linfo[[2]]$linkinv(eta1) 
     
-    n <- length(y)
-    l1 <- matrix(0,n,2)
+    ##n <- length(y)
+    ## l1 <- matrix(0,n,2)
     zl <- zipll(y,lambda,p,deriv)
 
     if (deriv>0) {
@@ -883,7 +884,8 @@ ziplss <-  function(link=list("identity","identity")) {
       g2 <- cbind(family$linfo[[1]]$d2link(lambda),family$linfo[[2]]$d2link(p))
     }
  
-    l3 <- l4 <- g3 <- g4 <- 0 ## defaults
+    ## l3 <- l4 <- 
+    g3 <- g4 <- 0 ## defaults
 
     if (deriv>1) {
       ## the third derivatives
@@ -921,6 +923,10 @@ ziplss <-  function(link=list("identity","identity")) {
   ## which is basically penalizing something different here.
   ## best we can do here is to use E only as a regularizer.
       n <- rep(1, nobs)
+      if (all.equal(y,round(y))!=TRUE) {
+          stop("Non-integer response variables are not allowed with ziplss ")
+      }
+      if ((min(y)==0&&max(y)==1)) stop("Using ziplss for binary data makes no sense")
       ## should E be used unscaled or not?..
       use.unscaled <- if (!is.null(attr(E,"use.unscaled"))) TRUE else FALSE
       if (is.null(start)) {

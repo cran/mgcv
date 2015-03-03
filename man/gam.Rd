@@ -483,7 +483,7 @@ b5<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
 plot(b5,pages=1)
 
  
-## a binary example (see later for large dataset version)...
+## a binary example (see ?gam.models for large dataset version)...
 
 dat <- gamSim(1,n=400,dist="binary",scale=.33)
 
@@ -527,6 +527,7 @@ vis.gam(b4)                     ## persp fit
 detach(eg)
 par(op)
 
+\dontrun{
 ##################################################
 ## largish dataset example with user defined knots
 ##################################################
@@ -555,7 +556,7 @@ vis.gam(b6,color="heat",theta=30,phi=30)
 b7 <- gam(y~s(x,z,k=40,xt=list(max.knots=500,seed=2)),data=data)
 vis.gam(b7,theta=30,phi=30)
 detach(eg)
-
+}
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

@@ -136,7 +136,7 @@ Check that the parameters of the priors on the parameters are fit for your purpo
 
 \examples{
 ## the following illustrates a typical workflow. To run the 
-## 'do not run' code you need rjags (and JAGS) to be installed.
+## 'Not run' code you need rjags (and JAGS) to be installed.
 require(mgcv)
   
 set.seed(2) ## simulate some data... 
@@ -179,6 +179,8 @@ jd <- jagam(y~s(x0)+te(x1,x2)+s(x3),data=dat,family=Gamma(link=log),
 
 \dontrun{
 require(rjags)
+## following sets random seed, but note that under JAGS 3.4 many
+## models are still not fully repeatable (JAGS 4 should fix this)
 jd$jags.ini$.RNG.name <- "base::Mersenne-Twister" ## setting RNG
 jd$jags.ini$.RNG.seed <- 6 ## how to set RNG seed
 jm <-jags.model("test.jags",data=jd$jags.data,inits=jd$jags.ini,n.chains=1)

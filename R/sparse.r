@@ -101,7 +101,7 @@ kd.vis <- function(kd,X,cex=.5) {
 ## code visualizes a kd tree for points in rows of X
 ## kd <- kd.tree(X) produces correct tree.
   if (ncol(X)!=2) stop("only deals with 2D case")
-  n <- nrow(X)
+  ##n <- nrow(X)
   d <- ncol(X)
   nb <- kd$idat[1]
   dd <- matrix(kd$ddat[-1],nb,2*d,byrow=TRUE)
@@ -243,7 +243,7 @@ spasm.construct.cus <- function(object,data) {
 ## * spl, and empty list which will contain intialised cubic 
 ##   spline smoothers for each block, once a smoothing parameter 
 ##   has been supplied...
-  dat <- list()
+  ##dat <- list()
   d <- length(object$terms)
   if (d != 1) stop("cubic spline only deals with 1D data") 
   object$x <- get.var(object$term[1],data)
@@ -289,7 +289,7 @@ spasm.sp.cus <- function(object,sp,w=rep(1,object$nobs),get.trH=FALSE,block=0,ce
   trH <-  0
   if (block==0) block <- 1:object$nblock
   for (i in block) {
-    n <- length(object$ind[[i]])
+    ##n <- length(object$ind[[i]])
     object$spl[[i]] <- setup.spline(object$x[object$ind[[i]]],w=w[object$ind[[i]]],lambda=sp)
     trH <- trH + object$spl[[i]]$trA
   }

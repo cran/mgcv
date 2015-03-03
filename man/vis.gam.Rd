@@ -120,7 +120,7 @@ b<-gam(y~fac+s(x,by=z))
 
 vis.gam(b,theta=-35,color="heat",cond=list(z=1)) # by variable example
 
-vis.gam(b,view=c("z","x"),theta= 35) # plot against by variable
+vis.gam(b,view=c("z","x"),theta= -135) # plot against by variable
 
 }
 \keyword{hplot} \keyword{models} \keyword{smooth} \keyword{regression}

@@ -375,8 +375,9 @@ smooth2random.fs.interaction <- function(object,vnames,type=1) {
     rind <- c(rind,k:(k+ncol(X)-1))
     rinc <- c(rinc,rep(ncol(X),ncol(X)))
     k <- k + n.lev * ncol(X)
-    if (type==1) { ## gamm form for use with lme
-      form <- as.formula(paste("~",term.name,"-1",sep=""))
+    if (type==1) { ## gamm form for use with lme 
+      ## env set to avoid 'save' saving whole environment to file...
+      form <- as.formula(paste("~",term.name,"-1",sep=""),env=.GlobalEnv)
       random[[i]] <- pdIdnot(form)
       names(random)[i] <- object$fterm         ## supplied factor name
       attr(random[[i]],"group") <- object$fac  ## factor supplied as part of term 
@@ -414,7 +415,7 @@ smooth2random.fs.interaction <- function(object,vnames,type=1) {
   Xf <- matrix(0,nrow(object$X),0)
   list(rand=random,trans.D=D,Xf=Xf,fixed=FALSE,rind=rind,rinc=rinc,
        pen.ind=pen.ind) ## pen.ind==i is TRUE for coefs penalized by ith penalty
-}
+} ## smooth2random.fs.interaction
 
 smooth2random.t2.smooth <- function(object,vnames,type=1) {
 ## takes a smooth object and turns it into a form suitable for estimation as a random effect
@@ -454,7 +455,8 @@ smooth2random.t2.smooth <- function(object,vnames,type=1) {
     group.name <- new.name("g",vnames)
     vnames <- c(vnames,term.name,group.name)
     if (type==1) { ## gamm form for lme
-      form <- as.formula(paste("~",term.name,"-1",sep=""))
+      ## env set to avoid 'save' saving whole environment to file...
+      form <- as.formula(paste("~",term.name,"-1",sep=""),env=.GlobalEnv)
       random[[i]] <- pdIdnot(form)
       names(random)[i] <- group.name
       attr(random[[i]],"group") <- factor(rep(1,nrow(X)))
@@ -472,7 +474,7 @@ smooth2random.t2.smooth <- function(object,vnames,type=1) {
   } else Xf <- matrix(0,nrow(object$X),0)
   list(rand=random,trans.D=diagU,Xf=Xf,fixed=FALSE,
        rind=1:n.para,rinc=rep(n.para,n.para),pen.ind=pen.ind)
-}
+} ## smooth2random.t2.smooth
 
 smooth2random.mgcv.smooth <- function(object,vnames,type=1) {
 ## takes a smooth object and turns it into a form suitable for estimation as a random effect
@@ -511,7 +513,8 @@ smooth2random.mgcv.smooth <- function(object,vnames,type=1) {
   
   term.name <- new.name("Xr",vnames)
   if (type==1) { ## gamm form for lme
-    form <- as.formula(paste("~",term.name,"-1",sep=""))
+    ## env set to avoid 'save' saving whole environment with fitted model object
+    form <- as.formula(paste("~",term.name,"-1",sep=""),env=.GlobalEnv)
     random <- list(pdIdnot(form))
     group.name <- new.name("g",vnames)
     names(random) <- group.name
@@ -593,7 +596,7 @@ smooth2random.tensor.smooth <- function(object,vnames,type=1) {
   }
   
   term.name <- new.name("Xr",vnames)
-  form <- as.formula(paste("~",term.name,"-1",sep=""))
+  form <- as.formula(paste("~",term.name,"-1",sep=""),env=.GlobalEnv)
   attr(form,"S") <- object$S   ## this class needs penalty matrices to be supplied
   random <- list(pdTens(form)) ## lme random effect class
 
@@ -678,17 +681,16 @@ gamm.setup <- function(formula,pterms,
     sm <- G$smooth[[pord[i]]]
     sm$X <- G$X[,sm$first.para:sm$last.para,drop=FALSE]
     rasm <- smooth2random(sm,names(data)) ## convert smooth to random effect and fixed effects
-
     sm$fixed <- rasm$fixed
   
     if (!is.null(sm$fac)) { 
       flev <- levels(sm$fac) ## grouping factor for smooth
-      n.lev <- length(flev)
-    } else n.lev <- 1
+      ##n.lev <- length(flev)
+    } ##else n.lev <- 1
  
     ## now append constructed variables to model frame and random effects to main list
     n.para <- 0 ## count random coefficients
-    rinc <- rind <- rep(0,0)
+   ## rinc <- rind <- rep(0,0)
     if (!sm$fixed) {
      # kk <- 1;
       for (k in 1:length(rasm$rand)) {
@@ -1258,7 +1260,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     else mf <- gmf
     rm(gmf)
     if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
-    Terms <- attr(mf,"terms")    
+    ##Terms <- attr(mf,"terms")    
   
     ## summarize the *raw* input variables
     ## note can't use get_all_vars here -- buggy with matrices
@@ -1570,8 +1572,18 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     object$weights <- object$prior.weights   
 
     if (!is.null(G$Xcentre)) object$Xcentre <- G$Xcentre ## column centering values
-
+    ## set environments to global to avoid enormous saved object files
+    environment(attr(object$model,"terms")) <- 
+    environment(object$terms) <- environment(object$pterms) <- 
+    environment(object$formula) <-environment(object$pred.formula) <-  .GlobalEnv
     ret$gam <- object
+    environment(attr(ret$lme$data,"terms")) <- environment(ret$lme$terms) <- .GlobalEnv
+    if (!is.null(ret$lme$modelStruct$varStruct)) {
+      environment(attr(ret$lme$modelStruct$varStruct,"formula")) <- .GlobalEnv
+    }  
+    if (!is.null(ret$lme$modelStruct$corStruct)) {
+      environment(attr(ret$lme$modelStruct$corStruct,"formula")) <- .GlobalEnv
+    }
     class(ret) <- c("gamm","list")
     ret
 

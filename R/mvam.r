@@ -82,7 +82,7 @@ mvn <- function(d=2) {
     } ## residuals
 
 
-    rd <- qf <- NULL ## these functions currently undefined for Cox PH
+    ##rd <- qf <- NULL ## these functions currently undefined for 
 
     ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
     ## function defining the Multivariate Normal model log lik.

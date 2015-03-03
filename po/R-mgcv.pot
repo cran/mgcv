@@ -1,8 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: R 3.1.0\n"
-"Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-07-21 09:50\n"
+"Project-Id-Version: mgcv 1.8-5\n"
+"POT-Creation-Date: 2015-03-02 20:44\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -59,6 +58,9 @@ msgstr ""
 msgid "Model has more coefficients than data"
 msgstr ""
 
+msgid "chunk.size < number of coefficients. Reset to %d"
+msgstr ""
+
 msgid "model matrix too dense for any possible benefit from sparse"
 msgstr ""
 
@@ -75,6 +77,9 @@ msgid "Model can not be updated"
 msgstr ""
 
 msgid "link not available for coxph family; available link is \"identity\""
+msgstr ""
+
+msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
 msgid "link not available for ordered categorical family; available links are \"identity\""
@@ -117,6 +122,12 @@ msgid "link not available for zero inflated; available link for `lambda' is only
 msgstr ""
 
 msgid "negative values not allowed for the zero inflated Poisson family"
+msgstr ""
+
+msgid "Non-integer response variables are not allowed with ziP"
+msgstr ""
+
+msgid "Using ziP for binary data makes no sense"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
@@ -287,6 +298,9 @@ msgstr ""
 msgid "iteration limit reached: max abs grad = %g"
 msgstr ""
 
+msgid "dist not recognised"
+msgstr ""
+
 msgid "gaulss requires 2 links specified as character strings"
 msgstr ""
 
@@ -303,6 +317,12 @@ msgid "link not available for"
 msgstr ""
 
 msgid "parameter of ziplss"
+msgstr ""
+
+msgid "Non-integer response variables are not allowed with ziplss"
+msgstr ""
+
+msgid "Using ziplss for binary data makes no sense"
 msgstr ""
 
 msgid "An object of length %d does not match the required parameter size"
@@ -395,7 +415,40 @@ msgstr ""
 msgid "Nested smooths must be fully random"
 msgstr ""
 
-msgid "dist not recognised"
+msgid "sorry link not yet handled"
+msgstr ""
+
+msgid "weights ignored"
+msgstr ""
+
+msgid "family not implemented yet"
+msgstr ""
+
+msgid "jagam requires a file for the JAGS model specification"
+msgstr ""
+
+msgid "smoothing parameter prior choise not recognised, reset to gamma"
+msgstr ""
+
+msgid "coefficient simulation data is missing"
+msgstr ""
+
+msgid "burnin too large, reset"
+msgstr ""
+
+msgid "rho missing from simulation data edf.type reset to 2"
+msgstr ""
+
+msgid "residuals argument not supported"
+msgstr ""
+
+msgid "unconditional argument not meaningful here"
+msgstr ""
+
+msgid "by.resids argument not supported"
+msgstr ""
+
+msgid "all.terms argument not supported"
 msgstr ""
 
 msgid "silly tolerance supplied"

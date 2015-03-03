@@ -189,11 +189,11 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
 { int dr,i,j,tB=0,tC=0,k,l,m,off,nhh;
   double lpl=0.0,*gamma,gamma_p=0.0,
     eta_sum,
-    *b_p,*A_p,*p1,*p2,*p3,*p4,
-    *d1gamma,
-    *d1gamma_p,*d1eta,xx,xx0,xx1,xx2,xx3,*d1b_p,*d1A_p,
-    *d2eta,*d2gamma,*d2gamma_p,*d2b_p,
-    *d2ldA_p;
+    *b_p=NULL,*A_p=NULL,*p1,*p2,*p3,*p4,
+    *d1gamma=NULL,
+    *d1gamma_p=NULL,*d1eta=NULL,xx,xx0,xx1,xx2,xx3,*d1b_p=NULL,*d1A_p=NULL,
+    *d2eta=NULL,*d2gamma=NULL,*d2gamma_p=NULL,*d2b_p=NULL,
+    *d2ldA_p=NULL;
   gamma = (double *)R_chk_calloc((size_t)*n,sizeof(double)); 
   if (*deriv >=0) {
     b_p = (double *)R_chk_calloc((size_t)*p,sizeof(double));

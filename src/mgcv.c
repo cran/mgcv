@@ -35,14 +35,6 @@ USA. */
 #define round(a) ((a)-floor(a) <0.5 ? (int)floor(a):(int) floor(a)+1)
 
 
-
-
-void ErrorMessage(char *msg,int fatal)
-
-{ if (fatal) error("%s",msg);else warning("%s",msg);
-}
-
-
 /* The following are some rather ancient routines used to set up an example
    additive model using regression (cubic) splines, via RGAMsetup(). */
 void RUnpackSarray(int m,matrix *S,double *RS)

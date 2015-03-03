@@ -22,16 +22,22 @@
 #include <stdio.h>
 #include <math.h>
 #include <R.h>
-#include <Rinternals.h>
 #include <R_ext/Linpack.h> /* only needed for pivoted chol - see note in mgcv_chol */
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
-#include <Rconfig.h>
 #ifdef SUPPORT_OPENMP
 #include <omp.h>
 #endif
 
 /*#include <dmalloc.h>*/
+
+void mgcv_omp(int *a) {
+#ifdef SUPPORT_OPENMP
+  *a=1;
+#else
+  *a=0;
+#endif  
+}
 
 void dump_mat(double *M,int *r,int*c,const char *path) {
   /* dump r by c matrix M to path - intended for debugging use only */
@@ -124,6 +130,8 @@ void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N) {
 void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n)
 /* This code doesn't rely on the BLAS...
  
+   Not thread safe as C modified and restored internally...
+
    Forms r by c product of B and C, transposing each according to bt and ct.
    n is the common dimension of the two matrices, which are stored in R 
    default column order form. Algorithm is inner loop optimized in each case 
@@ -543,9 +551,12 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
    are a number of indexing errors there, and down-date cancellation 
    strategy is only described in words). 
 */ 
-  int jb,pb,i,j,k,m,*p0,nb0,q,one=1,ok_norm,*mb,*kb,rt,nth;
+  int jb,pb,i,j,k,m,*p0,nb0,q,one=1,ok_norm=1,*mb,*kb,rt,nth;
   double *cn,*icn,x,*a0,*a1,*F,*Ak,*Aq,*work,tol,xx,done=1.0,dmone=-1.0,dzero=0.0; 
   char trans='T',nottrans='N';
+#ifdef OMP_REPORT
+  Rprintf("bpqr...");
+#endif
   tol = pow(DOUBLE_EPS,.8);
   mb = (int *)R_chk_calloc((size_t) nt,sizeof(int));
   kb = (int *)R_chk_calloc((size_t) nt,sizeof(int));  
@@ -598,6 +609,7 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
           #pragma omp for
           #endif
           for (i=0;i<nth;i++) {
+	    /* Only 10th argument changed on exit... */ 
             F77_CALL(dgemv)(&nottrans, mb+i, &j,&dmone,A+jb*n+kb[i],&n,F+j,&pb,&done,A + n*k + kb[i], &one);
             //F77_CALL(dgemv)(&nottrans, &m, &j,&dmone,A+jb*n+k,&n,F+j,&pb,&done,Ak, &one);
           }
@@ -619,14 +631,15 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         kb[0] = j+1;
         for (i=0;i<nth-1;i++) { mb[i] = rt;kb[i+1]=kb[i]+rt;}
         mb[nth-1]=q-(nth-1)*rt;
-        #ifdef SUPPORT_OPENMP
-        #pragma omp parallel private(i) num_threads(nth)
-        #endif 
+	//  #ifdef SUPPORT_OPENMP
+        //#pragma omp parallel private(i) num_threads(nth)
+        //#endif 
         { /* start of parallel section */
           #ifdef SUPPORT_OPENMP
-          #pragma omp for
+          #pragma omp parallel for private(i) num_threads(nth)
           #endif
           for (i=0;i<nth;i++) {
+            #pragma flush(trans,m,mb,tau,k,A,kb,jb,n,Ak,one,dzero,F,pb)
             F77_CALL(dgemv)(&trans, &m, mb+i,tau+k,A+(kb[i]+jb)*n+k,&n,Ak,&one,&dzero,F+kb[i]+j*pb, &one);
           }
           //F77_CALL(dgemv)(&trans, &m, &i,tau+k,A+(k+1)*n+k,&n,Ak,&one,&dzero,F+j+1+j*pb, &one);
@@ -726,6 +739,7 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         #endif
         for (i=0;i<nth;i++) {
           Ak = A + (k+1)*n + kb[i];Aq = A + jb * n + kb[i];
+          /* Argument 12 changed on exit... */
           F77_CALL(dgemm)(&nottrans,&trans,mb+i,&rt,&nb,&dmone,Aq,&n,F+j+1,&pb,&done,Ak,&n);
           // Ak = A + (k+1)*n + k + 1;Aq = A + jb * n + k + 1;
           // F77_CALL(dgemm)(&nottrans,&trans,&m,&rt,&nb,&dmone,Aq,&n,F+j+1,&pb,&done,Ak,&n);
@@ -736,7 +750,9 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
     if (!ok_norm) { /* recompute any column norms that had cancelled badly */ 
       for (i = k+1;i<p; i++) { 
         if (cn[i]<icn[i]*tol) { /* do the recompute */
-          x=0.0; Ak = A + i * n; Aq += n; Ak += k+1;
+          x=0.0; Ak = A + i * n; 
+          Aq = Ak + n; // Aq += n; <-- this was old code: Aq not initialised!
+          Ak += k+1;
           for (;Ak<Aq;Ak++) x += *Ak * *Ak;
           cn[i] = icn[i] = x;
         } 
@@ -749,6 +765,9 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
   R_chk_free(cn);
   R_chk_free(icn);
   R_chk_free(work);
+#ifdef OMP_REPORT
+  Rprintf("done\n");
+#endif
   return(p); /* NOTE: not really rank!! */
 } /* bpqr */
 
@@ -769,7 +788,9 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   #ifndef SUPPORT_OPENMP
   nt = 1;
   #endif
-
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_piqr...");
+  #endif
   c =(double *)R_chk_calloc((size_t) p,sizeof(double)); 
   work =(double *)R_chk_calloc((size_t) (p*nt),sizeof(double));
   k=0;tau=0.0;
@@ -817,13 +838,13 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
     } else nth=cpf=cpt=0;
 
     br = beta[r];
-    #ifdef SUPPORT_OPENMP
-    #pragma omp parallel private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
-    #endif
+    //#ifdef SUPPORT_OPENMP
+    //#pragma omp parallel private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
+    //#endif
     { j = cpt;
       if (j) {        
         #ifdef SUPPORT_OPENMP
-        #pragma omp for
+        #pragma omp parallel for private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
         #endif
         for (i=0;i<nth;i++) {
 	    if (i == nth-1) j = cpf;
@@ -853,7 +874,10 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
     
     } /* end while (tau > 0) */
   
-  R_chk_free(c); R_chk_free(work);
+  R_chk_free(c); R_chk_free(work); 
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
   return(r+1);
 } /* mgcv_piqr */
 
@@ -882,6 +906,7 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   rr = PROTECT(allocVector(INTSXP, 1));
   rrp = INTEGER(rr);
   *rrp = r;
+ 
   UNPROTECT(1);
   return(rr);
 
@@ -907,6 +932,9 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
   int lda,ldb,ldc,cpt,cpf,c1,i,nth;
   double alpha=1.0,beta=0.0;
   if (*r<=0||*c<=0||*n<=0) return;
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_pmmult...");
+  #endif
   if (B==C) { /* this is serial, unfortunately. note case must be caught as B can be re-ordered!  */
     if (*bt&&(!*ct)&&(*r==*c)) { getXtX(A,B,n,r);return;} 
     else if (*ct&&(!*bt)&&(*r==*c)) { getXXt(A,B,c,n);return;}
@@ -931,7 +959,7 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
   ldc = *r;
 
   if (*ct) { /* have to split on B, which involves re-ordering */
-    if (*bt) { /* can split on columns of n by r matrix B, but A then needs re-ordering */
+    if (*bt) { /* B'C': can split on columns of n by r matrix B, but (r by c) A then needs re-ordering */
       cpt = *r / *nt; /* cols per thread */
       if (cpt * *nt < *r) cpt++; 
       nth = *r/cpt;
@@ -941,12 +969,12 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
       #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
-        c1 = cpt;
+        //c1 = cpt;
         #ifdef SUPPORT_OPENMP
         #pragma omp for
         #endif
         for (i=0;i<nth;i++) {
-          if (i == nth-1) c1 = cpf;
+          if (i == nth-1) c1 = cpf; else c1 = cpt;
           /* note integer after each matrix is its leading dimension */
           if (c1>0) F77_CALL(dgemm)(&transa,&transb,&c1,c,n, &alpha,
 		B + i * cpt * *n, n ,C, c,&beta, A + i * cpt * *c, &c1);
@@ -955,7 +983,7 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
       /* now re-order the r by c matrix A, which currently contains the sequential
          blocks corresponding to each cpt rows of A */
       row_block_reorder(A,r,c,&cpt,bt); /* bt used here for 'reverse' as it contains a 1 */
-    } else { /* worst case - have to re-order r by n mat B and then reverse re-ordering of B and A at end */
+    } else { /* BC':worst case - have to re-order r by n mat B and then reverse re-ordering of B and A at end */
       cpt = *r / *nt; /* cols per thread */
       if (cpt * *nt < *r) cpt++; 
       nth = *r/cpt;
@@ -967,12 +995,12 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
       #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
-        c1 = cpt;
+        //c1 = cpt;
         #ifdef SUPPORT_OPENMP
         #pragma omp for
         #endif
         for (i=0;i<nth;i++) {
-          if (i == nth-1) c1 = cpf;
+          if (i == nth-1) c1 = cpf;else c1=cpt;
           if (c1>0) F77_CALL(dgemm)(&transa,&transb,&c1,c,n, &alpha,
 		B + i * cpt * *n, &c1,C,c,&beta, A + i * cpt * *c, &c1);
         }
@@ -991,24 +1019,28 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     #pragma omp parallel private(i,c1) num_threads(*nt)
     #endif
     { /* open parallel section */
-      c1 = cpt;
+      //c1 = cpt;
       #ifdef SUPPORT_OPENMP
       #pragma omp for
       #endif
       for (i=0;i< nth;i++) {
-        if (i == nth-1) c1 = cpf; /* how many columns in this block */
+        if (i == nth-1) c1 = cpf;else c1=cpt; /* how many columns in this block */
         if (c1>0) F77_CALL(dgemm)(&transa,&transb,r,&c1,n, &alpha,
 		B, &lda,C + i * *n * cpt, &ldb,&beta, A + i * *r * cpt, &ldc);
       }
     } /* end parallel */
   }
-
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
 } /* end mgcv_pmmult */
 
 
 
 void getXtX0(double *XtX,double *X,int *r,int *c)
-/* form X'X (nearly) as efficiently as possible - BLAS free*/
+/* form X'X (nearly) as efficiently as possible - BLAS free
+   thread safety: modifies XtX. Nothing else.
+*/
 { double *p0,*p1,*p2,*p3,*p4,x;
   int i,j;
   for (p0=X,i=0;i<*c;i++,p0 += *r) 
@@ -1019,7 +1051,9 @@ void getXtX0(double *XtX,double *X,int *r,int *c)
 }
 
 void getXtX(double *XtX,double *X,int *r,int *c)
-/* form X'X (nearly) as efficiently as possible - uses BLAS*/
+/* form X'X (nearly) as efficiently as possible - uses BLAS
+   Thread safety: Only XtX changed on exit.
+*/
 { double alpha=1.0,beta=0.0;
   int i,j;
   char uplo = 'L',trans='T';
@@ -1048,6 +1082,7 @@ void getXtWX0(double *XtWX, double *X,double *w,int *r,int *c,double *work)
    forms X'WX as efficiently as possible, where W = diag(w)
    and X is an r by c matrix stored column wise. 
    work should be an r-vector (longer is no problem).
+   Thread safety: work and XtWX modified; rest not.
 */ 
 { int i,j;
   double *p,*p1,*p2,*pX0,*pX1,xx;
@@ -1067,6 +1102,7 @@ void getXtWX(double *XtWX, double *X,double *w,int *r,int *c,double *work)
    forms X'WX as efficiently as possible, where W = diag(w)
    and X is an r by c matrix stored column wise. 
    work should be an r-vector (longer is no problem).
+   Thread safety: work and XtWX modified; rest unmodified.
 */ 
 { int i,j,one=1;
   char trans='T';
@@ -1339,6 +1375,9 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
 */
   int i,j,k,r1,*a,b;
   double x,*d,*dk,*z,*zz,*z1,*rr,*Rjj,*r2;
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_pbsi...");
+  #endif
   d = (double *)R_chk_calloc((size_t) *r,sizeof(double));
   if (*nt < 1) *nt = 1;
   if (*nt > *r) *nt = *r; /* no point having more threads than columns */
@@ -1406,6 +1445,9 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
     } 
   } /* end parallel section */
   R_chk_free(d);R_chk_free(a);
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
 } /* mgcv_pbsi */
 
 
@@ -1428,6 +1470,9 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
    Computation uses *nt cores. */
   double x,*ru,*rl,*r1,*ri,*rj,*Aji,*Aij;
   int *a,i,j,b;
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_PPt...");
+  #endif
   if (*nt < 1) *nt = 1;
   if (*nt > *r) *nt = *r; /* no point having more threads than columns */
   a = (int *)R_chk_calloc((size_t) (*nt+1),sizeof(int));
@@ -1508,7 +1553,10 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
       }
     } /* end of for b block loop */
   } /* end parallel block */ 
-  R_chk_free(a);
+  R_chk_free(a); 
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
 } /* mgcv_PPt */
 
 void mgcv_RPPt(SEXP a,SEXP r, SEXP NT) {
@@ -1657,7 +1705,7 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse) {
           for (i=0; i < *nb;i++,x0++,x1++) *x0 = *x1;
         } else { /* short segment */
           for (i=0;i<nbf;i++,x0++,x1++) *x0 = *x1; /* only copy info, not padding */
-          x1 += *nb - nbf; /* move sourse past padding */
+          x1 += *nb - nbf; /* move source past padding */
         }
       }  
     } else { /* forward mode */
@@ -1737,6 +1785,9 @@ void mgcv_pqrqy0(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,i
 */
   int i,j,k,l,left=1,n,nb,nbf,nq,TRUE=1,FALSE=0;
   double *x0,*x1,*Qb;  
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_pqrqy0...");
+  #endif
   k = get_qpr_k(r,c,nt); /* number of blocks in use */
   if (k==1) { /* single block case */ 
     if (*tp == 0 ) {/* re-arrange so b is a full matrix */
@@ -1831,7 +1882,10 @@ void mgcv_pqrqy0(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,i
     } /* end of parallel section */
     /* now need to unscramble separate blocks back into b as regular matrix */
     if (*cb>1) row_block_reorder(b,r,cb,&nb,&TRUE);
-  }
+  } 
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
   R_chk_free(Qb);
 }  /* mgcv_pqrqy0 */
 
@@ -1840,11 +1894,18 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
 /* Applies factor Q of a QR factor computed by mgcv_pqr to b. 
    b is physically r by cb, but if tp = 0 it contains a c by cb matrix on entry, while if
    tp=1 it contains a c by cb matrix on exit. Unused elments of b on entry assumed 0. 
-   a and tau are the result of mgcv_pqr  
+   a and tau are the result of mgcv_pqr.
+
+   Note that in multi-threaded mode this uses mgcv_pqr0, which is thread safe, but level 2.
+   mgcv_pqr is level 3 but not thread safe.  mgcv_pqrqy itself is not thread safe - i.e. 
+   this should not be called from a parallel section (which would be dumb anyway). 
 
 */
   int i,j,ki,k,left=1,nth;
-  double *x0,*x1;  
+  double *x0,*x1,*aii,*p0;  
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_pqrqy...");
+  #endif
   //Rprintf("pqrqy %d ",*nt);
   if (*tp == 0 ) {/* re-arrange so b is a full matrix */
     x0 = b + *r * *cb -1; /* end of full b (target) */
@@ -1860,6 +1921,9 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
   } /* if (*tp) */
   if (*cb==1 || *nt==1) mgcv_qrqy(b,a,tau,r,cb,c,&left,tp);
   else { /* split operation by columns of b */ 
+    /* set leading diagonal elements of a to 1 and store them */
+    aii = (double *)R_chk_calloc((size_t)*c,sizeof(double));
+    for (k=*r+1,x0=aii,x1=aii + *c,p0=a;x0<x1;x0++,p0 += k) { *x0 = *p0;*p0 = 1.0; } 
     nth = *nt;if (nth > *cb) nth = *cb;
     k = *cb/nth; 
     if (k*nth < *cb) k++; /* otherwise last thread is rate limiting */
@@ -1874,15 +1938,23 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
       for (i=0;i<nth;i++) {
         j = i * k;
         if (i==nth-1) ki = *cb - j; else ki = k;
-        mgcv_qrqy(b + j * *r,a,tau,r,&ki,c,&left,tp);
+        /* note this is level 2 at present, but thread safe */
+        mgcv_qrqy0(b + j * *r,a,tau,r,&ki,c,&left,tp);
       }
     } /* end parallel section */
+    for (k=*r+1,x0=aii,x1=aii + *c,p0=a;x0<x1;x0++,p0 += k) *p0= *x0;
+    R_chk_free(aii); 
   } 
   if (*tp) { /* need to strip out the extra rows */
     x1 = x0 = b;
     for (i=0;i < *cb;i++,x1 += *r - *c) 
     for (j=0;j < *c;j++,x0++,x1++) *x0 = *x1; 
-  }
+  }  
+  /* restore A[i,i]... */
+ 
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
   return;
 }  /* mgcv_pqrqy */
 
@@ -1897,7 +1969,7 @@ void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
   //Rprintf("pqr %d ",*nt);
   if (*nt==1) mgcv_qr(x,r,c,pivot,tau); else { /* call bpqr */
     /* int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt)*/
-    bpqr(x,*r,*c,tau,pivot,15,*nt); 
+    bpqr(x,*r,*c,tau,pivot,30,*nt); /* 30 is hard coded block size here */ 
   }
 } /* mgcv_pqr */
 
@@ -1918,7 +1990,9 @@ void mgcv_pqr0(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
 
   int i,j,k,l,*piv,nb,nbf,n,TRUE=1,FALSE=0,nr; 
   double *R,*R1,*xi; 
- 
+  #ifdef OMP_REPORT
+  Rprintf("mgcv_pqr0...");
+  #endif
   k = get_qpr_k(r,c,nt);/* number of threads to use */
  
   if (k==1) mgcv_qr(x,r,c,pivot,tau); else { /* multi-threaded version */
@@ -1952,7 +2026,10 @@ void mgcv_pqr0(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
     R_chk_free(piv);
     n = k * *c;
     mgcv_qr(R,&n,c,pivot,tau + k * *c); /* final pivoted QR */
-  }
+  } 
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
 } /* mgcv_pqr0 */
 
 void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau)
@@ -2013,6 +2090,44 @@ void mgcv_qr2(double *x, int *r, int *c,int *pivot,double *tau)
   
 } /* end mgcv_qr2 */
 
+void mgcv_qrqy0(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp) {
+/* mgcv_qrqy is not thread safe, because of the behaviour of dormqr (and similar functions).
+   This version uses dlarf for a thread safe routine, but this is then level 2, *and requires
+   modification of a before entry*.
+
+   Applies k reflectors of Q of a QR decomposition to r by c matrix b.
+   Apply Q from left if left!=0, right otherwise.
+   Transpose Q only if tp!=0.
+   Information about Q has been returned from mgcv_qr, and is stored in tau and 
+   *on and* below the leading diagonal of a. In fact the leading diagonal elements must 
+   be set to 1 before entry to this routine. 
+    
+   SUBROUTINE DLARF( SIDE, M, N, V, INCV, TAU, C, LDC, WORK )
+*/
+  char side='L';
+  int lda,lwork=-1,incv=1,ri,i0,i1,ii,i;
+  double *work,*v;
+ 
+  if (! *left) { 
+    side='R';lda = *c;lwork = *r;
+  } else { 
+    lda= *r;lwork = *c;
+  }
+  /* calloc is thread safe, R_chk_calloc ambiguous */
+  work=(double *)calloc((size_t)lwork,sizeof(double));
+  if ((*left && ! *tp)||(! *left && *tp)) { /* kth H applied first */
+    i0 = *k - 1;i1=-1;ii=-1;
+  } else { /* 1st H applied first */
+    i0 = 0;i1 = *k;ii=1;
+  }
+  for (i=i0;i!=i1;i+=ii) {
+    v = a + lda * i + i; /* start of v */
+    ri = *r - i; /* number of rows in sub-block to which this applies */
+    F77_CALL(dlarf)(&side,&ri,c,v,&incv,tau+i,b+i,r,work);
+  }
+  free(work);
+  } /* mgcv_qrqy0 */
+
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp)
 /* applies k reflectors of Q of a QR decomposition to r by c matrix b.
    Apply Q from left if left!=0, right otherwise.
@@ -2029,6 +2144,10 @@ void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,in
    er<-.C("mgcv_qrqy",as.double(y),as.double(um$a),as.double(um$tau),as.integer(r),as.integer(cy),as.integer(c),
         as.integer(left),as.integer(tp),PACKAGE="mgcv")
    er[[1]];qr.qy(qrx,y)
+
+   dormqr is not thread safe (with feasible memory use, at least).
+   A block threadsafe version could be built using dlarft, dlarfb.
+   A level 2 thread safe version could be built using dlarf (as in dorm2r)
    
 */
 
@@ -2046,7 +2165,6 @@ void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,in
   /* actual call */
   F77_CALL(dormqr)(&side,&trans,r,c,k,a,&lda,tau,b,r,work,&lwork,&info); 
   R_chk_free(work);
-   
 }
 
 
@@ -2317,6 +2435,10 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
   double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*zp,*qp,normTj,eps_stop,max_err,alpha=1.0,beta=0.0;
   unsigned long jran=1,ia=106,ic=1283,im=6075; /* simple RNG constants */
   const char uplo='U',trans='T';
+  #ifdef OMP_REPORT
+  Rprintf("Rlanczos");
+  #endif
+
 
   #ifndef SUPPORT_OPENMP
   *nt = 1; /* reset number of threads to 1 if openMP not available  */ 
@@ -2432,8 +2554,7 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
     /* calculate b[j]=||z||.... */
     for (xx=0.0,zp=z,p0=zp+*n;zp<p0;zp++) xx += *zp * *zp;b[j]=sqrt(xx); 
   
-    /*if (b[j]==0.0&&j< *n-1) ErrorMessage(_("Lanczos failed"),1);*/ /* Actually this isn't really a failure => rank(A)<l+lm */
-    /* get q[j+1]      */
+     /* get q[j+1]      */
     if (j < *n-1)
     { q[j+1]=(double *)R_chk_calloc((size_t) *n,sizeof(double));
       for (xx=b[j],qp=q[j+1],p0=qp + *n,zp=z;qp<p0;qp++,zp++) *qp = *zp/xx; /* forming q[j+1]=z/b[j] */
@@ -2526,5 +2647,8 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
   if (vlength) R_chk_free(v);
   for (i=0;i< *n+1;i++) if (q[i]) R_chk_free(q[i]);R_chk_free(q);  
   *n = j; /* number of iterations taken */
+  #ifdef OMP_REPORT
+  Rprintf("done\n");
+  #endif
 } /* end of Rlanczos */
 

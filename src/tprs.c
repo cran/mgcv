@@ -28,46 +28,6 @@ USA.*/
 
 #define ROUND(a) ((a)-(int)floor(a)>0.5) ? ((int)floor(a)+1):((int)floor(a))
 
-void ErrorMessage(char *msg, int fatal);
-
-static inline double eta(int m,int d,double r)
-
-/* The basis functions for a thin plate spline for d- dimensional data, with an mth order 
-   wiggliness penalty. 
-   Note that r is really r^2 (saves a sqrt when d even, and some flops )
-*/
-
-{ double pi=PI,Ghalf=1.772453850905515881919; /* Gamma function of 0.5 = sqrt(pi) */
-  double f;
-  int i,k,d2,m2;
-
-  d2 = d/2;m2 = 2*m;
-  if (m2 <= d) ErrorMessage(_("You must have 2m>d for a thin plate spline."),1);
-  if (r<=0.0) return(0.0); /* this is safe: even if eta() gets inlined so that r comes in in an fp register! */
-  if (d%2==0) /* then d even */
-  { if ((m+1+d2)%2) f= -1.0; else f=1.0; /* finding (-1)^{m+1+d/2} */
-    for (i=0;i<m2-1;i++) f/=2;  /* dividing by 2^{2m-1} */
-    for (i=0;i<d2;i++) f/=pi;  /* dividing by pi^{d/2} */
-    for (i=2;i<m;i++) f/=i; /* dividing by (m-1)! */
-    for (i=2;i<=m-d2;i++) f/=i; /* dividing by (m-d/2)! */
-    /*f*=log(r);*/
-    f *= log(r) * .5; /* since r is really r^2 */
-    /* for (i=0;i<2*m-d;i++) f*=r;*/
-    for (i=0;i<m-d2;i++) f *= r; /* r^2m-d (noting r is really r^2) */
-  } else /* d odd */
-  { f=Ghalf;
-    k=m-(d-1)/2; /* 1/2 - d = d/2 -m */
-    for (i=0;i<k;i++) f/= -0.5-i; /* f = gamma function of d/2-m */
-    for (i=0;i<m;i++) f/= 4; /* divide by 2^{2m} */
-    for (i=0;i<d-1;i++) f/=pi;
-    f /= Ghalf;                /* dividing by (pi^{d/2}) */
-    for (i=2;i<m;i++) f/=i;  /* divide by (m-1)! */
-    /* for (i=0;i<2*m-d;i++) f*=r;*/
-    for (i=0;i<m-d2-1 ;i++) f *= r; /* note r really r^2 */
-    f *= sqrt(r); 
-  } 
-  return(f);
-}
 
 
 double eta_const(int m,int d) {
@@ -77,7 +37,7 @@ double eta_const(int m,int d) {
   int i,k,d2,m2;
   Ghalf = sqrt(pi); /* Gamma function of 0.5 = sqrt(pi) */
   d2 = d/2;m2 = 2*m;
-  if (m2 <= d) ErrorMessage(_("You must have 2m>d for a thin plate spline."),1);
+  if (m2 <= d) error(_("You must have 2m>d for a thin plate spline."));
   if (d%2==0) /* then d even */
   { if ((m+1+d2)%2) f= -1.0; else f=1.0; /* finding (-1)^{m+1+d/2} */
     for (i=0;i<m2-1;i++) f/=2;  /* dividing by 2^{2m-1} */
@@ -145,7 +105,6 @@ void gen_tps_poly_powers(int *pi /* **pi */,int *M,int *m, int *d)
 */
 
 { int *index,i,j,sum;
-  /*  if (2*m<=d) ErrorMessage(_("You must have 2m > d"),1); caught in R */
   index=(int *)R_chk_calloc((size_t) *d,sizeof(int));
   for (i=0;i < *M;i++)
   { /* copy index to pi */
@@ -413,7 +372,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   
   Xu->c--; /* hide indexing column */
   if (Xu->r<k) 
-  ErrorMessage(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"),1);
+  error(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"));
   if (2*m<=d) { m=0;while (2*m<d+2) m++;} 
   tpsE(&E,Xu,m,d); /* The important matrix in the full t.p.s. problem */
   tpsT(&T,Xu,m,d); /* The tps constraint matrix */
@@ -421,7 +380,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
   /*ek=k-(d+1);*/  /* erroneous code - when I thought that -ve's must not be deleted */
   if (k<M+1)  /* re-set basis dimension if it is impossibly small */
   {  k=M+1;
-     if (Xu->r<k) ErrorMessage(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"),1);
+     if (Xu->r<k) error(_("A term has fewer unique covariate combinations than specified maximum degrees of freedom"));
   }
   if (Xu->r==k) pure_knot=1; /* basis dimension is number of knots - don't need eigen step */
 
