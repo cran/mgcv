@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-19\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2015-03-02 20:44\n"
+"POT-Creation-Date: 2015-03-30 11:44\n"
 "PO-Revision-Date: 2012-08-31 17:12+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -986,6 +986,18 @@ msgstr "Macierz modelu kary nie może mieć więcej kolumn niż wierszy"
 msgid "Model matrix not full column rank"
 msgstr "Macierz modelu nie ma pełnej rangi kolumny"
 
+# Recommended/mgcv/R/gam.fit3.r: 218
+# stop("Invalid linear predictor values in empty model")
+#, fuzzy
+msgid "single linear predictor indices are ignored"
+msgstr "Niepoprawne wartości liniowej zmiennej niezależnej w pustym modelu"
+
+# Recommended/mgcv/R/smooth.r: 177
+# stop("x out of range")
+#, fuzzy
+msgid "linear predictor labels out of range"
+msgstr "'x' jest poza zakresem"
+
 # Recommended/mgcv/R/mgcv.r: 347
 # stop("model has repeated 1-d smooths of same variable.")
 msgid "model has repeated 1-d smooths of same variable."
@@ -1031,6 +1043,9 @@ msgid "paraPen not supported for multi-formula models"
 msgstr ""
 
 msgid "absorb.cons must be TRUE for multi-formula models"
+msgstr ""
+
+msgid "dropping unidentifiable parameteric terms from model"
 msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 559
@@ -1374,10 +1389,19 @@ msgstr "'w' posiada długość inną niż 'y'!"
 msgid "X lost dimensions in magic!!"
 msgstr "'X' utraciło wymiary w 'magic()!'!"
 
+# Recommended/mgcv/R/smooth.r: 270
+# warning("dimension of fx is wrong")
+#, fuzzy
+msgid "mu dimensions wrong"
+msgstr "wymiar 'fx' jest niepoprawny"
+
 msgid "a has wrong number of rows"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
+msgstr ""
+
+msgid "mvn dimension error"
 msgstr ""
 
 # Recommended/mgcv/R/mgcv.r: 2052

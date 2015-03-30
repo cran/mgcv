@@ -17,8 +17,12 @@
 print an appropriate description of the model.
 }
 
-\details{ The formula supplied to \code{\link{gam}} is exactly like that supplied to 
-\code{\link{glm}} except that smooth terms, \code{\link{s}} and \code{\link{te}} can
+\details{ \code{\link{gam}} will accept a formula or, with some families, a list of formulae. 
+Other \code{mgcv} modelling functions will not accept a list. The list form provides a mechanism for 
+specifying several linear predictors, and allows these to share terms: see below.
+
+The formulae supplied to \code{\link{gam}} are exactly like that supplied to 
+\code{\link{glm}} except that smooth terms, \code{\link{s}}, \code{\link{te}}, \code{\link{ti}} and \code{\link{t2}} can
 be added to the right hand side (and \code{.} is not supported in \code{gam} formulae).
 
 Smooth terms are specified by expressions of the form: \cr
@@ -77,8 +81,15 @@ and \code{L} are n by m matrices. Let \code{F} be the n by m matrix that results
 to depend on (a discrete approximation to) any linear functional of a smooth: see \code{\link{linear.functional.terms}} for more information and examples (including functional linear models/signal regression).
 
 Note that \code{gam} allows any term in the model formula to be penalized (possibly by multiple penalties), 
-via the \code{paraPen} argument. See 
-\code{\link{gam.models}} for details and example code.
+via the \code{paraPen} argument. See \code{\link{gam.models}} for details and example code.
+
+When several formulae are provided in a list, then they can be used to specify multiple linear predictors 
+for families for which this makes sense (e.g. \code{\link{mvn}}). The first formula in the list must include 
+a response variable, but later formulae need not (depending on the requirements of the family). Let the linear predictors 
+be indexed, 1 to d where d is the number of linear predictors, and the indexing is in the order in which the 
+formulae appear in the list. It is possible to supply extra formulae specifying that several linear predictors 
+should share some terms. To do this a formula is supplied in which the response is replaced by numbers specifying the 
+indices of the linear predictors which will shre the terms specified on the r.h.s. For example \code{1+3~s(x)+z-1} specifies that linear predictors 1 and 3 will share the terms \code{s(x)} and \code{z} (but we don't want an extra intercept, as this would usually be unidentifiable). Note that it is possible that a linear predictor only includes shared terms: it must still have its own formula, but the r.h.s. would simply be \code{-1} (e.g. \code{y ~ -1} or \code{~ -1}).  
 
 }
 

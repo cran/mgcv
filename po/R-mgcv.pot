@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-5\n"
-"POT-Creation-Date: 2015-03-02 20:44\n"
+"Project-Id-Version: mgcv 1.8-6\n"
+"POT-Creation-Date: 2015-03-30 11:44\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -505,6 +505,12 @@ msgstr ""
 msgid "Model matrix not full column rank"
 msgstr ""
 
+msgid "single linear predictor indices are ignored"
+msgstr ""
+
+msgid "linear predictor labels out of range"
+msgstr ""
+
 msgid "model has repeated 1-d smooths of same variable."
 msgstr ""
 
@@ -533,6 +539,9 @@ msgid "paraPen not supported for multi-formula models"
 msgstr ""
 
 msgid "absorb.cons must be TRUE for multi-formula models"
+msgstr ""
+
+msgid "dropping unidentifiable parameteric terms from model"
 msgstr ""
 
 msgid "First argument is no sort of formula!"
@@ -727,10 +736,16 @@ msgstr ""
 msgid "X lost dimensions in magic!!"
 msgstr ""
 
+msgid "mu dimensions wrong"
+msgstr ""
+
 msgid "a has wrong number of rows"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
+msgstr ""
+
+msgid "mvn dimension error"
 msgstr ""
 
 msgid "object is not a glm or gam"

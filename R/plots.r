@@ -1228,6 +1228,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
     }
   }
   if (pages>0) par(oldpar)
+  invisible(pd)
 } ## end plot.gam
 
 
@@ -1254,13 +1255,11 @@ exclude.too.far<-function(g1,g2,d1,d2,dist)
   distance<-array(0,n)
   o<-.C(C_MinimumSeparation,x=as.double(cbind(g1,g2)),n=as.integer(n), d=as.integer(2),
                             t=as.double(cbind(d1,d2)),m=as.integer(m),distance=as.double(distance))
-
-  #o<-.C(C_MinimumSeparation,as.double(g1),as.double(g2),as.integer(n),as.double(d1),as.double(d2),
-  #       as.integer(m),distance=as.double(distance))  
+ 
   res <- rep(FALSE,n)
   res[o$distance > dist] <-TRUE
   res
-}
+} ## exclude.too.far
 
 
 
@@ -1329,23 +1328,7 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
                 view[1], view[2]))
  
   # now get the values of the variables which are not the arguments of the plotted surface
-#  marg<-x$model[1,]
-#  m.name<-names(x$model)
-#  for (i in 1:length(marg))
-#  { ma<-cond[[m.name[i]]]
-#    if (is.null(ma)) 
-#    { if (is.factor(x$model[[i]]))
-#      marg[[i]]<-factor(levels(x$model[[i]])[1],levels(x$model[[i]]))
-#      else if (para.term[i]&&is.matrix(x$model[[i]])) marg[[i]] <- t(colMeans(x$model[[i]]))
-#      else marg[[i]]<-mean(x$model[[i]]) 
-#    } else
-#    { if (is.factor(x$model[[i]]))
-#      marg[[i]]<-factor(ma,levels(x$model[[i]]))
-#      else marg[[i]]<-ma
-#    }
-#  }
-#  # marg includes conditioning values for view variables, but these will be ignored
-  
+
   # Make dataframe....
   if (is.factor(x$var.summary[[view[1]]]))
   m1<-fac.seq(x$var.summary[[view[1]]],n.grid)
@@ -1366,18 +1349,12 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     else newd[[i]]<-rep(ma,n.grid*n.grid)
   }
   names(newd) <- v.names
-  #row.names <- attr(newd,"row.names")
-  #attributes(newd) <- attributes(x$model) # done so that handling of offsets etc. works
-  #attr(newd,"row.names") <- row.names
   newd[[view[1]]]<-v1
   newd[[view[2]]]<-v2
   # call predict.gam to get predictions.....
   if (type=="link") zlab<-paste("linear predictor") ## ignore codetools
   else if (type=="response") zlab<-type
   else stop("type must be \"link\" or \"response\"")
-  ## turn newd into a model frame, so that names and averages are valid
-  #attributes(newd)<-attributes(x$model)
-  #attr(newd,"row.names")<-as.character(1:(n.grid*n.grid))
   fv <- predict.gam(x,newdata=newd,se.fit=TRUE,type=type)
   z <- fv$fit # store NA free copy now
   if (too.far>0) # exclude predictions too far from data
@@ -1499,5 +1476,5 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     eval(parse(text=txt))
 
   }
-}
+} ## vis.gam
 

@@ -2012,14 +2012,14 @@ fix.family.link.extended.family <- function(fam) {
   } ## cauchit  
   if (link == "cloglog") {
     ## g = log(-log(1-mu)), g' = -1/(log(1-mu)*(1-mu))
-    fam$g2g <- function(mu) { l1m <- log(1-mu)
+    fam$g2g <- function(mu) { l1m <- log1p(-mu)
       -l1m - 1
     }
-    fam$g3g <- function(mu) { l1m <- log(1-mu)
+    fam$g3g <- function(mu) { l1m <- log1p(-mu)
        l1m*(2*l1m + 3) + 2    
     }
     fam$g4g <- function(mu){
-      l1m <- log(1-mu)
+      l1m <- log1p(-mu)
       -l1m*(l1m*(6*l1m+11)+12)-6
     }
     return(fam)
@@ -2096,15 +2096,15 @@ fix.family.link.family <- function(fam)
   }
   if (link == "cloglog") {
   ## g = log(-log(1-mu)), g' = -1/(log(1-mu)*(1-mu))
-    fam$d2link <- function(mu) { l1m <- log(1-mu)
+    fam$d2link <- function(mu) { l1m <- log1p(-mu)
       -1/((1 - mu)^2*l1m) *(1+ 1/l1m)
     }
-    fam$d3link <- function(mu) { l1m <- log(1-mu)
+    fam$d3link <- function(mu) { l1m <- log1p(-mu)
        mu3 <- (1-mu)^3
       (-2 - 3*l1m - 2*l1m^2)/mu3/l1m^3
     }
     fam$d4link <- function(mu){
-      l1m <- log(1-mu)
+      l1m <- log1p(-mu)
       mu4 <- (1-mu)^4
       ( - 12 - 11 * l1m - 6 * l1m^2 - 6/l1m )/mu4  /l1m^3
     }

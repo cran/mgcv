@@ -950,7 +950,8 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
       theta <- exp(theta) ## note log theta supplied
       muth <- mu*theta
       ## yth <- y*theta
-      2* wt * (-lgamma(theta) +lgamma(muth) + lgamma(theta - muth) - muth*log(y/(1-y)) - theta*log(1-y) + log(y*(1-y))) 
+      2* wt * (-lgamma(theta) +lgamma(muth) + lgamma(theta - muth) - muth*(log(y)-log1p(-y)) - 
+                theta*log1p(-y) + log(y) + log1p(-y)) 
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
@@ -970,7 +971,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
       psi2.onemuth <- psigamma(onemuth,2)
       psi3.muth <- psigamma(muth,3)
       psi3.onemuth <- psigamma(onemuth,3)
-      log.yoney <- log(y)-log(oney)
+      log.yoney <- log(y)-log1p(-y)
       r <- list()
       ## get the quantities needed for IRLS. 
       ## Dmu2eta2 is deriv of D w.r.t mu twice and eta twice,
@@ -979,7 +980,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
       r$Dmu2 <- 2 * wt * theta^2*(psi1.muth+psi1.onemuth)
       r$EDmu2 <- r$Dmu2
       if (level>0) { ## quantities needed for first derivatives
-        r$Dth <- 2 * wt *theta*(-mu*log.yoney - log(oney)+ mu*psi0.muth+onemu*psi0.onemuth -psi0.th) 
+        r$Dth <- 2 * wt *theta*(-mu*log.yoney - log1p(-y)+ mu*psi0.muth+onemu*psi0.onemuth -psi0.th) 
         r$Dmuth <- r$Dmu + 2 * wt * theta^2*(mu*psi1.muth -onemu*psi1.onemuth)
         r$Dmu3 <- 2 * wt *theta^3 * (psi2.muth - psi2.onemuth) 
         r$Dmu2th <- 2* r$Dmu2 + 2 * wt * theta^3* (mu*psi2.muth + onemu*psi2.onemuth)
@@ -1001,7 +1002,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
         theta <- exp(theta)
         muth <- mu*theta
         term <- -lgamma(theta)+lgamma(muth)+lgamma(theta-muth)-(muth-1)*log(y)-
-               (theta-muth-1)*log(1-y) ## `-' log likelihood for each observation
+               (theta-muth-1)*log1p(-y) ## `-' log likelihood for each observation
         2 * sum(term * wt)
     }
     
@@ -1042,7 +1043,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
         mu[!ind] <- (a + b*expeta[!ind])/(1+expeta[!ind])
         l <- dbeta(y,phi*mu,phi*(1-mu),log=TRUE)
         if (deriv) {
-          g <- phi * log(y) - phi * log(1-y) - phi * digamma(mu*phi) + phi * digamma((1-mu)*phi)
+          g <- phi * log(y) - phi * log1p(-y) - phi * digamma(mu*phi) + phi * digamma((1-mu)*phi)
           h <- -phi^2*(trigamma(mu*phi)+trigamma((1-mu)*phi))
           dmueta2 <- dmueta1 <-  eta
           dmueta1 <- expeta*(b-a)/(1+expeta)^2 
@@ -1235,7 +1236,7 @@ scat <- function (theta = NULL, link = "identity") {
    dev.resids <- function(y, mu, wt,theta=NULL) {
       if (is.null(theta)) theta <- get(".Theta")
       nu <- exp(theta[1])+2; sig <- exp(theta[2])
-      wt * (nu + 1)*log(1+(1/nu)*((y-mu)/sig)^2)
+      wt * (nu + 1)*log1p((1/nu)*((y-mu)/sig)^2)
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
@@ -1312,7 +1313,7 @@ scat <- function (theta = NULL, link = "identity") {
         if (is.null(theta)) theta <- get(".Theta")
         nu <- exp(theta[1])+2; sig <- exp(theta[2])
         term <- -lgamma((nu+1)/2)+ lgamma(nu/2) + log(sig*(pi*nu)^.5) +
-           (nu+1)*log(1 + ((y-mu)/sig)^2/nu)/2  ## `-'log likelihood for each observation
+           (nu+1)*log1p(((y-mu)/sig)^2/nu)/2  ## `-'log likelihood for each observation
         2 * sum(term * wt)
     }
     

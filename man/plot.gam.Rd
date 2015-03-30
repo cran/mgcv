@@ -165,7 +165,8 @@ smooth in models (e.g. \code{s(x,bs="foo")}), and it will automatically plot usi
 
 }
 
-\value{ The function simply generates plots.
+\value{ The functions main purpose is its side effect of generating plots. It also silently returns 
+a list of the data used to produce the plots, which can be used to generate customized plots.
 }
 
 \references{
