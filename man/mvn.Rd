@@ -35,7 +35,6 @@ residuals are standardized to be approximately independent standard normal if al
 \seealso{\code{\link{gaussian}}}
 
 \examples{
-library(MASS)
 library(mgcv)
 ## simulate some data...
 V <- matrix(c(2,1,1,2),2,2)
@@ -49,7 +48,7 @@ x2 <- runif(n);x3 <- runif(n)
 y <- matrix(0,n,2)
 for (i in 1:n) {
   mu <- c(f0(x0[i])+f1(x1[i]),f2(x2[i]))
-  y[i,] <- mvrnorm(1,mu,V)
+  y[i,] <- rmvn(1,mu,V)
 }
 dat <- data.frame(y0=y[,1],y1=y[,2],x0=x0,x1=x1,x2=x2,x3=x3)
 

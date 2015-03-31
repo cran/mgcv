@@ -1,7 +1,23 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-6
+
+* Generalization of list formula handling to allow linear predictors to
+  share terms. e.g. gam(list(y1~s(x),y2~s(z),1+2~s(v)+w-1),family=mvn(d=2))
+
+* New German translation thanks to Detlef Steuer.
+
+* plot.gam now silently returns a list of plotting data, to help advanced 
+  users (Fabian Scheipl) to produce custimized plot.
+
+* bam can now set up an object suitable for fitting, but not actually do
+  the fit, following a suggestion by Fabian Scheipl. See arguments 'fit' 
+  and 'G'. 
+
 1.8-5
+
+* Korean translation added thanks to Chel Hee Lee.
 
 * scale parameter handling in edf in logLik.gam made consistent with glm 
   (affects AIC).

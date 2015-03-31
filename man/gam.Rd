@@ -9,15 +9,16 @@ data, the term `GAM' being taken to include any quadratically penalized GLM and 
 other models estimated by a quadratically penalised likelihood type approach (see \code{\link{family.mgcv}}).  
 The degree of smoothness of model terms is estimated as part of
 fitting. \code{gam} can also fit any GLM subject to multiple quadratic penalties (including 
-estimation of degree of penalization). Isotropic or scale invariant smooths of any number of variables are
-available as model terms, as are linear functionals of such smooths; confidence/credible intervals are readily
-available for any quantity predicted using a fitted model; \code{gam} is extendable: users can add smooths. 
+estimation of degree of penalization). Confidence/credible intervals are readily
+available for any quantity predicted using a fitted model.
 
 Smooth terms are represented using penalized regression splines (or similar smoothers)
 with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines with
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
-(when an isotropic smooth is inappropriate). For an overview of the smooths available see \code{\link{smooth.terms}}. 
+(when an isotropic smooth is inappropriate), and users can add smooths. 
+Linear functionals of smooths can alos be included in models.
+For an overview of the smooths available see \code{\link{smooth.terms}}. 
 For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. For more on model selection see \code{\link{gam.selection}}. Do read \code{\link{gam.check}} and \code{\link{choose.k}}.
 
 See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach (see details for differences to this implementation).
@@ -35,11 +36,9 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
 %- maybe also `usage' for other objects documented here.
 
 \arguments{ 
-\item{formula}{ A GAM formula (see \code{\link{formula.gam}} and also \code{\link{gam.models}}). 
-This is exactly like the formula for a GLM except that smooth terms, \code{\link{s}}, \code{\link{te}}, \code{\link{ti}} 
-and \code{\link{t2}}, can be added 
-to the right hand side to specify that the linear predictor depends on smooth functions of predictors 
-(or linear functionals of these).
+\item{formula}{ A GAM formula, or a list of formulae (see \code{\link{formula.gam}} and also \code{\link{gam.models}}). 
+These are exactly like the formula for a GLM except that smooth terms, \code{\link{s}}, \code{\link{te}}, \code{\link{ti}} 
+and \code{\link{t2}}, can be added to the right hand side to specify that the linear predictor depends on smooth functions of predictors (or linear functionals of these).
 } 
 
 \item{family}{

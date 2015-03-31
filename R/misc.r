@@ -2,6 +2,22 @@
 ## Many of the following are simple wrappers for C functions, used largely 
 ## for testing purposes
 
+rmvn <- function(n,mu,V) {
+## generate multivariate normal deviates. e.g.
+## V <- matrix(c(2,1,1,2),2,2); mu <- c(1,1);n <- 1000;z <- rmvn(n,mu,V);crossprod(sweep(z,2,colMeans(z)))/n
+  p <- ncol(V)
+  R <- mroot(V,rank=ncol(V)) ## RR' = V
+  if (is.matrix(mu)) {
+    if (ncol(mu)!=p||nrow(mu)!=n) stop("mu dimensions wrong")
+    z <- matrix(rnorm(p*n),n,p)%*%t(R) + mu
+  } else { 
+    if (length(mu)!=p) stop("mu dimensions wrong")
+    z <- t(R%*% matrix(rnorm(p*n),p,n) + mu)
+    if (n==1) z <- as.numeric(z)
+  }
+  z
+} ## rmvn
+
 mgcv.omp <- function() {
 ## does open MP appear to be available?
   oo <- .C(C_mgcv_omp,a=as.integer(-1))

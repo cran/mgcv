@@ -1116,7 +1116,7 @@ sparse.model.matrix <- function(G,mf,chunk.size) {
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),scale=0,gamma=1,knots=NULL,
                 sp=NULL,min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
-                nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,drop.unused.levels=TRUE,...)
+                nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -1127,113 +1127,128 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 ## 'n.threads' is number of threads to use for non-cluster computation (e.g. combining 
 ## results from cluster nodes). If 'NA' then is set to max(1,length(cluster)).
 { control <- do.call("gam.control",control)
-  if (is.character(family))
+  if (is.null(G)) { ## need to set up model!
+    if (is.character(family))
             family <- eval(parse(text = family))
-  if (is.function(family))
+    if (is.function(family))
             family <- family()
-  if (is.null(family$family))
+    if (is.null(family$family))
             stop("family not recognized")
-  ##family = gaussian() ## no choise here
-  if (family$family=="gaussian"&&family$link=="identity") am <- TRUE else am <- FALSE
-  if (scale==0) { if (family$family%in%c("poisson","binomial")) scale <- 1 else scale <- -1} 
-  if (!method%in%c("fREML","GCV.Cp","REML",
+    ##family = gaussian() ## no choise here
+    if (family$family=="gaussian"&&family$link=="identity") am <- TRUE else am <- FALSE
+    if (scale==0) { if (family$family%in%c("poisson","binomial")) scale <- 1 else scale <- -1} 
+    if (!method%in%c("fREML","GCV.Cp","REML",
                     "ML","P-REML","P-ML")) stop("un-supported smoothness selection method")
-  if (method=="fREML"&&!is.null(min.sp)) {
-    min.sp <- NULL
-    warning("min.sp not supported with fast REML computation, and ignored.")
-  }
-  if (sparse&&method=="fREML") {
-    method <- "REML"
-    warning("sparse=TRUE not supported with fast REML, reset to REML.")
-  }
-  gp <- interpret.gam(formula) # interpret the formula 
-  cl <- match.call() # call needed in gam object for update to work
-  mf <- match.call(expand.dots=FALSE)
-  mf$formula <- gp$fake.formula 
-  mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
-  mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$sparse <- mf$cluster <-
-  mf$use.chol <- mf$samfrac <- mf$nthreads <- mf$...<-NULL
-  mf$drop.unused.levels <- drop.unused.levels
-  mf[[1]]<-as.name("model.frame")
-  pmf <- mf
+    if (method=="fREML"&&!is.null(min.sp)) {
+      min.sp <- NULL
+      warning("min.sp not supported with fast REML computation, and ignored.")
+    }
+    if (sparse&&method=="fREML") {
+      method <- "REML"
+      warning("sparse=TRUE not supported with fast REML, reset to REML.")
+    }
+    gp <- interpret.gam(formula) # interpret the formula 
+    cl <- match.call() # call needed in gam object for update to work
+    mf <- match.call(expand.dots=FALSE)
+    mf$formula <- gp$fake.formula 
+    mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
+    mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho <- mf$sparse <- mf$cluster <-
+    mf$use.chol <- mf$samfrac <- mf$nthreads <- mf$G <- mf$fit <- mf$...<-NULL
+    mf$drop.unused.levels <- drop.unused.levels
+    mf[[1]]<-as.name("model.frame")
+    pmf <- mf
  
-  pmf$formula <- gp$pf
-  pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part
-  pterms <- attr(pmf,"terms") ## pmf only used for this
-  rm(pmf);
+    pmf$formula <- gp$pf
+    pmf <- eval(pmf, parent.frame()) # pmf contains all data for parametric part
+    pterms <- attr(pmf,"terms") ## pmf only used for this
+    rm(pmf);
 
-  if (gc.level>0) gc()
+    if (gc.level>0) gc()
 
-  mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
-  if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
-  terms <- attr(mf,"terms")
-  if (gc.level>0) gc()  
-  if (rho!=0&&!is.null(mf$"(AR.start)")) if (!is.logical(mf$"(AR.start)")) stop("AR.start must be logical")
-
-  ## number of threads to use for non-cluster node computation
-  if (!is.finite(nthreads)||nthreads<1) nthreads <- max(1,length(cluster))
-
-  ## summarize the *raw* input variables
-  ## note can't use get_all_vars here -- buggy with matrices
-  vars <- all.vars(gp$fake.formula[-2]) ## drop response here
-  inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
-
-  ## allow a bit of extra flexibility in what `data' is allowed to be (as model.frame actually does)
-  if (!is.list(data)&&!is.data.frame(data)) data <- as.data.frame(data) 
-
-  dl <- eval(inp, data, parent.frame())
-  if (!control$keepData) { rm(data);gc()} ## save space
-  names(dl) <- vars ## list of all variables needed
-  var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
-  rm(dl); if (gc.level>0) gc() ## save space    
-
-  ## need mini.mf for basis setup, then accumulate full X, y, w and offset
-  mf0 <- mini.mf(mf,chunk.size)
+    mf <- eval(mf, parent.frame()) # the model frame now contains all the data 
+    if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
+    terms <- attr(mf,"terms")
+    if (gc.level>0) gc()  
+    if (rho!=0&&!is.null(mf$"(AR.start)")) if (!is.logical(mf$"(AR.start)")) stop("AR.start must be logical")
     
-  if (sparse) sparse.cons <- 2 else sparse.cons <- -1
+    ## summarize the *raw* input variables
+    ## note can't use get_all_vars here -- buggy with matrices
+    vars <- all.vars(gp$fake.formula[-2]) ## drop response here
+    inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
 
-  G <- gam.setup(gp,pterms=pterms,
+    ## allow a bit of extra flexibility in what `data' is allowed to be (as model.frame actually does)
+    if (!is.list(data)&&!is.data.frame(data)) data <- as.data.frame(data) 
+
+    dl <- eval(inp, data, parent.frame())
+    if (!control$keepData) { rm(data);gc()} ## save space
+    names(dl) <- vars ## list of all variables needed
+    var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
+    rm(dl); if (gc.level>0) gc() ## save space    
+
+    ## need mini.mf for basis setup, then accumulate full X, y, w and offset
+    mf0 <- mini.mf(mf,chunk.size)
+    
+    if (sparse) sparse.cons <- 2 else sparse.cons <- -1
+
+    G <- gam.setup(gp,pterms=pterms,
                  data=mf0,knots=knots,sp=sp,min.sp=min.sp,
                  H=NULL,absorb.cons=TRUE,sparse.cons=sparse.cons,select=FALSE,
                  idLinksBases=TRUE,scale.penalty=control$scalePenalty,
                  paraPen=paraPen)
   
+    G$sparse <- sparse
 
-  ## no advantage to "fREML" with no free smooths...
-  if (((!is.null(G$L)&&ncol(G$L) < 1)||(length(G$sp)==0))&&method=="fREML") method <- "REML"
+    ## no advantage to "fREML" with no free smooths...
+    if (((!is.null(G$L)&&ncol(G$L) < 1)||(length(G$sp)==0))&&method=="fREML") method <- "REML"
 
-  G$var.summary <- var.summary
-  G$family <- family
-  G$terms<-terms;
-  G$pred.formula <- gp$pred.formula
+    G$var.summary <- var.summary 
+    G$family <- family
+    G$terms<-terms;
+    G$pred.formula <- gp$pred.formula
 
-  n <- nrow(mf)
+    n <- nrow(mf)
   
-  if (is.null(mf$"(weights)")) G$w<-rep(1,n)
-  else G$w<-mf$"(weights)"    
+    if (is.null(mf$"(weights)")) G$w<-rep(1,n)
+    else G$w<-mf$"(weights)"    
   
-  G$offset <- model.offset(mf)  
-  if (is.null(G$offset)) G$offset <- rep(0,n)
+    G$offset <- model.offset(mf)  
+    if (is.null(G$offset)) G$offset <- rep(0,n)
 
-  if (ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data")      ##+nrow(G$C)) stop("Model has more coefficients than data")
+    if (ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data") 
   
-  if (ncol(G$X) > chunk.size) { ## no sense having chunk.size < p
-    chunk.size <- 4*ncol(G$X)
-    warning(gettextf("chunk.size < number of coefficients. Reset to %d",chunk.size))    
+    if (ncol(G$X) > chunk.size) { ## no sense having chunk.size < p
+      chunk.size <- 4*ncol(G$X)
+      warning(gettextf("chunk.size < number of coefficients. Reset to %d",chunk.size))    
+    }
+
+    G$cl<-cl;
+    G$am <- am
+     
+    G$min.edf<-G$nsdf #-dim(G$C)[1]
+    if (G$m) for (i in 1:G$m) G$min.edf<-G$min.edf+G$smooth[[i]]$null.space.dim
+
+    G$formula<-formula
+    ## environment(G$formula)<-environment(formula)
+    environment(G$pterms) <- environment(G$terms) <- environment(G$pred.formula) <- 
+    environment(G$formula) <- .BaseNamespaceEnv
+
+  } else { ## G supplied
+    scale <- G$scale
+    mf <- G$mf; G$mf <- NULL
+    gp <- G$gp; G$gp <- NULL
+    na.action <- G$na.action; G$na.action <- NULL
+  } ## end of G setup 
+
+  if (!fit) {
+    G$scale <- scale
+    G$mf <- mf;G$na.action <- na.action;G$gp <- gp
+    return(G)
   }
 
-  G$cl<-cl;
-  G$am <- am
-     
-  G$min.edf<-G$nsdf #-dim(G$C)[1]
-  if (G$m) for (i in 1:G$m) G$min.edf<-G$min.edf+G$smooth[[i]]$null.space.dim
 
-  G$formula<-formula
-  ## environment(G$formula)<-environment(formula)
-  environment(G$pterms) <- environment(G$terms) <- environment(G$pred.formula) <- 
-  environment(G$formula) <- .BaseNamespaceEnv
+  ## number of threads to use for non-cluster node computation
+  if (!is.finite(nthreads)||nthreads<1) nthreads <- max(1,length(cluster))
 
- 
   G$conv.tol<-control$mgcv.tol      # tolerence for mgcv
   G$max.half<-control$mgcv.half     # max step halving in bfgs optimization
 
@@ -1244,14 +1259,14 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   
   colnamesX <- colnames(G$X)  
 
-  if (sparse) { ## Form a sparse model matrix...
+  if (G$sparse) { ## Form a sparse model matrix...
     if (sum(G$X==0)/prod(dim(G$X))<.5) warning("model matrix too dense for any possible benefit from sparse")
     if (nrow(mf)<=chunk.size) G$X <- as(G$X,"dgCMatrix") else 
       G$X <- sparse.model.matrix(G,mf,chunk.size)
     if (rho!=0) warning("AR1 parameter rho unused with sparse fitting")
     object <- bgam.fit2(G, mf, chunk.size, gp ,scale ,gamma,method=method,
                        control = control,npt=nthreads,...)
-  } else if (am) {
+  } else if (G$am) {
     if (nrow(mf)>chunk.size) G$X <- matrix(0,0,ncol(G$X)); if (gc.level>1) gc() 
     object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho,cl=cluster,
                       gc.level=gc.level,use.chol=use.chol,npt=nthreads)

@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-03-02 20:44\n"
+"POT-Creation-Date: 2015-03-30 11:44\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -591,6 +591,13 @@ msgstr ""
 msgid "Model matrix not full column rank"
 msgstr ""
 
+msgid "single linear predictor indices are ignored"
+msgstr ""
+
+#, fuzzy
+msgid "linear predictor labels out of range"
+msgstr "범위 외의 값을 가집니다."
+
 msgid "model has repeated 1-d smooths of same variable."
 msgstr ""
 
@@ -624,6 +631,9 @@ msgid "absorb.cons must be TRUE for multi-formula models"
 msgstr ""
 "여러개의 모델식(multi-formula models)을 사용하는 경우에 absorb.cons은 반드시 "
 "TRUE이어야 합니다."
+
+msgid "dropping unidentifiable parameteric terms from model"
+msgstr ""
 
 msgid "First argument is no sort of formula!"
 msgstr ""
@@ -842,11 +852,18 @@ msgstr "w의 길이가 y의 길이와 다릅니다!"
 msgid "X lost dimensions in magic!!"
 msgstr ""
 
+#, fuzzy
+msgid "mu dimensions wrong"
+msgstr "fx의 차원(dimension)이 올바르지 않습니다."
+
 msgid "a has wrong number of rows"
 msgstr "a가 가진 행의 개수가 올바르지 않습니다."
 
 msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn은 둘 이상의 차원을 가진 데이터를 필요로 합니다."
+
+msgid "mvn dimension error"
+msgstr ""
 
 msgid "object is not a glm or gam"
 msgstr "object의 클래스가 glm 또는 gam이 아닙니다."

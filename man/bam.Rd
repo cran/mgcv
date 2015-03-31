@@ -19,7 +19,7 @@ bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
     chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
     nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
-    drop.unused.levels=TRUE,...)
+    drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -142,6 +142,11 @@ be reduced by first fitting a model to a random sample of the data, and using th
 
 \item{drop.unused.levels}{by default unused levels are dropped from factors before fitting. For some smooths 
 involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
+
+\item{G}{if not \code{NULL} then this should be the object returned by a previous call to \code{bam} with 
+\code{fit=FALSE}. Causes all other arguments to be ignored except \code{chunk.size}, \code{gamma},code{nthreads}, \code{cluster}, \code{rho}, \code{gc.level}, \code{samfrac}, \code{use.chol} and \code{method}.}
+
+\item{fit}{if \code{FALSE} then the model is set up for fitting but not estimated, and an object is returned, suitable for passing as the \code{G} argument to \code{bam}.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }
