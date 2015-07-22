@@ -515,7 +515,7 @@ int mgcv_pchol(double *A,int *piv,int *n,int *nt) {
 
 SEXP mgcv_Rpchol(SEXP Amat,SEXP PIV,SEXP NT,SEXP NB) {
 /* routine to Choleski decompose n by n  matrix Amat with pivoting 
-   using routine mgcv_pchol to do the work. Uses NT parallel
+   using routine mgcv_bchol to do the work. Uses NT parallel
    threads. NB is block size.
 
    Designed for use with .call rather than .C
@@ -639,7 +639,7 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
           #pragma omp parallel for private(i) num_threads(nth)
           #endif
           for (i=0;i<nth;i++) {
-            #pragma flush(trans,m,mb,tau,k,A,kb,jb,n,Ak,one,dzero,F,pb)
+            //#pragma flush(trans,m,mb,tau,k,A,kb,jb,n,Ak,one,dzero,F,pb)
             F77_CALL(dgemv)(&trans, &m, mb+i,tau+k,A+(kb[i]+jb)*n+k,&n,Ak,&one,&dzero,F+kb[i]+j*pb, &one);
           }
           //F77_CALL(dgemv)(&trans, &m, &i,tau+k,A+(k+1)*n+k,&n,Ak,&one,&dzero,F+j+1+j*pb, &one);
@@ -881,11 +881,9 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   return(r+1);
 } /* mgcv_piqr */
 
- SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT, SEXP NB) {
-/* routine to QR decompose N by P matrix X with pivoting using routine
-   dlarfg to generate housholder. This is direct 
-   implementation of 5.4.1 from Golub and van Loan (with correction 
-   of the pivot pivoting!). Work is done by mgcv_piqr.
+SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT, SEXP NB) {
+/* routine to QR decompose N by P matrix X with pivoting.
+   Work is done by bpqr.
 
    Designed for use with .call rather than .C
    Return object is as 'qr' in R.
@@ -899,9 +897,7 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   p = ncols(X);
   x = REAL(X);beta = REAL(BETA);
   piv = INTEGER(PIV);
-  //int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt)
   r = bpqr(x,n,p,beta,piv,nb,nt); /* block version */
-  //r = mgcv_piqr(x,n,p,beta,piv,nt); /* level 2 version */
   /* should return rank (r+1) */
   rr = PROTECT(allocVector(INTSXP, 1));
   rrp = INTEGER(rr);
@@ -1035,6 +1031,83 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
   #endif
 } /* end mgcv_pmmult */
 
+void pcrossprod(double *B, double *A,int *R, int *C,int *nt,int *nb) {
+/* B=A'A if t==0. A is R by C. nb^2 is the target number of elements in a block. 
+   nt is the number of threads to use. B is C by C.
+   30/4 memorial edition 
+*/
+  int M,N,nf,nrf,kmax,kk,i,r,c,k,bs,bn,as,an,cs,cn; 
+  char uplo = 'U',trans='T',ntrans='N'; 
+  double alpha=1.0,beta=1.0;
+  M = ceil(((double) *C)/ *nb);
+  N = ceil(((double) *R)/ *nb);
+  if (M==1) { /* perform single threaded crossprod */
+    beta = 0.0;
+    F77_CALL(dsyrk)(&uplo,&trans,C,R,&alpha,A,R,&beta,B,C);
+  } else {
+    nf = *C - (M-1) * *nb;  /* cols in last col block of A */
+    nrf = *R - (N-1) * *nb;  /* rows in last row block of A */
+    kmax = (M+1)*M/2; /* number of blocks in upper triangle */ 
+    #ifdef SUPPORT_OPENMP
+    #pragma omp parallel for private(kk,i,r,c,bn,bs,k,as,an,beta,cs,cn) num_threads(*nt)
+    #endif
+    for (kk=0;kk<kmax;kk++) { /* work through blocks on upper triangle */
+      i=kk;r=0;while (i >= M-r) { i -= M - r; r++;}; c = r + i; /* convert kk to row/col */
+      if (r==M-1) bn = nf; else bn = *nb; /* (row) B block size */
+      bs = r * *nb; /* (row) B block start */
+      if (c==r) { /* diagonal block */
+        for (k=0;k<N;k++) { /* work through row blocks of A */
+          as = k * *nb; /* A row block start */ 
+          if (k==N-1) an = nrf; else an = *nb; /* A row block size */ 
+          /* uplo 'U' or 'L' for upper/lower tri. trans = 'T' for A'A.*/
+          if (k) beta=1.0; else beta = 0.0; /* multiplier for B block */
+          F77_CALL(dsyrk)(&uplo,&trans,&bn, /* cols of A block */
+			&an, /* rows of A block */ 
+                        &alpha,A + as + *R * bs, /* start of A block */
+                        R, /* R is physical number of rows in A */
+                        &beta,B + bs + *C * bs,C);
+        }
+      } else {
+	cs = c * *nb; /* b col start */
+        if (c==M-1) cn = nf; else cn = *nb; /* b col block size */
+        for (k=0;k<N;k++) { /* work through row blocks of A */
+          as = k * *nb; /* A row block start */ 
+          if (k==N-1) an = nrf; else an = *nb; /* A row block size */ 
+          /* uplo 'U' or 'L' for upper/lower tri. trans = 'T' for A'A.*/
+          if (k) beta=1.0; else beta = 0.0; /* multiplier for B block */
+          F77_CALL(dgemm)(&trans,&ntrans,
+                          &bn,&cn,&an, 
+                          &alpha,A + *R * bs + as, 
+                          R,A + *R * cs + as,R,&beta, B + bs + *C * cs, C);
+        }
+      }
+    }
+  }
+  /* fill in lower block */
+  for (r=0; r < *C;r++) for (c=0;c < r;c++) B[r + *C * c] = B[c + *C * r];
+} /* pcrossprod */
+
+
+SEXP mgcv_Rpcross(SEXP A, SEXP NT,SEXP NB) {
+/* .Call wrapper for pcrossproduct - forms A'A using 
+   NT threads and blocksize NB.
+   Return object a matrix.
+*/
+  int c,r,nt,nb;
+  double *A0,*B0;
+  SEXP B;
+  nt = asInteger(NT); /* number of threads */
+  nb = asInteger(NB); /* block size */
+  r = nrows(A);c = ncols(A);
+  A0 = REAL(A);  
+  B = PROTECT(allocMatrix(REALSXP,c,c));
+  B0 = REAL(B);
+  
+  pcrossprod(B0,A0,&r,&c,&nt,&nb);
+   
+  UNPROTECT(1);
+  return(B);
+} /* mgcv_Rpcross */
 
 
 void getXtX0(double *XtX,double *X,int *r,int *c)
@@ -1150,7 +1223,91 @@ void getXtMX(double *XtMX,double *X,double *M,int *r,int *c,double *work)
   }
 } /* getXtMX */
 
+void vcorr(double *dR,double *Vr,double *Vb,int *p,int *M) {
+/* dR contains M upper p by p matrices. The dR matrices are upper
+   triangular, but the zeros are included. Vr is an M by M matrix.
+   Vb is a p by p matrix. The kth dR contains dR/d\rho_k the derivative 
+   of the Choleski factor of the covariance matrix of some parameters
+   \beta w.r.t. \rho_k. Vr is the covariance matrix of \rho. If
+   b = \sum_k dR'/d\rho_k z (\rho_k - \hat \rho_k) where z ~ N(0,I_p)
+   then Vb is its cov matrix 
+   If *M < 0 then R is not transposed, i.e. 
+   b = \sum_k dR/d\rho_k z (\rho_k - \hat \rho_k)
+*/ 
+  double *Vi,*ViV,*p0,*p1,*p2,zero=0.0,one=1.0,x;
+  int i,j,k;
+  char trans = 'N';
+  k = *p * *M; if (k<0) k = -k;
+  Vi = (double *)R_chk_calloc((size_t) k,sizeof(double));
+  ViV = (double *)R_chk_calloc((size_t) k,sizeof(double));
+  if (*M>0) { /* R is transposed */
+    for (i=0;i<*p;i++) {   
+      for (p0=Vi,k=0;k<*M;k++) {
+        /* Vi is i by M */
+        p1 = dR + k * *p * *p + i * *p; /* start of col i of kth dR */
+        p2 = p1 + i + 1; /* first zero in col i of kth dR */ 
+        for (;p1<p2;p1++,p0++) *p0 = *p1;
+      }    
+      /* create ViV = Vi Vr (i by M) */
+      k = i + 1;
+      F77_CALL(dgemm)(&trans,&trans,&k,M,M, &one,
+  		Vi, &k, Vr , M, &zero, ViV, &k);
+      for (j=i;j<*p;j++) {
+        for (x=0.0,p0=ViV,k=0;k<*M;k++) {
+          /* Vj is i by M */
+          p1 = dR + k * *p * *p + j * *p; /* start of col j of kth dR */
+          p2 = p1 + i + 1; /* one past last relevant row in col j of kth dR */ 
+          for (;p1<p2;p1++,p0++) x += *p0 * *p1;
+        }
+        Vb[i + *p * j] = Vb[j + *p * i] = x;
+      }
+    }
+  } else { /* R not transposed */
+    *M = - *M;
+    for (i=0;i<*p;i++) {   
+      for (p0=Vi,k=0;k<*M;k++) {
+        /* Vi is p-i by M */
+        p1 = dR + k * *p * *p + i ; /* start of row i of kth dR */
+        p2 = p1 + *p * *p; /* 1 past row end */
+        p1 += i * *p; /* skip the starting zeroes */ 
+        for (;p1<p2;p1+= *p,p0++) *p0 = *p1;
+      }    
+      /* create ViV = Vi Vr (p-i by M) */
+      k = *p - i;
+      F77_CALL(dgemm)(&trans,&trans,&k,M,M, &one,
+  		Vi, &k, Vr , M, &zero, ViV, &k);
+      for (j=i;j<*p;j++) {
+        for (x=0.0,p0=ViV,k=0;k<*M;k++) {
+          p0 += (j-i);
+          /* Vj is p-i by M */
+          p1 = dR + k * *p * *p + j; /* start of row j of kth dR */
+          p2 = p1 + *p * *p; /* one past last relevant row in col j of kth dR */ 
+          p1 += j * *p; /* skip the starting zeroes */
+          for (;p1<p2;p1 += *p,p0++) x += *p0 * *p1;
+        }
+        Vb[i + *p * j] = Vb[j + *p * i] = x;
+      }
+    }
+  }
+  R_chk_free(Vi);R_chk_free(ViV);
+} /* vcorr */
 
+void dchol(double *dA, double *R, double *dR,int *p) {
+/* R is the Choleski factor of A, s.t. R'R = A (no pivoting). dA is dA/dx.
+   This function computes dR/dx and returns it in dR. Lower triangles not accessed.
+   FLOP cost double choleski, but no square roots.
+*/
+  int i,j,k;
+  double x,*pdRi,*pdRj,*pRi,*pRj,*pend;
+  for (i=0;i < *p;i++) for (j=i;j < *p;j++) {
+    k = i * *p;pdRi = dR + k; pRi = R + k;
+    k = j * *p; pdRj = dR + k; pRj = R + k;pend = pRj + i; 
+    for (x=0.0;pRj<pend;pRi++,pRj++,pdRi++,pdRj++) x += *pRi * *pdRj + *pRj * *pdRi;
+    k = i + j * *p;
+    if (j>i) dR[k] = (dA[k] - x - R[k]*dR[i + i * *p])/R[i + i * *p]; 
+    else  dR[k] = (dA[k] - x)*.5/R[i + i * *p]; 
+  }
+} /* dchol */
 
 void mgcv_chol(double *a,int *pivot,int *n,int *rank)
 /* a stored in column order, this routine finds the pivoted choleski decomposition of matrix a 
@@ -1427,7 +1584,7 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
   }
 
   #ifdef SUPPORT_OPENMP
-  #pragma omp parallel private(b,i,k,zz,rr) num_threads(*nt)
+#pragma omp parallel private(b,i,k,zz,rr,r2) num_threads(*nt)
   #endif 
   { /* open parallel section */
     #ifdef SUPPORT_OPENMP
@@ -1486,7 +1643,7 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
   }
 
   #ifdef SUPPORT_OPENMP
-  #pragma omp parallel private(b,i,ru,rl) num_threads(*nt)
+  #pragma omp parallel private(b,i,ru,rl,r1) num_threads(*nt)
   #endif
   { /* open parallel section */
     #ifdef SUPPORT_OPENMP
@@ -1539,7 +1696,7 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
     if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
   }
   #ifdef SUPPORT_OPENMP
-  #pragma omp parallel private(b,i,rl) num_threads(*nt)
+  #pragma omp parallel private(b,i,rl,r1) num_threads(*nt)
   #endif
   { /* start parallel block */
     #ifdef SUPPORT_OPENMP
@@ -1601,7 +1758,55 @@ void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc)
   char side='L',uplo='U',transa='T',diag='N';
   for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
   F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
-}
+} /* mgcv_forwardsolve */
+
+void mgcv_pforwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *nt) 
+/* parallel forward solve, using nt threads.
+   Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). This is just a standard forward 
+   substitution loop.
+*/  
+{ double *pR,*pC,alpha=1.0;
+  int cpt,cpf,nth,i,cp;
+  char side='L',uplo='U',transa='T',diag='N';
+  cpt = *bc / *nt; /* cols per thread */
+  if (cpt * *nt < *bc) cpt++;
+  nth = *bc/cpt;
+  if (nth * cpt < *bc) nth++;
+  cpf = *bc - cpt * (nth-1); /* columns on final block */ 
+  for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
+  //Rprintf("r = %d, c= %d bc = %d, nth= %d, cpt = %d, cpf = %d",*r,*c,*bc,nth,cpt,cpf);
+  #ifdef SUPPORT_OPENMP
+  #pragma omp parallel for private(i,cp) num_threads(nth)
+  #endif
+  for (i=0;i<nth;i++) {
+    if (i==nth-1) cp = cpf; else cp = cpt;
+    F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, &cp, &alpha,R, r,C + i * cpt * *c,c);
+  }
+} /* mgcv_pforwardsolve */
+
+SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT) {
+/* .Call wrapper for mgcv_pforwardsolve.
+   Return object a matrix.
+
+*/
+  int c,r,nt,bc;
+  double *R0,*b,*C0;
+  SEXP C;
+  nt = asInteger(NT);
+  r = nrows(R);c = ncols(R);
+  R0 = REAL(R);
+  bc = ncols(B);
+  b = REAL(B);  
+  C = PROTECT(allocMatrix(REALSXP,c,bc));
+  C0 = REAL(C);
+
+  mgcv_pforwardsolve(R0,&r,&c,b,C0,&bc,&nt);
+   
+  UNPROTECT(1);
+  return(C);
+} /* mgcv_Rpforwardsolve */
 
 
 void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse) {

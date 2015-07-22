@@ -65,15 +65,29 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        t2,te,ti,tensor.prod.model.matrix,tensor.prod.penalties,
        Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
 
-importFrom(grDevices,cm.colors,gray,heat.colors,terrain.colors,topo.colors)
-importFrom(graphics,axis,box,contour,hist,lines,mtext, par, persp,plot,points,
-           polygon,strheight,strwidth,text)
+importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,heat.colors,terrain.colors,topo.colors)
+importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,
+           mtext, par, persp,plot,points,
+           polygon,rect,strheight,strwidth,text,title)
 
-importFrom(stats,anova,influence,cooks.distance,logLik,vcov,residuals,predict,model.matrix)
+importFrom(stats,.checkMFClasses,.getXlevels,anova,approx,as.formula,
+binomial,coef,cooks.distance,cor,cov,
+delete.response,dbeta,dgamma,dnorm,dpois,fitted,formula,gaussian,glm,
+influence,logLik,lm,mad,
+make.link,median,model.frame,model.offset,model.matrix,nlm,
+na.pass,napredict,na.omit,naresid,optim,pchisq,pnorm,pt,pf,
+power,predict,printCoefmat,quantile,
+qbeta,qbinom,qchisq,qnbinom,qgamma,qnorm,qpois,qqline,qqnorm,qqplot,
+reformulate,residuals,
+rbeta,rbinom,rgamma,rnbinom,rnorm,rpois,runif,sd,
+termplot,terms.formula,terms,uniroot,var,vcov,weights)
+
+importFrom(utils,object.size)
+
 importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix,getGroupsFormula,lme,varFixed,lmeControl)
 importMethodsFrom(Matrix,t,colMeans,colSums,chol,solve,lu,expand)
 importFrom(Matrix,Diagonal,sparseMatrix,Matrix)
-importFrom(methods,cbind2)
+importFrom(methods,cbind2,as)
 
 S3method(anova, gam)
 S3method(influence, gam)

@@ -83,14 +83,14 @@ msgstr "QPCLS - Rang-Defizit im Modell"
 
 #: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
-msgstr "Es muss 2m>d für eine dünnwandige Spline gelten"
+msgstr "Es muss 2m>d für einen dünnwandige Spline gelten."
 
 #: tprs.c:375 tprs.c:383
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"
 msgstr ""
-"Ein Term hat weniger einheitliche Kombinationen von Kovarianten als maximal "
+"Ein Term hat weniger einzigartige Kombinationen von Kovariaten als maximal "
 "angegebene Freiheitsgrade"
 
 

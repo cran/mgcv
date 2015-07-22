@@ -1,6 +1,55 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-7
+
+** 'gam' default scale parameter changed to modified Pearson estimator 
+  developed by Fletcher 2012 Biometrika 99(1), 230-237. See ?gam.scale.
+
+** 'bam' now has a 'discrete' argument to allow discretization of covariates
+  for more efficient computation, with substantially more parallelization
+  (via 'nthreads'). Still somewhat experimental. 
+
+* Slightly more accurate smoothing parameter uncertainty correction. Changes 
+  edf2 used for AIC (under RE/ML), and hence may change AIC values. 
+
+* jagam prior variance on fixed effects is now set with reference to data and 
+  model during initialization step.
+
+* bam could lose offset for small datasets in gaussian additive case. fixed. 
+
+* gam.side now setup to include penalties in computations if fewer data than 
+  coefs (an exceedingly specialist topic). 
+
+* p-value computation for smooth terms modified to avoid an ambiguity in the 
+  choice of test statistic that could lead to p-value changing somewhat between 
+  platforms.   
+
+* gamm now warns if attempt is made to use extended family.
+
+* step fail logic improved for "fREML" optimization in 'bam'.
+
+* fix of openMP error in mgcv_pbsi, which could cause a problem in 
+  multi-threaded bam computation (failure to declare a variable as private).  
+
+* Smoothing parameter uncertainty corrected AIC calculations had an 
+  indexing problem in Sl.postproc, which could result in failure of bam with 
+  linked smooths. 
+
+* mroot patched for fact that chol(...,pivot=TRUE) does not operate as 
+  documented on rank deficient matrices: trailing block of triangular factor
+  has to be zeroed for pivoted crossprod of factor to equal original matrix. 
+
+* bam(...,sparse=TRUE) deprecated as no examples found where it is really 
+  worthwhile (but let me know if this is a problem). 
+
+* marginal model matrices in tensor product smooths now stored in 
+  re-parameterized form, if re-parameterization happened (shouldn't change 
+  anything!).
+
+* initial.spg could fail if response vector had dim attributes and extended 
+  family used. fixed.
+
 1.8-6
 
 * Generalization of list formula handling to allow linear predictors to

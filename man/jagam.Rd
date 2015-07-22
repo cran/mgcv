@@ -77,8 +77,8 @@ intercept for each smooth.}
 \item{sp.prior}{\code{"gamma"} or \code{"log.uniform"} prior for the smoothing parameters? Do check that the 
 default parameters are appropriate for your model in the JAGS code.}
 
-\item{diagonalize}{Should smooths be re-parameterized to have i.i.d. Gaussian priors? For Gaussian data this 
-allows efficient conjugate samplers to be used, but otherwise it is better to update smoothers blockwise, and not do this.}
+\item{diagonalize}{Should smooths be re-parameterized to have i.i.d. Gaussian priors (where possible)? For Gaussian data this 
+allows efficient conjugate samplers to be used, and it can also work well with GLMs if the JAGS \code{"glm"} module is loaded, but otherwise it is often better to update smoothers blockwise, and not do this.}
 
 \item{sam}{jags sample object, containing at least fields \code{b} (coefficients) and \code{rho} (log 
 smoothing parameters). May also contain field \code{mu} containing monitored expected response.}
@@ -104,7 +104,7 @@ plotting and predicting.
 
 \details{Smooths are easily incorportated into JAGS models using multivariate normal priors on the smooth coefficients. The smoothing parameters and smoothing penalty matrices directly specifiy the prior multivariate normal precision matrix. Normally a smoothing penalty does not correspond to a full rank precision matrix, implying an improper prior inappropriate for Gibbs sampling. To rectify this problem the null space penalties suggested in Marra and Wood (2011) are added to the usual penalties. 
 
-In an additive modelling context it is usual to centre the smooths, to avoid the identifiability issues associated with having an intercept for each smooth term (in addition to a global intercept). Under Gibbs sampling it is technically possible to omit this centring, since we anyway force propriety on the priors, and this propiety implies formal model identifiability. However, in most situations this formal identifiability is rather artificial and does not imply statistically meaningfull identifiability. Rather it serves only to massively inflate confidence intervals, since the multiple intercept terms are not identifiable from the data, but only from the prior. By default then, \code{jagam} imposes standard GAM identifiability constraints on all smooths. The \code{centred} argument does allow you to turn this off, but it is not recommended. If you do set \code{centred=FALSE} then chain convergence and mixing checks should be particularly stringent. 
+In an additive modelling context it is usual to centre the smooths, to avoid the identifiability issues associated with having an intercept for each smooth term (in addition to a global intercept). Under Gibbs sampling with JAGS it is technically possible to omit this centring, since we anyway force propriety on the priors, and this propiety implies formal model identifiability. However, in most situations this formal identifiability is rather artificial and does not imply statistically meaningfull identifiability. Rather it serves only to massively inflate confidence intervals, since the multiple intercept terms are not identifiable from the data, but only from the prior. By default then, \code{jagam} imposes standard GAM identifiability constraints on all smooths. The \code{centred} argument does allow you to turn this off, but it is not recommended. If you do set \code{centred=FALSE} then chain convergence and mixing checks should be particularly stringent. 
 
 The final technical issue for model setup is the setting of initial conditions for the coefficients and smoothing parameters. The approach taken is to take the default initial smoothing parameter values used elsewhere by \code{mgcv}, and to take a single PIRLS fitting step with these smoothing parameters in order to obtain starting values for the smooth coefficients. In the setting of fully conjugate updating the initial values of the coefficients are not critical, and good results are obtained without supplying them. But in the usual setting in which slice sampling is required for at least some of the updates then very poor results can sometimes be obtained without initial values, as the sampler simply fails to find the region of the posterior mode. 
 
@@ -156,6 +156,7 @@ jd <- jagam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,file="test.jags",
 
 \dontrun{
 require(rjags)
+load.module("glm") ## improved samplers for GLMs often worth loading
 jm <-jags.model("test.jags",data=jd$jags.data,inits=jd$jags.ini,n.chains=1)
 list.samplers(jm)
 sam <- jags.samples(jm,c("b","rho","scale"),n.iter=10000,thin=10)
@@ -164,6 +165,9 @@ plot(jam,pages=1)
 jam
 pd <- data.frame(x0=c(.5,.6),x1=c(.4,.2),x2=c(.8,.4),x3=c(.1,.1))
 fv <- predict(jam,newdata=pd)
+## and some minimal checking...
+require(coda)
+effectiveSize(as.mcmc.list(sam$b))
 }
 
 ## a gamma example...

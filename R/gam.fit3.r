@@ -70,12 +70,28 @@ get.Eb <- function(rS,rank)
 { q <- nrow(rS[[1]])
   S <- matrix(0,q,q)
   for (i in 1:length(rS)) { 
-    Si <- rS[[i]]%*%t(rS[[i]])
+    Si <- tcrossprod(rS[[i]]) ## rS[[i]]%*%t(rS[[i]])
     S <- S + Si/sqrt(sum(Si^2)) 
   }
   t(mroot(S,rank=rank)) ## E such that E'E = S
 } ## get.Eb
 
+huberp <- function(wp,dof,k=1.5,tol=.Machine$double.eps^.5) {
+## function to obtain huber estimate of scale from Pearson residuals, simplified 
+## from 'hubers' from MASS package
+  s0 <- mad(wp) ## initial scale estimate
+  th <- 2*pnorm(k) - 1
+  beta <- th + k^2 * (1 - th) - 2 * k * dnorm(k)
+  for (i in 1:50) {
+    r <- pmin(pmax(wp,-k*s0),k*s0)
+    ss <- sum(r^2)/dof
+    s1 <- sqrt(ss/beta)
+    if (abs(s1-s0)<tol*s0) break
+    s0 <- s1
+  }
+  if (i==50) warning("Huber scale estiamte not converged")
+  s1^2
+} ## huberp
 
 gam.scale <- function(wp,wd,dof,extra=0) {
 ## obtain estimates of the scale parameter, using the weighted Pearson and 
@@ -85,21 +101,23 @@ gam.scale <- function(wp,wd,dof,extra=0) {
 ## although deviance residual is much less extreme). 
   pearson <- (sum(wp^2)+extra)/dof
   deviance <- (sum(wd^2)+extra)/dof
-  ## now scale deviance residuals to have magnitude similar
-  ## to pearson and compute new estimator. 
-  kd <- wd
-  ind <- wd > 0
-  kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
-  ind <- wd < 0
-  kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
-  robust <- (sum(kd^2)+extra)/dof
-  ## force estimate to lie between deviance and pearson estimators
-  if (pearson > deviance) {
-    if (robust < deviance) robust <- deviance
-    if (robust > pearson) robust <- pearson
-  } else {
-    if (robust > deviance) robust <- deviance
-    if (robust < pearson) robust <- pearson
+  if (extra==0) robust <- huberp(wp,dof) else {
+    ## now scale deviance residuals to have magnitude similar
+    ## to pearson and compute new estimator. 
+    kd <- wd
+    ind <- wd > 0
+    kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
+    ind <- wd < 0
+    kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
+    robust <- (sum(kd^2)+extra)/dof
+    ## force estimate to lie between deviance and pearson estimators
+    if (pearson > deviance) {
+      if (robust < deviance) robust <- deviance
+      if (robust > pearson) robust <- pearson
+    } else {
+      if (robust > deviance) robust <- deviance
+      if (robust < pearson) robust <- pearson
+    }
   }
   list(pearson=pearson,deviance=deviance,robust=robust)
 }
@@ -592,6 +610,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
                 p.weights=as.double(weg),g1=as.double(g1),g2=as.double(g2),
                 g3=as.double(g3),g4=as.double(g4),V0=as.double(V),V1=as.double(V1),
                 V2=as.double(V2),V3=as.double(V3),beta=as.double(coef),b1=as.double(rep(0,nSp*ncol(x))),
+                w1=as.double(rep(0,nSp*length(z))),
                 D1=as.double(D1),D2=as.double(D2),P=as.double(dum),P1=as.double(P1),P2=as.double(P2),
                 trA=as.double(dum),trA1=as.double(trA1),trA2=as.double(trA2),
                 rV=as.double(rV),rank.tol=as.double(rank.tol),
@@ -607,6 +626,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
  
          ## get dbeta/drho, directly in original parameterization
          db.drho <- if (deriv) T%*%matrix(oo$b1,ncol(x),nSp) else NULL
+         dw.drho <- if (deriv) matrix(oo$w1,length(z),nSp) else NULL
 
          rV <- matrix(oo$rV,ncol(x),ncol(x)) ## rV%*%t(rV)*scale gives covariance matrix 
          
@@ -627,21 +647,27 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            mu <- linkinv(eta)
          }
          trA <- oo$trA;
-         
-         wpr <- (y-mu) *sqrt(weights/family$variance(mu)) ## weighted pearson residuals
-         se <- gam.scale(wpr,wdr,n.true-trA,dev.extra) ## get scale estimates
-         pearson.warning <- NULL
-         if (control$scale.est=="pearson") { 
-           scale.est <- se$pearson
-           if (scale.est > 4 * se$robust) pearson.warning <- TRUE
-         } else scale.est <- if (control$scale.est=="deviance") se$deviance else se$robust
+                  
+#         wpr <- (y-mu) *sqrt(weights/family$variance(mu)) ## weighted pearson residuals
+#         se <- gam.scale(wpr,wdr,n.true-trA,dev.extra) ## get scale estimates
+#         pearson.warning <- NULL
+#         if (control$scale.est=="pearson") { 
+#           scale.est <- se$pearson
+#           if (scale.est > 4 * se$robust) pearson.warning <- TRUE
+#         } else scale.est <- if (control$scale.est=="deviance") se$deviance else se$robust
 
-         #pearson <- sum(weights*(y-mu)^2/family$variance(mu)) ## Pearson statistic
+         if (control$scale.est%in%c("pearson","fletcher","Pearson","Fletcher")) {
+            pearson <- sum(weights*(y-mu)^2/family$variance(mu))
+            scale.est <- (pearson+dev.extra)/(n.true-trA)
+            if (control$scale.est%in%c("fletcher","Fletcher")) { ## Apply Fletcher (2012) correction
+              s.bar = mean(family$dvar(mu)*(y-mu)*sqrt(weights)/family$variance(mu))
+              if (is.finite(s.bar)) scale.est <- scale.est/(1+s.bar)
+            }
+         } else { ## use the deviance estimator
+           scale.est <- (dev+dev.extra)/(n.true-trA)
+         }
 
-         #scale.est <- (pearson+dev.extra)/(n.true-trA)
-
-         #scale.est <- (dev+dev.extra)/(n.true-trA)
-         reml.scale <- NA  
+        reml.scale <- NA  
 
         if (scoreType%in%c("REML","ML")) { ## use Laplace (RE)ML
           
@@ -773,12 +799,21 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
     names(residuals) <- ynames
     names(mu) <- ynames
     names(eta) <- ynames
-    wt <- rep.int(0, nobs)
-    if (fisher) wt[good] <- w else wt[good] <- wf  ## note that Fisher weights are returned
+    ww <- wt <- rep.int(0, nobs)
+    if (fisher) { wt[good] <- w; ww <- wt} else { 
+      wt[good] <- wf  ## note that Fisher weights are returned
+      ww[good] <- w
+    }
     names(wt) <- ynames
     names(weights) <- ynames
     names(y) <- ynames
-   
+    if (deriv && nrow(dw.drho)!=nrow(x)) {
+      w1 <- dw.drho
+      dw.drho <- matrix(0,nrow(x),ncol(w1))
+      dw.drho[good,] <- w1
+    }
+    
+
     wtdmu <- if (intercept) 
         sum(weights * y)/sum(weights)
     else linkinv(offset)
@@ -795,16 +830,99 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
    
     list(coefficients = coef, residuals = residuals, fitted.values = mu, 
          family = family, linear.predictors = eta, deviance = dev, 
-        null.deviance = nulldev, iter = iter, weights = wt, prior.weights = weights, 
-        df.null = nulldf, y = y, converged = conv,pearson.warning = pearson.warning,
+        null.deviance = nulldev, iter = iter, weights = wt, working.weights=ww,prior.weights = weights, 
+        df.null = nulldf, y = y, converged = conv,##pearson.warning = pearson.warning,
         boundary = boundary,D1=D1,D2=D2,P=P,P1=P1,P2=P2,trA=trA,trA1=trA1,trA2=trA2,
         GCV=GCV,GCV1=GCV1,GCV2=GCV2,GACV=GACV,GACV1=GACV1,GACV2=GACV2,UBRE=UBRE,
         UBRE1=UBRE1,UBRE2=UBRE2,REML=REML,REML1=REML1,REML2=REML2,rV=rV,db.drho=db.drho,
+        dw.drho=dw.drho,
         scale.est=scale.est,reml.scale= reml.scale,aic=aic.model,rank=oo$rank.est,K=Kmat)
 } ## end gam.fit3
 
+Vb.corr <- function(X,L,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
+## compute higher order Vb correction...
+## If w is NULL then X should be root Hessian, and 
+## dw is treated as if it was 0, otherwise X should be model 
+## matrix.
+## dw is derivative w.r.t. all the smoothing parameters and family parametres as if these 
+## were not linked, but not the scale parameter, of course. Vr includes scale uncertainty,
+## if scale extimated...
+## nth is the number of initial elements of rho that are not smoothing 
+## parameters, scale.est is TRUE is scale estimated
+  M <- length(off) ## number of penalty terms
+  if (scale.est) {
+    ## drop scale param from L, rho and Vr...
+    rho <- rho[-length(rho)]
+    if (!is.null(L)) L <- L[-nrow(L),-ncol(L),drop=FALSE]
+    Vr <- Vr[-nrow(Vr),-ncol(Vr),drop=FALSE]
+  }
+  ## ??? rho0???
+  lambda <- if (is.null(L)) exp(rho) else exp(L[1:M,,drop=FALSE]%*%rho)
+  
+  ## Re-create the Hessian, if is.null(w) then X assumed to be root
+  ## unpenalized Hessian...
+  H <- if (is.null(w)) crossprod(X) else H <- t(X)%*%(w*X)
+  if (M>0) for (i in 1:M) {
+      ind <- off[i] + 1:ncol(S[[i]]) - 1
+      H[ind,ind] <- H[ind,ind] + lambda[i+nth] * S[[i]]
+  }
 
-gam.fit3.post.proc <- function(X,L,object) {
+  R <- try(chol(H),silent=TRUE) ## get its Choleski factor.  
+  if (inherits(R,"try-error")) return(0) ## bail out as Hessian insufficiently well conditioned
+  
+  ## Create dH the derivatives of the hessian w.r.t. (all) the smoothing parameters...
+  dH <- list()
+  if (length(lambda)>0) for (i in 1:length(lambda)) {
+    ## If w==NULL use constant H approx...
+    dH[[i]] <- if (is.null(w)) H*0 else t(X)%*%(dw[,i]*X) 
+    if (i>nth) { 
+      ind <- off[i-nth] + 1:ncol(S[[i-nth]]) - 1
+      dH[[i]][ind,ind] <- dH[[i]][ind,ind] + lambda[i]*S[[i-nth]]
+    }
+  }
+  ## If L supplied then dH has to be re-weighted to give
+  ## derivatives w.r.t. optimization smoothing params.
+  if (!is.null(L)) {
+    dH1 <- dH;dH <- list()
+    if (length(rho)>0) for (j in 1:length(rho)) { 
+      ok <- FALSE ## dH[[j]] not yet created
+      if (nrow(L)>0) for (i in 1:nrow(L)) if (L[i,j]!=0.0) { 
+        dH[[j]] <- if (ok) dH[[j]] + dH1[[i]]*L[i,j] else dH1[[i]]*L[i,j]
+        ok <- TRUE
+      }
+    } 
+    rm(dH1)
+  } ## dH now w.r.t. optimization parameters 
+  
+  if (length(dH)==0) return(0) ## nothing to correct
+
+  ## Get derivatives of Choleski factor w.r.t. the smoothing parameters 
+  dR <- list()
+  for (i in 1:length(dH)) dR[[i]] <- dchol(dH[[i]],R) 
+  rm(dH)
+  
+  ## need to transform all dR to dR^{-1} = -R^{-1} dR R^{-1}...
+  for (i in 1:length(dR)) dR[[i]] <- -t(forwardsolve(t(R),t(backsolve(R,dR[[i]]))))
+ 
+  ## BUT: dR, now upper triangular, and it relates to RR' = Vb not R'R = Vb
+  ## in consequence of which Rz is the thing with the right distribution
+  ## and not R'z...
+  dbg <- FALSE
+  if (dbg) { ## debugging code
+    n.rep <- 10000;p <- ncol(R)
+    r <- rmvn(n.rep,rep(0,M),Vr)
+    b <- matrix(0,n.rep,p)
+    for (i in 1:n.rep) {
+      z <- rnorm(p)
+      if (M>0) for (j in 1:M) b[i,] <- b[i,] + dR[[j]]%*%z*(r[i,j]) 
+    }
+    Vfd <- crossprod(b)/n.rep
+  }
+
+  vcorr(dR,Vr,FALSE) ## NOTE: unscaled!!
+} ## Vb.corr
+
+gam.fit3.post.proc <- function(X,L,S,off,object) {
 ## get edf array and covariance matrices after a gam fit. 
 ## X is original model matrix, L the mapping from working to full sp
   scale <- if (object$scale.estimated) object$scale.est else object$scale
@@ -817,7 +935,7 @@ gam.fit3.post.proc <- function(X,L,object) {
   edf1 <- 2*edf - rowSums(t(F)*F) ## alternative
 
   ## check on plausibility of scale (estimate)
-  if (object$scale.estimated&&!is.null(object$pearson.warning)) warning("Pearson scale estimate maybe unstable. See ?gam.scale.")
+  ##if (object$scale.estimated&&!is.null(object$pearson.warning)) warning("Pearson scale estimate maybe unstable. See ?gam.scale.")
 
   ## edf <- rowSums(PKt*t(sqrt(object$weights)*X))
   ## Ve <- PKt%*%t(PKt)*object$scale  ## frequentist cov
@@ -831,20 +949,41 @@ gam.fit3.post.proc <- function(X,L,object) {
   if (!is.na(object$reml.scale)&&!is.null(object$db.drho)) { ## compute sp uncertainty correction
     M <- ncol(object$db.drho)
     ## transform to derivs w.r.t. working, noting that an extra final row of L
-    ## may be present, relating to scale parameter (for which db.drho is 0 since its a scale parameter)  
+    ## may be present, relating to scale parameter (for which db.drho is 0 since it's a scale parameter)  
     if (!is.null(L)) { 
       object$db.drho <- object$db.drho%*%L[1:M,,drop=FALSE] 
       M <- ncol(object$db.drho)
     }
-    ev <- eigen(object$outer.info$hess,symmetric=TRUE)
-    ind <- ev$values <= 0
-    ev$values[ind] <- 0;ev$values[!ind] <- 1/sqrt(ev$values[!ind])
-    rV <- (ev$values*t(ev$vectors))[,1:M]
+    ## extract cov matrix for log smoothing parameters...
+    ev <- eigen(object$outer.info$hess,symmetric=TRUE) 
+    d <- ev$values;ind <- d <= 0
+    d[ind] <- 0;d[!ind] <- 1/sqrt(d[!ind])
+    rV <- (d*t(ev$vectors))[,1:M] ## root of cov matrix
     Vc <- crossprod(rV%*%t(object$db.drho))
-    Vc <- Vb + Vc  ## Bayesian cov matrix with sp uncertainty
+    ## set a prior precision on the smoothing parameters, but don't use it to 
+    ## fit, only to regularize Cov matrix. exp(4*var^.5) gives approx 
+    ## multiplicative range. e.g. var = 5.3 says parameter between .01 and 100 times
+    ## estimate. Avoids nonsense at `infinite' smoothing parameters.   
+#    dpv <- rep(0,ncol(object$outer.info$hess))
+#    dpv[1:M] <- 1/10 ## prior precision (1/var) on log smoothing parameters
+#    Vr <- chol2inv(chol(object$outer.info$hess + diag(dpv,ncol=length(dpv))))[1:M,1:M]
+#    Vc <- object$db.drho%*%Vr%*%t(object$db.drho)
+    d <- ev$values; d[ind] <- 0;d <- 1/sqrt(d+1/10)
+    Vr <- crossprod(d*t(ev$vectors))
+    #Vc2 <- scale*Vb.corr(X,L,S,off,object$dw.drho,object$working.weights,log(object$sp),Vr)
+    ## Note that db.drho and dw.drho are derivatives w.r.t. full set of smoothing 
+    ## parameters excluding any scale parameter, but Vr includes info for scale parameter
+    ## if it has been estiamted. 
+    nth <- if (is.null(object$family$n.theta)) 0 else object$family$n.theta ## any parameters of family itself
+    Vc2 <- scale*Vb.corr(R,L,S,off,object$dw.drho,w=NULL,log(object$sp),Vr,nth,object$scale.estimated)
+    
+    Vc <- Vb + Vc + Vc2 ## Bayesian cov matrix with sp uncertainty
     ## finite sample size check on edf sanity...
     edf2 <- rowSums(Vc*crossprod(R))/scale
-    if (sum(edf2)>sum(edf1)) edf2 <- edf1 
+    if (sum(edf2)>sum(edf1)) { 
+      #cat("\n edf2=",sum(edf2),"  edf1=",sum(edf1)); 
+      edf2 <- edf1
+    } 
   } else edf2 <- Vc <- NULL
   list(Vc=Vc,Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,edf2=edf2,hat=hat,F=F,R=R)
 } ## gam.fit3.post.proc
@@ -1651,11 +1790,15 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
   check.derivs <- FALSE;eps <- 1e-5
 
+  uconv.ind <- rep(TRUE,ncol(B))
+
   for (i in 1:max.step) {
    
     ## get the trial step ...
 
-    step <- -drop(B%*%initial$grad)   
+    step <- -drop(B%*%initial$grad)
+    ## following line messes up conditions under which Wolfe guarantees update... 
+    ## step[!uconv.ind] <- 0 ## don't move if apparently converged  - don't do this
     ## unit.step <- step/sqrt(sum(step^2)) ## unit vector in step direction
 
     ms <- max(abs(step))
@@ -1798,7 +1941,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         converged <- FALSE      
       }
       if (converged) break
-
+      ## uconv.ind <- abs(trial$grad) > score.scale*conv.tol*.1
       initial <- trial
       initial$alpha <- 0
     }  
@@ -2366,7 +2509,7 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
     }
  
     environment(qf) <- environment(rd) <- environment(dvar) <- environment(d2var) <- 
-    environment(variance) <- environment(validmu) <- 
+    environment(d3var) <-environment(variance) <- environment(validmu) <- 
     environment(ls) <- environment(dev.resids) <- environment(aic) <- environment(getTheta) <- env
     famname <- paste("Negative Binomial(", format(round(theta,3)), ")", sep = "")
     structure(list(family = famname, link = linktemp, linkfun = stats$linkfun,

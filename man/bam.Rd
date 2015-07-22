@@ -17,8 +17,8 @@ for large datasets. \code{bam} can also compute on a cluster set up by the \link
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
-    chunk.size=10000,rho=0,AR.start=NULL,sparse=FALSE,cluster=NULL,
-    nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
+    chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,sparse=FALSE,
+    cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
     drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -117,7 +117,10 @@ Reset to \code{4*p} if \code{chunk.size < 4*p} where \code{p} is the number of c
 section of AR1 correlation. Very first observation in data frame does not need this. If \code{NULL} then 
 there are no breaks in AR1 correlaion.}
 
-\item{sparse}{If all smooths are P-splines and all tensor products are of the form \code{te(...,bs="ps",np=FALSE)} 
+\item{discrete}{with \code{method="fREML"} it is possible to discretize covariates for storage and efficiency reasons.
+If \code{discrete} is \code{TRUE}, a number or a vector of numbers for each smoother term, then discretization happens. If numbers are supplied they give the number of discretization bins. Experimental at present. }
+
+\item{sparse}{Deprecated. If all smooths are P-splines and all tensor products are of the form \code{te(...,bs="ps",np=FALSE)} 
 then in principle computation could be made faster using sparse matrix methods, and you could set this to \code{TRUE}. 
 In practice the speed up is disappointing, and the computation is less well conditioned than the default. See details.}
 
@@ -178,7 +181,7 @@ can be used in the 1D case, and tensor product smooths (\code{te}) are typically
 
 If \code{cluster} is provided as a cluster set up using \code{\link[parallel]{makeCluster}} (or \code{\link[parallel]{makeForkCluster}}) from the \code{parallel} package, then the rate limiting QR decomposition of the model matrix is performed in parallel using this cluster. Note that the speed ups are often not that great. On a multi-core machine it is usually best to set the cluster size to the number of physical cores, which is often less than what is reported by \code{\link[parallel]{detectCores}}. Using more than the number of physical cores can result in no speed up at all (or even a slow down). Note that a highly parallel BLAS may negate all advantage from using a cluster of cores. Computing in parallel of course requires more memory than computing in series. See examples.
 
-If the argument \code{sparse=TRUE} then QR updating is replaced by an alternative scheme, in which the model matrix is stored whole
+If the deprecated argument \code{sparse=TRUE} then QR updating is replaced by an alternative scheme, in which the model matrix is stored whole
  as a sparse matrix. This only makes sense if all smooths are P-splines and all tensor products are of the 
 form \code{te(...,bs="ps",np=FALSE)}, but no check is made. The computations are then based on the Choleski decomposition of 
 the crossproduct of the sparse model matrix. Although this crossproduct is nearly dense, sparsity should make its 
@@ -186,13 +189,13 @@ formation efficient, which is useful as it is the leading order term in the oper
 in using sparse methods to form the Choleski decomposition, given that the crossproduct is dense. 
 In practice the sparse matrix handling overheads mean that modest or no speed ups are produced 
 by this approach, while the computation is less stable than the default, and the memory footprint often higher 
-(but please let the author know if you find an example where the speedup is really worthwhile).
+(but please let the author know if you find an example where the speedup is really worthwhile). 
 
 }
 
 
 \references{
-Wood, S.N., Goude, Y. & Shaw S. (2014) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C, in press.  
+Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.  
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
@@ -257,7 +260,7 @@ system.time(b1 <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k),
 b1
 
 
-## Sparse smoother example...
+## Sparse smoother example (deprecated)...
 \dontrun{
 dat <- gamSim(1,n=10000,dist="poisson",scale=.1)
 system.time( b3 <- bam(y ~ te(x0,x1,bs="ps",k=10,np=FALSE)+

@@ -52,6 +52,78 @@ mvn.ll <- function(y,X,beta,dbeta=NULL) {
   list(l=oo$ll,lb=oo$lb,lbb=matrix(oo$lbb,nb,nb),dH=dH)
 }
 
+## discretized covariate routines...
+
+XWXd <- function(X,w,k,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
+## Form X'WX given weights in w and X in compressed form in list X.
+## each element of X is a (marginal) model submatrix. Full version 
+## is given by X[[i]][k[,i],]. list X relates to length(ds) separate
+## terms. ith term starts at matrix ts[i] and has dt[i] marginal matrices.
+## Terms with several marginals are tensor products and may have 
+## constraints (if qc[i]>1), stored as a householder vector in v[[i]]. 
+## check ts and k index start (assumed 1 here)
+## if drop is non-NULL it contains index of rows/cols to drop from result
+  m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
+  nx <- length(X);nt <- length(ts)
+  n <- length(w);pt <- 0;
+  for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0) 
+  oo <- .C(C_XWXd,XWX =as.double(rep(0,pt^2)),X= as.double(unlist(X)),w=as.double(w),
+           k=as.integer(k-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
+           ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
+           v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
+           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))
+  if (is.null(drop)) matrix(oo$XWX,pt,pt) else matrix(oo$XWX,pt,pt)[-drop,-drop]
+} ## XWXd
+
+XWyd <- function(X,w,y,k,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
+## X'Wy...  
+  m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
+  nx <- length(X);nt <- length(ts)
+  n <- length(w);pt <- 0;
+  for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0) 
+  oo <- .C(C_XWyd,XWy=rep(0,pt),y=as.double(y),X=as.double(unlist(X)),w=as.double(w),k=as.integer(k-1), 
+           m=as.integer(m),p=as.integer(p),n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
+           dt=as.integer(dt),nt=as.integer(nt),v=as.double(unlist(v)),qc=as.integer(qc),
+           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))
+  if (is.null(drop)) oo$XWy else oo$XWy[-drop]
+} ## XWyd 
+
+Xbd <- function(X,beta,k,ts,dt,v,qc,drop=NULL) {
+## note that drop may contain the index of columns of X to drop before multiplying by beta.
+## equivalently we can insert zero elements into beta in the appropriate places.
+  n <- nrow(k);m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
+  nx <- length(X);nt <- length(ts)
+  if (!is.null(drop)) { 
+    b <- rep(0,length(beta)+length(drop))
+    b[-drop] <- beta
+    beta <- b
+  }
+  oo <- .C(C_Xbd,f=as.double(rep(0,n)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1), 
+           m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
+           as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc))
+  oo$f
+} ## Xbd
+
+dchol <- function(dA,R) {
+## if dA contains matrix dA/dx where R is chol factor s.t. R'R = A
+## then this routine returns dR/dx...
+  p <- ncol(R)
+  oo <- .C(C_dchol,dA=as.double(dA),R=as.double(R),dR=as.double(R*0),p=as.integer(ncol(R)))
+  return(matrix(oo$dR,p,p))
+} ## dchol
+
+vcorr <- function(dR,Vr,trans=TRUE) {
+## Suppose b = sum_k op(dR[[k]])%*%z*r_k, z ~ N(0,Ip), r ~ N(0,Vr). vcorr returns cov(b).
+## dR is a list of p by p matrices. 'op' is 't' if trans=TRUE and I() otherwise.
+  p <- ncol(dR[[1]])
+  M <- if (trans) ncol(Vr) else -ncol(Vr) ## sign signals transpose or not to C code
+  if (abs(M)!=length(dR)) stop("internal error in vcorr, please report to simon.wood@r-project.org")
+  oo <- .C(C_vcorr,dR=as.double(unlist(dR)),Vr=as.double(Vr),Vb=as.double(rep(0,p*p)),
+           p=as.integer(p),M=as.integer(M))
+  return(matrix(oo$Vb,p,p))
+} ## vcorr
+
+
 pinv <- function(X,svd=FALSE) {
 ## a pseudoinverse for n by p, n>p matrices
   qrx <- qr(X,tol=0,LAPACK=TRUE)
@@ -93,7 +165,7 @@ pqr2 <- function(x,nt=1,nb=30) {
 
 pbsi <- function(R,nt=1,copy=TRUE) {
 ## parallel back substitution inversion of upper triangular R
-## library(mgcv); n <- 5000;p<-4000;x <- matrix(runif(n*p),n,p)
+## library(mgcv); n <- 500;p<-400;x <- matrix(runif(n*p),n,p)
 ## qrx <- mgcv:::pqr2(x,2);R <- qr.R(qrx)
 ## system.time(Ri <- mgcv:::pbsi(R,2))
 ## system.time(Ri2 <- backsolve(R,diag(p)));range(Ri-Ri2)
@@ -115,6 +187,20 @@ pchol <- function(A,nt=1,nb=30) {
   rank <- .Call(C_mgcv_Rpchol,A,piv,nt,nb)
   attr(A,"pivot") <- piv+1;attr(A,"rank") <- rank
   A
+}
+
+pforwardsolve <- function(R,B,nt=1) {
+## parallel forward solve via simple col splitting...
+ if (!is.matrix(B)) B <- as.matrix(B)
+ .Call(C_mgcv_Rpforwardsolve,R,B,nt)
+
+}
+
+pcrossprod <- function(A,trans=FALSE,nt=1,nb=30) {
+## parallel cross prod A'A or AA' if trans==TRUE...
+ if (!is.matrix(A)) A <- as.matrix(A)
+ if (trans) A <- t(A)
+ .Call(C_mgcv_Rpcross,A,nt,nb)
 }
 
 pRRt <- function(R,nt=1) {

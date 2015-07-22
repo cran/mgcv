@@ -1,4 +1,4 @@
-/* Copyright (C) 2007-2014 Simon N. Wood  simon.wood@r-project.org
+/* Copyright (C) 2007-2015 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -2125,7 +2125,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
           double *Det2_th,double *Det3,double *Det_th2,
           double *Det4, double *Det3_th, double *Det2_th2,
-          double *beta,double *b1,
+          double *beta,double *b1,double *w1,
           double *D1,double *D2,double *P0,double *P1,double *P2,
           double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
@@ -2202,7 +2202,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
 */
 { double *work,*p0,*p1,*p2,*p3,*p4,*p5,*p6,*p7,*K=NULL,
     *Vt,*b2=NULL,*P,xx=0.0,*eta1=NULL,*eta2=NULL,
-    *PKtz,*wi=NULL,*w1=NULL,*w2=NULL,*Tk=NULL,*Tkm=NULL,
+    *PKtz,*wi=NULL,*w2=NULL,*Tk=NULL,*Tkm=NULL,
     *dev_hess=NULL,*R,*raw,*Q1,*Q,*nulli,*WX,*tau,*R1;
   int i,j,k,*pivot1,ScS,*pi,rank,*pivot,
     ntot,n_2dCols=0,n_drop,*drop,tp,
@@ -2315,7 +2315,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   
   if (*deriv) {
     /* first derivs... */
-    p0 = w1 = (double *)R_chk_calloc((size_t) *n * ntot,sizeof(double)); 
+    p0 = w1; // = (double *)R_chk_calloc((size_t) *n * ntot,sizeof(double)); 
     p3 = Det2_th;p4 = eta1;
     for (i=0;i<ntot;i++) {
       p1=Det3;p2 = p1 + *n;
@@ -2366,11 +2366,6 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     R_chk_free(wi);
   } /* end of w derivs */
 
-  /* want to allow ML also...
-     1. move get_bSb to before get_ddetXWXpS etc, as MLpenalty1 messes up rS
-     2. modify MLpenalty1 to accept n_theta argument
-     3. Store R and Q1 as required by MLpenalty1
-  */
   if (ML) { /* ML is required (rather than REML), and need to save some stuff */
     /* save just R as rank by rank instead of nr by rank */
     for (p0=R,p1=R,j=0;j<rank;j++,p1+=nr) {
@@ -2451,7 +2446,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   if (*deriv) { 
     //R_chk_free(b1);
     R_chk_free(eta1);R_chk_free(Tk);
-    R_chk_free(w1);
+    //R_chk_free(w1);
     if (deriv2) {
       R_chk_free(b2);R_chk_free(eta2);R_chk_free(w2);
       R_chk_free(Tkm);R_chk_free(dev_hess);
@@ -2471,8 +2466,8 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
 void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	  double *sp,double *z,double *w,double *wf,double *alpha,double *mu,double *eta, double *y,
 	 double *p_weights,double *g1,double *g2,double *g3,double *g4,double *V0,
-	  double *V1,double *V2,double *V3,double *beta,double *b1,double *D1,double *D2,
-    double *P0, double *P1,double *P2,double *trA,
+	  double *V1,double *V2,double *V3,double *beta,double *b1,double *w1,
+         double *D1,double *D2,double *P0, double *P1,double *P2,double *trA,
     double *trA1,double *trA2,double *rV,double *rank_tol,double *conv_tol, int *rank_est,
 	 int *n,int *q, int *M,int *Mp,int *Enrow,int *rSncol,int *deriv,
 	  int *REML,int *fisher,int *fixed_penalty,int *nt)     
@@ -2579,7 +2574,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 { double *WX,*tau,*work,*p0,*p1,*p2,*p3,*K=NULL,
     *R1,*Vt,xx,*b2,*P,*Q,
     *af1=NULL,*af2=NULL,*a1,*a2,*eta1=NULL,*eta2=NULL,
-    *PKtz,*v1,*v2,*wi,*w1,*w2,*pw2,*Tk,*Tkm,*Tfk=NULL,*Tfkm=NULL,
+    *PKtz,*v1,*v2,*wi,*w2,*pw2,*Tk,*Tkm,*Tfk=NULL,*Tfkm=NULL,
          *pb2, *dev_grad,*dev_hess=NULL,
          ldetXWXS=0.0,reml_penalty=0.0,bSb=0.0,*R,
     *alpha1,*alpha2,*raw,*Q1,*nulli;
@@ -2659,7 +2654,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     eta1 = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
     Tk = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
    
-    w1 = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
+    //w1 = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
 
     n_eta2 = *n * n_2dCols;
     eta2 = (double *)R_chk_calloc((size_t)n_eta2,sizeof(double));
@@ -2732,7 +2727,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   } /* end of if (*deriv) */ 
   else { /* keep compilers happy */
     v1=v2=b1=(double *)NULL;
-    a1=a2=dev_grad=w1=w2=b2=(double *)NULL;
+    a1=a2=dev_grad=w2=b2=(double *)NULL;
     Tk=Tkm=(double *)NULL;
   }
   /************************************************************************************/
@@ -2886,19 +2881,6 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   } /* note that rS scrambled from here on... */
 
 
-    /* DEBUG NOTE: pearson2 and subsequent rescaling of P0-P2 were here... */
-
-  /*  pearson2(P0,P1,P2,y,mu,V0,V1,V2,g1,g2,p_weights,eta1,eta2,*n,*M,*deriv,deriv2);
-  
-  if (*REML) {*/ /* really want scale estimate and derivatives in P0-P2, so rescale */
-  /*  j = *n - *Mp;
-    *P0 /= j;
-    if (*deriv) for (p1 = P1,p2 = P1 + *M;p1<p2;p1++) *p1 /= j;
-    if (*deriv>1) for (p1 = P2,p2 = P2 + *M * *M;p1<p2;p1++) *p1 /= j; 
-    }*/
-
-
-
   /* clean up memory, except what's needed to get tr(A) and derivatives 
   */ 
 
@@ -2910,7 +2892,8 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     R_chk_free(eta1);
     R_chk_free(eta2);
     R_chk_free(a1);R_chk_free(a2);R_chk_free(wi);R_chk_free(dev_grad);
-    R_chk_free(w1);R_chk_free(w2);R_chk_free(b2);
+    //R_chk_free(w1);
+    R_chk_free(w2);R_chk_free(b2);
 
     if (deriv2) { R_chk_free(dev_hess);}
   }

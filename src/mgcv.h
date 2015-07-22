@@ -24,7 +24,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
 void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	  double *sp,double *z,double *w,double *wf,double *alpha,double *mu,double *eta, double *y,
 	 double *p_weights,double *g1,double *g2,double *g3,double *g4,double *V0,
-	  double *V1,double *V2,double *V3,double *beta,double *b1,double *D1,double *D2,
+	  double *V1,double *V2,double *V3,double *beta,double *b1,double *w1,double *D1,double *D2,
          double *P0, double *P1,double *P2,double *trA,
          double *trA1,double *trA2,double *rV,double *rank_tol,double *conv_tol, int *rank_est,
 	 int *n,int *q, int *M,int *Mp,int *Enrow,int *rSncol,int *deriv,
@@ -35,7 +35,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
           double *Det2_th,double *Det3,double *Det_th2,
           double *Det4, double *Det3_th, double *Det2_th2,
-          double *beta,double *b1,double *D1,double *D2,double *P,double *P1,double *P2,
+          double *beta,double *b1,double *w1,double *D1,double *D2,double *P,double *P1,double *P2,
           double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
 	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
@@ -68,13 +68,23 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
             int *m,double *ll,double *lb,double *lbb,double *dbeta,
             double *dH,int *deriv,int *nsp,int *nt);
 
+/* discretized covariate methods */
+void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx, 
+          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
+          int *ar_row,double *ar_weights);
+void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *m,int *p, int *n, 
+	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
+          int *ar_stop,int *ar_row,double *ar_weights);
+void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n, 
+	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc);
+
 /* various service routines */
 
 void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
 	       double *y,double *eps,int *n,
                double *th,double *rho,double *a, double *b);
 void psum(double *y, double *x,int *index,int *n);
-void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p);
+void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
 void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,int *nt);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);
@@ -121,6 +131,10 @@ void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N);
 void mgcv_Rpbsi(SEXP A, SEXP NT);
 void mgcv_RPPt(SEXP a,SEXP r, SEXP NT);
 SEXP mgcv_Rpchol(SEXP Amat,SEXP PIV,SEXP NT,SEXP NB);
+void dchol(double *dA, double *R, double *dR,int *p);
+void vcorr(double *dR,double *Vr,double *Vb,int *p,int *M);
+SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT);
+SEXP mgcv_Rpcross(SEXP A, SEXP NT,SEXP NB);
 
 /* basis constructor/prediction routines*/
 
