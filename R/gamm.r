@@ -1195,9 +1195,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
 # between the basis constructors provided in mgcv and the gammPQL routine used to estimate the model.
-# NOTE: need to fill out the gam object properly
-{
- ## if (!require("nlme")) stop("gamm() requires package nlme to be installed")
+{ if (inherits(family,"extended.family")) warning("family are not designed for use with gamm!")
+  
   control <- do.call("lmeControl",control) 
     # check that random is a named list
     if (!is.null(random))

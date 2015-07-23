@@ -96,11 +96,11 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
   validmu <- function(mu) all(is.finite(mu))
 
   dev.resids <- function(y, mu, wt,theta=NULL) {
-    F <- function(x) {
-      h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
-      x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
-      h 
-    }
+    #F <- function(x) {
+    #  h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
+    #  x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
+    #  h 
+    #}
     Fdiff <- function(a,b) {
       ## cancellation resistent F(b)-F(a), b>a
       h <- rep(1,length(b)); h[b>0] <- -1; eb <- exp(b*h)
@@ -144,11 +144,11 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
 
   Dd <- function(y, mu, theta, wt=NULL, level=0) {
   ## derivatives of the deviance...
-    F <- function(x) { ## e^(x)/(1+e^x) without overflow
-      h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
-      x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
-      h 
-    }
+   # F <- function(x) { ## e^(x)/(1+e^x) without overflow
+   #   h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
+   #   x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
+   #   h 
+   # }
     Fdiff <- function(a,b) {
       ## cancellation resistent F(b)-F(a), b>a 
       h <- rep(1,length(b)); h[b>0] <- -1; eb <- exp(b*h)
@@ -958,7 +958,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
     ## derivatives of the -2*loglik...
       ## ltheta <- theta
       theta <- exp(theta)
-      onemu <- 1 - mu;  oney <- 1 - y
+      onemu <- 1 - mu; ## oney <- 1 - y
       muth <- mu*theta; ## yth <- y*theta
       onemuth <- onemu*theta  ## (1-mu)*theta
       psi0.th <- digamma(theta)
@@ -1595,18 +1595,18 @@ ziP <- function (theta = NULL, link = "identity") {
 
     })
 
-   fv <- function(lp,theta=NULL) {
-    ## optional function to give fitted values... 
-      if (is.null(theta)) theta <- get(".Theta")
-      th1 <- theta[1]; th2 <- exp(theta[2]); 
-      eta <- th1 + th2*lp
-      p <- 1 - exp(-exp(eta))
-      fv <- lambda <- exp(lp)
-      ind <- lp < log(.Machine$double.eps)/2
-      fv[!ind] <- p[!ind] * lambda[!ind]/(1-exp(-lambda[!ind]))
-      fv[ind] <- p[ind]
-      fv      
-    } ## fv
+#   fv <- function(lp,theta=NULL) {
+#    ## optional function to give fitted values... 
+#      if (is.null(theta)) theta <- get(".Theta")
+#      th1 <- theta[1]; th2 <- exp(theta[2]); 
+#      eta <- th1 + th2*lp
+#      p <- 1 - exp(-exp(eta))
+#      fv <- lambda <- exp(lp)
+#      ind <- lp < log(.Machine$double.eps)/2
+#      fv[!ind] <- p[!ind] * lambda[!ind]/(1-exp(-lambda[!ind]))
+#      fv[ind] <- p[ind]
+#      fv      
+#    } ## fv
 
     rd <- function(mu,wt,scale) {
     ## simulate data given fitted latent variable in mu 

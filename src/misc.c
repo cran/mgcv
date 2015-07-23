@@ -530,12 +530,16 @@ x <- rtweedie(10000,power=1.5,mu=1,phi=1)
 /** Fast re-weighting routines                         */
 /*******************************************************/
 
-void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p) {
+void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans) {
 /* Function to recombine rows of n by p matrix X (column ordered).
-   ith row of X' is made up of row[stop[i-1]...stop[i]], weighted by 
-   w[stop[i-1]...stop[i]]. stop[-1]=0 by convention.
+   ith row of X' is made up of row[stop[i-1]+1...stop[i]], weighted by 
+   w[stop[i-1]+1...stop[i]]. stop[-1]=-1 by convention.
    stop is an n vector.     
    
+   If (trans==0) the the operation on a column x is x'[i] += w[row[j]] * X[row[j]] over the 
+   j from stop[i-1]+1 to stop[i]. Otherwise the tranposed operation 
+   x'[row[j]] += w[row[j]] * x[i] is used with the same j range. x' zero at outset.
+
    See rwMatrix in bam.r for call from R. 
 */
   int i,j,jump,start=0,end,off;
@@ -547,14 +551,19 @@ void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p) {
   for (i=0;i<*n;i++) { /* loop through rows of output X1 */
     end = stop[i]+1;
     for (j=start;j<end;j++) { /* loop through the input rows */
-      X1p = X1 + i;    /* pointer to start of row i of output */
-      Xp = X + row[j]; /* pointer to start of source row */
+      if (*trans) {
+        X1p = X1 + row[j];
+        Xp = X + i;
+      } else { 
+        X1p = X1 + i;    /* pointer to start of row i of output */
+        Xp = X + row[j]; /* pointer to start of source row */
+      }
       weight = w[j];   
       for (Xpe=Xp+off;Xp<Xpe;Xp+=jump,X1p+=jump) *X1p += weight * *Xp;
     }
     start = end;
   }
-  /* coppy output to input for return...*/
+  /* copy output to input for return...*/
   for (Xp=X,X1p=X1,Xpe=Xp+off;Xp<Xpe;Xp++,X1p++) *Xp = *X1p;
   R_chk_free(X1);
 }

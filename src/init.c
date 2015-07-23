@@ -14,10 +14,17 @@ R_CallMethodDef CallMethods[] = {
   { "mgcv_Rpbsi",(DL_FUNC)&mgcv_Rpbsi,2},
   { "mgcv_RPPt",(DL_FUNC)&mgcv_RPPt,3},
   { "mgcv_Rpchol",(DL_FUNC)&mgcv_Rpchol,4},
+  { "mgcv_Rpforwardsolve",(DL_FUNC)&mgcv_Rpforwardsolve,3},
+  { "mgcv_Rpcross",(DL_FUNC)&mgcv_Rpcross,3},
   {NULL, NULL, 0}
 };
 
 R_CMethodDef CEntries[] = {
+    {"XWXd", (DL_FUNC) &XWXd,17},
+    {"XWyd", (DL_FUNC) &XWyd,17},
+    {"Xbd", (DL_FUNC) &Xbd,13},
+    {"vcorr", (DL_FUNC) &vcorr, 5},
+    {"dchol", (DL_FUNC) &dchol, 4},
     {"mgcv_omp", (DL_FUNC) &mgcv_omp, 1},
     {"coxpred", (DL_FUNC) &coxpred, 13},
     {"coxpp", (DL_FUNC) &coxpp, 10},
@@ -33,8 +40,8 @@ R_CMethodDef CEntries[] = {
     {"magic", (DL_FUNC) &magic, 19},
     {"mgcv_mmult", (DL_FUNC) &mgcv_mmult,8},
     {"mgcv_pmmult", (DL_FUNC) &mgcv_pmmult,9},
-    {"gdi1",(DL_FUNC) &gdi1,47},
-    {"gdi2",(DL_FUNC) &gdi2,44},
+    {"gdi1",(DL_FUNC) &gdi1,48},
+    {"gdi2",(DL_FUNC) &gdi2,45},
     {"R_cond",(DL_FUNC) &R_cond,5} ,
     {"pls_fit1",(DL_FUNC)&pls_fit1,12},
     {"tweedious",(DL_FUNC)&tweedious,13},
@@ -45,7 +52,7 @@ R_CMethodDef CEntries[] = {
     {"mgcv_td_qy",(DL_FUNC)&mgcv_td_qy,7},
     {"mgcv_symeig",(DL_FUNC)&mgcv_symeig,6},
     {"read_mat",(DL_FUNC)&read_mat,4},
-    {"rwMatrix",(DL_FUNC)&rwMatrix,6},
+    {"rwMatrix",(DL_FUNC)&rwMatrix,7},
     {"in_out",(DL_FUNC)&in_out,8},
     {"Rlanczos",(DL_FUNC)&Rlanczos,8},
     {"rksos",(DL_FUNC)&rksos,3},

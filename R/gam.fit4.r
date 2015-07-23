@@ -2,7 +2,6 @@
 ## Routines for gam estimation beyond exponential family.
 
 
-
 dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
 ## What is available directly from the family are derivatives of the 
 ## deviance and link w.r.t. mu. This routine converts these to the
@@ -535,7 +534,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
             Det2=as.double(dd$Deta2),Dth2=as.double(dd$Dth2),Det.th=as.double(dd$Detath),
             Det2.th=as.double(dd$Deta2th),Det3=as.double(dd$Deta3),Det.th2 = as.double(dd$Detath2),
             Det4 = as.double(dd$Deta4),Det3.th=as.double(dd$Deta3th), Deta2.th2=as.double(dd$Deta2th2),
-            beta=as.double(coef),b1=as.double(rep(0,ntot*ncol(x))),
+            beta=as.double(coef),b1=as.double(rep(0,ntot*ncol(x))),w1=rep(0,ntot*length(z)),
             D1=as.double(rep(0,ntot)),D2=as.double(rep(0,ntot^2)),
             P=as.double(0),P1=as.double(rep(0,ntot)),P2 = as.double(rep(0,ntot^2)),
             ldet=as.double(1-2*(scoreType=="ML")),ldet1 = as.double(rep(0,ntot)), 
@@ -551,6 +550,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    rV <- T %*% rV   
    ## derivatives of coefs w.r.t. sps etc...
    db.drho <- if (deriv) T %*% matrix(oo$b1,ncol(x),ntot) else NULL 
+   dw.drho <- if (deriv) matrix(oo$w1,length(z),ntot) else NULL
    Kmat <- matrix(0,nrow(x),ncol(x)) 
    Kmat[good,] <- oo$X                    ## rV%*%t(K)%*%(sqrt(wf)*X) = F; diag(F) is edf array 
 
@@ -607,6 +607,11 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    ww <- wt <- rep.int(0, nobs)
    wt[good] <- wf 
    ww[good] <- w
+   if (deriv && nrow(dw.drho)!=nrow(x)) {
+      w1 <- dw.drho
+      dw.drho <- matrix(0,nrow(x),ncol(w1))
+      dw.drho[good,] <- w1
+   }
    aic.model <- family$aic(y, mu, theta, weights, dev) # note: incomplete 2*edf needs to be added
  
 
@@ -619,7 +624,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
         df.null = nulldf, y = y, converged = conv,
         boundary = boundary,
         REML=REML,REML1=REML1,REML2=REML2,
-        rV=rV,db.drho=db.drho,
+        rV=rV,db.drho=db.drho,dw.drho=dw.drho,
         scale.est=scale,reml.scale=scale,
         aic=aic.model,
         rank=oo$rank.est,
@@ -700,7 +705,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 
   ## get log likelihood, grad and Hessian (w.r.t. coefs - not s.p.s) ...
   ll <- family$ll(y,x,coef,weights,family,deriv=1) 
-  ll0 <- ll$l - t(coef)%*%St%*%coef/2
+  ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
   rank.checked <- FALSE ## not yet checked the intrinsic rank of problem 
   rank <- q;drop <- NULL
   eigen.fix <- FALSE
@@ -773,16 +778,36 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     coef1 <- coef + step 
     ll <- family$ll(y,x,coef1,weights,family,deriv=1) 
     ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
-    khalf <- 0
-    while (ll1 < ll0 && khalf < 50) { ## step halve until it succeeds...
-      step <- step/2;coef1 <- coef + step
+    khalf <- 0;fac <- 2
+    while (ll1 < ll0 && khalf < 25) { ## step halve until it succeeds...
+      step <- step/fac;coef1 <- coef + step
       ll <- family$ll(y,x,coef1,weights,family,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (ll1>=ll0) {
         ll <- family$ll(y,x,coef1,weights,family,deriv=1)
+      } else { ## abort if step has made no difference
+        if (max(abs(coef1-coef))==0) khalf <- 100
       }
       khalf <- khalf + 1
+      if (khalf>5) fac <- 5
     } ## end step halve
+ 
+    if (ll1 < ll0) { ## switch to steepest descent... 
+      step <- -.5*drop(grad)*mean(abs(coef))/mean(abs(grad))
+      khalf <- 0
+    }
+
+    while (ll1 < ll0 && khalf < 25) { ## step cut until it succeeds...
+      step <- step/10;coef1 <- coef + step
+      ll <- family$ll(y,x,coef1,weights,family,deriv=0)
+      ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
+      if (ll1>=ll0) {
+        ll <- family$ll(y,x,coef1,weights,family,deriv=1)
+      } else { ## abort if step has made no difference
+        if (max(abs(coef1-coef))==0) khalf <- 100
+      }
+      khalf <- khalf + 1
+    }
 
     if (ll1 >= ll0||iter==control$maxit) { ## step ok. Accept and test
       coef <- coef + step
@@ -1017,7 +1042,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ret
 } ## end of gam.fit5
 
-gam.fit5.post.proc <- function(object,Sl,L) {
+gam.fit5.post.proc <- function(object,Sl,L,S,off) {
 ## object is object returned by gam.fit5, Sl is penalty object, L maps working sp
 ## vector to full sp vector 
 ## Computes:
@@ -1089,13 +1114,27 @@ gam.fit5.post.proc <- function(object,Sl,L) {
   }  
 
   ## compute the smoothing parameter uncertainty correction...
-  if (!is.null(object$outer.info$hess)) {
-    ev <- eigen(object$outer.info$hess,symmetric=TRUE)
-    ind <- ev$values <= 0
-    ev$values[ind] <- 0;ev$values[!ind] <- 1/sqrt(ev$values[!ind])
+  if (!is.null(object$outer.info$hess)) { 
     if (!is.null(L)) object$db.drho <- object$db.drho%*%L ## transform to derivs w.r.t. working
-    Vc <- crossprod((ev$values*t(ev$vectors))%*%t(object$db.drho))
-    Vc <- Vb + Vc  ## Bayesian cov matrix with sp uncertainty
+    ev <- eigen(object$outer.info$hess,symmetric=TRUE)
+    d <- ev$values;ind <- d <= 0
+    d[ind] <- 0;d[!ind] <- 1/sqrt(d[!ind])
+    Vc <- crossprod((d*t(ev$vectors))%*%t(object$db.drho))
+    #dpv <- rep(0,ncol(object$outer.info$hess));M <- length(off)
+    #dpv[1:M] <- 1/100 ## prior precision (1/var) on log smoothing parameters
+    #Vr <- chol2inv(chol(object$outer.info$hess + diag(dpv,ncol=length(dpv))))[1:M,1:M]
+    #Vc <- object$db.drho%*%Vr%*%t(object$db.drho)
+    
+    #dpv[1:M] <- 1/10 ## prior precision (1/var) on log smoothing parameters
+    #Vr <- chol2inv(chol(object$outer.info$hess + diag(dpv,ncol=length(dpv))))[1:M,1:M]
+    #M <- length(off)
+    d <- ev$values; d[ind] <- 0;
+    d <- d + 1/50 #d[1:M] <- d[1:M] + 1/50 
+    d <- 1/sqrt(d)
+    Vr <- crossprod(d*t(ev$vectors))
+    #Vc2 <- Vb.corr(R,L,S,off,dw=NULL,w=NULL,log(object$sp),Vr)
+
+    Vc <- Vb + Vc #+ Vc2  ## Bayesian cov matrix with sp uncertainty
     ## reverse the various re-parameterizations...
   } else Vc <- Vb
   Vc <- Sl.repara(object$rp,Vc,inverse=TRUE) 
@@ -1112,8 +1151,14 @@ gam.fit5.post.proc <- function(object,Sl,L) {
   ## model. This is larger than edf2 should be, because of bias correction variability,
   ##  but is bounded in a way that is not *guaranteed* for edf2. Note that 
   ## justification only applies to sum(edf1/2) not elementwise   
+  if (!is.null(object$outer.info$hess)) { 
+    ## second correction term is easier computed in original parameterization...
+    Vc2 <- Vb.corr(R,L,S,off,dw=NULL,w=NULL,log(object$sp),Vr)
+    Vc <- Vc + Vc2
+  }
   edf1 <- 2*edf - rowSums(t(F)*F)
-  edf2 <- diag(Vc%*%crossprod(R)) 
+  #edf2 <- diag(Vc%*%crossprod(R)) 
+  edf2 <- rowSums(Vc*crossprod(R))
   if (sum(edf2)>sum(edf1)) edf2 <- edf1 
   ## note hat not possible here...
   list(Vc=Vc,Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,edf2=edf2,F=F,R=R)

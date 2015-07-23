@@ -75,7 +75,14 @@ jini <- function(G,lambda) {
     X[(nobs+1):(nobs+jj),uoff[i]:(uoff[i]+ncol(S)-1)] <- S
     nobs <- nobs + jj
   }
-  qr.coef(qr(X),z)
+  ## we need some idea of initial coeffs and some idea of 
+  ## associated standard error...
+  qrx <- qr(X,LAPACK=TRUE)
+  rp <- qrx$pivot;rp[rp] <- 1:ncol(X)
+  Ri <- backsolve(qr.R(qrx),diag(1,nrow=ncol(X)))[rp,] 
+  beta <- qr.coef(qrx,z)
+  se <- sqrt(rowSums(Ri^2))*sqrt(sum((z-X%*%beta)^2)/nrow(X))
+  list(beta=beta,se=se)
 } ## jini
 
 jagam <- function(formula,family=gaussian,data=list(),file,weights=NULL,na.action,
@@ -154,11 +161,22 @@ sp.prior = "gamma",diagonalize=FALSE) {
   if (use.weights) jags.stuff$w <- weights
 
   if (family$family == "binomial") jags.stuff$y <- G$y*weights ## JAGS not expecting observed prob!!
+ 
+  ## get initial values, for use by JAGS, and to guess suitable values for
+  ## uninformative priors...
+
+  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$off,G$L) ## initial sp values
+  jags.ini <- list()
+  lam <- if (is.null(G$L)) lambda else G$L%*%lambda
+  jin <- jini(G,lam)
+  jags.ini$b <- jin$beta
+  prior.tau <- signif(0.01/(abs(jin$beta) + jin$se)^2,2)
 
   ## set the fixed effect priors...
   if (G$nsdf>0) {
-    cat("  ## Parameteric effect priors CHECK tau is appropriate!\n",file=file,append=TRUE)
-    cat("  for (i in 1:",G$nsdf,") { b[i] ~ dnorm(0,0.001) }\n",file=file,append=TRUE,sep="")
+    ptau <- min(prior.tau[1:G$nsdf]) 
+    cat("  ## Parametric effect priors CHECK tau=1/",signif(1/sqrt(ptau),2),"^2 is appropriate!\n",file=file,append=TRUE,sep="")
+    cat("  for (i in 1:",G$nsdf,") { b[i] ~ dnorm(0,",ptau,") }\n",file=file,append=TRUE,sep="")
   }
 
   ## Work through smooths.
@@ -191,9 +209,10 @@ sp.prior = "gamma",diagonalize=FALSE) {
     if (seperable) {
       b0 <- G$smooth[[i]]$first.para
       if (M==0) {
-        cat("  ## Note fixed vague prior, CHECK tau...\n",file=file,append=TRUE,sep="")
+        cat("  ## Note fixed vague prior, CHECK tau = 1/",signif(1/sqrt(ptau),2),"^2...\n",file=file,append=TRUE,sep="")
         b1 <- G$smooth[[i]]$last.para
-        cat("  for (i in ",b0,":",b1,") { b[i] ~ dnorm(0, 1e-6) }\n",file=file,append=TRUE,sep="")
+        ptau <- min(prior.tau[b0:b1])
+        cat("  for (i in ",b0,":",b1,") { b[i] ~ dnorm(0,",ptau,") }\n",file=file,append=TRUE,sep="")
       } else for (j in 1:M) {
         D <- diag(G$smooth[[i]]$S[[j]]) > 0
         b1 <- sum(as.numeric(D)) + b0 - 1
@@ -222,10 +241,7 @@ sp.prior = "gamma",diagonalize=FALSE) {
   } ## smoothing penalties finished
 
   ## Write the smoothing parameter prior code, using L if it exists.
-  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$off,G$L) ## initial sp values
-  jags.ini <- list()
-  lam <- if (is.null(G$L)) lambda else G$L%*%lambda
-  jags.ini$b <- jini(G,lam)
+
   cat("  ## smoothing parameter priors CHECK...\n",file=file,append=TRUE,sep="")
   if (is.null(G$L)) {
     if (sp.prior=="log.uniform") {

@@ -398,7 +398,10 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
 # missed. 
 # Note that with.pen is quite extreme, since you then pretty much only pick
 # up dependencies in the null spaces
-{ m <- length(sm)
+{ if (!with.pen) { ## check that's possible and reset if not!
+    with.pen <- nrow(Xp) < ncol(Xp) + sum(unlist(lapply(sm,function(x) ncol(x$X))))
+  }
+  m <- length(sm)
   if (m==0) return(sm)
   v.names<-array("",0);maxDim<-1
   for (i in 1:m) { ## collect all term names and max smooth `dim'
@@ -736,7 +739,7 @@ olid <- function(X,nsdf,pstart,flpi,lpi) {
 
 
 gam.setup.list <- function(formula,pterms,
-                     data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
+                    data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
                     scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=FALSE) {
 ## version of gam.setup for when gam is called with a list of formulae, 
@@ -863,6 +866,8 @@ gam.setup.list <- function(formula,pterms,
   G
 } ## gam.setup.list
 
+
+
 gam.setup <- function(formula,pterms,
                      data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
@@ -910,10 +915,6 @@ gam.setup <- function(formula,pterms,
     m <- 0
   } else  m <- length(split$smooth.spec) # number of smooth terms
   
-  #pmf <- data
-  #pmf$formula <- split$pf
-  #pterms <- attr(model.frame(split$pf,data,drop.unused.levels=TRUE),"terms") # pmf contains all data for parametric part
-
   G <- list(m=m,min.sp=min.sp,H=H,pearson.extra=0,
             dev.extra=0,n.true=-1,pterms=pterms) ## dev.extra gets added to deviance if REML/ML used in gam.fit3
   
@@ -958,7 +959,7 @@ gam.setup <- function(formula,pterms,
   G$smooth <- list()
   G$S <- list()
  
-  if (gamm.call) { ## flag that this is a call from gamm --- some smoothers need to now!
+  if (gamm.call) { ## flag that this is a call from gamm --- some smoothers need to know!
     if (m>0) for (i in 1:m) attr(split$smooth.spec[[i]],"gamm") <- TRUE
   }
 
@@ -1581,9 +1582,9 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   
   object$control <- control
   if (inherits(family,"general.family")) {
-    mv <- gam.fit5.post.proc(object,G$Sl,G$L)
+    mv <- gam.fit5.post.proc(object,G$Sl,G$L,G$S,G$off)
     object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
-  } else mv <- gam.fit3.post.proc(G$X,G$L,object)
+  } else mv <- gam.fit3.post.proc(G$X,G$L,G$S,G$off,object)
   ## note: use of the following in place of Vp appears to mess up p-values for smooths,
   ##       but doesn't change r.e. p-values of course. 
   if (!is.null(mv$Vc)) object$Vc <- mv$Vc 
@@ -1637,7 +1638,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
 
        method <- "REML" ## any method you like as long as it's REML
        G$Sl <- Sl.setup(G) ## prepare penalty sequence
-       G$X <- Sl.initial.repara(G$Sl,G$X) ## re-parameterize accordingly
+       G$X <- Sl.initial.repara(G$Sl,G$X,both.sides=FALSE) ## re-parameterize accordingly
        ## make sure its BFGS if family only supplies these derivatives
        if (!is.null(G$family$available.derivs)&&G$family$available.derivs==1) optimizer <- c("outer","bfgs")
     }
@@ -1771,7 +1772,10 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
       }
       lsp <- c(lsp,log.scale) ## append log initial scale estimate to lsp
       ## extend G$L, if present...
-      if (!is.null(G$L)) G$L <- cbind(rbind(G$L,rep(0,ncol(G$L))),c(rep(0,nrow(G$L)),1))
+      if (!is.null(G$L)) { 
+        G$L <- cbind(rbind(G$L,rep(0,ncol(G$L))),c(rep(0,nrow(G$L)),1))
+        #attr(G$L,"scale") <- TRUE ## indicates scale estimated as sp
+      }
       if (!is.null(G$lsp0)) G$lsp0 <- c(G$lsp0,0)
     } 
      ## check if there are extra parameters to estimate
@@ -1785,7 +1789,10 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,...) {
       if (!is.null(G$L)&&nth>0) { 
         L <- rbind(cbind(diag(nth),matrix(0,nth,ncol(G$L))),
                    cbind(matrix(0,nrow(G$L),nth),G$L))
+        #sat <- attr(G$L,"scale")
         G$L <- L
+        #attr(G$L,"scale") <- sat
+        #attr(G$L,"not.sp") <- nth ## first not.sp params are not smoothing params
       }
       if (!is.null(G$lsp0)) G$lsp0 <- c(th0*0,G$lsp0)
     } else nth <- 0
@@ -2091,7 +2098,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
                          rank.tol=.Machine$double.eps^0.5,
                          nlm=list(),optim=list(),newton=list(),outerPIsteps=0,
                          idLinksBases=TRUE,scalePenalty=TRUE,
-                         keepData=FALSE,scale.est="pearson") 
+                         keepData=FALSE,scale.est="fletcher") 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -2101,7 +2108,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
 # rank.tol is the tolerance to use for rank determination
 # outerPIsteps is the number of performance iteration steps used to intialize
 #                         outer iteration
-{   scale.est <- match.arg(scale.est,c("robust","pearson","deviance"))
+{   scale.est <- match.arg(scale.est,c("fletcher","pearson","deviance"))
     if (!is.numeric(nthreads) || nthreads <1) stop("nthreads must be a positive integer") 
     if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
@@ -3089,8 +3096,6 @@ residuals.gam <-function(object, type = "deviance",...)
 ## Start of anova and summary (with contributions from Henric Nilsson) ....
 
 
-
-
 smoothTest <- function(b,X,V,eps=.Machine$double.eps^.5) {
 ## Forms Cox, Koh, etc type test statistic, and
 ## obtains null distribution by simulation...
@@ -3323,6 +3328,8 @@ reTest <- function(b,m) {
   list(stat=stat,pval=pval,rank=rank)
 } ## end reTest
 
+
+
 testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 ## Implements Wood (2013) Biometrika 100(1), 221-228
 ## The type argument specifies the type of truncation to use.
@@ -3340,7 +3347,9 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
   V <- R%*%V[qrx$pivot,qrx$pivot,drop=FALSE]%*%t(R)
   V <- (V + t(V))/2
   ed <- eigen(V,symmetric=TRUE)
-
+  ## remove possible ambiguity from statistic...
+  siv <- sign(ed$vectors[1,]);siv[siv==0] <- 1
+  ed$vectors <- sweep(ed$vectors,2,siv,"*")
 
   k <- max(0,floor(rank)) 
   nu <- abs(rank - k)     ## fractional part of supplied edf
@@ -3385,15 +3394,23 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
      B <- ev%*%B%*%ev
      eb <- eigen(B,symmetric=TRUE)
      rB <- eb$vectors%*%diag(sqrt(eb$values))%*%t(eb$vectors)
+     vec1 <- vec
+     vec1[,k:k1] <- t(rB%*%diag(c(-1,1))%*%t(vec[,k:k1]))
      vec[,k:k1] <- t(rB%*%t(vec[,k:k1]))
   } else {
-    if (k==0) vec <- t(t(vec)*sqrt(1/ed$val[1])) else
-    vec <- t(t(vec)/sqrt(ed$val[1:k]))
+    vec1 <- vec <- if (k==0) t(t(vec)*sqrt(1/ed$val[1])) else
+            t(t(vec)/sqrt(ed$val[1:k]))
     if (k==1) rank <- 1
   }
- 
+  ## there is an ambiguity in the choise of test statistic, leading to slight
+  ## differences in the p-value computation depending on which of 2 alternatives 
+  ## is arbitrarily selected. Following allows both to be computed and p-values
+  ## averaged (can't average test stat as dist then unknown) 
   d <- t(vec)%*%(R%*%p)
   d <- sum(d^2) 
+  d1 <- t(vec1)%*%(R%*%p)
+  d1 <- sum(d1^2)
+  ##d <- d1 ## uncomment to avoid averaging
 
   rank1 <- rank ## rank for lower tail pval computation below
 
@@ -3408,15 +3425,15 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
        val[k1] <- (rp - val[k])
      }
    
-     if (res.df <= 0) pval <- liu2(d,val) else ##  pval <- davies(d,val)$Qq else
-     pval <- simf(d,val,res.df)
+     if (res.df <= 0) pval <- (liu2(d,val) + liu2(d1,val))/2 else ##  pval <- davies(d,val)$Qq else
+     pval <- (simf(d,val,res.df) + simf(d1,val,res.df))/2
   } else { pval <- 2 }
   ## integer case still needs computing, also liu/pearson approx only good in 
   ## upper tail. In lower tail, 2 moment approximation is better (Can check this 
   ## by simply plotting the whole interesting range as a contour plot!)
   if (pval > .5) { 
-    if (res.df <= 0) pval <- pchisq(d,df=rank1,lower.tail=FALSE) else
-    pval <- pf(d/rank1,rank1,res.df,lower.tail=FALSE)
+    if (res.df <= 0) pval <- (pchisq(d,df=rank1,lower.tail=FALSE)+pchisq(d1,df=rank1,lower.tail=FALSE))/2 else
+    pval <- (pf(d/rank1,rank1,res.df,lower.tail=FALSE)+pf(d1/rank1,rank1,res.df,lower.tail=FALSE))/2
   }
   list(stat=d,pval=min(1,pval),rank=rank)
 } ## end of testStat
@@ -3837,17 +3854,21 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
           ok <- TRUE
         } 
       } else { ok <- TRUE} ## no id so proceed
-      if (ok) for (j in 1:length(x$smooth[[i]]$S.scale)) {
-        if (x$smooth[[i]]$sp[j]<0) { ## sp not supplied
-          x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
-          k <- k + 1
-          if (kf>0) {
+      if (ok) { 
+       if (length(x$smooth[[i]]$S.scale)!=length(x$smooth[[i]]$S))
+         warning("S.scale vector doesn't match S list - please report to maintainer")
+        for (j in 1:length(x$smooth[[i]]$S.scale)) {
+          if (x$smooth[[i]]$sp[j]<0) { ## sp not supplied
+            x$sp[k] <- x$sp[k] / x$smooth[[i]]$S.scale[j]
+            k <- k + 1
+            if (kf>0) {
+              x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
+              kf <- kf + 1
+            }
+          } else { ## sp supplied
             x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
             kf <- kf + 1
-          }
-        } else { ## sp supplied
-          x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[i]]$S.scale[j]
-          kf <- kf + 1
+          } 
         }
       } else { ## this id already dealt with, but full.sp not scaled yet 
         ii <- idxi[idx%in%x$smooth[[i]]$id] ## smooth prototype
@@ -3855,7 +3876,7 @@ gam.vcomp <- function(x,rescale=TRUE,conf.lev=.95) {
           x$full.sp[kf] <- x$full.sp[kf] / x$smooth[[ii]]$S.scale[j]
           kf <- kf + 1
         }
-      }
+      } 
     } ## finished rescaling
   }
   ## variance components (original scale)
@@ -3971,8 +3992,8 @@ mroot <- function(A,rank=NULL,method="chol")
 # correct rank if it isn't known in advance. 
 { if (is.null(rank)) rank <- 0 
   if (!isTRUE(all.equal(A,t(A)))) stop("Supplied matrix not symmetric")
-  if (method=="svd")
-  { um<-La.svd(A)
+  if (method=="svd") { 
+    um <- La.svd(A)
     if (sum(um$d!=sort(um$d,decreasing=TRUE))>0) 
     stop("singular values not returned in order")
     if (rank < 1) # have to work out rank
@@ -3985,14 +4006,17 @@ mroot <- function(A,rank=NULL,method="chol")
     d<-um$d[1:rank]^0.5
     return(t(t(um$u[,1:rank])*as.vector(d))) # note recycling rule used for efficiency
   } else
-  if (method=="chol")
-  { op <- options(warn=-1) ## don't want to be warned it's not +ve def
-    L <- chol(A,pivot=TRUE)
-    options(op) ## reset default warnings
+  if (method=="chol") { 
+    ## don't want to be warned it's not +ve def...
+    L <- suppressWarnings(chol(A,pivot=TRUE,tol=0))
     piv <- order(attr(L,"pivot"))
-    if (rank < 1) rank <- attr(L,"rank")
-    L <- L[,piv,drop=FALSE];L <- t(L[1:rank,,drop=FALSE])
-    #if (rank <= 1) dim(L) <- c(nrow(A),1)
+    ## chol does not work as documented (reported), have to explicitly zero
+    ## the trailing block...
+    r <- attr(L,"rank")
+    p <- ncol(L)
+    if (r < p) L[(r+1):p,(r+1):p] <- 0
+    if (rank < 1) rank <- r
+    L <- L[,piv,drop=FALSE]; L <- t(L[1:rank,,drop=FALSE])
     return(L)
   } else
   stop("method not recognised.")
@@ -4092,8 +4116,8 @@ initial.spg <- function(x,y,weights,family,S,off,L=NULL,lsp0=NULL,type=1,
     } else mustart <- mukeep
     if (inherits(family,"extended.family")) {
       theta <- family$getTheta()
-      w <- .5 * family$Dd(y,mustart,theta,weights)$EDmu2*family$mu.eta(family$linkfun(mustart))^2  
-    } else w <- as.numeric(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
+      w <- .5 * drop(family$Dd(y,mustart,theta,weights)$EDmu2*family$mu.eta(family$linkfun(mustart))^2)  
+    } else w <- drop(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
     w <- sqrt(w)
     if (type==1) { ## what PI would have used
       lambda <-  initial.sp(w*x,S,off)
@@ -4117,15 +4141,17 @@ initial.spg <- function(x,y,weights,family,S,off,L=NULL,lsp0=NULL,type=1,
 
 }
 
-initial.sp <- function(X,S,off,expensive=FALSE)
+initial.sp <- function(X,S,off,expensive=FALSE,XX=FALSE)
 # Find initial smoothing parameter guesstimates based on model matrix X 
 # and penalty list S. off[i] is the index of the first parameter to
 # which S[[i]] applies, since S[[i]]'s only store non-zero submatrix of 
 # penalty coefficient matrix.
+# if XX==TRUE then X contains X'X, not X!
 { n.p <- length(S) 
+  if (XX) expensive <- FALSE 
   def.sp <- array(0,n.p)
   if (n.p) { 
-    ldxx <- colSums(X*X) # yields diag(t(X)%*%X)
+    ldxx <- if (XX) diag(X) else colSums(X*X) # yields diag(t(X)%*%X)
     ldss <- ldxx*0       # storage for combined penalty l.d. 
     if (expensive) St <- matrix(0,ncol(X),ncol(X)) 
     pen <- rep(FALSE,length(ldxx)) # index of what actually gets penalized
@@ -4162,7 +4188,7 @@ initial.sp <- function(X,S,off,expensive=FALSE)
     }
   } 
   as.numeric(def.sp)
-}
+} ## initial.sp
 
 
 

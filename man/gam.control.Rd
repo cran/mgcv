@@ -15,7 +15,7 @@ gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
             rank.tol=.Machine$double.eps^0.5,
             nlm=list(),optim=list(),newton=list(),
             outerPIsteps=0,idLinksBases=TRUE,scalePenalty=TRUE,
-            keepData=FALSE,scale.est="pearson") 
+            keepData=FALSE,scale.est="fletcher") 
 }
 \arguments{ 
 \item{nthreads}{Some parts of some smoothing parameter selection methods (e.g. REML) can use some
@@ -76,7 +76,7 @@ if you are linking smoothing parameters but have set \code{idLinkBases} to \code
 object? Strict compatibility with class \code{glm} would keep it, but it wastes space to
 do so. }
 
-\item{scale.est}{How to estiamte the scale parameter for exponential family models estimated
+\item{scale.est}{How to estimate the scale parameter for exponential family models estimated
 by outer iteration. See \code{\link{gam.scale}}.}
 }
 

@@ -11,7 +11,7 @@ substantially with smoothing parameter value.
 } %- end description
 
 \usage{
-initial.sp(X,S,off,expensive=FALSE)
+initial.sp(X,S,off,expensive=FALSE,XX=FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -30,6 +30,8 @@ penalized by the penalty involving \code{S[[i]]}.}
 \item{expensive}{if \code{TRUE} then the overall amount of smoothing is
 adjusted so that the average degrees of freedom per penalized parameter is
 exactly 0.5: this is numerically costly. }
+
+\item{XX}{if \code{TRUE} then \code{X} contains \eqn{X^TX}{X'X}, rather than \eqn{X}{X}.}
 }
 
 \details{ Basically uses a crude approximation to the estimated degrees of
