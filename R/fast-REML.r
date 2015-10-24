@@ -81,19 +81,27 @@ Sl.setup <- function(G) {
       ## easily here means no overlap in penalties 
       Sl[[b]]$S <- G$smooth[[i]]$S
       nb <- nrow(Sl[[b]]$S[[1]])      
-      sbStart <- sbStop <- rep(NA,m)
+      sbdiag <- sbStart <- sbStop <- rep(NA,m)
+      ut <- upper.tri(Sl[[b]]$S[[1]],diag=FALSE) 
       ## overlap testing requires the block ranges 
       for (j in 1:m) { ## get block range for each S[[j]]
+        sbdiag[j] <- sum(abs(Sl[[b]]$S[[j]][ut]))==0 ## is penalty diagonal??
         ir <- range((1:nb)[rowSums(abs(Sl[[b]]$S[[j]]))>0])
-        #ic <- range((1:nb)[colSums(abs(Sl[[b]]$S[[j]]))>0]) ## symmetric not needed
         sbStart[j] <- ir[1];sbStop[j] <- ir[2] ## individual ranges
       } 
       split.ok <- TRUE
       for (j in 1:m) { ## test for overlap
         itot <- rep(FALSE,nb)
-        for (k in 1:m) if (j!=k) itot[sbStart[k]:sbStop[k]] <- TRUE
-        if (sum(itot[sbStart[j]:sbStop[j]])>0) { ## no good, some overlap detected
-          split.ok <- FALSE; break
+        if (all(sbdiag)) { ## it's all diagonal - can allow interleaving
+          for (k in 1:m) if (j!=k) itot[diag(Sl[[b]]$S[[k]])!=0] <- TRUE
+          if (sum(itot[diag(Sl[[b]]$S[[j]])!=0])>0) { ## no good, some overlap detected
+            split.ok <- FALSE; break
+          }
+        } else { ## not diagonal - really need on overlapping blocks
+          for (k in 1:m) if (j!=k) itot[sbStart[k]:sbStop[k]] <- TRUE
+          if (sum(itot[sbStart[j]:sbStop[j]])>0) { ## no good, some overlap detected
+            split.ok <- FALSE; break
+          }
         }
       }
       if (split.ok) { ## can split this block into m separate singleton blocks
@@ -108,9 +116,8 @@ Sl.setup <- function(G) {
         }
       } else { ## not possible to split
         Sl[[b]]$S <- G$smooth[[i]]$S
-      
+        b <- b + 1 ## next block!!
       } ## additive block finished
-      b <- b + 1 ## next block!!
     } ## additive block finished
   }
 

@@ -116,7 +116,8 @@ bp <- gam(y~s(la,lo,bs="sos",k=60),data=dat)
 
 ## pure knot based alternative...
 ind <- sample(1:n,100)
-bk <- gam(y~s(la,lo,bs="sos",k=60),knots=list(la=dat$la[ind],lo=dat$lo[ind]),data=dat)
+bk <- gam(y~s(la,lo,bs="sos",k=60),
+      knots=list(la=dat$la[ind],lo=dat$lo[ind]),data=dat)
 
 b <- bp
 

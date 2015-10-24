@@ -64,6 +64,8 @@ assumption that the coefficients are i.i.d. normal random effects. See \code{\li
 geographic units (districts of a town, for example). In this case a simple smoothing penalty is constructed
 based on the neighbourhood structure of the geographic units. See \code{\link{mrf}} for details and an example.}
 
+\item{Gaussian process smooths}{\code{bs="gp"}. Gaussian process models with a variety of simple correlation functions can be represented as smooths. See \code{\link{gp.smooth}} for details.}
+
 \item{Soap film smooths}{\code{bs="so"} (actually not single penaltied, but \code{bs="sw"} and \code{bs="sf"} allows splitting into single penalty components for use in tensor product smoothing). These are finite area smoothers designed to smooth within complicated geographical boundaries, where the boundary matters (e.g. you do not want to smooth across boundary features). See \code{\link{soap}} for details.}
 
 }
@@ -78,9 +80,12 @@ bases for tensor product smooths specified via \code{\link{te}}, \code{\link{ti}
 product smooths are smooth functions 
 of several variables where the basis is built up from tensor products of bases for smooths of fewer (usually one) 
 variable(s) (marginal bases). The multiple penalties for these smooths are produced automatically from the
-penalties of the marginal smooths. Wood (2006b) and Wood, Scheipl and Faraway (2012), give the general recipe for these constructions. The \code{te} construction results in fewer, more interpretable, penalties, while the \code{t2} construction is more natural if you are interested in functional ANOVA decompositions. \code{t2} works with the 
-\code{gamm4} package. 
-
+penalties of the marginal smooths. Wood (2006b) and Wood, Scheipl and Faraway (2012), give the general recipe for these constructions. 
+\describe{
+\item{te}{\code{te} smooths have one penalty per marginal basis, each of which is interpretable in a similar way to the marginal penalty from which it is derived. See Wood (2006b).}
+\item{ti}{\code{ti} smooths exclude the basis functions associated with the `main effects' of the marginal smooths, plus interactions other than the highest order specified. These provide a stable an interpretable way of specifying models with main effects and interactions. For example if we are interested in linear predicto \eqn{f_1(x)+f_2(z)+f_3(x,z)}{f1(x) + f2(z) + f3(x,z)}, we might use model formula \code{y~s(x)+s(z)+ti(x,z)} or \code{y~ti(x)+ti(z)+te(x,z)}. A similar construction involving \code{te} terms instead will be much less statsitically stable.}   
+\item{t2}{\code{t2} uses an alternative tensor product construction that results in more penalties each having a simple non-overlapping structure allowing use with the  \code{gamm4} package. It is a natural generalization of the SS-ANOVA construction, but the penalties are a little harder to interpret. See Wood, Scheipl and Faraway (2012/13). }  
+}
 Tensor product smooths often perform better than isotropic smooths when the covariates of a smooth are not naturally
 on the same scale, so that their relative scaling is arbitrary. For example, if smoothing with repect to time and 
 distance, an isotropic smoother will give very different results if the units are cm and minutes compared to if the units are metres and seconds: a tensor product smooth will  give the same answer in both cases (see \code{\link{te}} for an example of this). Note that \code{te} terms are knot based, and the thin plate splines seem to offer no advantage over cubic or P-splines as  marginal bases.
@@ -103,9 +108,9 @@ class (see \code{\link{factor.smooth.interaction}}) is available for the case in
 }
 
 \seealso{\code{\link{s}}, \code{\link{te}}, \code{\link{t2}} \code{\link{tprs}},\code{\link{Duchon.spline}}, 
-\code{\link{cubic.regression.spline}},\code{\link{p.spline}}, \code{\link{mrf}}, code{\link{soap}}, 
-code{\link{Spherical.Spline}}, \code{\link{adaptive.smooth}}, \code{\link{user.defined.smooth}},
-code{\link{smooth.construct.re.smooth.spec}}, code{\link{factor.smooth.interaction}}}
+\code{\link{cubic.regression.spline}},\code{\link{p.spline}}, \code{\link{mrf}}, \code{\link{soap}}, 
+\code{\link{Spherical.Spline}}, \code{\link{adaptive.smooth}}, \code{\link{user.defined.smooth}},
+\code{\link{smooth.construct.re.smooth.spec}}, \code{\link{smooth.construct.gp.smooth.spec}},\code{\link{factor.smooth.interaction}}}
 
 \author{
 Simon Wood <simon.wood@r-project.org>
@@ -123,8 +128,8 @@ Wood, S.N. (2006a) \emph{Generalized Additive Models: an introduction with R}, C
 Wood, S.N. (2006b) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics 62(4):1025-1036
 
-Wood S.N., F. Scheipl and J.J. Faraway (2012) Straightforward intermediate rank tensor product smoothing
-in mixed models. Statistical Computing.
+Wood S.N., F. Scheipl and J.J. Faraway (2013) Straightforward intermediate rank tensor product smoothing
+in mixed models. Statistical Computing. 23(3), 341-360. [online 2012]
 
 }
 

@@ -14,10 +14,10 @@ although this behaviour can be over-ridden.
 }
 
 \usage{
-smoothCon(object,data,knots,absorb.cons=FALSE,
+smoothCon(object,data,knots=NULL,absorb.cons=FALSE,
           scale.penalty=TRUE,n=nrow(data),dataX=NULL,
           null.space.penalty=FALSE,sparse.cons=0,
-          diagonal.penalty=FALSE)
+          diagonal.penalty=FALSE,apply.by=TRUE)
 PredictMat(object,data,n=nrow(data))
 }
 %- maybe also `usage' for other objects documented here.
@@ -40,7 +40,9 @@ should be constructed with another set of data provided in \code{dataX} --- \cod
 be the same for both. Facilitates smooth id's.}
 \item{null.space.penalty}{Should an extra penalty be added to the smooth which will penalize the 
 components of the smooth in the penalty null space: provides a way of penalizing terms out of the model altogether.}
-
+\item{apply.by}{set to \code{FALSE} to have basis setup exactly as in default case, but to return add an additional 
+matrix \code{X0} to the return object, containing the model matrix without the \code{by} variable, if a \code{by} 
+variable is present. Useful for \code{bam} discrete method setup.}
 \item{sparse.cons}{If \code{0} then default sum to zero constraints are used. If \code{-1} then sweep and 
 drop sum to zero constraints are used (default with \code{\link{bam}}). If \code{1} then one
 coefficient is set to zero as constraint for sparse smooths. If \code{2} then sparse coefficient sum to zero 

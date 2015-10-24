@@ -112,7 +112,7 @@ Usually the answer is no, they would be meaningless.}
 
 \item{scheme}{Integer or integer vector selecting a plotting scheme for each plot. See details.}
 
-\item{...}{ other graphics parameters to pass on to plotting commands.}
+\item{...}{ other graphics parameters to pass on to plotting commands. See details for smooth plot specific options.}
 
 }
 \details{ Produces default plot showing the smooth components of a
@@ -121,9 +121,8 @@ Usually the answer is no, they would be meaningless.}
 
 For smooth  terms \code{plot.gam} actually calls plot method functions depending on the 
 class of the smooth. Currently \code{\link{random.effects}}, Markov random fields (\code{\link{mrf}}), 
-\code{\link{Spherical.Spline}}  and 
-\code{\link{factor.smooth.interaction}} terms have special methods (documented in their help files), 
-the rest use the defaults described below. 
+\code{\link{Spherical.Spline}}  and  \code{\link{factor.smooth.interaction}} terms have special methods 
+(documented in their help files), the rest use the defaults described below. 
 
 For plots of 1-d smooths, the x axis of each plot is labelled 
 with the covariate name, while the y axis is labelled \code{s(cov,edf) } where \code{cov}
@@ -131,7 +130,6 @@ is the covariate name, and \code{edf} the estimated (or user defined for regress
 degrees of freedom of the smooth. \code{scheme == 0} produces a smooth curve with dashed curves 
 indicating 2 standard error bounds. \code{scheme == 1} illustrates the error bounds using a shaded
 region.
-
 
 For \code{scheme==0}, contour plots are produced for 2-d smooths with the x-axes labelled with the first covariate
 name and the y axis with the second covariate name. The main title of
@@ -156,6 +154,8 @@ Note that, if \code{seWithMean=TRUE}, the confidence bands include the uncertain
 although each smooth is shown centred, the confidence bands are obtained as if every other term in the model was 
 constrained to have average 0, (average taken over the covariate values), except for the smooth concerned. This seems to correspond more closely to how most users interpret componentwise intervals in practice, and also results in intervals with
 close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results presented in Marra and Wood (2012).
+
+Several smooth plots methods using \code{\link{image}} will accept a \code{colors} argument, which can be anything documented in \code{\link{heat.colors}} (in which case something like \code{colors=rainbow(50)} is appropriate), or the \code{\link{grey}} function (in which case somthing like \code{colors=grey(0:50/50)} is needed). Another option is \code{contour.col} which will set the contour colour for some plots. These options are useful for producing grey scale pictures instead of colour.
 
 Sometimes you may want a small change to a default plot, and the arguments to \code{plot.gam} just won't let you do it. 
 In this case, the quickest option is sometimes to clone the \code{smooth.construct} and \code{Predict.matrix} methods for 

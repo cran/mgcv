@@ -14,8 +14,8 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 
 \usage{
 \method{predict}{gam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
-        block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
-        unconditional=FALSE,...)
+        exclude=NULL,block.size=NULL,newdata.guaranteed=FALSE,
+        na.action=na.pass,unconditional=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -47,8 +47,12 @@ outside \code{R} (see example code, below). }
 
 \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
 
-\item{terms}{if \code{type=="terms"} then only results for the terms given in this array
-will be returned.}
+\item{terms}{if \code{type=="terms"} or \code{type="iterms"} then only results for the terms (smooth or parametric) named in this array
+will be returned. Otherwise any smooth terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
+
+\item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array
+will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
+If \code{NULL} then no terms are excluded.}
 
 \item{block.size}{maximum number of predictions to process per call to underlying
 code: larger is quicker, but more memory intensive. Set to < 1 to use total number

@@ -438,13 +438,15 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,colors=heat.colors(100),
+                     contour.col=3,...) {
 ## plot method function for sos.smooth terms
   if (scheme>1) return(plot.mgcv.smooth(x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
-                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme-2,...))
+                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme-2,
+                     colors=colors,contour.col=contour.col,...))
   ## convert location of pole in plotting grid to radians
   phi <- phi*pi/180
   theta <- theta*pi/180
@@ -504,7 +506,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (scheme == 0) {
       col <- 1# "lightgrey 
       zz[P$ind] <- P$fit
-      image(P$xm,P$ym,matrix(zz,m,m),col=heat.colors(100),axes=FALSE,xlab="",ylab="",...)
+      image(P$xm,P$ym,matrix(zz,m,m),col=colors,axes=FALSE,xlab="",ylab="",...)
       if (rug) { 
         if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
         points(P$raw$x,P$raw$y,...)
@@ -514,7 +516,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       zz[P$ind] <- P$lo
       contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,levels=c(-8:9*20),col=col,...)
       zz[P$ind] <- P$fit
-      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,col=3,...)
+      contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,col=contour.col,...)
     } else if (scheme == 1) {
       col <- 1 
       zz[P$ind] <- P$fit
@@ -694,7 +696,8 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,colors=heat.colors(50),
+                     contour.col=3,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
 ## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
 ##     'coefficients' containg the coefs for the smooth, but usually these
@@ -908,7 +911,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
         } else if (scheme==2) {
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
-                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=heat.colors(50),...)
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
           contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=3,...)
           if (rug) {  
             if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
@@ -953,8 +956,8 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                           zlab=P$main,theta=theta,phi=phi,xlim=P$xlim,ylim=P$ylim,...)
         } else if (scheme==2) {
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
-                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=heat.colors(50),...)
-          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=3,...)
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
+          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=contour.col,...)
           if (rug) {  
             if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
             points(P$raw$x,P$raw$y,...)

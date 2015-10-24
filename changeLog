@@ -1,6 +1,61 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-8
+
+** New "gp" smooth class (see ?gp.smooth) implemeting the Matern 
+   covariance based Gaussian process model of Kamman and Wand (2003), and a 
+   variety of other simple GP smoothers.
+
+* some smooth plot methods now accept 'colors' and 'contour.col' argument to
+  set color palette in image plots and contour line colors. 
+
+* predict.gam and predict.bam now accept an 'exclude' argument allowing 
+  terms (e.g. random effects) to be zeroed for prediction. For efficiency,
+  smooth terms not in 'terms' or in 'exclude' are no longer evaluated, and 
+  are instead set to zero or not returned. See ?predict.gam.
+
+* ocat saturated likelihood definition changed to zero, leading to better 
+  comprability of deviance between model fits (thanks to Herwig Friedl).
+
+* null.deviance calculation for extended families modified to make more sense
+  when `mu' is the mean of a latent variable, rather than the response itself. 
+
+* bam now returns standarized residuals 'std.rsd' if `rho!=0'. 
+
+* bam(...,discrete=TRUE) can now handle 'fs' terms.
+
+* bam(...,discrete=TRUE) now accepts 'by' variables. Thanks to Zheyaun Li
+  for debugging on this.
+
+* bam now works with drop.unused.levels == TRUE when random effects should
+  have more levels than those that exist in data. (Thanks Alec Leh) 
+
+* bam chunk.size logic error fix - error could be triggered if chunk.size
+  reset automaticlly to be larger than data size.
+
+* uniqucombs can now accept a data frame with some or all factor columns,
+  as well as purely numeric marices.
+
+* discrete.mf modified to avoid discretizing a covariate more than once,
+  and to halt if a model requires the same covariate to be discretized 
+  two different ways (e.g. s(x) + s(x,z)). This affects only 
+  bam(...,discrete=TRUE).
+
+* Some changes to ziP and ziplss families to improve numerical robustness,
+  and to ziP help file to suggest appropriate checking. Thanks to Keren 
+  Raiter, for reporting problems. 
+
+* numerical robustness of extended gam methods (gam.fit4) improved for cases 
+  with many zero or near zero iterative weights. Handling of zero weights 
+  modified to avoid divide by (near) zero problems. Also tests for poor 
+  scaling of sqrt(abs(w))*z and substitutes computations based on w*z if 
+  detected. Also 'newton' routine now step halves if REML score not finite!
+
+* Sl.setup (used by bam) modification to allow more efficient handling of terms
+  with multiple diagonal penalties with no non-zero elements in common, but
+  possibly with non zero elements `interleaved' between penalties.
+
 1.8-7
 
 ** 'gam' default scale parameter changed to modified Pearson estimator 

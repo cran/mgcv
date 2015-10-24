@@ -5,7 +5,7 @@
 \description{ Alternative to \code{\link{te}} for defining tensor product smooths
 in a \code{\link{gam}} formula. Results in a construction in which the penalties are 
 non-overlapping multiples of identity matrices (with some rows and columns zeroed). 
-The construction, which is due to Fabian Scheipl, is analogous to Smoothing Spline ANOVA 
+The construction, which is due to Fabian Scheipl (\code{mgcv} implementation, 2010), is analogous to Smoothing Spline ANOVA 
 (Gu, 2002), but using low rank penalized regression spline marginals. The main advantage of this construction 
 is that it is useable with \code{gamm4} from package \code{gamm4}.
 }
@@ -157,19 +157,16 @@ values (defualt).}
 \author{ Simon N. Wood \email{simon.wood@r-project.org} and Fabian Scheipl}
 \references{
 
-Wood S.N., F. Scheipl and J.J. Faraway (2012) Straightforward intermediate rank tensor product smoothing
-in mixed models. Statistical Computing.
+Wood S.N., F. Scheipl and J.J. Faraway (2013, online Feb 2012) Straightforward intermediate rank tensor product smoothing in mixed models. Statistical Computing. 23(3):341-360
 
 Gu, C. (2002) Smoothing Spline ANOVA, Springer.
-
-\url{http://people.bath.ac.uk/sw283/}
 
 Alternative approaches to functional ANOVA decompositions, 
 *not* implemented by t2 terms, are discussed in:
 
 Belitz and Lang (2008) Simultaneous selection of variables and smoothing parameters in structured additive regression models. Computational Statistics & Data Analysis, 53(1):61-81
 
-Lee, D-J and M. Durban (2011) P-spline ANOVA type interaction models for spatio-temporal smoothing. Statistical Modelling
+Lee, D-J and M. Durban (2011) P-spline ANOVA type interaction models for spatio-temporal smoothing. Statistical Modelling, 11:49-69
  
 Wood, S.N. (2006) Low-Rank Scale-Invariant Tensor Product Smooths for Generalized Additive Mixed Models. Biometrics 62(4): 1025-1036.
 

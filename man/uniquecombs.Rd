@@ -3,8 +3,8 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{find the unique rows in a matrix }
 \description{
-This routine returns a matrix containing all the unique rows of the
-matrix supplied as its argument. That is, all the duplicate rows are
+This routine returns a matrix or data frame containing all the unique rows of the
+matrix or data frame supplied as its argument. That is, all the duplicate rows are
 stripped out. Note that the ordering of the rows on exit is not the same
 as on entry. It also returns an index attribute for relating the result back 
 to the original matrix.
@@ -14,7 +14,7 @@ uniquecombs(x)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
- \item{x}{ is an \R matrix (numeric) }
+ \item{x}{ is an \R matrix (numeric), or data frame. }
 }
 \details{ Models with more parameters than unique combinations of
   covariates are not identifiable. This routine provides a means of
@@ -25,11 +25,14 @@ uniquecombs(x)
    
  \code{\link{unique}} and \code{\link{duplicated}}, can sometimes be used 
  in place of this, if the full index is not needed. Relative performance is variable. 
+
+ If \code{x} is not a matrix or data frame on entry then an attmept is made to coerce 
+ it to a data frame. 
 }
 \value{
-A matrix consisting of the unique rows of \code{x} (in arbitrary order).
+A matrix or data frame consisting of the unique rows of \code{x} (in arbitrary order).
 
-The matrix has an \code{"index"} attribute. \code{index[i]} gives the row of the returned 
+The matrix or data frame has an \code{"index"} attribute. \code{index[i]} gives the row of the returned 
 matrix that contains row i of the original matrix. 
  
 }
@@ -41,12 +44,19 @@ matrix that contains row i of the original matrix.
 
 \examples{
 require(mgcv)
-X<-matrix(c(1,2,3,1,2,3,4,5,6,1,3,2,4,5,6,1,1,1),6,3,byrow=TRUE)
+
+## matrix example...
+X <- matrix(c(1,2,3,1,2,3,4,5,6,1,3,2,4,5,6,1,1,1),6,3,byrow=TRUE)
 print(X)
 Xu <- uniquecombs(X);Xu
 ind <- attr(Xu,"index")
 ## find the value for row 3 of the original from Xu
 Xu[ind[3],];X[3,]
+
+## data frame example...
+df <- data.frame(f=factor(c("er",3,"b","er",3,3,1,2,"b")),
+      x=c(.5,1,1.4,.5,1,.6,4,3,1.7))
+uniquecombs(df)
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

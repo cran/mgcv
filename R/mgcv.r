@@ -372,7 +372,7 @@ augment.smX <- function(sm,nobs,np) {
 ## identifiability constraint purposes.
   ns <- length(sm$S) ## number of penalty matrices
   if (ns==0) { ## nothing to do
-    return(rbind(sm$X),matrix(0,np,np))
+    return(rbind(sm$X,matrix(0,np,ncol(sm$X))))
   }
   ind <- colMeans(abs(sm$S[[1]]))!=0
   sqrmaX  <- mean(abs(sm$X[,ind]))^2
@@ -503,10 +503,10 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
             }
           } ## penalty matrices finished
           ## Now we need to establish null space rank for the term
-          m <- length(sm[[i]]$S)
-          if (m>0) {
+          mi <- length(sm[[i]]$S)
+          if (mi>0) {
             St <- sm[[i]]$S[[1]]/norm(sm[[i]]$S[[1]],type="F")
-            if (m>1) for (j in 1:m) St <- St + 
+            if (mi>1) for (j in 1:mi) St <- St + 
                   sm[[i]]$S[[j]]/norm(sm[[i]]$S[[j]],type="F")
             es <- eigen(St,symmetric=TRUE,only.values=TRUE)
             sm[[i]]$null.space.dim <- sum(es$values<max(es$values)*.Machine$double.eps^.75) 
@@ -872,7 +872,7 @@ gam.setup <- function(formula,pterms,
                      data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
                     scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=FALSE,
-                    diagonal.penalty=FALSE) 
+                    diagonal.penalty=FALSE,apply.by=TRUE) 
 ## set up the model matrix, penalty matrices and auxilliary information about the smoothing bases
 ## needed for a gam fit.
 ## elements of returned object:
@@ -1007,12 +1007,14 @@ gam.setup <- function(formula,pterms,
     id <- split$smooth.spec[[i]]$id
     if (is.null(id)||!idLinksBases) { ## regular evaluation
       sml <- smoothCon(split$smooth.spec[[i]],data,knots,absorb.cons,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons,diagonal.penalty=diagonal.penalty) 
+                       null.space.penalty=select,sparse.cons=sparse.cons,
+                       diagonal.penalty=diagonal.penalty,apply.by=apply.by) 
     } else { ## it's a smooth with an id, so basis setup data differs from model matrix data
       names(id.list[[id]]$data) <- split$smooth.spec[[i]]$term ## give basis data suitable names
       sml <- smoothCon(split$smooth.spec[[i]],id.list[[id]]$data,knots,
                        absorb.cons,n=nrow(data),dataX=data,scale.penalty=scale.penalty,
-                       null.space.penalty=select,sparse.cons=sparse.cons,diagonal.penalty=diagonal.penalty)
+                       null.space.penalty=select,sparse.cons=sparse.cons,
+                       diagonal.penalty=diagonal.penalty,apply.by=apply.by)
     }
     for (j in 1:length(sml)) {
       newm <- newm + 1
@@ -1024,7 +1026,15 @@ gam.setup <- function(formula,pterms,
 
   ## at this stage, it is neccessary to impose any side conditions required
   ## for identifiability
-  if (m>0) sm <- gam.side(sm,X,tol=.Machine$double.eps^.5)
+  if (m>0) { 
+    sm <- gam.side(sm,X,tol=.Machine$double.eps^.5)
+    if (!apply.by) for (i in 1:length(sm)) { ## restore any by-free model matrices
+      if (!is.null(sm[[i]]$X0)) { ## there is a by-free matrix to restore 
+        ind <- attr(sm[[i]],"del.index") ## columns, if any to delete
+        sm[[i]]$X <- if (is.null(ind)) sm[[i]]$X0 else sm[[i]]$X0[,-ind,drop=FALSE] 
+      }
+    }
+  }
 
   ## The matrix, L, mapping the underlying log smoothing parameters to the
   ## log of the smoothing parameter multiplying the S[[i]] must be
@@ -2501,7 +2511,7 @@ model.matrix.gam <- function(object,...)
 
 
 
-predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
+predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
                        block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
                        unconditional=FALSE,...) {
 
@@ -2771,11 +2781,14 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     if (!is.null(drop.ind)) X <- X[,-drop.ind]
 
     if (n.smooth) for (k in 1:n.smooth) { ## loop through smooths
-      Xfrag <- PredictMat(object$smooth[[k]],data)		 
-      X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para] <- Xfrag
-      Xfrag.off <- attr(Xfrag,"offset") ## any term specific offsets?
-      if (!is.null(Xfrag.off)) { Xoff[,k] <- Xfrag.off; any.soff <- TRUE }
-      if (type=="terms"||type=="iterms") ColNames[n.pterms+k] <- object$smooth[[k]]$label
+      klab <- object$smooth[[k]]$label
+      if ((is.null(terms)||(klab%in%terms))&&(is.null(exclude)||!(klab%in%exclude))) {
+        Xfrag <- PredictMat(object$smooth[[k]],data)		 
+        X[,object$smooth[[k]]$first.para:object$smooth[[k]]$last.para] <- Xfrag
+        Xfrag.off <- attr(Xfrag,"offset") ## any term specific offsets?
+        if (!is.null(Xfrag.off)) { Xoff[,k] <- Xfrag.off; any.soff <- TRUE }
+      }
+      if (type=="terms"||type=="iterms") ColNames[n.pterms+k] <- klab
     } ## smooths done
 
     
@@ -2913,13 +2926,27 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,
     rm(X)
   } ## end of prediction block loop
 
-  if ((type=="terms"||type=="iterms")&&!is.null(terms)) { # return only terms requested via `terms'
-    if (sum(!(terms %in%colnames(fit)))) 
-      warning("non-existent terms requested - ignoring")
-    else { 
-      fit <- fit[,terms,drop=FALSE]
-      if (se.fit) {
-        se <- se[,terms,drop=FALSE]
+  if ((type=="terms"||type=="iterms")&&(!is.null(terms)||!is.null(exclude))) { # return only terms requested via `terms'
+    cnames <- colnames(fit)
+    if (!is.null(terms)) {
+      if (sum(!(terms %in%cnames))) 
+        warning("non-existent terms requested - ignoring")
+      else { 
+        fit <- fit[,terms,drop=FALSE]
+        if (se.fit) {
+           se <- se[,terms,drop=FALSE]
+        }
+      }
+    }
+    if (!is.null(exclude)) {
+      if (sum(!(exclude %in%cnames))) 
+        warning("non-existent exclude terms requested - ignoring")
+      else { 
+        exclude <- which(cnames%in%exclude) ## convert to numeric column index
+        fit <- fit[,-exclude,drop=FALSE]
+        if (se.fit) {
+          se <- se[,-exclude,drop=FALSE]
+        }
       }
     }
   }
@@ -3639,8 +3666,9 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         chi.sq[i] <- t(p)%*%V%*%p
         df[i] <- attr(V, "rank")
       } else { ## Better founded alternatives...
-        Xt <- X[,start:stop,drop=FALSE] 
-        if (object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
+        Xt <- X[,start:stop,drop=FALSE]  
+        fx <- if (inherits(object$smooth[[i]],"tensor.smooth")) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
+        if (!fx&&object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
           res <- reTest(object,i)
         } else { ## Inverted Nychka interval statistics
           df[i] <- min(ncol(Xt),edf1[i])
