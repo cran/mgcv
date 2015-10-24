@@ -386,20 +386,22 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
             if (control$trace) t1 <- proc.time()
-            oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
+            oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
                      E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
                      q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
-                     penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads))
+                     penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads),
+                     use.wy=as.integer(0))
             if (control$trace) tc <- tc + sum((proc.time()-t1)[c(1,4)])
 
             if (!fisher&&oo$n<0) { ## likelihood indefinite - switch to Fisher for this step
               z <- (eta - offset)[good] + (yg - mug)/mevg
               w <- (weg * mevg^2)/var.mug
               if (control$trace) t1 <- proc.time()
-              oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),
+              oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
                        E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
                        q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
-                       penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads))
+                       penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads),
+                       use.wy=as.integer(0))
               if (control$trace) tc <- tc + sum((proc.time()-t1)[c(1,4)])
             }
 
@@ -1436,7 +1438,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     ## accept if improvement, else step halve
     ii <- 0 ## step halving counter
     ##sc.extra <- 1e-4*sum(grad*Nstep) ## -ve sufficient decrease 
-    if (score1<score && pdef) { ## immediately accept step if it worked and positive definite
+    if (is.finite(score1) && score1<score && pdef) { ## immediately accept step if it worked and positive definite
       old.score <- score 
       mustart <- b$fitted.values
       etastart <- b$linear.predictors
@@ -1460,10 +1462,10 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         grad <- rho$rho1*grad
       }
 
-    } else if (score1>=score) { ## initial step failed to improve score, try step halving ...
+    } else if (!is.finite(score1) || score1>=score) { ## initial step failed to improve score, try step halving ...
       step <- Nstep ## start with the (pseudo) Newton direction
       ##sc.extra <- 1e-4*sum(grad*step) ## -ve sufficient decrease 
-      while (score1>=score && ii < maxHalf) {
+      while ((!is.finite(score1) || score1>=score) && ii < maxHalf) {
         if (ii==3&&i<10) { ## Newton really not working - switch to SD, but keeping step length 
           s.length <- min(sum(step^2)^.5,maxSstep)
           step <- Sstep*s.length/sum(Sstep^2)^.5 ## use steepest descent direction
@@ -1489,7 +1491,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
           score1 <- b1$UBRE
         } else score1 <- b1$GCV
         ##sc.extra <- 1e-4*sum(grad*Nstep) ## -ve sufficient decrease 
-        if (score1 < score) { ## accept
+        if (is.finite(score1) && score1 < score) { ## accept
           if (pdef||!sd.unused) { ## then accept and compute derivatives
             b <- gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
                  offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
@@ -1523,7 +1525,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
           }
           score1 <- score - abs(score) - 1 ## make sure that score1 < score
         }  # end of if (score1<= score ) # accept
-        if (score1>=score) ii <- ii + 1
+        if (!is.finite(score1) || score1>=score) ii <- ii + 1
       } ## end while (score1>score && ii < maxHalf)
       if (!pdef&&sd.unused&&ii<maxHalf) score1 <- score2
     } ## end of step halving branch
@@ -1535,7 +1537,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
     if (!pdef&&sd.unused) {
       step <- Sstep*2
-      kk <- 0
+      kk <- 0;score2 <- NA
       ok <- TRUE
       while (ok) { ## step length loop for steepest....
         step <- step/2;kk <- kk+1
@@ -1556,18 +1558,18 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         } else if (scoreType=="UBRE") {
           score3 <- b1$UBRE
         } else score3 <- b1$GCV
-        if (kk==1||score3<=score2) { ## accept step - better than last try
+        if (!is.finite(score2)||(is.finite(score3)&&score3<=score2)) { ## accept step - better than last try
           score2 <- score3
           lsp2 <- lsp3
           ## if (!is.null(lsp.max)) delta2 <- delta3
         }
         ## stop when improvement found, and shorter step is worse...
-        if (score2<score&&score3>score2||kk==40) ok <- FALSE
+        if ((is.finite(score2)&&is.finite(score3)&&score2<score&&score3>score2)||kk==40) ok <- FALSE
       } ## while (ok) ## step length control loop
 
       ## now pick the step that led to the biggest decrease  
 
-      if (score2<score1) {
+      if (is.finite(score2) && score2<score1) {
         lsp1 <- lsp2
         if (!is.null(lsp.max)) delta1 <- delta
         score1 <- score2
@@ -1621,9 +1623,13 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     if (ii==maxHalf) converged <- TRUE ## step failure
     if (converged) break
   } ## end of iteration loop
-  if (ii==maxHalf) ct <- "step failed"
-  else if (i==200) ct <- "iteration limit reached" 
-  else ct <- "full convergence"
+  if (ii==maxHalf) { 
+    ct <- "step failed"
+    warning("Fitting terminated with step failure - check results carefully")
+  } else if (i==200) { 
+    ct <- "iteration limit reached"
+    warning("Iteration limit reached without full convergence - check carefully")
+  } else ct <- "full convergence"
   list(score=score,lsp=lsp,lsp.full=L%*%lsp+lsp0,grad=grad,hess=hess,iter=i,conv =ct,score.hist = score.hist[!is.na(score.hist)],object=b)
 } ## newton
 

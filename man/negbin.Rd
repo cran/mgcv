@@ -44,7 +44,7 @@ estimate of \code{theta} after fitting (see example).}
 For \code{nb} an object inheriting from class \code{extended.family}.
 }
 
-\details{\code{nb} allows estimation of the \code{theta} parameter alongside the model smoothing parameters, but is only useable with \code{\link{gam}} (not \code{bam} or \code{gam}).
+\details{\code{nb} allows estimation of the \code{theta} parameter alongside the model smoothing parameters, but is only useable with \code{\link{gam}} (not \code{bam} or \code{gamm}).
 
 For \code{negbin}, if a single value of \code{theta} is supplied then it is always taken as the known fixed value and this is useable with \code{\link{bam}} and \code{\link{gamm}}. If \code{theta} is two 
 numbers (\code{theta[2]>theta[1]}) then they are taken as specifying the range of values over which to search for 

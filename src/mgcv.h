@@ -31,7 +31,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 	  int *REML,int *fisher,int *fixed_penalty,int *nthreads);     
 
 void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
-	  double *sp,double *theta,double *z,double *w,double *wf,
+	  double *sp,double *theta,double *z,double *w,double *wz,double *wf,
           double *Dth,double *Det,double *Det2,double *Dth2,double *Det_th,
           double *Det2_th,double *Det3,double *Det_th2,
           double *Det4, double *Det3_th, double *Det2_th2,
@@ -39,10 +39,10 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
 	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
-	  int *fixed_penalty,int *nt);
+	  int *fixed_penalty,int *nt,int *type);
 
-void pls_fit1(double *y,double *X,double *w,double *E,double *Es,int *n,int *q,int *rE,double *eta,
-	      double *penalty,double *rank_tol,int *nt);
+void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int *n,int *q,int *rE,double *eta,
+	      double *penalty,double *rank_tol,int *nt,int *use_wy);
 
 void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv, 
                double *det, double *det1, double *det2, double *d_tol,
@@ -101,8 +101,8 @@ void mgcv_chol(double *a,int *pivot,int *n,int *rank);
 void mgcv_svd(double *x,double *u, double *d,int *r,int *c);
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
 void mgcv_qrqy0(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
-void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
-void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc);
+void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc, int *right);
+void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc, int *right);
 void mgcv_qr(double *x, int *r, int *c,int *pivot,double *tau);
 void mgcv_qr2(double *x, int *r, int *c,int *pivot,double *tau);
 void update_qr(double *Q,double *R,int *n, int *q,double *lam, int *k);

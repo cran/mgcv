@@ -747,7 +747,8 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,colors=heat.colors(100),
+                     contour.col=1,...) {
 ## plot method function for soap.smooth terms
   if (scheme==3) {  
     if (is.null(P)) outline <- FALSE else outline <- TRUE   
@@ -758,7 +759,8 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
-                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme,...)
+                     shift=shift,trans=trans,by.resids=by.resids,scheme=scheme,colors=colors,
+                     contour.col=contour.col,...)
             if (outline) { if (is.null(names(P$bnd))) {
                 for (i in 1:length(P$bnd)) lines(P$bnd[[i]],lwd=2)
               } else lines(P$bnd,lwd=2)
@@ -777,23 +779,24 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (is.null(ylab)) ylabel <- x$term[2] else ylabel <- ylab
     xscale <- x$sd$x0 + 0:(nrow(G)-1) * x$sd$dx 
     yscale <- x$sd$y0 + 0:(ncol(G)-1) * x$sd$dy
+    main <- if (is.null(main)) label
     return(list(fit=G,scale=FALSE,se=FALSE,raw=raw,xlab=xlabel,ylab=ylabel,
-                xscale=xscale,yscale=yscale,main=label,bnd=x$sd$bnd))
+                xscale=xscale,yscale=yscale,main=main,bnd=x$sd$bnd))
     } else { ## do plot
       if (scheme==0) {
         xlim <- range(P$xscale);dx = xlim[2] - xlim[1]
         ylim <- range(P$yscale);dy = ylim[2] - ylim[1]
         plot(P$xscale[1],P$yscale[1],xlab=P$xlab,ylab=P$ylab,main=P$main,xlim=xlim,ylim=ylim,...)
         rect(xlim[1]-dx,ylim[1]-dy,xlim[2]+dx,ylim[2]+dy,col="lightgrey")
-        image(P$xscale,P$yscale,P$fit,add=TRUE,col=heat.colors(50),...)
-        contour(P$xscale,P$yscale,P$fit,add=TRUE,...)
+        image(P$xscale,P$yscale,P$fit,add=TRUE,col=colors,...)
+        contour(P$xscale,P$yscale,P$fit,add=TRUE,col=contour.col,...)
       } else if (scheme==1) {
         image(P$xscale,P$yscale,P$fit,col=grey(0:50/50),xlab=P$xlab,
               ylab=P$ylab,main=P$main,...)
-        contour(P$xscale,P$yscale,P$fit,add=TRUE,...)
+        contour(P$xscale,P$yscale,P$fit,add=TRUE,col=contour.col,...)
       } else if (scheme==2) {
         contour(P$xscale,P$yscale,P$fit,xlab=P$xlab,
-              ylab=P$ylab,main=P$main,...)
+              ylab=P$ylab,main=P$main,col=contour.col,...)
         if (is.null(names(P$bnd))) {
           for (i in 1:length(P$bnd)) lines(P$bnd[[i]],lwd=2)
         } else lines(P$bnd,lwd=2)

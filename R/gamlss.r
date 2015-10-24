@@ -730,6 +730,7 @@ ldg <- function(g,deriv=4) {
   ## so l'' = alpha*(b-eg)...
   b <- egi*(1+egi/6)/2
   l2[ind] <- a[ind]*(b-egi)
+  l2[ii] <- -exp(g[ii])
   l3 <- l4 <- NULL
   ## in a similar vein l3 can be robustified...  
   if (deriv>1) {
@@ -745,7 +746,13 @@ ldg <- function(g,deriv=4) {
    
     l4[ii] <- -exp(g[ii])
   }
-  list(l1=-a,l2=l2,l3=l3,l4=l4)
+  l1=-a
+  ghi <- log(.Machine$double.xmax)/5
+  ii <- g > ghi
+  if (sum(ii)) {
+    l1[ii] <- l2[ii] <- l3[ii] <- l4[ii] <- -exp(ghi)
+  }
+  list(l1=l1,l2=l2,l3=l3,l4=l4)
 } ## ldg
 
 lde <- function(eta,deriv=4) {
@@ -832,8 +839,8 @@ zipll <- function(y,g,eta,deriv=0) {
       ## order gggg,ggge,ggee,geee,eeee
       l4 <- matrix(0,n,5) 
       l4[!zind,1] <- lg$l4[!zind]   ## l_gggg, y>0
-      l4[!zind,4] <- le$l4[!zind]   ## l_eeee, y>0
-      l4[zind,4]  <- l[zind]        ## l_eeee, y=0
+      l4[!zind,5] <- le$l4[!zind]   ## l_eeee, y>0
+      l4[zind,5]  <- l[zind]        ## l_eeee, y=0
    }
    list(l=l,l1=l1,l2=l2,l3=l3,l4=l4,El2=El2)
 } ## zipll

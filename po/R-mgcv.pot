@@ -1,7 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-6\n"
-"POT-Creation-Date: 2015-03-30 11:44\n"
+"Project-Id-Version: R 3.2.2\n"
+"Report-Msgid-Bugs-To: bugs.r-project.org\n"
+"POT-Creation-Date: 2015-10-23 16:27\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -9,6 +10,12 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+
+msgid "bam can not discretize with this nesting structure"
+msgstr ""
+
+msgid "discretization can not handle smooth ids"
+msgstr ""
 
 msgid "'family' argument seems not to be a valid family object"
 msgstr ""
@@ -34,6 +41,9 @@ msgstr ""
 msgid "fitted rates numerically 0 occurred"
 msgstr ""
 
+msgid "Too many cluster nodes to use all efficiently"
+msgstr ""
+
 msgid "non-finite coefficients at iteration"
 msgstr ""
 
@@ -41,6 +51,12 @@ msgid "family not recognized"
 msgstr ""
 
 msgid "un-supported smoothness selection method"
+msgstr ""
+
+msgid "discretization only available with fREML"
+msgstr ""
+
+msgid "discrete method does not use parallel cluster - use nthreads instead"
 msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
@@ -55,10 +71,16 @@ msgstr ""
 msgid "AR.start must be logical"
 msgstr ""
 
+msgid "chunk.size < number of coefficients. Reset to %d"
+msgstr ""
+
+msgid "unknown tensor constraint type"
+msgstr ""
+
 msgid "Model has more coefficients than data"
 msgstr ""
 
-msgid "chunk.size < number of coefficients. Reset to %d"
+msgid "sparse=TRUE is deprecated"
 msgstr ""
 
 msgid "model matrix too dense for any possible benefit from sparse"
@@ -133,6 +155,9 @@ msgstr ""
 msgid "fast REML optimizer reached iteration limit"
 msgstr ""
 
+msgid "Huber scale estiamte not converged"
+msgstr ""
+
 msgid "unsupported order of differentiation requested of gam.fit3"
 msgstr ""
 
@@ -205,9 +230,6 @@ msgstr ""
 msgid "Algorithm stopped at boundary value"
 msgstr ""
 
-msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
-msgstr ""
-
 msgid "deriv should be 1 or 2"
 msgstr ""
 
@@ -218,6 +240,12 @@ msgid "L must have at least as many rows as columns."
 msgstr ""
 
 msgid "L has inconsistent dimensions."
+msgstr ""
+
+msgid "Fitting terminated with step failure - check results carefully"
+msgstr ""
+
+msgid "Iteration limit reached without full convergence - check carefully"
 msgstr ""
 
 msgid "link not implemented for extended families"
@@ -395,6 +423,9 @@ msgid "iteration %d"
 msgstr ""
 
 msgid "gamm not converged, try increasing niterPQL"
+msgstr ""
+
+msgid "family are not designed for use with gamm!"
 msgstr ""
 
 msgid "random argument must be a *named* list."
@@ -661,6 +692,9 @@ msgstr ""
 msgid "non-existent terms requested - ignoring"
 msgstr ""
 
+msgid "non-existent exclude terms requested - ignoring"
+msgstr ""
+
 msgid "requires an object of class gam"
 msgstr ""
 
@@ -712,6 +746,9 @@ msgstr ""
 msgid "argument is not a gam object"
 msgstr ""
 
+msgid "S.scale vector doesn't match S list - please report to maintainer"
+msgstr ""
+
 msgid "Supplied matrix not symmetric"
 msgstr ""
 
@@ -737,6 +774,9 @@ msgid "X lost dimensions in magic!!"
 msgstr ""
 
 msgid "mu dimensions wrong"
+msgstr ""
+
+msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
 msgid "a has wrong number of rows"
@@ -812,12 +852,6 @@ msgid "lower bound >= upper bound in call to mono.con()"
 msgstr ""
 
 msgid "x is null"
-msgstr ""
-
-msgid "x has no row attribute"
-msgstr ""
-
-msgid "x has no col attribute"
 msgstr ""
 
 msgid "order too low"
@@ -952,6 +986,9 @@ msgstr ""
 msgid "\"fs\" terms can not be fixed here"
 msgstr ""
 
+msgid "fs smooth not suitable for discretisation with more than one metric predictor"
+msgstr ""
+
 msgid "the adaptive smooth class is limited to 1 or 2 covariates."
 msgstr ""
 
@@ -1016,6 +1053,12 @@ msgid "s value modified to give continuous function"
 msgstr ""
 
 msgid "basis dimension reset to minimum possible"
+msgstr ""
+
+msgid "incorrect arguments to GP smoother"
+msgstr ""
+
+msgid "more knots than data in an ms term: knots ignored."
 msgstr ""
 
 msgid "smooth objects should not have a qrc attribute."

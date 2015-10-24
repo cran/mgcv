@@ -1496,17 +1496,22 @@ void mgcv_backsolve0(double *R,int *r,int *c,double *B,double *C, int *bc)
   }
 }
 
-void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc) 
+void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *right) 
 /* BLAS version
+   If *right==0:
    Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
    of r by c argument R. B is c by bc. (Possibility of non square argument
    R facilitates use with output from mgcv_qr). This is just a standard back 
    substitution loop.
+   Otherwise:
+   Finds C=BR^{-1} where B is bc by c
 */  
 { double *pR,*pC,alpha=1.0;
+  int n,m;
   char side='L',uplo='U',transa='N',diag='N';
+  if (*right) { side = 'R';m = *bc,n= *c;} else {m = *c;n= *bc;}
   for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
-  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
+  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,&m, &n, &alpha,R, r,C,&m);
 } /* mgcv_backsolve */
 
 
@@ -1747,17 +1752,22 @@ void mgcv_forwardsolve0(double *R,int *r,int *c,double *B,double *C, int *bc)
   }
 }
 
-void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc) 
+ void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *right) 
 /* BLAS version
+   If *right == 0:
    Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
    of r by c argument R. B is c by bc. (Possibility of non square argument
    R facilitates use with output from mgcv_qr). This is just a standard forward 
    substitution loop.
+   Otherwise:
+   Finds C = B R^{-T} where B is bc by c.
 */  
 { double *pR,*pC,alpha=1.0;
+  int m,n;
   char side='L',uplo='U',transa='T',diag='N';
+  if (*right) { side='R';m = *bc;n= *c; } else {m = *c;n= *bc;}
   for (pC=C,pR=pC+ *bc * *c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
-  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, bc, &alpha,R, r,C,c);
+  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,&m, &n, &alpha,R, r,C,&m);
 } /* mgcv_forwardsolve */
 
 void mgcv_pforwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *nt) 

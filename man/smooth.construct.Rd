@@ -105,7 +105,9 @@ The following items may be added:
 \code{smoothCon} will add an identifiability constraint that each term should
 sum to zero over the covariate values. Set to a zero row matrix if no
 constraints are required. If a supplied \code{C} has an attribute \code{"always.apply"} then it is never ignored, even if any
-\code{by} variables of a smooth imply that no constraint is actually needed. }
+\code{by} variables of a smooth imply that no constraint is actually needed. Code for creating \code{C} should check whether 
+the specification object already contains a zero row matrix, and leave this unchanged if it is (since this signifies 
+no constraint should be produced). }
 
 \item{Cp}{An optional matrix supplying alternative identifiability constraints for use when predicting. By default the 
 fitting constrants are used. This option is useful when some sort of simple sparse constraint is required for fitting, but the 

@@ -8,9 +8,12 @@
 data set, the term `GAM' being taken to include any quadratically penalized GLM.  
 The degree of smoothness of model terms is estimated as part of
 fitting. In use the function is much like \code{\link{gam}}, except that the numerical methods
-are designed for datasets containing upwards of several tens of thousands of data (see Wood, Goude and Shaw, 2014). The advantage 
+are designed for datasets containing upwards of several tens of thousands of data (see Wood, Goude and Shaw, 2015). The advantage 
 of \code{bam} is much lower memory footprint than \code{\link{gam}}, but it can also be much faster, 
 for large datasets. \code{bam} can also compute on a cluster set up by the \link[parallel]{parallel} package.
+
+An alternative fitting approach is provided by the \code{discrete==TRUE} method. In this case a method based on discretization of 
+covariate values and C code level parallelization (controlled by the \code{nthreads} argument instead of the \code{cluster} argument) is used. This extends both the data set and model size usable.
 
 }
 \usage{
@@ -111,7 +114,9 @@ if smooths share smoothing parameters).}
 Reset to \code{4*p} if \code{chunk.size < 4*p} where \code{p} is the number of coefficients.}
 
 \item{rho}{An AR1 error model can be used for the residuals (based on dataframe order), of Gaussian-identity 
-           link models. This is the AR1 correlation parameter.}
+           link models. This is the AR1 correlation parameter. Standardized residuals (approximately 
+           uncorrelated under correct model) returned in 
+           \code{std.rsd} if non zero. }
 
 \item{AR.start}{logical variable of same length as data, \code{TRUE} at first observation of an independent
 section of AR1 correlation. Very first observation in data frame does not need this. If \code{NULL} then 
@@ -147,7 +152,7 @@ be reduced by first fitting a model to a random sample of the data, and using th
 involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
 
 \item{G}{if not \code{NULL} then this should be the object returned by a previous call to \code{bam} with 
-\code{fit=FALSE}. Causes all other arguments to be ignored except \code{chunk.size}, \code{gamma},code{nthreads}, \code{cluster}, \code{rho}, \code{gc.level}, \code{samfrac}, \code{use.chol} and \code{method}.}
+\code{fit=FALSE}. Causes all other arguments to be ignored except \code{chunk.size}, \code{gamma},\code{nthreads}, \code{cluster}, \code{rho}, \code{gc.level}, \code{samfrac}, \code{use.chol} and \code{method}.}
 
 \item{fit}{if \code{FALSE} then the model is set up for fitting but not estimated, and an object is returned, suitable for passing as the \code{G} argument to \code{bam}.}
 
@@ -171,7 +176,7 @@ Smoothness selection is performed on the working model at each stage (performanc
 small memory footprint. This is trivial to justify in the case of GCV or Cp/UBRE/AIC based model selection, and 
 for REML/ML is justified via the asymptotic multivariate normality of Q'z where z is the IRLS pseudodata. 
 
-For full method details see Wood, Goude and Shaw (2014).
+For full method details see Wood, Goude and Shaw (2015).
 
 Note that POI is not as stable as the default nested iteration used with \code{\link{gam}}, but that for very large, information rich,
 datasets, this is unlikely to matter much. 
