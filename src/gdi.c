@@ -1947,7 +1947,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
    z must contain Wz on entry.
 */
 { int i,j,k,*pivot,nt1,nr,left,tp,bt,ct,TRUE=1,FALSE=0,one=1;
-  double *zz,*WX,*tau,*R1,Rnorm,Enorm,Rcond,*Q,*tau1,*Ri,ldetI2D,*IQ,*d,*p0,*p1,*p2,*p3,*p4,xx,norm1,norm2;
+  double *zz=NULL,*WX,*tau,*R1,Rnorm,Enorm,Rcond,*Q=NULL,*tau1,*Ri,ldetI2D,*IQ,*d,*p0,*p1,*p2,*p3,*p4,xx,norm1,norm2;
   nt1 = *nt;
   
   if (*type==0) {

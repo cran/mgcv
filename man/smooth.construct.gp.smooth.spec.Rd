@@ -5,9 +5,9 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Low rank Gaussian process smooths}
 
-\description{Gaussian process/kriging models based on a simple covariance functions can be written in a very similar form to thin plate and Duchon spline models (e.g. Handcock, Meier, Nychka, 1994), and low rank versions produced by the eigen approximation method of Wood (2003). Kammann and Wand (2003) suggest a particularly simple form of the Matern covariance function with only a single smoothing parameter to estimate, and this class implements this and other similar models.  
+\description{Gaussian process/kriging models based on simple covariance functions can be written in a very similar form to thin plate and Duchon spline models (e.g. Handcock, Meier, Nychka, 1994), and low rank versions produced by the eigen approximation method of Wood (2003). Kammann and Wand (2003) suggest a particularly simple form of the Matern covariance function with only a single smoothing parameter to estimate, and this class implements this and other similar models.  
 
-Usually invoked by an \code{s(...,bs="ms")} term in a \code{gam} formula. Argument \code{m} of selects the covariance function, sets the range parameter and any power parameter. If \code{m} is not supplied then it defaults to \code{NA} and the covariance function suggested by Kammann and Wand (2003) along with their suggested range parameter is used. Otherwise \code{m[1]} between 1 and 5 selects the correlation function from respectively, spherical, power exponential, and Matern with kappa = 1.5, 2.5 or 3.5. \code{m[2]} if present specifies the range parameter, with non-positive or absent indicating that the Kammann and Wand estimate should be used. \code{m[3]} can be used to specify the power for the power exponential which otherwise defaults to 1. 
+Usually invoked by an \code{s(...,bs="gp")} term in a \code{gam} formula. Argument \code{m} selects the covariance function, sets the range parameter and any power parameter. If \code{m} is not supplied then it defaults to \code{NA} and the covariance function suggested by Kammann and Wand (2003) along with their suggested range parameter is used. Otherwise \code{m[1]} between 1 and 5 selects the correlation function from respectively, spherical, power exponential, and Matern with kappa = 1.5, 2.5 or 3.5. \code{m[2]} if present specifies the range parameter, with non-positive or absent indicating that the Kammann and Wand estimate should be used. \code{m[3]} can be used to specify the power for the power exponential which otherwise defaults to 1. 
 }
 
 \usage{
@@ -33,7 +33,7 @@ smooth class documented under \code{\link{smooth.construct}}, this object will c
 avoid any co-linearity problems that might otehrwise occur in the penalty null space basis of the term. }
 \item{Xu}{A matrix of the unique covariate combinations for this smooth (the basis is constructed by first stripping 
 out duplicate locations).}
-\item{UZ}{The matrix mapping the smoother parameters back to the parameters of a full Matern spline.}
+\item{UZ}{The matrix mapping the smoother parameters back to the parameters of a full GP smooth.}
 \item{null.space.dimension}{The dimension of the space of functions that have zero wiggliness according to the wiggliness penalty for this term.}
 \item{gp.defn}{the type, range parameter and power parameter defining the correlation function. }
 }

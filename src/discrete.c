@@ -135,7 +135,7 @@ void tensorXb(double *f,double *X, double *C,double *work, double *beta,
    no constraint is applied. 
 */ 
   char trans='N';
-  int pb=1,md,*kp,*kd,pd,i,j,one=1;
+  int pb=1,md,*kp,*kd,pd,i,j;
   double *M,done=1.0,dzero=0.0,*p0,*p1,*p2,*p3,*pf,*pc,x;
   M = X;
   for (i=0;i<*dt-1;i++) {
@@ -182,7 +182,7 @@ void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n,
 	int *nx, int *ts, int *dt, int *nt,double *v,int *qc) {
 /* Forms f = X beta for X stored in the packed form described in function XWX */
   int i,j,q,*pt,*off,*voff,*tps,dC=0,c1;
-  double *f0,*pf,*p0,*p1,*p2,*C,*work,maxp=0;
+  double *f0,*pf,*p0,*p1,*p2,*C=NULL,*work,maxp=0;
   /* obtain various indices */
   pt = (int *) R_chk_calloc((size_t)*nt,sizeof(int)); /* the term dimensions */
   off = (int *) R_chk_calloc((size_t)*nx+1,sizeof(int)); /* offsets for X submatrix starts */
@@ -196,7 +196,6 @@ void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n,
         if (c1>dC) dC = c1; /* dimension of working matrix C */
       }
       if (j==0) pt[i] = p[q]; else pt[i] *= p[q]; /* term dimension */
-      //if (maxm<m[q]) maxm=m[q];
     } 
     if (qc[i]>0) voff[i+1] = voff[i] + pt[i]; else voff[i+1] = voff[i]; /* start of ith v matrix */
     if (maxp < pt[i]) maxp = pt[i];
@@ -204,10 +203,10 @@ void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n,
     else tps[i+1] = tps[i] + pt[i] - 1; /* there is a tensor constraint to apply - reducing param count*/
   }
   /* now form the product term by term... */
-  pf=f0 = (double *)calloc((size_t)*n,sizeof(double));
+  pf=f0 = (double *)R_chk_calloc((size_t)*n,sizeof(double));
   i = *n; if (i<maxp) i=maxp;
-  work = (double *)calloc((size_t)i,sizeof(double));
-  if (dC) C = (double *)calloc((size_t)dC,sizeof(double));
+  work = (double *)R_chk_calloc((size_t)i,sizeof(double));
+  if (dC) C = (double *)R_chk_calloc((size_t)dC,sizeof(double));
   for (i=0;i < *nt;i++) { /* work through terms */ 
     if (i==0) f0 = f; /* result written straight to f for i==0 */
     if (dt[i]==1) singleXb(f0,work,X+off[ts[i]],beta+tps[i],k + *n *ts[i],m+ts[i], p+ts[i],n); 
@@ -226,9 +225,8 @@ void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n,
 void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *m,int *p, int *n, 
          int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
          int *ar_stop,int *ar_row,double *ar_weights) {
-  double *Wy,*p0,*p1,*p2,*p3,done=1.0,dzero=0.0,*Xy0,*work,*work1,x;
+  double *Wy,*p0,*p1,*p2,*p3,*Xy0,*work,*work1,x;
   int q,i,j,*pt,*off,*voff,*tps,maxm=0,maxp=0,one=1,zero=0;
-  char trans='T';
   if (*ar_stop>=0) { /* model has AR component, requiring sqrt(weights) */
     for (p0 = w,p1 = w + *n;p0<p1;p0++) *p0 = sqrt(*p0);
   }
@@ -268,7 +266,6 @@ void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *m,int *p, int *
         for (x=0.0,p0=Xy0,p1=p0 + pt[i],p2=v+voff[i];p0<p1;p0++,p2++) x += *p0 * *p2; /* x = v'Xy0 */
         p0=XWy + tps[i];p1 = p0 + pt[i]-1;p2 = v+voff[i] + 1;p3=Xy0+1;
         for (;p0<p1;p0++,p2++,p3++) *p0 = *p3 - x * *p2; /* (I-vv')Xy0 less first element */
-        //F77_CALL(dgemv)(&trans, pt+i, qc+i,&done,Q+Qoff[i],pt+i,Xy0,&one,&dzero,XWy + tps[i],&one);
       } else { /* straight copy */
         for (p0=Xy0,p1=p0+pt[i],p2=XWy+tps[i];p0<p1;p0++,p2++) *p2 = *p0;
       }
@@ -304,10 +301,9 @@ void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx
    AR models are handled via the 3 ar_* arrays. ar_stop[0] < 0 signals no AR. 
   
 */  
-  int r,c,i,j,q,*pt,*pd,*off,a,b,*tps,ptot,maxp=0,maxm=0,*voff,pa,pb,kk,dk,rk,*start,one=1,zero=0; 
-  double done=1.0,dzero=0.0,*p0,*p1,*p2, *Xi,*temp,*tempn,*xwx,*xwx0,
+  int r,c,i,j,q,*pt,*pd,*off,a,b,*tps,ptot,maxp=0,maxm=0,*voff,pa,pb,kk,dk,*start,one=1,zero=0; 
+  double *p0,*p1,*p2, *Xi,*temp,*tempn,*xwx,*xwx0,
     *XiB,*tempB,*tempnB,*x0,*x1,x;
-  char trans='T',not_trans='N';
   #ifndef SUPPORT_OPENMP
   *nthreads = 1;
   #endif
@@ -346,7 +342,7 @@ void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx
       a=c;b=r; 
     }
     /* split cols between threads... */  
-    dk = pt[b] / *nthreads; rk = pt[b] % *nthreads;
+    dk = pt[b] / *nthreads; //rk = pt[b] % *nthreads;
     if (dk * *nthreads < pt[b]) dk++;start[0]=0; 
     for (i=0;i<*nthreads;i++) { 
       start[i+1] = start[i] + dk;
@@ -394,12 +390,6 @@ void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx
 
     /* if Xb is tensor, may need to apply constraint */
     if (dt[a]>1&&qc[a]>0) { /* first term is a tensor with a constraint */
-      ///* copy xwx to xwx0 */
-      //for (p0=xwx,p1=p0 + pt[b]*pt[a],p2=xwx0;p0<p1;p0++,p2++) *p2 = *p0;
-      /* apply Qa' */
-      //F77_CALL(dgemm)(&trans,&not_trans,qc+a,pt+b,pt+a, &done,
-      //		    Q+Qoff[a],pt+a,xwx0,pt+a,&dzero,xwx,qc+a);
-      //pa = qc[a]; /* rows of xwx */
       x0=x1=xwx; /* pointers to columns of xwx */ 
       /* col by col form (I-vv')xwx, dropping first row... */
       for (j=0;j<pt[b];j++) {
@@ -418,10 +408,6 @@ void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx
         for (p0=xwx0+j+pa,p1=v+voff[b],p2=p1+pt[b],p1++;p1<p2;x1+=pa,p1++,p0+=pa) *x1 = *p0 - *p1 *x; 
       }
       pb=pt[b]-1;
-      ///* apply Qa from right */
-      //F77_CALL(dgemm)(&not_trans,&not_trans,&pa,qc+b,pt+b, &done,
-      //		      xwx0,&pa, Q+Qoff[b],pt+b,&dzero,xwx,&pa);
-      //pb = qc[b]; /* rows of xwx */
     } else pb=pt[b];
     /* copy result into overall XWX*/  
   
@@ -436,6 +422,5 @@ void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx
   R_chk_free(start);
   R_chk_free(XiB); R_chk_free(tempnB); R_chk_free(pt); R_chk_free(pd); R_chk_free(off);
   R_chk_free(voff); R_chk_free(tps); R_chk_free(tempB); R_chk_free(xwx); R_chk_free(xwx0);
-  //R_chk_free(); R_chk_free(); R_chk_free(); R_chk_free(); R_chk_free();
 } /* XWX */
 

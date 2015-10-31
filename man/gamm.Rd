@@ -127,7 +127,7 @@ Some details of how GAMs are represented as mixed models and estimated using
 \code{lme} or \code{gammPQL} in \code{gamm} can be found in Wood (2004 ,2006a,b). In addition \code{gamm} obtains a posterior covariance matrix for the parameters of all the fixed effects and the smooth terms. The approach is similar to that described in Lin & Zhang (1999) - the covariance matrix of the data (or pseudodata in the generalized case) implied by the weights, correlation and random effects structure is obtained, based on the estimates of the parameters of these terms and this is used to obtain the posterior covariance matrix of the fixed and smooth effects. 
 
 The bases used to represent smooth terms are the same as those used in \code{\link{gam}}, although adaptive
-smoothing bases are not available.
+smoothing bases are not available. Prediction from the returned \code{gam} object is straightforward using \code{\link{predict.gam}}, but this will set the random effects to zero. If you want to predict with random effects set to their predicted values then you can adapt the prediction code given in the examples below. 
 
 In the event of \code{lme} convergence failures, consider
 modifying \code{option(mgcv.vc.logrange)}: reducing it helps to remove
@@ -329,6 +329,22 @@ b <- gamm(y~s(x0,bs="cr")+s(x1,bs="cr")+s(x2,bs="cr")+
 plot(b$gam,pages=1)
 summary(b$gam)
 vis.gam(b$gam)
+
+## Prediction from gam object, optionally adding 
+## in random effects. 
+
+## Extract random effects and make names more convenient...
+refa <- ranef(b$lme,level=5)
+rownames(refa) <- substr(rownames(refa),start=9,stop=20)
+refb <- ranef(b$lme,level=6)
+rownames(refb) <- substr(rownames(refb),start=9,stop=20)
+
+## make a prediction, with random effects zero...
+p0 <- predict(b$gam,data.frame(x0=.3,x1=.6,x2=.98,x3=.77))
+
+## add in effect for fa = "2" and fb="2/4"...
+p <- p0 + refa["2",1] + refb["2/4",1] 
+
 ## and a "spatial" example...
 library(nlme);set.seed(1);n <- 100
 dat <- gamSim(2,n=n,scale=0) ## standard example
