@@ -1,5 +1,5 @@
-bcb7f62d1e1297b1d685a095b00220aa *ChangeLog
-f133d9c24128ba8a977d1674d59f2a23 *DESCRIPTION
+2c86df7b3fcdf158d1bb11de61f2a6be *ChangeLog
+54d39cfcc0af404fd8bb91703f033f2e *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 b1b86938209b64b673e096da331769eb *NAMESPACE
 9cf2059cc5ab5fd2f8a9f4439fec53e5 *R/bam.r
@@ -70,7 +70,7 @@ b2ff252537dd2155524b774b2435e66e *man/gam.vcomp.Rd
 a66a814cc4c6f806e824751fda519ae0 *man/gam2objective.Rd
 717401fd7efa3b39d90418a5d1d0c216 *man/gamObject.Rd
 a2593990d6a87f7b783d0435062dec02 *man/gamSim.Rd
-1a69eb8822eac2d99f92fee8dfe0a818 *man/gamm.Rd
+e5e279fdabb71a81f03a16fed5022d8e *man/gamm.Rd
 df4a6db696749986fd5e20586fc9b718 *man/gaulss.Rd
 39ae109127110152e97dc9f79e08bb14 *man/get.var.Rd
 a2ea1233d43fac89e0cacbc09a8d31e2 *man/in.out.Rd
@@ -87,7 +87,7 @@ b440c31b77c368b484d9665b2b3e89fb *man/jagam.Rd
 5169af4be5fccf9fa79b6de08e9ea035 *man/magic.post.proc.Rd
 59672d8599211ce9cf44252f92110920 *man/mgcv-FAQ.Rd
 38c75ee7bb718c277da5bc649e6886e7 *man/mgcv-package.Rd
-9742c9bd1d42aaebe27e2b4218d12672 *man/mgcv-parallel.Rd
+f58c9c3919f6971e7f9f7b985a696a08 *man/mgcv-parallel.Rd
 00ccf213c31910cd14f1df65a300eb33 *man/model.matrix.gam.Rd
 bc9b89db7e7ff246749551c16f5f1f07 *man/mono.con.Rd
 d33914a328f645af13f5a42914ca0f35 *man/mroot.Rd
@@ -123,7 +123,7 @@ c438eb3e41cb1f51e72283380145d210 *man/scat.Rd
 76013feaf70d00976bba0154b6f2c946 *man/smooth.construct.cr.smooth.spec.Rd
 f5e6d0f5122f61c336827b3615482157 *man/smooth.construct.ds.smooth.spec.Rd
 db75c958cbfb561914a3291ab58b9786 *man/smooth.construct.fs.smooth.spec.Rd
-3a0545da6f80f00e0b7347f8083a10b3 *man/smooth.construct.gp.smooth.spec.Rd
+e38f6ea7f89cb068976b73a177878906 *man/smooth.construct.gp.smooth.spec.Rd
 4aaa84b520992fbc32b0c37f7f63c1dd *man/smooth.construct.mrf.smooth.spec.Rd
 abe15377f471a2d8957a59c19eeef0bb *man/smooth.construct.ps.smooth.spec.Rd
 6aaff8575f68775ed21930893ea9e03d *man/smooth.construct.re.smooth.spec.Rd
@@ -160,12 +160,12 @@ dc1ef92ff4454734c3a24876e299b760 *po/ko.po
 dfd4eec9edc7d1ab6354d47b6e2bd42f *po/pl.po
 03972284b3400cf82cacd5d2dc4b8cb3 *src/Makevars
 e71c1a1624b431fbab0a4c8f151d2a97 *src/coxph.c
-48f0c9de0da60d48cf4b306c2fdd039a *src/discrete.c
-5a8e93ae5f4fae722c1304cecc9c94b3 *src/gdi.c
+c1365ce13e8571bdd8dafe90ddb4e6b8 *src/discrete.c
+5b0e3daee87ad81384e40ddd2f017dfc *src/gdi.c
 2436f9b328e80370ce2203dbf1dd813c *src/general.h
 d95aa7d646833d1e56f2414f32637bb3 *src/init.c
 9a5d7cb3cf93cbdfc08353fbd20a270e *src/magic.c
-53cde45313485d2d15e6377461dd3f46 *src/mat.c
+52745e0f5fe2fcaf1d3bd9b0297e78f0 *src/mat.c
 aae0f298e384952bb8b6b923d40520a8 *src/matrix.c
 6b781cbd5b9cfee68ad30bb7ce31ef3a *src/matrix.h
 ec2ae157a9e3bedcccc88b053d0a4e0c *src/mgcv.c

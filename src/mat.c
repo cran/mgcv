@@ -847,7 +847,7 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
         #pragma omp parallel for private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
         #endif
         for (i=0;i<nth;i++) {
-	    if (i == nth-1) j = cpf;
+	    if (i == nth-1) j = cpf; else j = cpt;
             p1 = p0 + n + n * cpt *i; 
             z1=p1+nh;
             for (ii =0;ii<j;ii++,p1+=n,z1+=n) {

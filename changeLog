@@ -1,6 +1,12 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-9
+
+* C level fix in bam(...,discrete=TRUE) code. Some memory was mistakenly 
+  allocated via 'calloc' rather than 'R_chk_calloc', but was then freed
+  via 'R_chk_free'. This could cause R to halt on some platforms.
+
 1.8-8
 
 ** New "gp" smooth class (see ?gp.smooth) implemeting the Matern 
