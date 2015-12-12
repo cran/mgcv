@@ -127,7 +127,7 @@ models. Journal of the Royal Statistical Society (B) 73(1):3-36
 O 'Sullivan, Yandall & Raynor (1986) Automatic smoothing of regression
 functions in generalized linear models. J. Amer. Statist. Assoc. 81:96-103.
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}

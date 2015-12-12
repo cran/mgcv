@@ -31,7 +31,7 @@ the fitting routines (except \code{gamm}) deal gracefully with rank deficiency, 
 Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. CRC/
 Chapmand and Hall, Boca Raton, Florida.
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} }
 

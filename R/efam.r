@@ -207,7 +207,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     ## a1 <- f1^2 - f1;a0 <- f0^2 - f0; 
     a <- a1 - a0
     
-    al1al0 <- (al1-al0)/2; al0al1 <- (al0-al1)/2
+    #!al1al0 <- (al1-al0)/2; #! al0al1 <- (al0-al1)/2
     ##g1 <- F(al1al0);g0 <- F(al0al1)
     ##A <- pmax(g1 - g0,.Machine$double.eps)
 #!    A <- Fdiff(al0al1,al1al0)

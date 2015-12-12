@@ -29,7 +29,7 @@ SEs etc to be calculated).
 REML estimation of smoothing parameters in versions 1.5, some changes had to be made to the syntax. In particular the 
 function \code{gam.method} no longer exists. The smoothness selection method (GCV, REML etc) is now controlled by the
 \code{method} argument to \code{gam} while the optimizer is selected using the \code{optimizer} argument. 
-See \code{\link{gam}} and \url{http://www.maths.bath.ac.uk/~sw283/igam/index.html} for details.
+See \code{\link{gam}} and \url{http://www.maths.bris.ac.uk/~sw15190/igam/index.html} for details.
 
 \item \bold{Why is a model object saved under a previous mgcv version not usable with the current mgcv version?} 
 I'm sorry about this issue, I know it's really annoying. Here's my defence. 

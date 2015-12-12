@@ -91,18 +91,37 @@ XWyd <- function(X,w,y,k,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
 Xbd <- function(X,beta,k,ts,dt,v,qc,drop=NULL) {
 ## note that drop may contain the index of columns of X to drop before multiplying by beta.
 ## equivalently we can insert zero elements into beta in the appropriate places.
-  n <- nrow(k);m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
+  n <- if (is.matrix(k)) nrow(k) else length(k)
+  m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
   if (!is.null(drop)) { 
-    b <- rep(0,length(beta)+length(drop))
-    b[-drop] <- beta
+    b <- if (is.matrix(beta)) matrix(0,nrow(beta)+length(drop),ncol(beta)) else rep(0,length(beta)+length(drop))
+    if (is.matrix(beta)) b[-drop,] <- beta else b[-drop] <- beta
     beta <- b
   }
-  oo <- .C(C_Xbd,f=as.double(rep(0,n)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1), 
+  bc <- if (is.matrix(beta)) ncol(beta) else 1
+  oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1), 
            m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
-           as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc))
-  oo$f
+           as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(bc))
+  if (is.matrix(beta)) matrix(oo$f,n,bc) else oo$f
 } ## Xbd
+
+diagXVXd <- function(X,V,k,ts,dt,v,qc,drop=NULL,n.threads=1) {
+## discrete computation of diag(XVX')
+  n <- if (is.matrix(k)) nrow(k) else length(k)
+  m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
+  nx <- length(X);nt <- length(ts)
+  if (!is.null(drop)) { 
+    pv <- ncol(V)+length(drop)
+    V0 <- matrix(0,pv,pv)
+    V0[-drop,-drop] <- V
+    V <- V0;rm(V0)
+  } else pv <- ncol(V) 
+  oo <- .C(C_diagXVXt,diag=as.double(rep(0,n)),V=as.double(V),X=as.double(unlist(X)),k=as.integer(k-1), 
+           m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
+           as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(pv),as.integer(n.threads))
+  oo$diag
+} ## diagXVXd
 
 dchol <- function(dA,R) {
 ## if dA contains matrix dA/dx where R is chol factor s.t. R'R = A

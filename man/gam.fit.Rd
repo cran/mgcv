@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM P-IRLS estimation with GCV/UBRE smoothness estimation}
 \description{ This is an internal function of package \code{mgcv}. It is a modification
-  of the function \code{glm.fit}, designed to be called from \code{gam}. The major
+  of the function \code{glm.fit}, designed to be called from \code{gam} when perfomance iteration is selected (not the default). The major
   modification is that rather than solving a weighted least squares problem at each IRLS step, 
   a weighted, penalized least squares problem
   is solved at each IRLS step with smoothing parameters associated with each penalty chosen by GCV or UBRE,

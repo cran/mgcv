@@ -27,7 +27,7 @@ void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,dou
 */
   double eta,*p1,*p2,*p3,*v,*pv,*pa,x,vVv,hi; 
   int ir=0,i=0;
-  v = (double *)R_chk_calloc((size_t)*p,sizeof(double)); 
+  v = (double *)CALLOC((size_t)*p,sizeof(double)); 
   for (i=0;i<*n;i++) { /* loop through new data */
     while (ir < *nt && t[i]<tr[ir]) { /* find current interval */
       ir++;
@@ -54,7 +54,7 @@ void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,dou
     }
     X++; /* next prediction */
   } /* data loop */
-  R_chk_free(v);
+  FREE(v);
 } /* coxpred */
 
 void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km, 
@@ -85,11 +85,11 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
 */
   double *b,*gamma_p,*gamma,*gamma_np,*bj,*bj1,*p1,*p2,gamma_i,*Xp,*aj,*aj1,x,y;
   int *dc,i,j;
-  b = (double *)R_chk_calloc((size_t) *nt * *p,sizeof(double)); /* storage for the b vectors */
-  gamma_p = (double *)R_chk_calloc((size_t) *nt,sizeof(double)); 
-  gamma_np = (double *)R_chk_calloc((size_t) *nt,sizeof(double));
-  dc = (int *)R_chk_calloc((size_t) *nt,sizeof(int)); /* storage for event counts at each time*/
-  gamma = (double *)R_chk_calloc((size_t)*n,sizeof(double)); 
+  b = (double *)CALLOC((size_t) *nt * *p,sizeof(double)); /* storage for the b vectors */
+  gamma_p = (double *)CALLOC((size_t) *nt,sizeof(double)); 
+  gamma_np = (double *)CALLOC((size_t) *nt,sizeof(double));
+  dc = (int *)CALLOC((size_t) *nt,sizeof(int)); /* storage for event counts at each time*/
+  gamma = (double *)CALLOC((size_t)*n,sizeof(double)); 
   if (*p>0) for (i=0;i<*n;i++) gamma[i] = exp(eta[i]);
   else for (p1=gamma,p2=p1 + *n;p1<p2;p1++) *p1 = 1.0;
 
@@ -130,8 +130,8 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
     i = j * *p;
     for (aj=X+i,aj1=p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++) *aj = *aj1 + *p1 * x; 
   }
-  R_chk_free(b);R_chk_free(gamma);R_chk_free(dc);
-  R_chk_free(gamma_p);R_chk_free(gamma_np);
+  FREE(b);FREE(gamma);FREE(dc);
+  FREE(gamma_p);FREE(gamma_np);
 } /* coxpp */
 
 
@@ -194,10 +194,10 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
     *d1gamma_p=NULL,*d1eta=NULL,xx,xx0,xx1,xx2,xx3,*d1b_p=NULL,*d1A_p=NULL,
     *d2eta=NULL,*d2gamma=NULL,*d2gamma_p=NULL,*d2b_p=NULL,
     *d2ldA_p=NULL;
-  gamma = (double *)R_chk_calloc((size_t)*n,sizeof(double)); 
+  gamma = (double *)CALLOC((size_t)*n,sizeof(double)); 
   if (*deriv >=0) {
-    b_p = (double *)R_chk_calloc((size_t)*p,sizeof(double));
-    A_p = (double *)R_chk_calloc((size_t)(*p * *p),sizeof(double));
+    b_p = (double *)CALLOC((size_t)*p,sizeof(double));
+    A_p = (double *)CALLOC((size_t)(*p * *p),sizeof(double));
   }
   /* form exponential of l.p. */
 
@@ -205,27 +205,27 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
 
   if (*deriv>0) { /* prepare for first derivatives */
     /* Get basic first derivatives given d1beta */
-    d1eta = (double *)R_chk_calloc((size_t)(*n * *n_sp),sizeof(double));
+    d1eta = (double *)CALLOC((size_t)(*n * *n_sp),sizeof(double));
     mgcv_mmult(d1eta,X,d1beta,&tB,&tC,n,n_sp,p);
-    p1=d1gamma = (double *)R_chk_calloc((size_t)(*n * *n_sp),sizeof(double));
+    p1=d1gamma = (double *)CALLOC((size_t)(*n * *n_sp),sizeof(double));
     p2=d1eta;
     for (j=0;j<*n_sp;j++) 
     for (i=0;i<*n;i++) {
 	*p1 = *p2 * gamma[i]; p1++; p2++;
     }
     /* accumulation storage */
-    d1gamma_p = (double *)R_chk_calloc((size_t)*n_sp,sizeof(double));
-    d1b_p = (double *)R_chk_calloc((size_t)(*n_sp * *p),sizeof(double));   
+    d1gamma_p = (double *)CALLOC((size_t)*n_sp,sizeof(double));
+    d1b_p = (double *)CALLOC((size_t)(*n_sp * *p),sizeof(double));   
   }
 
   if (*deriv>2) { /* prepare for second derivative calculations */
     /* Basic second derivative derived from d2beta */ 
     nhh = *n_sp * (*n_sp+1) / 2; /* elements in `half hessian' */
-    d2eta  = (double *)R_chk_calloc((size_t)(*n * nhh),sizeof(double));
+    d2eta  = (double *)CALLOC((size_t)(*n * nhh),sizeof(double));
      
     mgcv_mmult(d2eta,X,d2beta,&tB,&tC,n,&nhh,p);
    
-    p1=d2gamma  = (double *)R_chk_calloc((size_t)(*n * nhh),sizeof(double));
+    p1=d2gamma  = (double *)CALLOC((size_t)(*n * nhh),sizeof(double));
     p2=d2eta;
     for (j=0;j<*n_sp;j++) {  /* create d2gamma */
       for (k=j;k<*n_sp;k++) {
@@ -238,18 +238,18 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
       }
     } /* end of d2gamma loop */  
     /* accumulation storage */
-    d2gamma_p = (double *)R_chk_calloc((size_t) nhh,sizeof(double));
-    d2b_p = (double *)R_chk_calloc((size_t)( nhh * *p),sizeof(double));
+    d2gamma_p = (double *)CALLOC((size_t) nhh,sizeof(double));
+    d2b_p = (double *)CALLOC((size_t)( nhh * *p),sizeof(double));
   }
 
   if (*deriv>0) { /* Derivatives of H are required */
     /* create storage for accumulating derivatives */
-    d1A_p = (double *)R_chk_calloc((size_t)(*n_sp * *p * *p),sizeof(double));
+    d1A_p = (double *)CALLOC((size_t)(*n_sp * *p * *p),sizeof(double));
     /* clear incoming storage */
     for (j = *n_sp * *p * *p,k=0;k<j;k++) d1H[k] = 0.0;
     /* note that only leading diagonal of d2H is obtained and stored */ 
     if (*deriv>2) {   
-      d2ldA_p = (double *)R_chk_calloc((size_t)(nhh * *p),sizeof(double));
+      d2ldA_p = (double *)CALLOC((size_t)(nhh * *p),sizeof(double));
       for (j = nhh * *p,k=0;k<j;k++) d2H[k] = 0.0; 
     }
   }
@@ -373,19 +373,19 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
 	d1H[k + *p * l + off] = d1H[l + *p * k + off];
   }
  
-  if (*deriv>=0) { R_chk_free(A_p);R_chk_free(b_p);}
-  R_chk_free(gamma);
+  if (*deriv>=0) { FREE(A_p);FREE(b_p);}
+  FREE(gamma);
 
   if (*deriv > 0) { /* clear up first derivative storage */
-    R_chk_free(d1eta);R_chk_free(d1gamma);
-    R_chk_free(d1gamma_p);R_chk_free(d1b_p);
-    R_chk_free(d1A_p);
+    FREE(d1eta);FREE(d1gamma);
+    FREE(d1gamma_p);FREE(d1b_p);
+    FREE(d1A_p);
   }
 
   if (*deriv > 2) { /* clear up second derivative storage */
-    R_chk_free(d2eta);R_chk_free(d2gamma);
-    R_chk_free(d2gamma_p);R_chk_free(d2b_p);
-    R_chk_free(d2ldA_p);    
+    FREE(d2eta);FREE(d2gamma);
+    FREE(d2gamma_p);FREE(d2b_p);
+    FREE(d2ldA_p);    
   }
   *lp = lpl;
 } /* end coxlpl */

@@ -129,9 +129,9 @@ double *forward_buf(double *buf,int *jal,int update)
 /* extend buffer forward 1000 */
 { double *buf2,*p,*p1,*p2;
   int n=1000;
-  buf2 = (double *)R_chk_calloc((size_t)(*jal+n),sizeof(double));
+  buf2 = (double *)CALLOC((size_t)(*jal+n),sizeof(double));
   for (p=buf,p1=buf + *jal,p2=buf2;p<p1;p++,p2++) *p2 = *p;
-  R_chk_free(buf);
+  FREE(buf);
   if (update) *jal += n;
   return(buf2);
 }
@@ -143,7 +143,7 @@ double *backward_buf(double *buf,int *jal,int *j0,int *j_lo,int *j_hi,int update
   double *buf2,*p,*p1,*p2;
   if (n > *j0-1) n = *j0 - 1; /* only extend back to j=1 */
   if (n==0) return(buf);
-  buf2 = (double *)R_chk_calloc((size_t)(*jal+n),sizeof(double));
+  buf2 = (double *)CALLOC((size_t)(*jal+n),sizeof(double));
   for (p=buf,p1=buf + *jal,p2=buf2 + n;p<p1;p++,p2++) *p2 = *p;  
   if (update) {
     *jal += n; /* number of buffer locations allocated */
@@ -151,7 +151,7 @@ double *backward_buf(double *buf,int *jal,int *j0,int *j_lo,int *j_hi,int update
     *j_hi += n;  /* end of initialized elements within buffer */
     *j0 -= n; /* j0 is the true j corresponding to buffer element 0 */
   }
-  R_chk_free(buf);
+  FREE(buf);
   return(buf2);
 } /* backward_buf */
 
@@ -221,9 +221,9 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
   /* initially establish the min and max y values, and hence the initial buffer range,
      at the same time produce the alpha log(y) log(y)/(1-p)^2 and log(y)/(1-p)^3 vectors. */ 
   
-  alogy = (double *)R_chk_calloc((size_t)*n,sizeof(double));
-  logy1p2 = (double *)R_chk_calloc((size_t)*n,sizeof(double));
-  logy1p3 = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+  alogy = (double *)CALLOC((size_t)*n,sizeof(double));
+  logy1p2 = (double *)CALLOC((size_t)*n,sizeof(double));
+  logy1p3 = (double *)CALLOC((size_t)*n,sizeof(double));
 
   ymax = ymin = *y;
   *alogy = alpha * log(*y);
@@ -254,20 +254,20 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
   /* prepare, up front, everything needed to form log W_j etc. except for the part depending on y[i]... */
 
   /* evaluation... */
-  wb = (double *)R_chk_calloc((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j, for y[i] */
+  wb = (double *)CALLOC((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j, for y[i] */
   /* first deriv wrt phi... */
-  wb1 = (double *)R_chk_calloc((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j', for y[i] */
+  wb1 = (double *)CALLOC((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j', for y[i] */
   /* second deriv wrt phi... */
-  // wb2 = (double *)R_chk_calloc((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j'', for y[i] */
+  // wb2 = (double *)CALLOC((size_t)jal,sizeof(double)); /* add -j*alogy[i] to get logW_j'', for y[i] */
   /* ... note that in the above it's log of derivative, not derivative of log, but in the 
     following it's the derivative of the log... */
 
   /* first deriv wrt p... */
-  wp1 = (double *)R_chk_calloc((size_t)jal,sizeof(double));
+  wp1 = (double *)CALLOC((size_t)jal,sizeof(double));
   /* second deriv wrt p... */
-  wp2 = (double *)R_chk_calloc((size_t)jal,sizeof(double));
+  wp2 = (double *)CALLOC((size_t)jal,sizeof(double));
   /* second deriv wrt p and phi... */
-  wpp = (double *)R_chk_calloc((size_t)jal,sizeof(double));
+  wpp = (double *)CALLOC((size_t)jal,sizeof(double));
 
   for (jb=j_lo,j=j_lo+j0;jb <= j_hi;jb++,j++) { /* jb is in buffer index, j is true index */ 
     wb[jb] = j * w_base - lgamma((double)j+1) - lgamma(-j * alpha);
@@ -479,8 +479,8 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
     w1p[i] =  wdlogwdp/wi;
 
   } /* end of looping through y */
-  R_chk_free(alogy);R_chk_free(wb);R_chk_free(wb1);//R_chk_free(wb2);
-  R_chk_free(logy1p2);R_chk_free(logy1p3);R_chk_free(wp1);R_chk_free(wp2);R_chk_free(wpp);
+  FREE(alogy);FREE(wb);FREE(wb1);//FREE(wb2);
+  FREE(logy1p2);FREE(logy1p3);FREE(wp1);FREE(wp2);FREE(wpp);
 } /* tweedious */
 
 
@@ -530,7 +530,7 @@ x <- rtweedie(10000,power=1.5,mu=1,phi=1)
 /** Fast re-weighting routines                         */
 /*******************************************************/
 
-void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans) {
+void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans,double *work) {
 /* Function to recombine rows of n by p matrix X (column ordered).
    ith row of X' is made up of row[stop[i-1]+1...stop[i]], weighted by 
    w[stop[i-1]+1...stop[i]]. stop[-1]=-1 by convention.
@@ -540,14 +540,17 @@ void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans) {
    j from stop[i-1]+1 to stop[i]. Otherwise the tranposed operation 
    x'[row[j]] += w[row[j]] * x[i] is used with the same j range. x' zero at outset.
 
+   work is same dimension as X
+
    See rwMatrix in bam.r for call from R. 
 */
-  int i,j,jump,start=0,end,off;
+  ptrdiff_t i,j,jump,start=0,end,off;
   double *X1p,*Xp,weight,*Xpe,*X1;
   /* create storage for output matrix, cleared to zero */
-  X1 = (double *)R_chk_calloc((size_t)(*n * *p),sizeof(double));
+  X1 = work; 
   jump = *n;
-  off = *n * *p;
+  off = *n * (ptrdiff_t) *p; 
+  for (X1p=X1,Xpe=X1p+off;X1p<Xpe;X1p++) *X1p = 0.0;
   for (i=0;i<*n;i++) { /* loop through rows of output X1 */
     end = stop[i]+1;
     for (j=start;j<end;j++) { /* loop through the input rows */
@@ -565,7 +568,6 @@ void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans) {
   }
   /* copy output to input for return...*/
   for (Xp=X,X1p=X1,Xpe=Xp+off;Xp<Xpe;Xp++,X1p++) *Xp = *X1p;
-  R_chk_free(X1);
 }
 
 /* Example code for rwMatrix in R....

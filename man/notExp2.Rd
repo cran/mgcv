@@ -60,7 +60,7 @@ notLog2(x,d=.Options$mgcv.vc.logrange,b=1/d)
 
 \references{
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 
 }
 

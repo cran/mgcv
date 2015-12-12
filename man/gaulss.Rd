@@ -31,6 +31,10 @@ The null deviance reported for this family is the sum of squares of the differen
 
 }
 
+\references{
+Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+}
+
 
 
 

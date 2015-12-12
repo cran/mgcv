@@ -105,7 +105,7 @@ void gen_tps_poly_powers(int *pi /* **pi */,int *M,int *m, int *d)
 */
 
 { int *index,i,j,sum;
-  index=(int *)R_chk_calloc((size_t) *d,sizeof(int));
+  index=(int *)CALLOC((size_t) *d,sizeof(int));
   for (i=0;i < *M;i++)
   { /* copy index to pi */
     /* for (j=0;j<d;j++) pi[i][j]=index[j];*/
@@ -124,7 +124,7 @@ void gen_tps_poly_powers(int *pi /* **pi */,int *M,int *m, int *d)
       } 
     }
   }
-  R_chk_free(index); 
+  FREE(index); 
 }
 
 
@@ -141,10 +141,10 @@ void tpsT(matrix *T,matrix *X,int m,int d)
   for (i=0;i<d;i++) M*=d+m-1-i;
   for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
 
-  /* pin=(int **)R_chk_calloc((size_t)M,sizeof(int *)); 
-     for (i=0;i<M;i++) pin[i]=(int *)R_chk_calloc((size_t)d,sizeof(int));*/
+  /* pin=(int **)CALLOC((size_t)M,sizeof(int *)); 
+     for (i=0;i<M;i++) pin[i]=(int *)CALLOC((size_t)d,sizeof(int));*/
 
-  pin = (int *)R_chk_calloc((size_t) (M * d),sizeof(int));
+  pin = (int *)CALLOC((size_t) (M * d),sizeof(int));
   gen_tps_poly_powers(pin, &M, &m, &d); /* pin[][] contains powers of polynomials in unpenalized basis */
   
   (*T)=initmat(X->r,M);
@@ -155,8 +155,8 @@ void tpsT(matrix *T,matrix *X,int m,int d)
     T->M[i][j]=x;
   }
   
-  /*for (i=0;i<M;i++) R_chk_free(pin[i]);*/
-  R_chk_free(pin);
+  /*for (i=0;i<M;i++) FREE(pin[i]);*/
+  FREE(pin);
 }
 
 
@@ -205,15 +205,15 @@ double tps_g(matrix *X,matrix *p,double *x,int d,int m,double *b,int constant)
   if (2*m<=d&&d>0) { m=0;while (2*m<d+2) m++;} 
   if (sd!=d||sm!=m) /* then re-calculate the penalty null space basis and eta constant */
   { if (sd>0&&sm>0) 
-    { /*for (i=0;i<M;i++) R_chk_free(pin[i]);*/ R_chk_free(pin);}
+    { /*for (i=0;i<M;i++) FREE(pin[i]);*/ FREE(pin);}
     sd=d;sm=m;
     if (d>0) /* get a new basis for the null space of the penalty */
     { M=1;     /* dimension of penalty null space */
       for (i=0;i<d;i++) M*=d+m-1-i;
       for (i=2;i<=d;i++) M/=i;     /* M = (m+d+1)!/(d!(m-d!) */
-      /* pin=(int **)R_chk_calloc((size_t)M,sizeof(int *)); 
-         for (i=0;i<M;i++) pin[i]=(int *)R_chk_calloc((size_t)d,sizeof(int));*/
-      pin=(int *)R_chk_calloc((size_t)(M*d),sizeof(int)); 
+      /* pin=(int **)CALLOC((size_t)M,sizeof(int *)); 
+         for (i=0;i<M;i++) pin[i]=(int *)CALLOC((size_t)d,sizeof(int));*/
+      pin=(int *)CALLOC((size_t)(M*d),sizeof(int)); 
       gen_tps_poly_powers(pin, &M, &m, &d);
       eta0 = eta_const(m,d); /* constant multiplying eta */
     } else return(0.0);
@@ -266,8 +266,8 @@ int *Xd_strip(matrix *Xd)
 
 { int *yxindex,start,stop,ok,i;
   double xi,**dum;
-  yxindex = (int *)R_chk_calloc((size_t)Xd->r,sizeof(int));
-  dum = (double **)R_chk_calloc((size_t)Xd->r,sizeof(double *));
+  yxindex = (int *)CALLOC((size_t)Xd->r,sizeof(int));
+  dum = (double **)CALLOC((size_t)Xd->r,sizeof(double *));
   msort(*Xd);
   start=stop=0;ok=1;
   while(ok)
@@ -298,7 +298,7 @@ int *Xd_strip(matrix *Xd)
       { Xd->M[Xd->r-1+i]=dum[i];}
     } 
   }
-  R_chk_free(dum); 
+  FREE(dum); 
   return(yxindex);
 }
 
@@ -398,14 +398,14 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
 
   
       nk = E.r;
-      Ea = (double *) R_chk_calloc((size_t) (nk*nk),sizeof(double));
-      Ua = (double *) R_chk_calloc((size_t) (nk*k),sizeof(double));
+      Ea = (double *) CALLOC((size_t) (nk*nk),sizeof(double));
+      Ua = (double *) CALLOC((size_t) (nk*k),sizeof(double));
       RArrayFromMatrix(Ea,nk,&E);
       minus = -1;kk=k; 
   
       Rlanczos(Ea,Ua,v.M[0],&nk, &kk, &minus,&tol,&one); // final '&one' is for single thread version
 
-      U = Rmatrix(Ua,E.r,k);R_chk_free(Ea);R_chk_free(Ua);
+      U = Rmatrix(Ua,E.r,k);FREE(Ea);FREE(Ua);
     
   
     /* Now form the constraint matrix for the truncated problem T'U */
@@ -448,14 +448,14 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     freemat(X1);
   } else /* the user supplied a set of knots to generate the original un-truncated basis */
   { p.r=0; /* don't want a value from tps_g() */
-    xc=(double *)R_chk_calloc((size_t)d,sizeof(double));
+    xc=(double *)CALLOC((size_t)d,sizeof(double));
     kk = (int) UZ->r;
-    b=(double *)R_chk_calloc((size_t)kk,sizeof(double));  /* initmat((long)UZ->r,1L);*/
+    b=(double *)CALLOC((size_t)kk,sizeof(double));  /* initmat((long)UZ->r,1L);*/
     *X=initmat(n,k);
-    a = (double *)R_chk_calloc((size_t)k,sizeof(double));
+    a = (double *)CALLOC((size_t)k,sizeof(double));
     /* following loop can dominate computational cost, so it is worth 
        using BLAS routines and paying some attention to efficiency */
-    uz = (double *) R_chk_calloc((size_t)(kk*k),sizeof(double));
+    uz = (double *) CALLOC((size_t)(kk*k),sizeof(double));
     RArrayFromMatrix(uz,kk,UZ);
     for (i=0;i<n;i++) { 
       for (j=0;j<d;j++) xc[j]=x[j][i];
@@ -474,7 +474,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
       } */
     }
     tps_g(Xu,&p,xc,0,0,b,constant); /* tell tps_g to clear up its internally allocated memory - only d=0 matters here*/
-    R_chk_free(xc);R_chk_free(b);R_chk_free(a);R_chk_free(uz);
+    FREE(xc);FREE(b);FREE(a);FREE(uz);
   }
   /* Next, create the penalty matrix...... */
   *S=initmat(k,k); /* form Z'SZ */
@@ -495,7 +495,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
     for (j=0;j<S->r;j++) S->M[i][j]/=w;
     for (j=0;j<S->r;j++) S->M[j][i]/=w;
   }  
-  R_chk_free(yxindex);freemat(Z);freemat(TU);freemat(E);freemat(T);
+  FREE(yxindex);freemat(Z);freemat(TU);freemat(E);freemat(T);
   if (!pure_knot) {freemat(U);freemat(v);}
 }
 
@@ -520,10 +520,10 @@ void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,do
 { double **xx,**kk=NULL,*dum,**XM;
   matrix Xm,Sm,UZm,Xum;
   int i,j,Xr;
-  xx=(double **)R_chk_calloc((size_t)(*d),sizeof(double*));
+  xx=(double **)CALLOC((size_t)(*d),sizeof(double*));
   for (i=0;i<*d;i++) xx[i]=x + i * *n;
   if (*nk)
-  { kk=(double **)R_chk_calloc((size_t)(*d),sizeof(double*));
+  { kk=(double **)CALLOC((size_t)(*d),sizeof(double*));
     for (i=0;i<*d;i++) kk[i]=knt + i * *nk;
   }
   tprs_setup(xx,kk,*m,*d,*n,*k,1,&Xm,&Sm,&UZm,&Xum,*nk); /* Do actual setup */
@@ -540,7 +540,7 @@ void construct_tprs(double *x,int *d,int *n,double *knt,int *nk,int *m,int *k,do
     dum++;
   }
   freemat(Xm);freemat(Sm);freemat(UZm);freemat(Xum);
-  R_chk_free(xx);if(*nk) R_chk_free(kk);
+  FREE(xx);if(*nk) FREE(kk);
 }
 
 void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *nXu,
@@ -562,17 +562,17 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
 
   if (2 * *m <= *d && *d > 0) { *m = 0;while ( 2 * *m < *d+2) (*m)++;} 
   /* get null space polynomial powers */
-  pin=(int *)R_chk_calloc((size_t) (*M * *d),sizeof(int)); 
+  pin=(int *)CALLOC((size_t) (*M * *d),sizeof(int)); 
   gen_tps_poly_powers(pin, M, m, d);
   eta0 = eta_const(*m,*d);
 
   /*Xum=Rmatrix(Xu,*nXu,*d);*/
   nobsM = *nXu + *M;
   /* UZm=Rmatrix(UZ,nobsM,*k);*/
-  b=(double *)R_chk_calloc((size_t)nobsM,sizeof(double)); /* initmat(UZm.r,1L);*/
-  a=(double *)R_chk_calloc((size_t)*k,sizeof(double));
+  b=(double *)CALLOC((size_t)nobsM,sizeof(double)); /* initmat(UZm.r,1L);*/
+  a=(double *)CALLOC((size_t)*k,sizeof(double));
   /* Xm=initmat((long)*n,(long)*k);*/
-  xx=(double*)R_chk_calloc((size_t) *d,sizeof(double));
+  xx=(double*)CALLOC((size_t) *d,sizeof(double));
   for (Xp=X,xp=x,i=0;i< *n;i++,xp++,Xp++) 
   { if (*by_exists) by_mult=by[i]; else by_mult=1.0;
     if (by_mult==0.0) {         /* then don't waste flops on calculating stuff that will only be zeroed */
@@ -614,8 +614,8 @@ void predict_tprs(double *x, int *d,int *n,int *m,int *k,int *M,double *Xu,int *
   /*tps_g(&Xum,&p,x,0,0,b,1);*/ /* have tps_g clear up */ 
   /*freemat(Xum);*/
   /*freemat(UZm);*/
-  R_chk_free(b);R_chk_free(a);
-  R_chk_free(xx);R_chk_free(pin);
+  FREE(b);FREE(a);
+  FREE(xx);FREE(pin);
 }
 
 

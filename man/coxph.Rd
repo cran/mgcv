@@ -43,6 +43,8 @@ Hastie and Tibshirani (1990) Generalized Additive Models, Chapman and Hall.
 
 Klein, J.P and Moeschberger, M.L. (2003) Survival Analysis: Techniques for
    Censored and Truncated Data (2nd ed.) Springer.
+
+Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
 }
 
 

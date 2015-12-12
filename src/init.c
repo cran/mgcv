@@ -20,9 +20,10 @@ R_CallMethodDef CallMethods[] = {
 };
 
 R_CMethodDef CEntries[] = {
+    {"diagXVXt", (DL_FUNC) &diagXVXt,15},
     {"XWXd", (DL_FUNC) &XWXd,17},
     {"XWyd", (DL_FUNC) &XWyd,17},
-    {"Xbd", (DL_FUNC) &Xbd,13},
+    {"Xbd", (DL_FUNC) &Xbd,14},
     {"vcorr", (DL_FUNC) &vcorr, 5},
     {"dchol", (DL_FUNC) &dchol, 4},
     {"mgcv_omp", (DL_FUNC) &mgcv_omp, 1},
@@ -52,7 +53,7 @@ R_CMethodDef CEntries[] = {
     {"mgcv_td_qy",(DL_FUNC)&mgcv_td_qy,7},
     {"mgcv_symeig",(DL_FUNC)&mgcv_symeig,6},
     {"read_mat",(DL_FUNC)&read_mat,4},
-    {"rwMatrix",(DL_FUNC)&rwMatrix,7},
+    {"rwMatrix",(DL_FUNC)&rwMatrix,8},
     {"in_out",(DL_FUNC)&in_out,8},
     {"Rlanczos",(DL_FUNC)&Rlanczos,8},
     {"rksos",(DL_FUNC)&rksos,3},

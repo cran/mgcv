@@ -329,7 +329,7 @@ Wood (2001) mgcv:GAMs and Generalized Ridge Regression for R. R News 1(2):20-25
 Wood and Augustin (2002) GAMs with integrated model selection using penalized regression splines and applications 
 to environmental modelling. Ecological Modelling 157:157-177
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 

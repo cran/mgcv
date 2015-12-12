@@ -41,7 +41,7 @@ For details of how GAMMs are set up for estimation using \code{lme} see:
 Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
 Generalized Additive Mixed Models. Biometrics 62(4):1025-1036
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
