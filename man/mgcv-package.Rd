@@ -85,6 +85,7 @@ French Translation - Philippe Grosjean
 
 Maintainer: Simon Wood <simon.wood@r-project.org>
 
+Part funded by EPSRC: EP/K005251/1
 }
 \references{
 These provide details for the underlying mgcv methods, and fuller 

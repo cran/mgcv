@@ -26,6 +26,7 @@ USA.*/
 #include "matrix.h"
 #include "qp.h"
 #include "general.h"
+#include "mgcv.h"
 
 #define DELMAX 35
 
@@ -420,10 +421,10 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
 { matrix Q,T,Rf,PX,Py,a,P,p1,s,c,Xy,y1,u,Pd,pz,pk;
   int k,i,j,tk,*I,*ignore,iter=0,*fixed,*delog,maxdel=100;
   double x;
-  I=(int *)R_chk_calloc((size_t) p->r,sizeof(int)); /* I[i] is the row of Ain containing ith active constraint */
-  fixed=(int *)R_chk_calloc((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequality constraint is to be left in regardless of l.m. estimate */
-  ignore=(int *)R_chk_calloc((size_t) Ain->r,sizeof(int)); /* ignore[i] is 1 if ith row of Ain is in active set, 0 otherwise */
-  delog=(int *)R_chk_calloc((size_t) Ain->r,sizeof(int)); /* counts up number of times a constraint is deleted */
+  I=(int *)CALLOC((size_t) p->r,sizeof(int)); /* I[i] is the row of Ain containing ith active constraint */
+  fixed=(int *)CALLOC((size_t) p->r,sizeof(int)); /* fixed[i] is set to 1 when the corresponding inequality constraint is to be left in regardless of l.m. estimate */
+  ignore=(int *)CALLOC((size_t) Ain->r,sizeof(int)); /* ignore[i] is 1 if ith row of Ain is in active set, 0 otherwise */
+  delog=(int *)CALLOC((size_t) Ain->r,sizeof(int)); /* counts up number of times a constraint is deleted */
   p1=initmat(p->r,1);    /* a working space vector for stepping & lagrange */
   y1=initmat(y->r,1);    /* a work space vector for lagrange */
   s=initmat(p->r,1);c=initmat(p->r,1); /* working space vectors for Givens rotation */
@@ -505,7 +506,7 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
         /* free memory */
         freemat(T);freemat(Rf);freemat(PX);freemat(Py);freemat(p1);freemat(y1);
         freemat(s);freemat(c);freemat(Xy);freemat(Pd);freemat(pz);freemat(pk);
-        R_chk_free(I);R_chk_free(ignore);freemat(P);R_chk_free(fixed);R_chk_free(delog);
+        FREE(I);FREE(ignore);freemat(P);FREE(fixed);FREE(delog);
         /* return */
         return;
       }

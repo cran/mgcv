@@ -771,7 +771,7 @@ gam.setup.list <- function(formula,pterms,
   pof <- ncol(G$X) ## counts the model matrix columns produced so far
   pstart <- rep(0,d) ## indexes where parameteric columns start in each formula block of X
   pstart[1] <- 1
-  for (i in 2:d) {
+  if (d>1) for (i in 2:d) {
     if (is.null(formula[[i]]$response)) {  ## keep gam.setup happy
       formula[[i]]$response <- formula$response 
       mv.response <- FALSE
@@ -1889,7 +1889,7 @@ variable.summary <- function(pf,dl,n) {
    if (v.n>0) for (i in 1:v.n) {
      if (v.name[i]%in%p.name) para <- TRUE else para <- FALSE ## is variable in the parametric part?
 
-     if (para&&is.matrix(dl[[v.name[i]]])) { ## parametric matrix --- a special case
+     if (para&&is.matrix(dl[[v.name[i]]])&&ncol(dl[[v.name[i]]])>1) { ## parametric matrix --- a special case
        x <- matrix(apply(dl[[v.name[i]]],2,quantile,probs=0.5,type=3,na.rm=TRUE),1,ncol(dl[[v.name[i]]])) ## nearest to median entries
      } else { ## anything else
        x <- dl[[v.name[i]]]
@@ -2524,6 +2524,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 #      == "terms"    - for individual terms on scale of linear predictor 
 #      == "iterms"   - exactly as "terms" except that se's include uncertainty about mean  
 #      == "lpmatrix" - for matrix mapping parameters to l.p. - has "lpi" attribute if multiple l.p.s
+#      == "newdata"  - returns newdata after pre-processing 
 # Steps are:
 #  1. Set newdata to object$model if no newdata supplied
 #  2. split up newdata into manageable blocks if too large
@@ -2549,12 +2550,16 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 #                       dropping
 # if GC is TRUE then gc() is called after each block is processed
 
+  ## para acts by adding all smooths to the exclude list. 
+  ## it also causes any lp matrix to be smaller than it would otherwise have been.
+  #if (para) exclude <- c(exclude,unlist(lapply(object$smooth,function(x) x$label)))
+
   if (unconditional) {
     if (is.null(object$Vc)) warning("Smoothness uncertainty corrected covariance not available") else 
     object$Vp <- object$Vc
   }
 
-  if (type!="link"&&type!="terms"&&type!="iterms"&&type!="response"&&type!="lpmatrix")  { 
+  if (type!="link"&&type!="terms"&&type!="iterms"&&type!="response"&&type!="lpmatrix"&&type!="newdata")  { 
     warning("Unknown type, reset to terms.")
     type<-"terms"
   }
@@ -2655,6 +2660,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
       }
       newdata[[i]] <- factor(newdata[[i]],levels=levm) # set prediction levels to fit levels
     }
+    if (type=="newdata") return(newdata)
 
     # split prediction into blocks, to avoid running out of memory
     if (length(newdata)==1) newdata[[2]] <- newdata[[1]] # avoids data frame losing its labels and dimensions below!
@@ -2702,9 +2708,9 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
   } else { ## "response" or "link"
     ## get number of linear predictors, in case it's more than 1...
     if (is.list(object$formula)) {
-      nf <- length(object$formula) ## number of model formulae
+      # nf <- length(object$formula) ## number of model formulae
       nlp <- length(lpi) ## number of linear predictors
-    } else nlp <- nf <- 1
+    } else nlp <- 1 ## nf <- 1
     # nlp <- if (is.list(object$formula)) length(object$formula) else 1
     fit <- if (nlp>1) matrix(0,np,nlp) else array(0,np)
     if (se.fit) se <- fit
@@ -2888,6 +2894,9 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
           if (is.matrix(fit)&&!is.matrix(ffv[[1]])) {
             fit <- fit[,1]; if (se.fit) se <- se[,1]
           }
+          if (is.matrix(ffv[[1]])&&(!is.matrix(fit)||ncol(ffv[[1]])!=ncol(fit))) {
+            fit <- matrix(0,np,ncol(ffv[[1]])); if (se.fit) se <- fit
+          }
           if (is.matrix(fit)) {
             fit[start:stop,] <- ffv[[1]]
             if (se.fit) se[start:stop,] <- ffv[[2]]
@@ -2961,7 +2970,10 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
     colnames(H) <- names(object$coefficients);rownames(H)<-rn
     if (!is.null(s.offset)) { 
       s.offset <- napredict(na.act,s.offset)
-      attr(H,"offset") <- s.offset
+      attr(H,"offset") <- s.offset ## term specific offsets...
+    }
+    if (!is.null(attr(attr(object$model,"terms"),"offset"))) {
+      attr(H,"model.offset") <- napredict(na.act,model.offset(mf)) 
     }
     H <- napredict(na.act,H)
     if (length(object$nsdf)>1) { ## add "lpi" attribute if more than one l.p.
@@ -3667,7 +3679,8 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
         df[i] <- attr(V, "rank")
       } else { ## Better founded alternatives...
         Xt <- X[,start:stop,drop=FALSE]  
-        fx <- if (inherits(object$smooth[[i]],"tensor.smooth")) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
+        fx <- if (inherits(object$smooth[[i]],"tensor.smooth")&&
+                  !is.null(object$smooth[[i]]$fx)) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
         if (!fx&&object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
           res <- reTest(object,i)
         } else { ## Inverted Nychka interval statistics

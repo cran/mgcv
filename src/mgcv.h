@@ -17,6 +17,15 @@
 
 //#define OMP_REPORT // define to have all routines using omp report on start and end.
 
+/* sed -i 's/old-text/new-text/g' *.c
+   is quite useful!!
+*/
+// For safe memory handling from R...
+#define CALLOC R_chk_calloc
+#define FREE R_chk_free
+// Can reset to check for memory errors...
+//#define CALLOC calloc
+//#define FREE free
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
 	   double *lsp0,double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score,int *nt);
@@ -76,7 +85,9 @@ void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *m,int *p, int *
 	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
           int *ar_stop,int *ar_row,double *ar_weights);
 void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n, 
-	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc);
+	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc);
+void diagXVXt(double *diag,double *V,double *X,int *k,int *m,int *p, int *n, 
+	      int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *pv,int *nthreads);
 
 /* various service routines */
 
@@ -84,7 +95,7 @@ void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *
 	       double *y,double *eps,int *n,
                double *th,double *rho,double *a, double *b);
 void psum(double *y, double *x,int *index,int *n);
-void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans);
+void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans,double *work);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);
 void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,int *nt);
 void RuniqueCombs(double *X,int *ind,int *r, int *c);

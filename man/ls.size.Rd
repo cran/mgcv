@@ -23,7 +23,7 @@ same names as the elements of the list. If \code{x} is not a list then its size 
 \references{
 
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 

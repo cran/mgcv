@@ -36,7 +36,7 @@ Gentle, J.E. (2003) Random Number Generation and Monte Carlo Methods (2nd ed.) S
 Michael, J.R., W.R. Schucany & R.W. Hass (1976) Generating random variates using transformations 
 with multiple roots. The American Statistician 30, 88-90.
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}

@@ -59,7 +59,7 @@ over-optimism of the previous two measures, but is less easy to understand.}
 \references{
 
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 

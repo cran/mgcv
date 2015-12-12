@@ -21,7 +21,7 @@ print an appropriate description of the model.
 Other \code{mgcv} modelling functions will not accept a list. The list form provides a mechanism for 
 specifying several linear predictors, and allows these to share terms: see below.
 
-The formulae supplied to \code{\link{gam}} are exactly like that supplied to 
+The formulae supplied to \code{\link{gam}} are exactly like those supplied to 
 \code{\link{glm}} except that smooth terms, \code{\link{s}}, \code{\link{te}}, \code{\link{ti}} and \code{\link{t2}} can
 be added to the right hand side (and \code{.} is not supported in \code{gam} formulae).
 

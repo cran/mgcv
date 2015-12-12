@@ -177,7 +177,7 @@ Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics 62(4):1025-1036
 
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 
 }
 

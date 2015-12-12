@@ -52,6 +52,14 @@ prediction matrices for the term.
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
+\section{WARNINGS }{
+Much better statistical stability will be obtained by using models like 
+\code{y~s(x)+s(z)+ti(x,z)} or \code{y~ti(x)+ti(z)+ti(x,z)} rather than 
+\code{y~s(x)+s(z)+s(x,z)}, since the former are designed not to require 
+further constraint.
+}
+
+\seealso{\code{\link{ti}}, \code{\link{gam.models}}}
 
 \examples{
 ## The first two examples here iluustrate models that cause

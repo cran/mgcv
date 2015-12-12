@@ -62,16 +62,16 @@ matrix initmat(int rows,int cols)
   pad=0;
 #endif
   A.vec=0;
-  A.M=(double **)R_chk_calloc((size_t)(rows+2*pad),sizeof(double *));
+  A.M=(double **)CALLOC((size_t)(rows+2*pad),sizeof(double *));
   if ((cols==1)||(rows==1))
   { if (A.M)
-    A.M[0]=(double *)R_chk_calloc((size_t)(cols*rows+2*pad),sizeof(double));
+    A.M[0]=(double *)CALLOC((size_t)(cols*rows+2*pad),sizeof(double));
     for (i=1;i<rows+2*pad;i++)
     A.M[i]=A.M[0]+i*cols;A.vec=1;
   } else
   { if (A.M)
     for (i=0;i<rows+2*pad;i++)
-    A.M[i]=(double *)R_chk_calloc((size_t)(cols+2*pad),sizeof(double));
+    A.M[i]=(double *)CALLOC((size_t)(cols+2*pad),sizeof(double));
   }
   A.mem=(long)(rows*cols*sizeof(double));
   memused+=A.mem;matrallocd++;
@@ -98,10 +98,10 @@ matrix initmat(int rows,int cols)
     A.V=A.M[0];
   /* putting a record of the matrix on the linked list of all extant matrices */
     if (matrallocd==1) /*new list*/
-    { top=bottom=(MREC *)R_chk_calloc(1,sizeof(MREC));
+    { top=bottom=(MREC *)CALLOC(1,sizeof(MREC));
       bottom->mat=top->mat=A;top->bp=bottom;bottom->fp=top;
     } else  /* expanding the linked list by one */
-    { top->fp=(MREC *)R_chk_calloc(1,sizeof(MREC));
+    { top->fp=(MREC *)CALLOC(1,sizeof(MREC));
       top->fp->mat=A;top->fp->bp=top;top=top->fp; /* crystal clear, no? */
     }
   }
@@ -153,16 +153,16 @@ void freemat(matrix A)
 	     if (i!=matrallocd-1)
 	     delet->fp->bp=delet->bp;
 	     else top=delet->bp;
-	     R_chk_free(delet);
+	     FREE(delet);
       }
       /* repositioning pointers so that what was allocated gets freed */
       if (!A.vec) for (i=0;i<pad;i++) A.M--;
       for (i=0;i<A.original_r+2*pad;i++)
       for (j=0;j<pad;j++) A.M[i]--;
     }
-    if (A.vec) R_chk_free(A.M[0]); else
-    for (i=0;i<A.original_r+2*pad;i++) if (A.M[i]) R_chk_free(A.M[i]);
-    if (A.M) R_chk_free(A.M);
+    if (A.vec) FREE(A.M[0]); else
+    for (i=0;i<A.original_r+2*pad;i++) if (A.M[i]) FREE(A.M[i]);
+    if (A.M) FREE(A.M);
     memused -= A.mem;matrallocd--;
   }
 }
@@ -339,8 +339,8 @@ void multi(int n,matrix C,...)
 #else
   va_start(argptr,C);
 #endif
-  t=(int *)R_chk_calloc((size_t)n,sizeof(int));
-  M=(matrix *)R_chk_calloc((size_t)n,sizeof(matrix)); /* previously no cast for sun C ??! */
+  t=(int *)CALLOC((size_t)n,sizeof(int));
+  M=(matrix *)CALLOC((size_t)n,sizeof(matrix)); /* previously no cast for sun C ??! */
   for (i=0;i<n;i++) M[i]=/*(matrix)*/ va_arg(argptr,matrix);
   for (i=0;i<n;i++) t[i]=(int) va_arg(argptr,int);
   if (t[0]) r=M[0].c; else r=M[0].r;
@@ -358,8 +358,8 @@ void multi(int n,matrix C,...)
   { matmult(C,temp0,M[n-1],0,t[n-1]);
     freemat(temp0);
   }
-  R_chk_free(t);
-  R_chk_free(M);
+  FREE(t);
+  FREE(M);
   va_end(argptr);
 }
 
@@ -376,10 +376,10 @@ void invert(matrix *A)
 { double **AM,*p,*p1,max,x;
   int *c,*rp,*cp,i,j,k,pr=0,pc=0,*d,cj,ck;
   if (A->r!=A->c) error(_("Attempt to invert() non-square matrix"));
-  c=(int *)R_chk_calloc((size_t)A->c,sizeof(int)); /* index of columns, used for column pivoting */
-  d=(int *)R_chk_calloc((size_t)A->c,sizeof(int));
-  rp=(int *)R_chk_calloc((size_t)A->c,sizeof(int)); /* row changes */
-  cp=(int *)R_chk_calloc((size_t)A->c,sizeof(int)); /* row changes */
+  c=(int *)CALLOC((size_t)A->c,sizeof(int)); /* index of columns, used for column pivoting */
+  d=(int *)CALLOC((size_t)A->c,sizeof(int));
+  rp=(int *)CALLOC((size_t)A->c,sizeof(int)); /* row changes */
+  cp=(int *)CALLOC((size_t)A->c,sizeof(int)); /* row changes */
   for (i=0;i<A->c;i++) { c[i]=i;d[i]=i;}
   AM=A->M;            /* saving adress calculations*/
   for (j=0;j<A->c;j++) /* loop through columns to be reduced */
@@ -434,7 +434,7 @@ void invert(matrix *A)
     { p=AM[k];x=p[i];p[i]=p[rp[i]];p[rp[i]]=x;} /* column exchange  */
   }
    
-  R_chk_free(c);R_chk_free(rp);R_chk_free(cp);R_chk_free(d);
+  FREE(c);FREE(rp);FREE(cp);FREE(d);
 }
 
 void tricholeski(matrix *T,matrix *l0,matrix *l1)
@@ -804,7 +804,7 @@ int QR(matrix *Q,matrix *R)
   double *u,t,z,**RM,*p,m;
   RM=R->M;Rr=R->r;
   if (Rr<R->c) n=Rr; else n=R->c;
-  u=(double *)R_chk_calloc((size_t)Rr,sizeof(double));
+  u=(double *)CALLOC((size_t)Rr,sizeof(double));
   for (k=0;k<n;k++)
   { m=0.0;for (i=k;i<Rr;i++) { z=RM[i][k];z=fabs(z);if (z>m) m=z;}
     if (m) for (i=k;i<Rr;i++) RM[i][k]/=m; /* avoid over/underflow problems */
@@ -816,7 +816,7 @@ int QR(matrix *Q,matrix *R)
     t=t*t;t+=u[k]*u[k]-z*z; /* efficient t calculation */
     /* t=0.0;for (p=u+k;p<u+Rr;p++) t+= *p * *p; - old inefficient calculation */
     t=sqrt(t/2);
-    if (t==0.0) {R_chk_free(u);return(0);} /* singular matrix */
+    if (t==0.0) {FREE(u);return(0);} /* singular matrix */
     for (p=u+k;p<u+Rr;p++) *p /= t;
     for (j=k+1;j<R->c;j++)
     { t=0.0;for (i=k;i<Rr;i++) t+=u[i]*RM[i][j];
@@ -827,7 +827,7 @@ int QR(matrix *Q,matrix *R)
       for (i=k;i<Rr;i++) p[i]=u[i];
     }
   }
-  R_chk_free(u);
+  FREE(u);
   return(1);
 }
 

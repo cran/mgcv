@@ -254,7 +254,8 @@ setup.soap <- function(bnd,knots,nmax=100,k=10,bndSpec=NULL) {
       }
       bc[[i]] <- list(bsm=bsm,X=bsm$X[1:ret$nb[i],],S=bsm$S[[1]],free.bound=TRUE)
     } else { ## boundary is fixed
-      d <- ret$d[start:stop] 
+      ## pmax/pmin needed to avoid rounding error induced NA's
+      d <- pmax(pmin(ret$d[start:stop],max(bnd[[i]]$d)),min(bnd[[i]]$d)) 
       ui <- !duplicated(bnd[[i]]$d)
       ff <- approx(bnd[[i]]$d[ui],bnd[[i]]$f[ui],d)$y ## fixed values for BC
       bc[[i]] <- list(f=ff,free.bound=FALSE)

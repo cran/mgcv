@@ -36,12 +36,12 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
  
   nb = ncoef + ntheta; /* number of coefficients overall */
   /* Create the Choleski factor of the precision matrix */
-  R = (double *)R_chk_calloc((size_t)*m * *m,sizeof(double));
+  R = (double *)CALLOC((size_t)*m * *m,sizeof(double));
   theta = beta + lpi[*m-1]; /* parameters of R */
   ldetR = 0.0; /* log|R| */
-  rri = (int *)R_chk_calloc((size_t)ntheta,sizeof(int)); /* theta to R row index */
-  rci = (int *)R_chk_calloc((size_t)ntheta,sizeof(int)); /* theta to R col index */
-  deriv_theta = (double *)R_chk_calloc((size_t)ntheta,sizeof(double)); /* exp(theta) or 1*/
+  rri = (int *)CALLOC((size_t)ntheta,sizeof(int)); /* theta to R row index */
+  rci = (int *)CALLOC((size_t)ntheta,sizeof(int)); /* theta to R col index */
+  deriv_theta = (double *)CALLOC((size_t)ntheta,sizeof(double)); /* exp(theta) or 1*/
   for (k=0,i=0;i<*m;i++) { /* fill out R */
     deriv_theta[k] = exp(theta[k]);
     R[i + *m * i] = deriv_theta[k];ldetR += theta[k];
@@ -53,7 +53,7 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
     }
   }  
   /* obtain y - mu */
-  mu  = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+  mu  = (double *)CALLOC((size_t)*n,sizeof(double));
   for (l=0;l<*m;l++) { /* loop through components */
     if (l==0) { Xl = X;pl = lpi[0];bl=beta;} /* Xl is lth model matrix with pl columns, coef vec bl */ 
     else { Xl = X + *n * lpi[l-1];pl = lpi[l]-lpi[l-1];bl = beta + lpi[l-1];}   
@@ -61,11 +61,11 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
     /* now subtract mu from relevant component of y */
     for (p=mu,p1= mu + *n,p2=y+l;p<p1;p++,p2 += *m) *p2 -= *p;
   }
-  R_chk_free(mu);
+  FREE(mu);
   /* so y now contains y-mu */
   
   /* R(y-mu) is required repeatedly... */
-  Rymu =  (double *)R_chk_calloc((size_t)*n * *m,sizeof(double));
+  Rymu =  (double *)CALLOC((size_t)*n * *m,sizeof(double));
   bt=0;ct=0;mgcv_pmmult(Rymu,R,y,&bt,&ct,m,n,m,nt);  
   /* compute the log likelihood */
   for (*ll=0.0,p=Rymu,p1=p + *n * *m;p<p1;p++) *ll += *p * *p;
@@ -108,7 +108,7 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
 
   /* the Hessian is needed next */
   /* create index vector of dimension to which each coef relates ...*/ 
-  din =  (int *)R_chk_calloc((size_t)ncoef,sizeof(int));
+  din =  (int *)CALLOC((size_t)ncoef,sizeof(int));
   for (k=0,i=0;i<ncoef;i++) { 
     if (i==lpi[k]) k++; 
     din[i] = k;
@@ -166,11 +166,11 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
   /* Now the derivatives of the Hessian, given the derivatives of the coefficients,
      wrt the smoothing parameters */
   if (*deriv) {
-    yX = (double *)R_chk_calloc((size_t)*m * ncoef,sizeof(double)); /* need (y-mu)X - m by ncoef */
+    yX = (double *)CALLOC((size_t)*m * ncoef,sizeof(double)); /* need (y-mu)X - m by ncoef */
     bt=0;ct=0;mgcv_pmmult(yX,y,X,&bt,&ct,m,&ncoef,n,nt); /* rows, dim, cols coef */   
-    yRX = (double *)R_chk_calloc((size_t)*m * ncoef,sizeof(double)); /* need R(y-mu)X - m by ncoef*/
+    yRX = (double *)CALLOC((size_t)*m * ncoef,sizeof(double)); /* need R(y-mu)X - m by ncoef*/
     bt=0;ct=0;mgcv_pmmult(yRX,Rymu,X,&bt,&ct,m,&ncoef,n,nt); /* rows, dim, cols coef */  
-    yty = (double *)R_chk_calloc((size_t)*m * *m,sizeof(double)); /* need (y-mu)(y-mu)' - m by m */
+    yty = (double *)CALLOC((size_t)*m * *m,sizeof(double)); /* need (y-mu)(y-mu)' - m by m */
     bt=0;ct=1;mgcv_pmmult(yty,y,y,&bt,&ct,m,m,n,nt); /* rows, cols dim */  
     for (r=0;r< *nsp;r++) { 
       db = dbeta + nb * r; /* d coefs / d rho_r */
@@ -256,13 +256,13 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
 
       dH += nb * nb; /* move on to next Hessian */
     } /* smoothing parameter loop */ 
-    R_chk_free(yX);R_chk_free(yRX);R_chk_free(yty);
+    FREE(yX);FREE(yRX);FREE(yty);
   } /* if (*deriv) */
   
 
-  R_chk_free(din); R_chk_free(rri); R_chk_free(rci);
+  FREE(din); FREE(rri); FREE(rci);
   
-  R_chk_free(R);R_chk_free(Rymu);R_chk_free(deriv_theta);
+  FREE(R);FREE(Rymu);FREE(deriv_theta);
 } /* mvn_ll */
 
 

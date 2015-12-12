@@ -66,7 +66,7 @@ conclusions to be drawn from a model fit, however.
 
 Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. CRC.
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 
 \examples{

@@ -1,6 +1,29 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+1.8-10
+
+** 'multinom' family implemented for multinomial logistic regression.
+
+* predict.bam now defaults to using efficient discrete prediction methods 
+  for models fit using discrete covariate methods (bam(...,discrete=TRUE)). 
+
+* with bam(...,discrete=TRUE) terms like s(a,b,bs="re") had wrong p-value 
+  computation applied, as a result of being treated as tensor product terms.
+  Fixed.
+
+* minor tweak to soap basis setup to avoid rounding error leading to 'approx'
+  occasionally producing NA's with fixed boundaries.
+
+* misc.c:rwMatrix made thread safe (had been using R_chk_calloc, which isn't). 
+
+* some upgrading for 64bit addressing.
+
+* uniquecombs now preserves contrasts on factors.
+
+* variable summary tweak so that 1 column matrices in parametric model are 
+  treated as regular numeric variables.
+
 1.8-9
 
 * C level fix in bam(...,discrete=TRUE) code. Some memory was mistakenly 
@@ -119,7 +142,7 @@
 * New German translation thanks to Detlef Steuer.
 
 * plot.gam now silently returns a list of plotting data, to help advanced 
-  users (Fabian Scheipl) to produce custimized plot.
+  users (Fabian Scheipl) to produce customized plot.
 
 * bam can now set up an object suitable for fitting, but not actually do
   the fit, following a suggestion by Fabian Scheipl. See arguments 'fit' 

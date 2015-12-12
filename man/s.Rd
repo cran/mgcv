@@ -107,7 +107,7 @@ Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
 and Hall/CRC Press.
 
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 
 }
 

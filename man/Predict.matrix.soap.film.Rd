@@ -37,7 +37,7 @@ the contribution from any known boundary conditions on the smooth.
 }
 \references{
 
-\url{http://www.maths.bath.ac.uk/~sw283/}
+\url{http://www.maths.bris.ac.uk/~sw15190/}
 }
 \author{ Simon N. Wood \email{s.wood@bath.ac.uk}} 
 

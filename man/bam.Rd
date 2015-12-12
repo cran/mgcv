@@ -166,7 +166,7 @@ An object of class \code{"gam"} as described in \code{\link{gamObject}}.
 }
 
 
-\details{ \code{bam} operates by first setting up the basis characteristics for the smooths, using a representative subsample 
+\details{ When \code{discrete=FALSE}, \code{bam} operates by first setting up the basis characteristics for the smooths, using a representative subsample 
 of the data. Then the model matrix is constructed in blocks using \code{\link{predict.gam}}. For each block the factor R,
 from the QR decomposition of the whole model matrix is updated, along with Q'y. and the sum of squares of y. At the end of 
 block processing, fitting takes place, without the need to ever form the whole model matrix. 
@@ -185,6 +185,8 @@ Note also that it is possible to spend most of the computational time on basis e
 can be used in the 1D case, and tensor product smooths (\code{te}) are typically much less costly in the multi-dimensional case. 
 
 If \code{cluster} is provided as a cluster set up using \code{\link[parallel]{makeCluster}} (or \code{\link[parallel]{makeForkCluster}}) from the \code{parallel} package, then the rate limiting QR decomposition of the model matrix is performed in parallel using this cluster. Note that the speed ups are often not that great. On a multi-core machine it is usually best to set the cluster size to the number of physical cores, which is often less than what is reported by \code{\link[parallel]{detectCores}}. Using more than the number of physical cores can result in no speed up at all (or even a slow down). Note that a highly parallel BLAS may negate all advantage from using a cluster of cores. Computing in parallel of course requires more memory than computing in series. See examples.
+
+When \code{discrete=TRUE} the covariate data are first discretized. Discretization takes place on a smooth by smooth basis, or in the case of tensor product smooths (or any smooth that can be represented as such, such as random effects), separately for each marginal smooth. The required spline bases are then evaluated at the discrete values, and stored, along with index vectors indicating which original observation they relate to. Fitting is by a version of performance oriented iteration/PQL using REML smoothing parameter selection on each iterative working model (as for the default method). The iteration is based on the derivatives of the REML score, without computing the score itself, allowing the expensive computations to be reduced to one parallel block Cholesky decomposition per iteration (plus two basic operations of equal cost, but easily parallelized). Unlike standard POI/PQL, only one step of the smoothing parameter update for the working model is taken at each step (rather than iterating to the optimal set of smoothing parameters for each working model). At each step a weighted model matrix crossproduct of the model matrix is required - this is efficiently computed from the pre-computed basis functions evaluated at the discretized covariate values. Efficient computation with tensor product terms means that some terms within a tensor product may be re-ordered for maximum efficiency. Parallel computation is controlled using the \code{nthreads} argument. For this method no cluster computation is used, and the \code{parallel} package is not required. 
 
 If the deprecated argument \code{sparse=TRUE} then QR updating is replaced by an alternative scheme, in which the model matrix is stored whole
  as a sparse matrix. This only makes sense if all smooths are P-splines and all tensor products are of the 

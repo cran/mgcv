@@ -85,6 +85,8 @@ modified from Venables and Ripley's \code{negative.binomial} family.
 }
 
 \references{
+Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+
 Venables, B. and B.R. Ripley (2002) Modern Applied Statistics in S, Springer.
 }
 

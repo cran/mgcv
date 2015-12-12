@@ -73,6 +73,8 @@ Tweedie, M. C. K. (1984). An index which distinguishes between
      New Directions. Proceedings of the Indian Statistical Institute
      Golden Jubilee International Conference (Eds. J. K. Ghosh and J.
      Roy), pp. 579-604. Calcutta: Indian Statistical Institute.
+
+Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
 }
 
 \seealso{\code{\link{ldTweedie}}, \code{\link{rTweedie}}}

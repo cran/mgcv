@@ -38,6 +38,9 @@ avoid problems. For 1D smooths uses e.g. \code{s(x,m=1)} and for isotropic smoot
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 }
+\references{
+Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+}
 
 \section{WARNINGS }{
 Zero inflated models are often over-used. Having lots of zeroes in the data does not in itself imply zero inflation. Having too many zeroes *given the model mean* may imply zero inflation. 

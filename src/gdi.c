@@ -121,17 +121,17 @@ void get_bSb0(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
 { double *Sb,*Skb,*work,*work1,*p1,*p0,*p2,xx;
   int i,j,bt,ct,one=1,m,k,rSoff,mk,km; 
   
-  work = (double *)R_chk_calloc((size_t)*q,sizeof(double)); 
-  Sb = (double *)R_chk_calloc((size_t)*q,sizeof(double));
+  work = (double *)CALLOC((size_t)*q,sizeof(double)); 
+  Sb = (double *)CALLOC((size_t)*q,sizeof(double));
   bt=0;ct=0;mgcv_mmult(work,E,beta,&bt,&ct,Enrow,&one,q);
   bt=1;ct=0;mgcv_mmult(Sb,E,work,&bt,&ct,q,&one,Enrow); /* S \hat \beta */
 
   for (*bSb=0.0,i=0;i<*q;i++) *bSb += beta[i] * Sb[i]; /* \hat \beta' S \hat \beta */
 
-  if (*deriv <=0) {R_chk_free(work);R_chk_free(Sb);return;}
+  if (*deriv <=0) {FREE(work);FREE(Sb);return;}
 
-  work1 = (double *)R_chk_calloc((size_t)*q,sizeof(double));
-  Skb = (double *)R_chk_calloc((size_t)*M * *q,sizeof(double));
+  work1 = (double *)CALLOC((size_t)*q,sizeof(double));
+  Skb = (double *)CALLOC((size_t)*M * *q,sizeof(double));
  
   for (p1=Skb,rSoff=0,i=0;i<*M;i++) { /* first part of first derivatives */
      /* form S_k \beta * sp[i]... */
@@ -176,7 +176,7 @@ void get_bSb0(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
   bt=1;ct=0;mgcv_mmult(work,b1,Sb,&bt,&ct,M,&one,q);
   for (i=0;i<*M;i++) bSb1[i] += 2*work[i];
   
-  R_chk_free(Sb);R_chk_free(work);R_chk_free(Skb);R_chk_free(work1);
+  FREE(Sb);FREE(work);FREE(Skb);FREE(work1);
 
 } /* end get_bSb0 */
 
@@ -212,17 +212,17 @@ void get_bSb(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
 { double *Sb,*Skb,*work,*work1,*p1,*p0,*p2,xx;
   int i,j,bt,ct,one=1,m,k,rSoff,mk,km,Mtot; 
   
-  work = (double *)R_chk_calloc((size_t)*q+*M0,sizeof(double)); 
-  Sb = (double *)R_chk_calloc((size_t)*q,sizeof(double));
+  work = (double *)CALLOC((size_t)*q+*M0,sizeof(double)); 
+  Sb = (double *)CALLOC((size_t)*q,sizeof(double));
   bt=0;ct=0;mgcv_mmult(work,E,beta,&bt,&ct,Enrow,&one,q);
   bt=1;ct=0;mgcv_mmult(Sb,E,work,&bt,&ct,q,&one,Enrow); /* S \hat \beta */
 
   for (*bSb=0.0,i=0;i<*q;i++) *bSb += beta[i] * Sb[i]; /* \hat \beta' S \hat \beta */
 
-  if (*deriv <=0) {R_chk_free(work);R_chk_free(Sb);return;}
+  if (*deriv <=0) {FREE(work);FREE(Sb);return;}
 
-  work1 = (double *)R_chk_calloc((size_t)*q,sizeof(double));
-  Skb = (double *)R_chk_calloc((size_t)*M * *q,sizeof(double));
+  work1 = (double *)CALLOC((size_t)*q,sizeof(double));
+  Skb = (double *)CALLOC((size_t)*M * *q,sizeof(double));
  
   for (p1=Skb,rSoff=0,i=0;i<*M;i++) { /* first part of first derivatives */
      /* form S_k \beta * sp[k]... */
@@ -275,7 +275,7 @@ void get_bSb(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
   bt=1;ct=0;mgcv_mmult(work,b1,Sb,&bt,&ct,&Mtot,&one,q);
   for (i=0;i<Mtot;i++) bSb1[i] += 2*work[i];
   
-  R_chk_free(Sb);R_chk_free(work);R_chk_free(Skb);R_chk_free(work1);
+  FREE(Sb);FREE(work);FREE(Skb);FREE(work1);
 
 } /* end get_bSb */
 
@@ -309,7 +309,7 @@ void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse)
 { double *dum,*px,*pd,*pd1,*p,*p1;
   int *pi,*pi1,i,j;
   if (*col) { /* pivot columns */ 
-     dum = (double *) R_chk_calloc((size_t)*c,sizeof(double));
+     dum = (double *) CALLOC((size_t)*c,sizeof(double));
      if (*reverse) /* unpivot x */
        for (i=0;i< *r;i++) {
 	 for (px=x+i,pi=pivot,pi1=pi+*c;pi<pi1;pi++,px+=*r) dum[*pi]= *px; /*dum[pivot[j]] = x[j* *r + i] */ 
@@ -320,7 +320,7 @@ void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse)
 	 for (px=x+i,pd=dum,pd1=dum+*c;pd<pd1;pd++,px += *r) *px = *pd;  /* x[j * *r + i] = dum[j]; */ 
      }
   } else { /* pivot rows */
-    dum = (double *) R_chk_calloc((size_t)*r,sizeof(double));
+    dum = (double *) CALLOC((size_t)*r,sizeof(double));
     if (*reverse) /* unpivot x */
     for (p=x,j=0;j<*c;j++,p += *r) { /* work column by column using dum as working storage */
       for (pi=pivot,pi1=pi+*r,p1=p;pi<pi1;pi++,p1++) dum[*pi] = *p1; /*dum[pivot[i]] = p[i]; ith row of pivoted -> pivot[i] row of unpivoted */
@@ -332,7 +332,7 @@ void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse)
         for (pd=dum,pd1=dum+*r,p1=p;pd<pd1;pd++,p1++) *p1 = *pd;        /* store pivoted column in x */
     }
   } 
-  R_chk_free(dum);
+  FREE(dum);
 } /* end pivoter */
 
 
@@ -345,8 +345,8 @@ double qr_ldet_inv(double *X,int *r,double *Xi,int *get_inv)
 { double *tau,ldet,*p,*Qt;
   int *pivot,i,TRUE=1,j,FALSE=0;
   /* Allocated working storage ...*/
-  pivot = (int *)R_chk_calloc((size_t)*r,sizeof(int));
-  tau = (double *)R_chk_calloc((size_t)*r,sizeof(double));
+  pivot = (int *)CALLOC((size_t)*r,sizeof(int));
+  tau = (double *)CALLOC((size_t)*r,sizeof(double));
   
   mgcv_qr(X,r,r,pivot,tau); /* get QR=X itself */
 
@@ -355,7 +355,7 @@ double qr_ldet_inv(double *X,int *r,double *Xi,int *get_inv)
   
   if (*get_inv) {
   /* Now get the inverse of X. X^{-1} = R^{-1}Q' */
-    Qt = (double *)R_chk_calloc((size_t)*r * *r,sizeof(double));
+    Qt = (double *)CALLOC((size_t)*r * *r,sizeof(double));
     for (p=Qt,i=0;i<*r;i++,p += *r+1) *p = 1.0;
     mgcv_qrqy(Qt,X,tau,r,r,r,&TRUE,&TRUE); /* Extracting the orthogonal factor Q' */
 
@@ -371,9 +371,9 @@ double qr_ldet_inv(double *X,int *r,double *Xi,int *get_inv)
       for (i=0;i<*r;i++) p[i] = tau[i];        /* store unpivoted column in Xi */
 
     }
-    R_chk_free(Qt);
+    FREE(Qt);
   } /* end if (*get_inv) */
-  R_chk_free(pivot);R_chk_free(tau);
+  FREE(pivot);FREE(tau);
   return(ldet);
 } /* end qr_ldet_inv */
 
@@ -407,7 +407,7 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
 
   if (*fixed_penalty) { 
     Mf = *M + 1;  /* total number of components, including fixed one */
-    spf = (double *)R_chk_calloc((size_t)Mf,sizeof(double));
+    spf = (double *)CALLOC((size_t)Mf,sizeof(double));
     for (i=0;i<*M;i++) spf[i]=sp[i];spf[*M]=1.0; /* includes sp for fixed term */
   } 
   else {spf=sp;Mf = *M;} /* total number of components, including fixed one */
@@ -418,8 +418,8 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
   if (*deriv) { /* only need to modify if derivatives needed */
     for (j=i=0;i<Mf;i++) j += rSncol[i];tot_col=j;
     j *= *q;
-    rS1 = (double *)R_chk_calloc((size_t) j,sizeof(double));
-    rS2 = (double *)R_chk_calloc((size_t) j,sizeof(double));
+    rS1 = (double *)CALLOC((size_t) j,sizeof(double));
+    rS2 = (double *)CALLOC((size_t) j,sizeof(double));
     for (p=rS1,p3=rS2,p1=rS1+j,p2=sqrtS;p<p1;p++,p2++,p3++) *p3 = *p = *p2;
   } else {rS1=rS2=NULL;}
   /* Explicitly form the Si (stored in a single block), so S_i is stored
@@ -429,7 +429,7 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
   max_col = *q; /* need enough storage just in case square roots are over-sized */ 
   for (i=0;i<Mf;i++) if (rSncol[i]>max_col) max_col=rSncol[i];
 
-  p = Si = (double *)R_chk_calloc((size_t)*q * max_col * Mf,sizeof(double));
+  p = Si = (double *)CALLOC((size_t)*q * max_col * Mf,sizeof(double));
   
   for (rSoff=i=0;i<Mf;p+= *q * *q,rSoff+=rSncol[i],i++) {
     bt=0;ct=1;mgcv_mmult(p,sqrtS+rSoff * *q,sqrtS+rSoff * *q,&bt,&ct,q,q,rSncol+i);   
@@ -438,23 +438,23 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
  
   /* Initialize the sub-dominant set gamma and the counters */
   K = 0;Q = *q;
-  frob =  (double *)R_chk_calloc((size_t)Mf,sizeof(double)); 
-  gamma = (int *)R_chk_calloc((size_t)Mf,sizeof(int));  /* terms remaining to deal with */
-  gamma1 = (int *)R_chk_calloc((size_t)Mf,sizeof(int)); /* new gamma */
-  alpha = (int *)R_chk_calloc((size_t)Mf,sizeof(int));  /* dominant terms */
+  frob =  (double *)CALLOC((size_t)Mf,sizeof(double)); 
+  gamma = (int *)CALLOC((size_t)Mf,sizeof(int));  /* terms remaining to deal with */
+  gamma1 = (int *)CALLOC((size_t)Mf,sizeof(int)); /* new gamma */
+  alpha = (int *)CALLOC((size_t)Mf,sizeof(int));  /* dominant terms */
   for (i=0;i<Mf;i++) gamma[i] = 1; /* no terms dealt with initially */
   
   /* Other storage... */
 
-  S = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* Transformed S (total) */
-  Sb = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* summation storage */
-  pivot = (int *)R_chk_calloc((size_t) Q,sizeof(int)); /* pivot storage */
-  tau = (double *) R_chk_calloc((size_t) Q,sizeof(double)); /* working storage */  
-  work = (double *)R_chk_calloc((size_t)(4 * Q),sizeof(double));
+  S = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* Transformed S (total) */
+  Sb = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* summation storage */
+  pivot = (int *)CALLOC((size_t) Q,sizeof(int)); /* pivot storage */
+  tau = (double *) CALLOC((size_t) Q,sizeof(double)); /* working storage */  
+  work = (double *)CALLOC((size_t)(4 * Q),sizeof(double));
 
-  Sg = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* summation storage */
-  B = (double *) R_chk_calloc((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
-  R = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* storage for unpivoted QR factor */
+  Sg = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* summation storage */
+  B = (double *) CALLOC((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
+  R = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* storage for unpivoted QR factor */
   /* Start the main orthogonal transform loop */
   iter =0;
   while(1) {
@@ -625,20 +625,20 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
       det2[i + *M * j] = det2[j + *M * i] = -sp[i]*sp[j]*trAB(Si + *q * *q *i,Si + *q * *q *j,q,q);
     for (i=0;i<*M;i++) det2[i + *M * i] += det1[i];
   }
-  R_chk_free(R);
-  R_chk_free(work);
-  R_chk_free(frob);
-  R_chk_free(gamma);
-  R_chk_free(gamma1);
-  R_chk_free(alpha);
-  R_chk_free(S);
-  R_chk_free(Sb);
-  R_chk_free(Sg);
-  if (*deriv) { R_chk_free(rS1);R_chk_free(rS2);}
-  if (*fixed_penalty) {R_chk_free(spf);}
-  R_chk_free(Si);
-  R_chk_free(B);
-  R_chk_free(pivot);R_chk_free(tau);
+  FREE(R);
+  FREE(work);
+  FREE(frob);
+  FREE(gamma);
+  FREE(gamma1);
+  FREE(alpha);
+  FREE(S);
+  FREE(Sb);
+  FREE(Sg);
+  if (*deriv) { FREE(rS1);FREE(rS2);}
+  if (*fixed_penalty) {FREE(spf);}
+  FREE(Si);
+  FREE(B);
+  FREE(pivot);FREE(tau);
 } /* end of get_detS2 */
 
 
@@ -685,7 +685,7 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
 
   if (*fixed_penalty) { 
     Mf = *M + 1;  /* total number of components, including fixed one */
-    spf = (double *)R_chk_calloc((size_t)Mf,sizeof(double));
+    spf = (double *)CALLOC((size_t)Mf,sizeof(double));
     for (i=0;i<*M;i++) spf[i]=sp[i];spf[*M]=1.0; /* includes sp for fixed term */
   } 
   else {spf=sp;Mf = *M;} /* total number of components, including fixed one */
@@ -696,7 +696,7 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
   /* Explicitly form the Si (stored in a single block), so S_i is stored
      in Si + i * q * q (starting i from 0). As iteration progresses,
      blocks are shrunk -- always Q by Q */
-  p = Si = (double *)R_chk_calloc((size_t)*q * *q * Mf,sizeof(double));
+  p = Si = (double *)CALLOC((size_t)*q * *q * Mf,sizeof(double));
   max_col = *q; /* need enough storage just in case square roots are over-sized */
   for (rSoff=i=0;i<Mf;p+= *q * *q,rSoff+=rSncol[i],i++) {
     bt=0;ct=1;mgcv_mmult(p,sqrtS+rSoff * *q,sqrtS+rSoff * *q,&bt,&ct,q,q,rSncol+i);
@@ -707,20 +707,20 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
   /* Initialize the sub-dominant set gamma and the counters */
   K = 0; /* counter for coefs already deal with */
   Q = *q; /* How many coefs left to deal with */
-  frob =  (double *)R_chk_calloc((size_t)Mf,sizeof(double)); 
-  gamma = (int *)R_chk_calloc((size_t)Mf,sizeof(int));  /* terms remaining to deal with */
-  gamma1 = (int *)R_chk_calloc((size_t)Mf,sizeof(int)); /* new gamma */
-  alpha = (int *)R_chk_calloc((size_t)Mf,sizeof(int));  /* dominant terms */
+  frob =  (double *)CALLOC((size_t)Mf,sizeof(double)); 
+  gamma = (int *)CALLOC((size_t)Mf,sizeof(int));  /* terms remaining to deal with */
+  gamma1 = (int *)CALLOC((size_t)Mf,sizeof(int)); /* new gamma */
+  alpha = (int *)CALLOC((size_t)Mf,sizeof(int));  /* dominant terms */
   for (i=0;i<Mf;i++) gamma[i] = 1; /* no terms dealt with initially */
   
   /* Other storage... */
 
-  U=Sb = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* summation storage */
+  U=Sb = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* summation storage */
 
-  Sg = (double *) R_chk_calloc((size_t) Q * Q,sizeof(double)); /* summation storage */
-  ev = (double *) R_chk_calloc((size_t) Q,sizeof(double));     /* eigenvalue storage */
-  B = (double *) R_chk_calloc((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
-  C = (double *) R_chk_calloc((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
+  Sg = (double *) CALLOC((size_t) Q * Q,sizeof(double)); /* summation storage */
+  ev = (double *) CALLOC((size_t) Q,sizeof(double));     /* eigenvalue storage */
+  B = (double *) CALLOC((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
+  C = (double *) CALLOC((size_t) Q * max_col,sizeof(double)); /* Intermediate storage */
 
   /* Start the main similarity transform loop */
   iter =0;
@@ -874,17 +874,17 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
   }
 
  
-  R_chk_free(frob);
-  R_chk_free(gamma);
-  R_chk_free(gamma1);
-  R_chk_free(alpha);
-  R_chk_free(Sb);
-  R_chk_free(Sg);
-  if (*fixed_penalty) {R_chk_free(spf);}
-  R_chk_free(Si);
-  R_chk_free(ev);
-  R_chk_free(B);
-  R_chk_free(C);
+  FREE(frob);
+  FREE(gamma);
+  FREE(gamma1);
+  FREE(alpha);
+  FREE(Sb);
+  FREE(Sg);
+  if (*fixed_penalty) {FREE(spf);}
+  FREE(Si);
+  FREE(ev);
+  FREE(B);
+  FREE(C);
 }/* end get_stableS */
 
 
@@ -918,17 +918,17 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   if (*deriv==2) deriv2=1; else deriv2=0;
   /* obtain diag(KK') */ 
   if (*deriv) {
-    diagKKt = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+    diagKKt = (double *)CALLOC((size_t)*n,sizeof(double));
     xx = diagABt(diagKKt,K,K,n,r); 
   } else { /* nothing to do */
       return;
   }
   /* set up work space */
-  work =  (double *)R_chk_calloc((size_t)*n * nthreads,sizeof(double));
+  work =  (double *)CALLOC((size_t)*n * nthreads,sizeof(double));
   tid=0; /* thread identifier defaults to zero if openMP not available */
   /* now loop through the smoothing parameters to create K'TkK */
   if (deriv2) {
-    KtTK = (double *)R_chk_calloc((size_t)(*r * *r * *M),sizeof(double));
+    KtTK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
     #ifdef SUPPORT_OPENMP
     #pragma omp parallel private(k,j,tid) num_threads(nthreads)
     #endif
@@ -954,15 +954,15 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   max_col = *q;
   for (j=0;j<*M;j++) if (max_col<rSncol[j]) max_col=rSncol[j]; /* under ML can have q < max(rSncol) */
 
-  PtrSm = (double *)R_chk_calloc((size_t)(*r * max_col * nthreads),sizeof(double)); /* storage for P' rSm */
-  trPtSP = (double *)R_chk_calloc((size_t) *M,sizeof(double));
+  PtrSm = (double *)CALLOC((size_t)(*r * max_col * nthreads),sizeof(double)); /* storage for P' rSm */
+  trPtSP = (double *)CALLOC((size_t) *M,sizeof(double));
 
   if (deriv2) {
-    PtSP = (double *)R_chk_calloc((size_t)(*M * *r * *r ),sizeof(double));
+    PtSP = (double *)CALLOC((size_t)(*M * *r * *r ),sizeof(double));
   } else { PtSP = (double *) NULL;}
   
   
-  rSoff =  (int *)R_chk_calloc((size_t)*M,sizeof(int));
+  rSoff =  (int *)CALLOC((size_t)*M,sizeof(int));
   rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   tid = 0;
   #ifdef SUPPORT_OPENMP
@@ -987,7 +987,7 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
       }
     }
   } /* end of parallel section */
-  R_chk_free(rSoff);
+  FREE(rSoff);
   /* Now accumulate the second derivatives */
 
   //  #ifdef SUPPORT_OPENMP
@@ -1032,9 +1032,9 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   } /* end of parallel section */
  
   /* free up some memory */
-  if (deriv2) {R_chk_free(PtSP);R_chk_free(KtTK);}
-  R_chk_free(diagKKt);R_chk_free(work);
-  R_chk_free(PtrSm);R_chk_free(trPtSP);
+  if (deriv2) {FREE(PtSP);FREE(KtTK);}
+  FREE(diagKKt);FREE(work);
+  FREE(PtrSm);FREE(trPtSP);
   #ifdef OMP_REPORT
   Rprintf("done\n");
   #endif 
@@ -1073,17 +1073,17 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   if (*deriv==2) deriv2=1; else deriv2=0;
   /* obtain diag(KK') */ 
   if (*deriv) {
-    diagKKt = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+    diagKKt = (double *)CALLOC((size_t)*n,sizeof(double));
     xx = diagABt(diagKKt,K,K,n,r); 
   } else { /* nothing to do */
       return;
   }
   /* set up work space */
-  work =  (double *)R_chk_calloc((size_t)*n * nthreads,sizeof(double));
+  work =  (double *)CALLOC((size_t)*n * nthreads,sizeof(double));
   tid=0; /* thread identifier defaults to zero if openMP not available */
   /* now loop through the smoothing parameters to create K'TkK */
   if (deriv2) {
-    KtTK = (double *)R_chk_calloc((size_t)(*r * *r * Mtot),sizeof(double));
+    KtTK = (double *)CALLOC((size_t)(*r * *r * Mtot),sizeof(double));
     #ifdef SUPPORT_OPENMP
     #pragma omp parallel private(k,j,tid) num_threads(nthreads)
     #endif
@@ -1109,15 +1109,15 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   max_col = *q;
   for (j=0;j<*M;j++) if (max_col<rSncol[j]) max_col=rSncol[j]; /* under ML can have q < max(rSncol) */
 
-  PtrSm = (double *)R_chk_calloc((size_t)(*r * max_col * nthreads),sizeof(double)); /* storage for P' rSm */
-  trPtSP = (double *)R_chk_calloc((size_t) *M,sizeof(double));
+  PtrSm = (double *)CALLOC((size_t)(*r * max_col * nthreads),sizeof(double)); /* storage for P' rSm */
+  trPtSP = (double *)CALLOC((size_t) *M,sizeof(double));
 
   if (deriv2) {
-    PtSP = (double *)R_chk_calloc((size_t)(*M * *r * *r ),sizeof(double));
+    PtSP = (double *)CALLOC((size_t)(*M * *r * *r ),sizeof(double));
   } else { PtSP = (double *) NULL;}
   
   
-  rSoff =  (int *)R_chk_calloc((size_t)*M,sizeof(int));
+  rSoff =  (int *)CALLOC((size_t)*M,sizeof(int));
   if (*M>0) {
     rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   }
@@ -1144,7 +1144,7 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
       }
     }
   } /* end of parallel section */
-  R_chk_free(rSoff);
+  FREE(rSoff);
   /* Now accumulate the second derivatives */
 
   //  #ifdef SUPPORT_OPENMP
@@ -1190,9 +1190,9 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   } /* end of parallel section */
  
   /* free up some memory */
-  if (deriv2) {R_chk_free(PtSP);R_chk_free(KtTK);}
-  R_chk_free(diagKKt);R_chk_free(work);
-  R_chk_free(PtrSm);R_chk_free(trPtSP);
+  if (deriv2) {FREE(PtSP);FREE(KtTK);}
+  FREE(diagKKt);FREE(work);
+  FREE(PtrSm);FREE(trPtSP);
 
 } /* end get_ddetXWXpS */
 
@@ -1227,17 +1227,17 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   #endif
   if (*deriv==2) deriv2=1; else deriv2=0;
   /* Get the sign array for negative w_i */
-  Ip = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+  Ip = (double *)CALLOC((size_t)*n,sizeof(double));
   for (p0=w,p1=p0+ *n,p2=Ip;p0<p1;p0++,p2++) if (*p0 < 0) {*p2 = -1.0;neg_w=1;} else *p2 = 1.0;
 
   /* obtain tr(A) and diag(A) = diag(KK'Ip) */ 
-  diagKKt = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+  diagKKt = (double *)CALLOC((size_t)*n,sizeof(double));
   *trA = diagABt(diagKKt,K,K,n,r); 
   if (neg_w) { /* correct trA */
     for (*trA=0.0,p0=diagKKt,p1=p0 + *n,p2=Ip;p0<p1;p0++,p2++) *trA += *p2 * *p0;
   }
   if (!*deriv) {
-    R_chk_free(Ip);R_chk_free(diagKKt); 
+    FREE(Ip);FREE(diagKKt); 
     #ifdef OMP_REPORT
     Rprintf("done\n");
     #endif 
@@ -1245,15 +1245,15 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   }
 
   /* set up work space */
-  work =  (double *)R_chk_calloc((size_t)*n * *nt,sizeof(double));
+  work =  (double *)CALLOC((size_t)*n * *nt,sizeof(double));
   /* Get K'IpK and KK'IpK  */
-  KtK = (double *)R_chk_calloc((size_t)*r * *r,sizeof(double));
+  KtK = (double *)CALLOC((size_t)*r * *r,sizeof(double));
   if (neg_w) { 
-    IpK = (double *)R_chk_calloc((size_t) *r * *n,sizeof(double));
+    IpK = (double *)CALLOC((size_t) *r * *n,sizeof(double));
     for (p0=IpK,p3=K,i=0;i<*r;i++) 
       for (p1=Ip,p2=p1 + *n;p1<p2;p1++,p0++,p3++) *p0 = *p1 * *p3; 
   } else { 
-    IpK = (double *)R_chk_calloc((size_t) *r * *n,sizeof(double));
+    IpK = (double *)CALLOC((size_t) *r * *n,sizeof(double));
     for (p0=IpK,p1=K,p2=K+ *n * *r;p1<p2;p0++,p1++) *p0 = *p1; 
     /*IpK = K;*/
   }
@@ -1264,18 +1264,18 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
     }
     Rprintf("K range = %g - %g\n",lowK,hiK);*/
   bt=1;ct=0;mgcv_pmmult(KtK,K,IpK,&bt,&ct,r,r,n,nt);  
-  if (neg_w) R_chk_free(IpK); else R_chk_free(IpK);
-  KKtK = (double *)R_chk_calloc((size_t)*n * *r,sizeof(double));
+  if (neg_w) FREE(IpK); else FREE(IpK);
+  KKtK = (double *)CALLOC((size_t)*n * *r,sizeof(double));
   bt=0;ct=0;mgcv_pmmult(KKtK,K,KtK,&bt,&ct,n,r,r,nt);  
 
   /* obtain diag(KK'KK') */
-  diagKKtKKt = (double *)R_chk_calloc((size_t)*n,sizeof(double));
+  diagKKtKKt = (double *)CALLOC((size_t)*n,sizeof(double));
   xx = diagABt(diagKKtKKt,KKtK,K,n,r);
  
   /* now loop through the smoothing parameters to create K'TkK and K'TkKK'K */
   if (deriv2) {
-    KtTK = (double *)R_chk_calloc((size_t)(*r * *r * *M),sizeof(double));
-    KtTKKtK = (double *)R_chk_calloc((size_t)(*r * *r * *M),sizeof(double));
+    KtTK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
+    KtTKKtK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
     #ifdef SUPPORT_OPENMP
     #pragma omp parallel private(k,j,tid) num_threads(*nt)
     #endif
@@ -1320,23 +1320,23 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   }
 
   /* free up some memory */
-  if (deriv2) {R_chk_free(KtTKKtK);R_chk_free(KtTK);} 
+  if (deriv2) {FREE(KtTKKtK);FREE(KtTK);} 
 
-  R_chk_free(diagKKtKKt);R_chk_free(diagKKt);
+  FREE(diagKKtKKt);FREE(diagKKt);
 
   /* create KP'rSm, KK'KP'rSm and P'SmP */
-  PtrSm = (double *)R_chk_calloc((size_t)(*r * *q * *nt),sizeof(double)); /* transient storage for P' rSm */
-  KPtrSm = (double *)R_chk_calloc((size_t)(*n * *q * *nt),sizeof(double)); /* transient storage for K P' rSm */
-  diagKPtSPKt = (double *)R_chk_calloc((size_t)(*n * *M),sizeof(double));
+  PtrSm = (double *)CALLOC((size_t)(*r * *q * *nt),sizeof(double)); /* transient storage for P' rSm */
+  KPtrSm = (double *)CALLOC((size_t)(*n * *q * *nt),sizeof(double)); /* transient storage for K P' rSm */
+  diagKPtSPKt = (double *)CALLOC((size_t)(*n * *M),sizeof(double));
   if (deriv2) {
-    PtSP = (double *)R_chk_calloc((size_t)(*M * *r * *r ),sizeof(double));
-    PtSPKtK = (double *)R_chk_calloc((size_t)(*M * *r * *r ),sizeof(double));
-    KtKPtrSm = (double *)R_chk_calloc((size_t)(*r * *q * *nt),sizeof(double));/* transient storage for K'K P'rSm */ 
-    KKtKPtrSm = (double *)R_chk_calloc((size_t)(*n * *q * *nt),sizeof(double));/* transient storage for K'K P'rSm */ 
-    diagKPtSPKtKKt = (double *)R_chk_calloc((size_t)(*n * *M),sizeof(double));
+    PtSP = (double *)CALLOC((size_t)(*M * *r * *r ),sizeof(double));
+    PtSPKtK = (double *)CALLOC((size_t)(*M * *r * *r ),sizeof(double));
+    KtKPtrSm = (double *)CALLOC((size_t)(*r * *q * *nt),sizeof(double));/* transient storage for K'K P'rSm */ 
+    KKtKPtrSm = (double *)CALLOC((size_t)(*n * *q * *nt),sizeof(double));/* transient storage for K'K P'rSm */ 
+    diagKPtSPKtKKt = (double *)CALLOC((size_t)(*n * *M),sizeof(double));
   } else {  KKtKPtrSm=PtSPKtK= PtSP=KtKPtrSm=diagKPtSPKtKKt=(double *)NULL; }
   
-  rSoff =  (int *)R_chk_calloc((size_t)*M,sizeof(int));
+  rSoff =  (int *)CALLOC((size_t)*M,sizeof(int));
   rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   tid = 0;
   #ifdef SUPPORT_OPENMP
@@ -1369,12 +1369,12 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
       if (deriv2) trA2[m * *M + m] -=xx; /* the extra diagonal term of trA2 */
     } 
   } /* end of parallel section */
-  R_chk_free(rSoff);
+  FREE(rSoff);
   
 
   if (!deriv2) { /* trA1 finished, so return */
-    R_chk_free(PtrSm);R_chk_free(KPtrSm);R_chk_free(diagKPtSPKt);
-    R_chk_free(work);R_chk_free(KtK);R_chk_free(KKtK); 
+    FREE(PtrSm);FREE(KPtrSm);FREE(diagKPtSPKt);
+    FREE(work);FREE(KtK);FREE(KKtK); 
     #ifdef OMP_REPORT
     Rprintf("done\n");
     #endif 
@@ -1410,9 +1410,9 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
      trA2[mk] =trA2[km];
    } 
    /* clear up */
-   R_chk_free(PtrSm);R_chk_free(KPtrSm);R_chk_free(PtSP);R_chk_free(KtKPtrSm);R_chk_free(diagKPtSPKt);
-   R_chk_free(diagKPtSPKtKKt);R_chk_free(work);R_chk_free(KtK);R_chk_free(KKtK);R_chk_free(PtSPKtK);R_chk_free(KKtKPtrSm);
-   R_chk_free(Ip);  
+   FREE(PtrSm);FREE(KPtrSm);FREE(PtSP);FREE(KtKPtrSm);FREE(diagKPtSPKt);
+   FREE(diagKPtSPKtKKt);FREE(work);FREE(KtK);FREE(KKtK);FREE(PtSPKtK);FREE(KKtKPtrSm);
+   FREE(Ip);  
    #ifdef OMP_REPORT
     Rprintf("done\n");
    #endif 
@@ -1464,13 +1464,13 @@ void pearson2(double *P, double *P1, double *P2,
 { double resid,xx,*Pe1,*Pe2,*pp,*p1,*p0,*v2,*Pi1,*Pi2;
   int i,k,m,n_2dCols=0,one=1;
   if (deriv) {
-    Pe1 = (double *)R_chk_calloc((size_t)n,sizeof(double)); /* for dP/deta */
-    Pi1 = (double *)R_chk_calloc((size_t) n * M,sizeof(double)); /* for dPi/drho */
+    Pe1 = (double *)CALLOC((size_t)n,sizeof(double)); /* for dP/deta */
+    Pi1 = (double *)CALLOC((size_t) n * M,sizeof(double)); /* for dPi/drho */
     if (deriv2) { 
       n_2dCols = (M * (1 + M))/2;
-      Pe2 = (double *)R_chk_calloc((size_t)n,sizeof(double)); /* for d2P/deta2 */
-      v2 = (double *)R_chk_calloc((size_t)n,sizeof(double));
-      Pi2 = (double *)R_chk_calloc((size_t)n_2dCols*n,sizeof(double)); /* for d2P_i/drho */
+      Pe2 = (double *)CALLOC((size_t)n,sizeof(double)); /* for d2P/deta2 */
+      v2 = (double *)CALLOC((size_t)n,sizeof(double));
+      Pi2 = (double *)CALLOC((size_t)n_2dCols*n,sizeof(double)); /* for d2P_i/drho */
     } else {Pe2=v2=Pi2=NULL;}
   } else {Pi1 = Pe2 = v2 = Pe1 = Pi2 = NULL;}
   *P=0.0;
@@ -1516,9 +1516,9 @@ void pearson2(double *P, double *P1, double *P2,
   
   /* clear up */
   if (deriv) {
-    R_chk_free(Pe1);R_chk_free(Pi1);
+    FREE(Pe1);FREE(Pi1);
     if (deriv2) {
-      R_chk_free(Pe2);R_chk_free(Pi2);R_chk_free(v2);
+      FREE(Pe2);FREE(Pi2);FREE(v2);
     }
   }
 
@@ -1533,7 +1533,7 @@ void applyP(double *y,double *x,double *R,double *Vt,int neg_w,int nr,int r,int 
 { double *x1;
   int bt,ct;
   if (neg_w) { /* apply V */
-    x1 = (double *)R_chk_calloc((size_t)r*c,sizeof(double));
+    x1 = (double *)CALLOC((size_t)r*c,sizeof(double));
     if (right) {
       mgcv_backsolve(R,&nr,&r,x,x1, &c,&right);         /* x1 = x R^{-1} */
       bt=0;ct=1;mgcv_mmult(y,x1,Vt,&bt,&ct,&c,&r,&r);   /* y = x R^{-1} V */
@@ -1541,7 +1541,7 @@ void applyP(double *y,double *x,double *R,double *Vt,int neg_w,int nr,int r,int 
       bt=1;ct=0;mgcv_mmult(x1,Vt,x,&bt,&ct,&r,&c,&r);   /* x1 = V x */    
       mgcv_backsolve(R,&nr,&r,x1,y, &c,&right);         /* y = R^{-1} V x */
     }
-    R_chk_free(x1);
+    FREE(x1);
   } else mgcv_backsolve(R,&nr,&r,x,y, &c,&right);            /* y = R^{-1} x */
 } /* applyP */
 
@@ -1552,7 +1552,7 @@ void applyPt(double *y,double *x,double *R,double *Vt,int neg_w,int nr,int r,int
 { double *x1;
   int bt,ct;
   if (neg_w) { /* apply V */
-    x1 = (double *)R_chk_calloc((size_t)r*c,sizeof(double));
+    x1 = (double *)CALLOC((size_t)r*c,sizeof(double));
     if (right) {
       bt=0;ct=0;mgcv_mmult(x1,x,Vt,&bt,&ct,&c,&r,&r);   /* x1 = x V' */
       mgcv_forwardsolve(R,&nr,&r,x1,y, &c,&right);       /* y = x V' R^{-T} */
@@ -1560,7 +1560,7 @@ void applyPt(double *y,double *x,double *R,double *Vt,int neg_w,int nr,int r,int
       mgcv_forwardsolve(R,&nr,&r,x,x1, &c,&right);      /* x1 = R^{-T} x */
       bt=0;ct=0;mgcv_mmult(y,Vt,x1,&bt,&ct,&r,&c,&r);   /* y = V'R^{-T} x */    
     }
-    R_chk_free(x1);
+    FREE(x1);
   } else mgcv_forwardsolve(R,&nr,&r,x,y, &c,&right);            /* y = R^{-T} x */
 } /* applyPt */
 
@@ -1581,9 +1581,9 @@ void ift1(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
 */
 { int n_2dCols,i,j,k,one=1,bt,ct;
   double *work,*Skb,*pp,*p0,*p1,*work1;
-  work = (double *) R_chk_calloc((size_t)*n,sizeof(double));
-  work1 = (double *) R_chk_calloc((size_t)*n,sizeof(double));
-  Skb = (double *) R_chk_calloc((size_t)*r,sizeof(double));
+  work = (double *) CALLOC((size_t)*n,sizeof(double));
+  work1 = (double *) CALLOC((size_t)*n,sizeof(double));
+  Skb = (double *) CALLOC((size_t)*r,sizeof(double));
   n_2dCols = (*M * (1 + *M))/2;
   for (i=0;i<*M;i++) { /* first derivative loop */
     multSk(Skb,beta,&one,i,rS,rSncol,r,work); /* get S_i \beta */
@@ -1613,7 +1613,7 @@ void ift1(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
     bt=0;ct=0;mgcv_mmult(eta2,X,b2,&bt,&ct,n,&n_2dCols,r); /* second derivatives of eta */
   }
 
-  R_chk_free(work);R_chk_free(Skb);R_chk_free(work1);
+  FREE(work);FREE(Skb);FREE(work1);
 } /* end ift1 */
 
 void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,double *theta,
@@ -1636,9 +1636,9 @@ void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
 */
 { int n_2dCols,i,j,k,one=1,bt,ct,ntot,kk;
   double *work,*Db_th,*pp,*p0,*p1,*work1;
-  work = (double *) R_chk_calloc((size_t)*n,sizeof(double));
-  work1 = (double *) R_chk_calloc((size_t)*n,sizeof(double));
-  Db_th = (double *) R_chk_calloc((size_t)*r,sizeof(double));
+  work = (double *) CALLOC((size_t)*n,sizeof(double));
+  work1 = (double *) CALLOC((size_t)*n,sizeof(double));
+  Db_th = (double *) CALLOC((size_t)*r,sizeof(double));
   ntot = *M + *n_theta;
   n_2dCols = (ntot  * (1 + ntot))/2;
 
@@ -1707,7 +1707,7 @@ void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
     bt=0;ct=0;mgcv_mmult(eta2,X,b2,&bt,&ct,n,&n_2dCols,r); /* second derivatives of eta */
   }
 
-  R_chk_free(work);R_chk_free(Db_th);R_chk_free(work1);
+  FREE(work);FREE(Db_th);FREE(work1);
 } /* end ift2 */
 
 
@@ -1806,61 +1806,61 @@ double *R,double *Q, int *nind,double *sp,double *rS,int *rSncol,int *q,int *n,
          *d,*p0,*p1,*p2,*p3,ldetXWXS,ldetI2D=0.0;
   int ScS,bt,ct,qM,*pivot,i,j,k,left,tp,n_drop=0,*drop,FALSE=0; 
 
-  drop = (int *)R_chk_calloc((size_t)*Ms,sizeof(int));
+  drop = (int *)CALLOC((size_t)*Ms,sizeof(int));
   for (i=0;i < *q;i++) if (nulli[i]>0.0) { drop[n_drop] = i;n_drop++; }
 
   for (ScS=0.0,i=0;i<*M;i++) ScS += rSncol[i]; /* total columns of rS */
 
   qM = *q - n_drop;
 
-  RU1 = (double *)R_chk_calloc((size_t) *q * *q ,sizeof(double));
+  RU1 = (double *)CALLOC((size_t) *q * *q ,sizeof(double));
   for (p1=RU1,p2=R,p3=R+ *q * *q;p2 < p3;p1++,p2++) *p1 = *p2;
  
   drop_cols(RU1,*q,*q,drop,n_drop); /* drop the null space columns from R */ 
 
   /* A pivoted QR decomposition of RU1 is needed next */
-  tau=(double *)R_chk_calloc((size_t)qM,sizeof(double)); /* part of reflector storage */
-  pivot=(int *)R_chk_calloc((size_t)qM,sizeof(int));
+  tau=(double *)CALLOC((size_t)qM,sizeof(double)); /* part of reflector storage */
+  pivot=(int *)CALLOC((size_t)qM,sizeof(int));
   
   mgcv_qr(RU1,q,&qM,pivot,tau); /* RU1 and tau now contain the QR decomposition information */
   /* pivot[i] gives the unpivoted position of the ith pivoted parameter.*/
   
   /* Ri needed */
 
-  Ri =  (double *)R_chk_calloc((size_t) qM * qM,sizeof(double)); 
+  Ri =  (double *)CALLOC((size_t) qM * qM,sizeof(double)); 
   Rinv(Ri,RU1,&qM,q,&qM); /* getting R^{-1} */
   
   if (*type==0||*neg_w) { /* new Q factor needed explicitly */
-    Qb = (double *)R_chk_calloc((size_t) *q * qM,sizeof(double)); 
+    Qb = (double *)CALLOC((size_t) *q * qM,sizeof(double)); 
     for (i=0;i< qM;i++) Qb[i * *q + i] = 1.0;
     left=1;tp=0;mgcv_qrqy(Qb,RU1,tau,q,&qM,&qM,&left,&tp); /* Q from the QR decomposition */
   } else { /* need X with null space cols dropped */ 
-    XU1 = (double *)R_chk_calloc((size_t) *n * *q,sizeof(double));
+    XU1 = (double *)CALLOC((size_t) *n * *q,sizeof(double));
     for (p1=XU1,p2=X,p3=X + *n * *q;p2 < p3;p1++,p2++) *p1 = *p2;
     drop_cols(XU1,*n,*q,drop,n_drop); /* drop the null space columns from X */ 
   }
-  R_chk_free(tau);
+  FREE(tau);
 
-  K = (double *)R_chk_calloc((size_t) *n * qM,sizeof(double));
-  P = (double *)R_chk_calloc((size_t) qM * qM,sizeof(double));
+  K = (double *)CALLOC((size_t) *n * qM,sizeof(double));
+  P = (double *)CALLOC((size_t) qM * qM,sizeof(double));
 
   if (*neg_w) { /* need to deal with -ve weight correction */
     if (*neg_w < *q+1) k = *q+1; else k = *neg_w;
-    IQ = (double *)R_chk_calloc((size_t) k * *q,sizeof(double)); 
+    IQ = (double *)CALLOC((size_t) k * *q,sizeof(double)); 
     for (i=0;i< *neg_w;i++) { /* Copy the rows of Q corresponding to -ve w_i into IQ */
       p0 = IQ + i;p1 = Q + nind[i];
       for (j=0;j<*q;j++,p0+=k,p1+= *n) *p0 = *p1;
     }
     /* Note that IQ may be zero padded, for convenience */
-    IQQ = (double *)R_chk_calloc((size_t) k * qM,sizeof(double)); 
+    IQQ = (double *)CALLOC((size_t) k * qM,sizeof(double)); 
     bt=0;ct=0;mgcv_mmult(IQQ,IQ,Qb,&bt,&ct,&k,&qM,q); /* I^-Q_1 \bar Q is k by rank */
-    R_chk_free(IQ);
+    FREE(IQ);
      
     /* Get the SVD of IQQ */
-    Vt = (double *)R_chk_calloc((size_t) qM * qM,sizeof(double));
-    d = (double *)R_chk_calloc((size_t) qM,sizeof(double));
+    Vt = (double *)CALLOC((size_t) qM * qM,sizeof(double));
+    d = (double *)CALLOC((size_t) qM,sizeof(double));
     mgcv_svd_full(IQQ,Vt,d,&k,&qM); /* SVD of IQ */
-    R_chk_free(IQQ);
+    FREE(IQQ);
     for (i=0;i<qM;i++) {
       d[i] = 1 - 2*d[i]*d[i];
       if (d[i]<=0) d[i]=0.0; 
@@ -1880,13 +1880,13 @@ double *R,double *Q, int *nind,double *sp,double *rS,int *rSncol,int *q,int *n,
     if (*type==1) {
       bt=0;ct=0;mgcv_mmult(K,XU1,P,&bt,&ct,n,&qM,&qM); 
     } else {
-      work = (double *)R_chk_calloc((size_t) *q * qM,sizeof(double));
+      work = (double *)CALLOC((size_t) *q * qM,sizeof(double));
       bt=0;ct=1;mgcv_mmult(work,Qb,Vt,&bt,&ct,q,&qM,&qM); /* \bar Q V (I - 2D^2)^.5 */
 
       bt=0;ct=0;mgcv_mmult(K,Q,work,&bt,&ct,n,&qM,q);
-      R_chk_free(work);
+      FREE(work);
     }
-    R_chk_free(d);R_chk_free(Vt);   
+    FREE(d);FREE(Vt);   
     
   } else { /* no negative weights, so P and K can be obtained directly */
     ldetI2D = 0.0;
@@ -1900,7 +1900,7 @@ double *R,double *Q, int *nind,double *sp,double *rS,int *rSncol,int *q,int *n,
     }
   }
 
-  R_chk_free(Ri);
+  FREE(Ri);
 
   /* Evaluate the required log determinant... */
 
@@ -1909,22 +1909,22 @@ double *R,double *Q, int *nind,double *sp,double *rS,int *rSncol,int *q,int *n,
  
   ldetXWXS += ldetI2D; /* the negative weights correction */
   
-  R_chk_free(RU1);
+  FREE(RU1);
 
   /* rS also needs to have null space parts dropped, and to be pivoted... */
 
   drop_rows(rS,*q,ScS,drop,n_drop);   /* rS now rank by ScS */ 
   pivoter(rS,&qM,&ScS,pivot,&FALSE,&FALSE); /* row pivot of rS */
   
-  if (*type==0||*neg_w) R_chk_free(Qb); else R_chk_free(XU1);
-  R_chk_free(pivot);
+  if (*type==0||*neg_w) FREE(Qb); else FREE(XU1);
+  FREE(pivot);
 
   /* Now we have all the ingredients to obtain required derivatives of the log determinant... */
   
   if (*deriv)
     get_ddetXWXpS(det1,det2,P,K,sp,rS,rSncol,Tk,Tkm,n,&qM,&qM,M,M0,deriv,*nthreads);
 
-  R_chk_free(P);R_chk_free(K);R_chk_free(drop);
+  FREE(P);FREE(K);FREE(drop);
   return(ldetXWXS);
 } /* end of MLpenalty1 */
 
@@ -1951,14 +1951,14 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   nt1 = *nt;
   
   if (*type==0) {
-    zz = (double *)R_chk_calloc((size_t)*n,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
+    zz = (double *)CALLOC((size_t)*n,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
     for (i=0;i< *n;i++) { 
       zz[i] = z[i]*raw[i]; /* form z itself */
     }
     for (i=0;i<neg_w;i++) { k=nind[i]; zz[k] = -zz[k];} 
   } /* otherwise z must actually contain wz */
 
-  WX = (double *) R_chk_calloc((size_t) ( (*n + *nt * *q) * *q),sizeof(double));
+  WX = (double *) CALLOC((size_t) ( (*n + *nt * *q) * *q),sizeof(double));
   for (j=0;j<*q;j++) 
   { for (i=0;i<*n;i++) /* form WX */
     { k = i + *n * j;
@@ -1967,16 +1967,16 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   }
   /* get the QR decomposition of WX */
  
-  tau=(double *)R_chk_calloc((size_t) *q * (*nt + 1),sizeof(double)); /* part of reflector storage */
+  tau=(double *)CALLOC((size_t) *q * (*nt + 1),sizeof(double)); /* part of reflector storage */
 
-  pivot=(int *)R_chk_calloc((size_t)*q,sizeof(int));
+  pivot=(int *)CALLOC((size_t)*q,sizeof(int));
   
   mgcv_pqr(WX,n,q,pivot,tau,&nt1); /* WX and tau now contain the QR decomposition information */
 
   /* pivot[i] gives the unpivoted position of the ith pivoted parameter.*/
   
   /* copy out upper triangular factor R, and unpivot it */
-  R1 = (double *)R_chk_calloc((size_t)*q * *q,sizeof(double));
+  R1 = (double *)CALLOC((size_t)*q * *q,sizeof(double));
  
   getRpqr(R1,WX,n,q,q,&nt1);
 
@@ -1993,7 +1993,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   
   /* ... and now use it to establish rank */
    
-  tau1=(double *)R_chk_calloc((size_t)*q,sizeof(double)); /* part of reflector storage */
+  tau1=(double *)CALLOC((size_t)*q,sizeof(double)); /* part of reflector storage */
 
   mgcv_qr(R,&nr,q,pivot1,tau1);
   
@@ -2044,7 +2044,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   /* Form Q1 = Qf Qs[1:q,] where Qf and Qs are orthogonal factors from first and final QR decomps
      respectively ... */
   if (neg_w || *type==0) { /* Q1 needed if neg_w correction needed, and anyway for type==0 */
-    Q = (double *)R_chk_calloc((size_t) nr * *rank,sizeof(double)); 
+    Q = (double *)CALLOC((size_t) nr * *rank,sizeof(double)); 
     for (i=0;i < *rank;i++) Q[i * nr + i] = 1.0;
     left=1;tp=0;mgcv_qrqy(Q,R,tau1,&nr,rank,rank,&left,&tp); /* Q from the second QR decomposition */
 
@@ -2054,23 +2054,23 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     /* so, at this stage WX = Q1 R, dimension n by rank */
   }
 
-  Ri =  (double *)R_chk_calloc((size_t) *rank * *rank,sizeof(double)); 
+  Ri =  (double *)CALLOC((size_t) *rank * *rank,sizeof(double)); 
   Rinv(Ri,R,rank,&nr,rank); /* getting R^{-1} */
   
 
   ldetI2D = 0.0; /* REML determinant correction */
   if (neg_w) { /* then the correction for the negative w_i has to be evaluated */
     if (neg_w < *rank + 1) k = *rank + 1; else k = neg_w;
-    IQ = (double *)R_chk_calloc((size_t) k * *rank,sizeof(double)); 
+    IQ = (double *)CALLOC((size_t) k * *rank,sizeof(double)); 
     for (i=0;i < neg_w;i++) { /* Copy the rows of Q corresponding to -ve w_i into IQ */
       p0 = IQ + i;p1 = Q1 + nind[i];
       for (j=0;j < *rank;j++,p0+=k,p1+= *n) *p0 = *p1;
     }
     /* Note that IQ may be zero padded, for convenience */
    
-    d = (double *)R_chk_calloc((size_t) *rank,sizeof(double));
+    d = (double *)CALLOC((size_t) *rank,sizeof(double));
     mgcv_svd_full(IQ,Vt,d,&k,rank); /* SVD of IQ */
-    R_chk_free(IQ);
+    FREE(IQ);
 
     if (deriv2) { /* correct the Hessian of the deviance */
       /* put DV'R into P, temporarily */
@@ -2107,7 +2107,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     /* Form K - or postpone if type!=0*/
     if (*type==0) mgcv_pmmult(K,Q1,Vt,&bt,&ct,n,rank,rank,nt);
   
-    R_chk_free(d);   
+    FREE(d);   
   } else { /* no negative weights so P and K much simpler */
     if (*type==0) { /* Form K now */
       for (p0=K,p1=Q1,j=0;j< *rank;j++,p1 += *n) /* copy just Q1 into K */
@@ -2167,11 +2167,11 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     } else applyP(PKtz,work,R,Vt,neg_w,nr,*rank,1,0);
   }
 
-  R_chk_free(WX);R_chk_free(tau);R_chk_free(Ri);R_chk_free(R1); 
-  R_chk_free(tau1);
-  if (neg_w || *type==0) R_chk_free(Q); 
-  R_chk_free(pivot);
-  if (*type==0) R_chk_free(zz);
+  FREE(WX);FREE(tau);FREE(Ri);FREE(R1); 
+  FREE(tau1);
+  if (neg_w || *type==0) FREE(Q); 
+  FREE(pivot);
+  if (*type==0) FREE(zz);
 } /* gdiPK */
 
 
@@ -2299,22 +2299,22 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   /*d_tol = sqrt(*rank_tol * 100);*/
   /* first step is to obtain P and K */
 
-  PKtz = (double *)R_chk_calloc((size_t)*q,sizeof(double)); /* PK'z --- the pivoted coefficients*/
-  nulli = (double *)R_chk_calloc((size_t)*q,sizeof(double)); /* keep track of the params in null space */   
-  drop = (int *)R_chk_calloc((size_t)*q,sizeof(int)); /* original locations of dropped parameters */
-  raw = (double *)R_chk_calloc((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
+  PKtz = (double *)CALLOC((size_t)*q,sizeof(double)); /* PK'z --- the pivoted coefficients*/
+  nulli = (double *)CALLOC((size_t)*q,sizeof(double)); /* keep track of the params in null space */   
+  drop = (int *)CALLOC((size_t)*q,sizeof(int)); /* original locations of dropped parameters */
+  raw = (double *)CALLOC((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
   n_work = (4 * *n + 2 * *q) * *M + 2 * *n;
   k = 5 * *q; if (n_work < k) n_work = k;
   k = (*M * (1 + *M))/2 * *n;
   if (n_work < k) n_work = k;
-  work = (double *)R_chk_calloc((size_t) n_work,sizeof(double)); /* work space for several routines*/
+  work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
   nr = *q + *Enrow;
-  R = (double *)R_chk_calloc((size_t)*q * nr,sizeof(double));
-  pivot1=(int *)R_chk_calloc((size_t)*q,sizeof(int));
-  if (deriv2) dev_hess = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
-  K = (double *)R_chk_calloc((size_t) *n * *q,sizeof(double));
-  P = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double));
-  Q1 = (double *)R_chk_calloc((size_t) *n * *q,sizeof(double)); 
+  R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
+  pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
+  if (deriv2) dev_hess = (double *)CALLOC((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
+  K = (double *)CALLOC((size_t) *n * *q,sizeof(double));
+  P = (double *)CALLOC((size_t) *q * *q,sizeof(double));
+  Q1 = (double *)CALLOC((size_t) *n * *q,sizeof(double)); 
 
   for (i=0;i< *n;i++) 
     if (w[i]<0) { neg_w++;raw[i] = sqrt(-w[i]);} 
@@ -2322,8 +2322,8 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     else { *type=1; } /* zero weights so we have to use type 1 method */
 
   if (neg_w) {  
-    Vt = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double));
-    nind = (int *)R_chk_calloc((size_t)neg_w,sizeof(int)); /* index the negative w_i */
+    Vt = (double *)CALLOC((size_t) *q * *q,sizeof(double));
+    nind = (int *)CALLOC((size_t)neg_w,sizeof(int)); /* index the negative w_i */
     k=0;for (i=0;i< *n;i++) if (w[i]<0) { nind[k]=i;k++;}
   } else { nind = (int *)NULL; Vt = (double *)NULL;}
   
@@ -2338,17 +2338,17 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
         deriv2,ScS,&TRUE,
       rank_tol,ldet,type);
        
-  R_chk_free(raw);
+  FREE(raw);
 
   /* now call ift2 to get derivatives of coefs w.r.t. smoothing/theta parameters */
   ntot = *M + *n_theta;
   n_2dCols = (ntot  * (1 + ntot))/2;
   if (*deriv) {
-    //b1 = (double *)R_chk_calloc((size_t) rank * ntot,sizeof(double)); 
-    eta1 = (double *)R_chk_calloc((size_t) *n * ntot,sizeof(double)); 
+    //b1 = (double *)CALLOC((size_t) rank * ntot,sizeof(double)); 
+    eta1 = (double *)CALLOC((size_t) *n * ntot,sizeof(double)); 
     if (deriv2) {
-      b2 = (double *)R_chk_calloc((size_t) rank * n_2dCols,sizeof(double)); 
-      eta2 = (double *)R_chk_calloc((size_t) *n * n_2dCols,sizeof(double)); 
+      b2 = (double *)CALLOC((size_t) rank * n_2dCols,sizeof(double)); 
+      eta2 = (double *)CALLOC((size_t) *n * n_2dCols,sizeof(double)); 
     }
     ift2(R,Vt,X,rS,PKtz,sp,theta,
           Det_th,Det2_th,Det3,Det_th2,
@@ -2391,7 +2391,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   
   if (*deriv) {
     /* first derivs... */
-    p0 = w1; // = (double *)R_chk_calloc((size_t) *n * ntot,sizeof(double)); 
+    p0 = w1; // = (double *)CALLOC((size_t) *n * ntot,sizeof(double)); 
     p3 = Det2_th;p4 = eta1;
     for (i=0;i<ntot;i++) {
       p1=Det3;p2 = p1 + *n;
@@ -2402,7 +2402,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
       }
     }
     if (deriv2) { /* second derivs... */ 
-      p0 = w2 = (double *)R_chk_calloc((size_t)  *n * n_2dCols,sizeof(double)); 
+      p0 = w2 = (double *)CALLOC((size_t)  *n * n_2dCols,sizeof(double)); 
       p1 = Det2_th2;p2 = eta2;
       for (i=0;i<ntot;i++) for (k=i;k<ntot;k++) {
       	p3 = Det3;p4 = Det4; 
@@ -2430,17 +2430,17 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     
     if (*type==0) { /* form |w|^{-1}dw/drho etc... */
       /* a useful array for Tk and Tkm */
-      wi=(double *)R_chk_calloc((size_t)*n,sizeof(double)); 
+      wi=(double *)CALLOC((size_t)*n,sizeof(double)); 
       for (i=0;i< *n;i++) { wi[i]=1/fabs(w[i]);}
 
       /* get Tk and Tkm */
-      Tk = (double *)R_chk_calloc((size_t) *n * ntot,sizeof(double)); 
+      Tk = (double *)CALLOC((size_t) *n * ntot,sizeof(double)); 
       rc_prod(Tk,wi,w1,&ntot,n); 
       if (deriv2) { 
-        Tkm = (double *)R_chk_calloc((size_t)  *n * n_2dCols,sizeof(double));
+        Tkm = (double *)CALLOC((size_t)  *n * n_2dCols,sizeof(double));
         rc_prod(Tkm,wi,w2,&n_2dCols,n);
       }
-      R_chk_free(wi);
+      FREE(wi);
     } else { /* Tk and Tkm simply contain unscaled derivatives */
       Tk = w1;
       Tkm = w2;
@@ -2485,27 +2485,27 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     
   /* form sqrt(wf)X augmented with E */
   nr = *n + *Enrow;
-  WX = (double *) R_chk_calloc((size_t) ( (nr + *nt * rank) * rank),sizeof(double));
+  WX = (double *) CALLOC((size_t) ( (nr + *nt * rank) * rank),sizeof(double));
   for (p0=w,p1=w + *n,p2=wf;p0<p1;p0++,p2++) *p0 = sqrt(*p2);
   for (p3=X,p0 = WX,i=0;i<rank;i++) {
     for (p1=w,p2=w+*n;p1<p2;p1++,p0++,p3++) *p0 = *p3 * *p1;
     for (j=0;j<*Enrow;j++,E++,p0++) *p0 = *E;
   }
   /* QR decompose it and hence get new P and K */
-  pivot = (int *)R_chk_calloc((size_t)rank,sizeof(int));
-  tau = (double *)R_chk_calloc((size_t)rank*(*nt+1),sizeof(double));
+  pivot = (int *)CALLOC((size_t)rank,sizeof(int));
+  tau = (double *)CALLOC((size_t)rank*(*nt+1),sizeof(double));
   mgcv_pqr(WX,&nr,&rank,pivot,tau,nt);
-  R1 = (double *)R_chk_calloc((size_t)rank*rank,sizeof(double));
+  R1 = (double *)CALLOC((size_t)rank*rank,sizeof(double));
   getRpqr(R1,WX,&nr,&rank,&rank,nt);
   Rinv(P,R1,&rank,&rank,&rank);
-  R_chk_free(R1); 
-  Q = (double *)R_chk_calloc((size_t) nr * rank,sizeof(double)); 
+  FREE(R1); 
+  Q = (double *)CALLOC((size_t) nr * rank,sizeof(double)); 
   for (i=0;i< rank;i++) Q[i * rank + i] = 1.0;
   tp=0;mgcv_pqrqy(Q,WX,tau,&nr,&rank,&rank,&tp,nt);
   for (p1=Q,p0=K,j=0;j<rank;j++,p1 += *Enrow) for (i=0;i<*n;i++,p1++,p0++) *p0 = *p1;
-  R_chk_free(Q);R_chk_free(WX);R_chk_free(tau);
+  FREE(Q);FREE(WX);FREE(tau);
   pivoter(P,&rank,&rank,pivot,&FALSE,&TRUE); /* unpivoting the rows of P */
-  R_chk_free(pivot);
+  FREE(pivot);
   for (p1=P,i=0;i < rank; i++) for (j=0;j<rank;j++,p1++) rV[pivot1[j] + i * rank] = *p1;
   undrop_rows(rV,*q,rank,drop,n_drop); /* zero rows inserted */
   p0 = rV + *q * rank;p1 = rV + *q * *q;
@@ -2523,20 +2523,20 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   *rank_est = rank;
 
   if (*deriv) { 
-    R_chk_free(eta1);
-    if (*type==0) R_chk_free(Tk);
+    FREE(eta1);
+    if (*type==0) FREE(Tk);
     if (deriv2) {
-      R_chk_free(b2);R_chk_free(eta2);R_chk_free(w2);
-      if (*type==0) R_chk_free(Tkm);
-      R_chk_free(dev_hess);
+      FREE(b2);FREE(eta2);FREE(w2);
+      if (*type==0) FREE(Tkm);
+      FREE(dev_hess);
     }
   }
   if (neg_w) {
-    R_chk_free(Vt);R_chk_free(nind);
+    FREE(Vt);FREE(nind);
   }
-  R_chk_free(PKtz);R_chk_free(nulli);R_chk_free(drop);
-  R_chk_free(work);R_chk_free(R);R_chk_free(pivot1);R_chk_free(K);
-  R_chk_free(P);R_chk_free(Q1);
+  FREE(PKtz);FREE(nulli);FREE(drop);
+  FREE(work);FREE(R);FREE(pivot1);FREE(K);
+  FREE(P);FREE(Q1);
 
 } /* gdi2 */
 
@@ -2677,30 +2677,30 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   /*d_tol = sqrt(*rank_tol * 100);*/
   /* first step is to obtain P and K */
 
-  PKtz = (double *)R_chk_calloc((size_t)*q,sizeof(double)); /* PK'z --- the pivoted coefficients*/
-  nulli = (double *)R_chk_calloc((size_t)*q,sizeof(double)); /* keep track of the params in null space */   
-  drop = (int *)R_chk_calloc((size_t)*q,sizeof(int)); /* original locations of dropped parameters */
-  raw = (double *)R_chk_calloc((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
+  PKtz = (double *)CALLOC((size_t)*q,sizeof(double)); /* PK'z --- the pivoted coefficients*/
+  nulli = (double *)CALLOC((size_t)*q,sizeof(double)); /* keep track of the params in null space */   
+  drop = (int *)CALLOC((size_t)*q,sizeof(int)); /* original locations of dropped parameters */
+  raw = (double *)CALLOC((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
   n_work = (4 * *n + 2 * *q) * *M + 2 * *n; 
   k = 5 * *q; if (n_work < k) n_work = k;
   k = (*M * (1 + *M))/2 * *n; if (n_work < k) n_work = k;
  
-  work = (double *)R_chk_calloc((size_t) n_work,sizeof(double)); /* work space for several routines*/
+  work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
   nr = *q + *Enrow;
-  R = (double *)R_chk_calloc((size_t)*q * nr,sizeof(double));
-  pivot1=(int *)R_chk_calloc((size_t)*q,sizeof(int));
-  if (deriv2) dev_hess = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
-  K = (double *)R_chk_calloc((size_t) *n * *q,sizeof(double));
-  P = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double));
-  Q1 = (double *)R_chk_calloc((size_t) *n * *q,sizeof(double)); 
+  R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
+  pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
+  if (deriv2) dev_hess = (double *)CALLOC((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
+  K = (double *)CALLOC((size_t) *n * *q,sizeof(double));
+  P = (double *)CALLOC((size_t) *q * *q,sizeof(double));
+  Q1 = (double *)CALLOC((size_t) *n * *q,sizeof(double)); 
 
   for (i=0;i< *n;i++) 
     if (w[i]<0) { neg_w++;raw[i] = sqrt(-w[i]);} 
     else raw[i] = sqrt(w[i]);
 
   if (neg_w) {  
-    Vt = (double *)R_chk_calloc((size_t) *q * *q,sizeof(double));
-    nind = (int *)R_chk_calloc((size_t)neg_w,sizeof(int)); /* index the negative w_i */
+    Vt = (double *)CALLOC((size_t) *q * *q,sizeof(double));
+    nind = (int *)CALLOC((size_t)neg_w,sizeof(int)); /* index the negative w_i */
     k=0;for (i=0;i< *n;i++) if (w[i]<0) { nind[k]=i;k++;}
   } else { nind = (int *)NULL; Vt = (double *)NULL;}
   
@@ -2716,7 +2716,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   /************************************************************************************/
   /* free some memory */                    
   /************************************************************************************/
-  R_chk_free(raw);
+  FREE(raw);
   /************************************************************************************/
   /* The coefficient derivative setup starts here */
   /************************************************************************************/
@@ -2724,30 +2724,30 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   if (*deriv) {
     n_2dCols = (*M * (1 + *M))/2;
     n_b2 = rank * n_2dCols;
-    b2 = (double *)R_chk_calloc((size_t)n_b2,sizeof(double)); /* 2nd derivs of beta */
+    b2 = (double *)CALLOC((size_t)n_b2,sizeof(double)); /* 2nd derivs of beta */
    
     //n_b1 = rank * *M;
-    //b1 = (double *)R_chk_calloc((size_t)n_b1,sizeof(double)); /* 1st derivs of beta */
+    //b1 = (double *)CALLOC((size_t)n_b1,sizeof(double)); /* 1st derivs of beta */
    
     n_eta1 = *n * *M;
-    eta1 = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
-    Tk = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
+    eta1 = (double *)CALLOC((size_t)n_eta1,sizeof(double));
+    Tk = (double *)CALLOC((size_t)n_eta1,sizeof(double));
    
-    //w1 = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
+    //w1 = (double *)CALLOC((size_t)n_eta1,sizeof(double));
 
     n_eta2 = *n * n_2dCols;
-    eta2 = (double *)R_chk_calloc((size_t)n_eta2,sizeof(double));
-    Tkm = (double *)R_chk_calloc((size_t)n_eta2,sizeof(double));
+    eta2 = (double *)CALLOC((size_t)n_eta2,sizeof(double));
+    Tkm = (double *)CALLOC((size_t)n_eta2,sizeof(double));
   
-    w2 = (double *)R_chk_calloc((size_t)n_eta2,sizeof(double));
+    w2 = (double *)CALLOC((size_t)n_eta2,sizeof(double));
 
  
     v1 = work;v2=work + *n * *M; /* a couple of working vectors */ 
    
     /* Set up constants involved updates (little work => leave readable!)*/
   
-    a1=(double *)R_chk_calloc((size_t)*n,sizeof(double));  
-    a2=(double *)R_chk_calloc((size_t)*n,sizeof(double));
+    a1=(double *)CALLOC((size_t)*n,sizeof(double));  
+    a2=(double *)CALLOC((size_t)*n,sizeof(double));
     alpha1=alpha2 =(double *)NULL;
     if (*fisher) { /* Fisher scoring updates */
    
@@ -2762,8 +2762,8 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
     } else { /* full Newton updates */
       
-      alpha1 = (double *) R_chk_calloc((size_t)*n,sizeof(double));
-      alpha2 = (double *) R_chk_calloc((size_t)*n,sizeof(double));
+      alpha1 = (double *) CALLOC((size_t)*n,sizeof(double));
+      alpha2 = (double *) CALLOC((size_t)*n,sizeof(double));
       for (i=0;i< *n;i++) {
         xx = V2[i]-V1[i]*V1[i]+g3[i]-g2[i]*g2[i]; /* temp. storage */
         alpha1[i] = (-(V1[i]+g2[i]) + (y[i]-mu[i])*xx)/alpha[i];
@@ -2780,8 +2780,8 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
                                  w[i]*(alpha1[i]*alpha1[i] - alpha2[i] + V2[i]-V1[i]*V1[i] + 2*g3[i]-2*g2[i]*g2[i])/(g1[i]*g1[i]) ;
 
       if (! *REML) { /* then Fisher versions of a1 and a2 also needed */
-        af1=(double *)R_chk_calloc((size_t)*n,sizeof(double));  
-        af2=(double *)R_chk_calloc((size_t)*n,sizeof(double));
+        af1=(double *)CALLOC((size_t)*n,sizeof(double));  
+        af2=(double *)CALLOC((size_t)*n,sizeof(double));
         /* dwf/deta = - w[i]*(V'/V+2g''/g')/g' */
         for (i=0;i< *n;i++) af1[i] = -  wf[i] *(V1[i] + 2*g2[i])/g1[i];
         /* d2wf/deta2 .... */
@@ -2790,13 +2790,13 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
       } 
 
 
-      R_chk_free(alpha1);R_chk_free(alpha2);
+      FREE(alpha1);FREE(alpha2);
       
     } /* end of full Newton setup */
 
     /* get gradient vector and Hessian of deviance wrt coefficients */
     for (i=0;i< *n ;i++) v1[i] = -2*p_weights[i]*(y[i]-mu[i])/(V0[i]*g1[i]);
-    dev_grad=(double *)R_chk_calloc((size_t) rank,sizeof(double));
+    dev_grad=(double *)CALLOC((size_t) rank,sizeof(double));
     bt=1;ct=0;mgcv_mmult(dev_grad,X,v1,&bt,&ct,&rank,&one,n);
     
     if (deriv2) { /* get hessian of deviance w.r.t. beta */
@@ -2840,7 +2840,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
 
     /* a useful array for Tk and Tkm */
-    wi=(double *)R_chk_calloc((size_t)*n,sizeof(double)); 
+    wi=(double *)CALLOC((size_t)*n,sizeof(double)); 
     for (i=0;i< *n;i++) { wi[i]=1/fabs(w[i]);}
 
     /* get Tk and Tkm */
@@ -2850,8 +2850,8 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     
     if (! *REML && ! *fisher) { /* then Fisher based versions of Tk and Tkm needed */ 
       rc_prod(w1,af1,eta1,M,n); /* w1 = dwf/d\rho_k done */
-        Tfk = (double *)R_chk_calloc((size_t)n_eta1,sizeof(double));
-        Tfkm = (double *)R_chk_calloc((size_t)n_eta2,sizeof(double));
+        Tfk = (double *)CALLOC((size_t)n_eta1,sizeof(double));
+        Tfkm = (double *)CALLOC((size_t)n_eta2,sizeof(double));
       if (deriv2) {
         rc_prod(w2,af1,eta2,&n_2dCols,n); 
         for (pw2=w2,m=0;m < *M;m++) for (k=m;k < *M;k++) {
@@ -2864,7 +2864,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
       for (i=0;i< *n;i++) { wi[i]=1/wf[i];}
       rc_prod(Tfk,wi,w1,M,n); 
       if (deriv2) rc_prod(Tfkm,wi,w2,&n_2dCols,n);
-      R_chk_free(af1);R_chk_free(af2);
+      FREE(af1);FREE(af2);
     } /* Fisher based Tk, Tkm, completed */
     else {Tfk = Tfkm = NULL;}
 
@@ -2893,7 +2893,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
       for (p2=p1,i=0;i<=j;i++,p0++,p2++) *p0 = *p2;
       for (i=j+1;i<rank;i++,p0++) *p0 = 0.0; 
     }
-  } else { R_chk_free(R);R_chk_free(Q1);R_chk_free(nind); } /* needed later for ML calculation */
+  } else { FREE(R);FREE(Q1);FREE(nind); } /* needed later for ML calculation */
 
 
   /* REML NOTE: \beta'S\beta stuff has to be done here on pivoted versions.
@@ -2956,25 +2956,25 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     reml_penalty =  MLpenalty1(trA1,trA2,Tk,Tkm,nulli,X,R,Q1,nind,sp,rS,rSncol,
 			       &rank,n,Mp,M,&FALSE,&neg_w,rank_tol,deriv,nt,&FALSE);
     
-    R_chk_free(R);R_chk_free(Q1);R_chk_free(nind);
+    FREE(R);FREE(Q1);FREE(nind);
   } /* note that rS scrambled from here on... */
 
 
   /* clean up memory, except what's needed to get tr(A) and derivatives 
   */ 
 
-  if (neg_w) R_chk_free(Vt);   
-  R_chk_free(work);R_chk_free(PKtz);
+  if (neg_w) FREE(Vt);   
+  FREE(work);FREE(PKtz);
  
   if (*deriv) {
-    //R_chk_free(b1);
-    R_chk_free(eta1);
-    R_chk_free(eta2);
-    R_chk_free(a1);R_chk_free(a2);R_chk_free(wi);R_chk_free(dev_grad);
-    //R_chk_free(w1);
-    R_chk_free(w2);R_chk_free(b2);
+    //FREE(b1);
+    FREE(eta1);
+    FREE(eta2);
+    FREE(a1);FREE(a2);FREE(wi);FREE(dev_grad);
+    //FREE(w1);
+    FREE(w2);FREE(b2);
 
-    if (deriv2) { R_chk_free(dev_hess);}
+    if (deriv2) { FREE(dev_hess);}
   }
   
   /* Note: the following gets only trA if REML is being used,
@@ -2988,37 +2988,37 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   } else { /* Need expected value versions of everything for EDF calculation */
     /* form sqrt(wf)X augmented with E */
     nr = *n + *Enrow;
-    /* st WX = (double *)R_chk_calloc((size_t)nr * rank,sizeof(double)); */
-    WX = (double *) R_chk_calloc((size_t) ( (nr + *nt * rank) * rank),sizeof(double));
+    /* st WX = (double *)CALLOC((size_t)nr * rank,sizeof(double)); */
+    WX = (double *) CALLOC((size_t) ( (nr + *nt * rank) * rank),sizeof(double));
     for (p0=w,p1=w + *n,p2=wf;p0<p1;p0++,p2++) *p0 = sqrt(*p2);
     for (p3=X,p0 = WX,i=0;i<rank;i++) {
       for (p1=w,p2=w+*n;p1<p2;p1++,p0++,p3++) *p0 = *p3 * *p1;
       for (j=0;j<*Enrow;j++,E++,p0++) *p0 = *E;
     }
     /* QR decompose it and hence get new P and K */
-    pivot = (int *)R_chk_calloc((size_t)rank,sizeof(int));
-    /* st tau = (double *)R_chk_calloc((size_t)rank,sizeof(double)); */
-    tau = (double *)R_chk_calloc((size_t)rank*(*nt+1),sizeof(double));
+    pivot = (int *)CALLOC((size_t)rank,sizeof(int));
+    /* st tau = (double *)CALLOC((size_t)rank,sizeof(double)); */
+    tau = (double *)CALLOC((size_t)rank*(*nt+1),sizeof(double));
     /* st mgcv_qr(WX,&nr,&rank,pivot,tau); */
     mgcv_pqr(WX,&nr,&rank,pivot,tau,&nt1);
 
     /* st Rinv(P,WX,&rank,&nr,&rank); */ /* P= R^{-1} */
-    R1 = (double *)R_chk_calloc((size_t)rank*rank,sizeof(double));
+    R1 = (double *)CALLOC((size_t)rank*rank,sizeof(double));
     getRpqr(R1,WX,&nr,&rank,&rank,&nt1);
 
     Rinv(P,R1,&rank,&rank,&rank);
-    R_chk_free(R1); 
+    FREE(R1); 
 
     /* there's something about the way you taste that makes me want to clear my throat, 
        there's a method to your madness, that really gets my goat */
-    Q = (double *)R_chk_calloc((size_t) nr * rank,sizeof(double)); 
+    Q = (double *)CALLOC((size_t) nr * rank,sizeof(double)); 
     /* st for (i=0;i< rank;i++) Q[i * nr + i] = 1.0; */
     /* st left=1;tp=0;mgcv_qrqy(Q,WX,tau,&nr,&rank,&rank,&left,&tp); */ /* Q from the second QR decomposition */
     for (i=0;i< rank;i++) Q[i * rank + i] = 1.0;
     tp=0;mgcv_pqrqy(Q,WX,tau,&nr,&rank,&rank,&tp,&nt1);
 
     for (p1=Q,p0=K,j=0;j<rank;j++,p1 += *Enrow) for (i=0;i<*n;i++,p1++,p0++) *p0 = *p1;
-    R_chk_free(Q);R_chk_free(WX);R_chk_free(tau);
+    FREE(Q);FREE(WX);FREE(tau);
     if (*deriv)  pivoter(rS,&rank,&ScS,pivot,&FALSE,&FALSE); /* apply the latest pivoting to rows of rS */
     
   }
@@ -3033,7 +3033,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
   if (!*fisher) { /* first unpivot rows of P */
     pivoter(P,&rank,&rank,pivot,&FALSE,&TRUE); /* unpivoting the rows of P */
-    R_chk_free(pivot);
+    FREE(pivot);
   }
 
   for (p1=P,i=0;i < rank; i++) for (j=0;j<rank;j++,p1++) rV[pivot1[j] + i * rank] = *p1;
@@ -3048,13 +3048,13 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
 
   *rank_est = rank;
 
-  R_chk_free(drop);
-  R_chk_free(nulli);
-  R_chk_free(pivot1);
-  R_chk_free(P);R_chk_free(K);
+  FREE(drop);
+  FREE(nulli);
+  FREE(pivot1);
+  FREE(P);FREE(K);
   if (*deriv) { 
-    R_chk_free(Tk);R_chk_free(Tkm);
-    if (! *REML && ! *fisher) { R_chk_free(Tfk);R_chk_free(Tfkm);}
+    FREE(Tk);FREE(Tkm);
+    if (! *REML && ! *fisher) { FREE(Tfk);FREE(Tfkm);}
   }
 
   if (*REML) {*rank_tol = reml_penalty;*conv_tol = bSb;}
@@ -3158,16 +3158,16 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   nr = *q + *rE;
   nz = *n; if (nz<nr) nz=nr; /* possible for nr to be more than n */
-  z = (double *)R_chk_calloc((size_t) nz,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
+  z = (double *)CALLOC((size_t) nz,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
   
-  raw = (double *)R_chk_calloc((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
+  raw = (double *)CALLOC((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
   
   for (i=0;i< *n;i++) 
     if (w[i]<0) { neg_w++;raw[i] = sqrt(-w[i]);} 
     else raw[i] = sqrt(w[i]);
 
   if (neg_w) {
-    nind = (int *)R_chk_calloc((size_t)neg_w,sizeof(int)); /* index the negative w_i */
+    nind = (int *)CALLOC((size_t)neg_w,sizeof(int)); /* index the negative w_i */
     k=0;for (i=0;i< *n;i++) if (w[i]<0) { nind[k]=i;k++;}
   } else { nind = (int *)NULL;}
 
@@ -3177,8 +3177,8 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   for (i=0;i<neg_w;i++) {k=nind[i];z[k] = -z[k];} 
 
-  /* st WX = (double *) R_chk_calloc((size_t) ( *n * *q),sizeof(double)); */
-  WX = (double *) R_chk_calloc((size_t) ( (*n + *nt * *q) * *q),sizeof(double));
+  /* st WX = (double *) CALLOC((size_t) ( *n * *q),sizeof(double)); */
+  WX = (double *) CALLOC((size_t) ( (*n + *nt * *q) * *q),sizeof(double));
   for (Xp=X,p0=WX,j=0;j<*q;j++) { 
     for (p1=raw,i=0;i<*n;i++,p1++,p0++,Xp++) { /* form WX */
       *p0 = *Xp * *p1;
@@ -3187,10 +3187,10 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     }
   } 
   /* get the QR decomposition of WX */
-  /* st tau=(double *)R_chk_calloc((size_t)*q,sizeof(double)); */ /* part of reflector storage */
-  tau=(double *)R_chk_calloc((size_t) *q * (*nt + 1),sizeof(double)); 
+  /* st tau=(double *)CALLOC((size_t)*q,sizeof(double)); */ /* part of reflector storage */
+  tau=(double *)CALLOC((size_t) *q * (*nt + 1),sizeof(double)); 
   
-  pivot=(int *)R_chk_calloc((size_t)*q,sizeof(int));
+  pivot=(int *)CALLOC((size_t)*q,sizeof(int));
   
   /* st mgcv_qr(WX,n,q,pivot,tau); */ /* WX and tau now contain the QR decomposition information */
   mgcv_pqr(WX,n,q,pivot,tau,nt);
@@ -3198,7 +3198,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   /* pivot[i] gives the unpivoted position of the ith pivoted parameter.*/
   
   /* copy out upper triangular factor R, and unpivot it */
-  R1 = (double *)R_chk_calloc((size_t)*q * *q,sizeof(double));
+  R1 = (double *)CALLOC((size_t)*q * *q,sizeof(double));
   /* st for (i=0;i<*q;i++) for (j=i;j<*q;j++) R1[i + *q * j] = WX[i + *n * j]; */ 
   getRpqr(R1,WX,n,q,q,nt);
   
@@ -3208,7 +3208,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   Rnorm = frobenius_norm(R1,q,q);
   Enorm =  frobenius_norm(Es,rE,q);
  
-  R = (double *)R_chk_calloc((size_t)*q * nr,sizeof(double));
+  R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
   for (j=0;j<*q;j++) { 
     for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j]/Rnorm;
     for (i=0;i< *rE;i++) R[i + *q + nr * j] = Es[i + *rE * j]/Enorm;
@@ -3216,12 +3216,12 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   
   /* ... and now use it to establish rank */
    
-  tau1=(double *)R_chk_calloc((size_t)*q,sizeof(double)); /* part of reflector storage */
-  pivot1=(int *)R_chk_calloc((size_t)*q,sizeof(int));
+  tau1=(double *)CALLOC((size_t)*q,sizeof(double)); /* part of reflector storage */
+  pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
   mgcv_qr(R,&nr,q,pivot1,tau1);
   
   /* now actually find the rank of R */
-  work = (double *)R_chk_calloc((size_t)(4 * *q),sizeof(double));
+  work = (double *)CALLOC((size_t)(4 * *q),sizeof(double));
   rank = *q;
   R_cond(R,&nr,&rank,work,&Rcond);
   while (*rank_tol * Rcond > 1) { rank--;R_cond(R,&nr,&rank,work,&Rcond);}
@@ -3233,7 +3233,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   n_drop = *q - rank;
   if (n_drop) {
-    drop = (int *)R_chk_calloc((size_t)n_drop,sizeof(int)); /* original locations of dropped parameters */
+    drop = (int *)CALLOC((size_t)n_drop,sizeof(int)); /* original locations of dropped parameters */
     for (i=0;i<n_drop;i++) drop[i] = pivot1[rank+i];
     qsort(drop,n_drop,sizeof(int),icompare); /* key assumption of the drop/undrop routines is that `drop' is ascending */
     /* drop columns indexed in `drop'... */
@@ -3249,42 +3249,42 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j];
       for (i=0;i< *rE;i++) R[i + *q + nr * j] = E[i + *rE * j];
   }
-  R_chk_free(R1);
+  FREE(R1);
   mgcv_qr(R,&nr,&rank,pivot1,tau1); /* The final QR decomposition */ 
   
 
   if (neg_w) { /* then the correction for the negative w_i has to be evaluated */
-    Q = (double *)R_chk_calloc((size_t) nr * rank,sizeof(double)); 
+    Q = (double *)CALLOC((size_t) nr * rank,sizeof(double)); 
     for (i=0;i< rank;i++) Q[i * nr + i] = 1.0;
     left=1;tp=0;mgcv_qrqy(Q,R,tau1,&nr,&rank,&rank,&left,&tp); /* Q from the second QR decomposition */
 
-    Q1 = (double *)R_chk_calloc((size_t) *n * rank,sizeof(double)); 
+    Q1 = (double *)CALLOC((size_t) *n * rank,sizeof(double)); 
     /* st for (i=0;i<*q;i++) for (j=0;j<rank;j++) Q1[i + *n * j] = Q[i + nr * j]; */
     /* st left=1;tp=0;mgcv_qrqy(Q1,WX,tau,n,&rank,q,&left,&tp); */ /* Q1 = Qb Q[1:q,]  where Qb from first QR decomposition */   
     for (i=0;i<*q;i++) for (j=0;j<rank;j++) Q1[i + *q * j] = Q[i + nr * j];
     tp=0;mgcv_pqrqy(Q1,WX,tau,n,q,&rank,&tp,nt);/* Q1 = Qb Q[1:q,]  where Qb from first QR decomposition */   
     
-    R_chk_free(Q);
+    FREE(Q);
 
     if (neg_w < rank+1) k = rank+1; else k = neg_w;
-    IQ = (double *)R_chk_calloc((size_t) k * rank,sizeof(double)); 
+    IQ = (double *)CALLOC((size_t) k * rank,sizeof(double)); 
     for (i=0;i<neg_w;i++) { /* Copy the rows of Q1 corresponding to -ve w_i into IQ */
       p0 = IQ + i;p1 = Q1 + nind[i];
       for (j=0;j<rank;j++,p0+=k,p1+= *n) *p0 = *p1;
     }
-    R_chk_free(Q1); 
+    FREE(Q1); 
     /* Note that IQ may be zero padded, for convenience */
-    Vt = (double *)R_chk_calloc((size_t) rank * rank,sizeof(double));
-    d = (double *)R_chk_calloc((size_t)  rank,sizeof(double));
+    Vt = (double *)CALLOC((size_t) rank * rank,sizeof(double));
+    d = (double *)CALLOC((size_t)  rank,sizeof(double));
     mgcv_svd_full(IQ,Vt,d,&k,&rank); /* SVD of IQ */
-    R_chk_free(IQ);
+    FREE(IQ);
     for (i=0;i<rank;i++) {
       d[i] = 1 - 2*d[i]*d[i];
       if (d[i]< - *rank_tol) { /* X'WX not +ve definite, clean up and abort */
         *n = -1; 
-        R_chk_free(Vt);R_chk_free(d);R_chk_free(pivot);R_chk_free(tau);
-        R_chk_free(nind);R_chk_free(raw);R_chk_free(z);R_chk_free(work);R_chk_free(WX);
-        R_chk_free(tau1);R_chk_free(pivot1);R_chk_free(R);if (n_drop) R_chk_free(drop);
+        FREE(Vt);FREE(d);FREE(pivot);FREE(tau);
+        FREE(nind);FREE(raw);FREE(z);FREE(work);FREE(WX);
+        FREE(tau1);FREE(pivot1);FREE(R);if (n_drop) FREE(drop);
         return;
       }
       if (d[i]<=0) d[i]=0.0; else d[i] = 1/d[i];
@@ -3378,11 +3378,11 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     for (*penalty=0.0,i=0;i < *rE;i++) *penalty += work[i]*work[i]; /* the penalty term */
   }
 
-  R_chk_free(z);
-  R_chk_free(WX);R_chk_free(tau);R_chk_free(pivot);R_chk_free(raw);
-  R_chk_free(R);R_chk_free(pivot1);R_chk_free(tau1);  R_chk_free(work);
-  if (n_drop) R_chk_free(drop);
-  if (neg_w) { R_chk_free(nind);R_chk_free(d);R_chk_free(Vt);}
+  FREE(z);
+  FREE(WX);FREE(tau);FREE(pivot);FREE(raw);
+  FREE(R);FREE(pivot1);FREE(tau1);  FREE(work);
+  if (n_drop) FREE(drop);
+  if (neg_w) { FREE(nind);FREE(d);FREE(Vt);}
 } /* end pls_fit1 */
 
 
