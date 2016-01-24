@@ -19,10 +19,10 @@ covariate values and C code level parallelization (controlled by the \code{nthre
 \usage{
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
-    scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,paraPen=NULL,
-    chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,sparse=FALSE,
-    cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
-    drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
+    select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,
+    paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
+    sparse=FALSE,cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,
+    samfrac=1,drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -74,6 +74,10 @@ of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likel
 \item{control}{A list of fit control parameters to replace defaults returned by 
 \code{\link{gam.control}}. Any control parameters not supplied stay at their default values.}
 
+\item{select}{Should selection penalties be added to the smooth effects, so that they can in principle be 
+penalized out of the model? Has the side effect that smooths no longer have a fixed effect component (improper prior
+from a Bayesian perspective) allowing REML comparison of models with the same fixed effect structure. 
+}
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
 scale paraemter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 

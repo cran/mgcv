@@ -437,7 +437,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
   sm.dim <- sm.id
   for (d in 1:maxDim) {
     for (i in 1:m) {
-      if (sm[[i]]$dim==d) for (j in 1:d) { ## work through terms
+      if (sm[[i]]$dim==d&&sm[[i]]$side.constrain) for (j in 1:d) { ## work through terms
         term<-sm[[i]]$vn[j]
         a <- sm.id[[term]]
         la <- length(a)+1
@@ -448,7 +448,7 @@ gam.side <- function(sm,Xp,tol=.Machine$double.eps^.5,with.pen=FALSE)
   }
   ## so now each unique variable name has an associated array of 
   ## the smooths of which it is an argument, arranged in ascending 
-  ## order of dimension.
+  ## order of dimension. Smooths for which side.constrain==FALSE are excluded.
   if (maxDim==1) warning("model has repeated 1-d smooths of same variable.")
 
   ## Now set things up to enable term specific model matrices to be
@@ -2066,6 +2066,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   object$call <- G$cl # needed for update() to work
   class(object) <- c("gam","glm","lm")
   if (is.null(object$deviance)) object$deviance <- sum(residuals(object,"deviance")^2)
+  names(object$gcv.ubre) <- method
   environment(object$formula) <- environment(object$pred.formula) <-
   environment(object$terms) <- environment(object$pterms) <- .GlobalEnv
   if (!is.null(object$model))  environment(attr(object$model,"terms"))  <- .GlobalEnv
@@ -4157,8 +4158,9 @@ initial.spg <- function(x,y,weights,family,S,off,L=NULL,lsp0=NULL,type=1,
     } else mustart <- mukeep
     if (inherits(family,"extended.family")) {
       theta <- family$getTheta()
-      w <- .5 * drop(family$Dd(y,mustart,theta,weights)$EDmu2*family$mu.eta(family$linkfun(mustart))^2)  
-    } else w <- drop(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
+      ## use 'as.numeric' - 'drop' can leave result as 1D array...
+      w <- .5 * as.numeric(family$Dd(y,mustart,theta,weights)$EDmu2*family$mu.eta(family$linkfun(mustart))^2)  
+    } else w <- as.numeric(weights*family$mu.eta(family$linkfun(mustart))^2/family$variance(mustart))
     w <- sqrt(w)
     if (type==1) { ## what PI would have used
       lambda <-  initial.sp(w*x,S,off)

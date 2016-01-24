@@ -1,6 +1,41 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+Currently deprecated and liable to be removed: 
+- bam(...,sparse=TRUE) [1.8-5]
+- negbin() with search for `theta' - use 'nb' instead [1.8-0]
+- single penalty tensor product smooths.
+- p.type!=0 in summary.gam.
+	
+	
+1.8-11
+
+* bam(...,discrete=TRUE) can now handle matrix arguments to smooths (and hence
+  linear functional terms).
+
+* bam(...,discrete=TRUE) bug fix in fixed sp handling.
+
+* bam(...,discrete = TRUE) db.drho reparameterization fix, fixing nonsensical 
+  edf2. Also bam edf2 limited to maximum of edf1.
+
+* smoothCon rescaling of S changed to use efficient matrix norm in place of
+  relatively slow computation involving model matrix crossproduct.  
+
+* bam aic corrected for AR model if present.
+	
+* Added select=TRUE argument to 'bam'.
+
+* Several discrete prediction fixes including improved thread safety.
+
+* bam/gam name gcv.ubre field by "method".
+
+* gam.side modified so that if a smooth has 'side.constrain==FALSE' it is 
+  neither constrained, nor used in the computation of constraints for other
+  terms (the latter part being new). Very limited impact!
+
+* No longer checks if SUPPORT_OPENMP defined in Rconfig.h, but only if _OPENMP
+  defined. No change in actual behaviour. 
+
 1.8-10
 
 ** 'multinom' family implemented for multinomial logistic regression.

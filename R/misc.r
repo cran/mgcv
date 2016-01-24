@@ -50,14 +50,14 @@ mvn.ll <- function(y,X,beta,dbeta=NULL) {
     }
   }
   list(l=oo$ll,lb=oo$lb,lbb=matrix(oo$lbb,nb,nb),dH=dH)
-}
+} ## mvn.ll
 
 ## discretized covariate routines...
 
-XWXd <- function(X,w,k,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
+XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
 ## Form X'WX given weights in w and X in compressed form in list X.
 ## each element of X is a (marginal) model submatrix. Full version 
-## is given by X[[i]][k[,i],]. list X relates to length(ds) separate
+## is given by X[[i]][k[,i],]. list X relates to length(ts) separate
 ## terms. ith term starts at matrix ts[i] and has dt[i] marginal matrices.
 ## Terms with several marginals are tensor products and may have 
 ## constraints (if qc[i]>1), stored as a householder vector in v[[i]]. 
@@ -68,45 +68,49 @@ XWXd <- function(X,w,k,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w
   n <- length(w);pt <- 0;
   for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0) 
   oo <- .C(C_XWXd,XWX =as.double(rep(0,pt^2)),X= as.double(unlist(X)),w=as.double(w),
-           k=as.integer(k-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
+           k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
            ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
            v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
            ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))
   if (is.null(drop)) matrix(oo$XWX,pt,pt) else matrix(oo$XWX,pt,pt)[-drop,-drop]
 } ## XWXd
 
-XWyd <- function(X,w,y,k,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
+XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
 ## X'Wy...  
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
   n <- length(w);pt <- 0;
   for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0) 
   oo <- .C(C_XWyd,XWy=rep(0,pt),y=as.double(y),X=as.double(unlist(X)),w=as.double(w),k=as.integer(k-1), 
+           ks=as.integer(ks-1),
            m=as.integer(m),p=as.integer(p),n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
            dt=as.integer(dt),nt=as.integer(nt),v=as.double(unlist(v)),qc=as.integer(qc),
            ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))
   if (is.null(drop)) oo$XWy else oo$XWy[-drop]
 } ## XWyd 
 
-Xbd <- function(X,beta,k,ts,dt,v,qc,drop=NULL) {
+Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL) {
 ## note that drop may contain the index of columns of X to drop before multiplying by beta.
 ## equivalently we can insert zero elements into beta in the appropriate places.
-  n <- if (is.matrix(k)) nrow(k) else length(k)
-  m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
-  nx <- length(X);nt <- length(ts)
+  n <- if (is.matrix(k)) nrow(k) else length(k) ## number of data
+  m <- unlist(lapply(X,nrow)) ## number of rows in each discrete model matrix
+  p <- unlist(lapply(X,ncol)) ## number of cols in each discrete model matrix
+  nx <- length(X) ## number of model matrices
+  nt <- length(ts) ## number of terms
   if (!is.null(drop)) { 
     b <- if (is.matrix(beta)) matrix(0,nrow(beta)+length(drop),ncol(beta)) else rep(0,length(beta)+length(drop))
     if (is.matrix(beta)) b[-drop,] <- beta else b[-drop] <- beta
     beta <- b
   }
-  bc <- if (is.matrix(beta)) ncol(beta) else 1
-  oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1), 
+  bc <- if (is.matrix(beta)) ncol(beta) else 1 ## number of columns in beta
+  oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1),
+           ks = as.integer(ks-1), 
            m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
            as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(bc))
   if (is.matrix(beta)) matrix(oo$f,n,bc) else oo$f
 } ## Xbd
 
-diagXVXd <- function(X,V,k,ts,dt,v,qc,drop=NULL,n.threads=1) {
+diagXVXd <- function(X,V,k,ks,ts,dt,v,qc,drop=NULL,n.threads=1) {
 ## discrete computation of diag(XVX')
   n <- if (is.matrix(k)) nrow(k) else length(k)
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
@@ -118,6 +122,7 @@ diagXVXd <- function(X,V,k,ts,dt,v,qc,drop=NULL,n.threads=1) {
     V <- V0;rm(V0)
   } else pv <- ncol(V) 
   oo <- .C(C_diagXVXt,diag=as.double(rep(0,n)),V=as.double(V),X=as.double(unlist(X)),k=as.integer(k-1), 
+           ks=as.integer(ks-1),
            m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
            as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(pv),as.integer(n.threads))
   oo$diag

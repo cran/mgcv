@@ -290,7 +290,7 @@ int mgcv_bchol(double *A,int *piv,int *n,int *nt,int *nb) {
    +ve semi definite matrix and piv is pivot sequence. 
 */  
   int i,j,k,l,q,r=-1,*pk,*pq,jb,n1,m,N,*a,b;
-  double tol=0.0,*dots,*pd,*p1,*Aj,*Aj1,*Ajn,xmax,x,*Aq,*Ajj,*Aend;
+  double tol=0.0,*dots,*pd,*p1,*Aj,*Aq0,*Aj0,*Aj1,*Ajn,*Ail,xmax,x,*Aq,*Ajj,*Aend;
   dots = (double *)CALLOC((size_t) *n,sizeof(double));
   for (pk = piv,i=0;i < *n;pk++,i++) *pk = i; /* initialize pivot record */
   jb = *nb; /* block size, allowing final to be smaller */
@@ -341,8 +341,10 @@ int mgcv_bchol(double *A,int *piv,int *n,int *nt,int *nb) {
         Aq = Aj + k; /* Lucas (2004) has '1' in place of 'k' */
         Aj += j;        
         Aj1 = Ajn + k; /* Lucas (2004) has '1' in place of 'k' */
-        for (;Aj<Aend;Aj += *n,Aq += *n) 
-        for (pd = Aj1,p1=Aq;pd < Ajj;pd++,p1++) *Aj -= *pd * *p1;  
+        for (;Aj<Aend;Aj += *n,Aq += *n) {
+	  for (pd = Aj1,p1=Aq;pd < Ajj;pd++,p1++) *Aj -= *pd * *p1;
+          //*Aj -= x;
+        }  
       }
       if (j < *n) {
         Aj = Ajj; x = *Aj;Aj += *n;
@@ -364,19 +366,29 @@ int mgcv_bchol(double *A,int *piv,int *n,int *nt,int *nb) {
           if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
       }     
       #ifdef SUPPORT_OPENMP
-      #pragma omp parallel private(b,i,l,Aj,Aend,Aq,Aj1) num_threads(m)
+#pragma omp parallel private(b,i,l,Aj,Aend,Aq,Aj1,Ail,Aj0,Aq0) num_threads(m)
       #endif 
       { /* start parallel section */
         #ifdef SUPPORT_OPENMP
         #pragma omp for
         #endif
         for (b=0;b<m;b++)
-        for (i=a[b];i<a[b+1];i++) for (l=i;l<*n;l++) {
-	  Aj = A + i * *n;Aend = Aj + j;Aj1 = Aj + l;
-          Aj+=k;Aq = A + l * *n + k; /* Lucas (2004) has '1' in place of 'k' */
-          for (;Aj < Aend;Aj++,Aq++) *Aj1 -= *Aq * *Aj;
-          A[i + *n * l ] = *Aj1;
-        }
+	for (i=a[b];i<a[b+1];i++) { 
+          Aj0 = A + i * *n;
+          Aq0 = Aj0 + k;
+          Aend = Aj0 + j;
+          Ail = Aj1 = Aj0 + i;
+          Aj0 += k; 
+	  for (l=i;l<*n;l++,Aq0 += *n,Aj1++,Ail += *n) {
+	    // Aj = A + i * *n;Aend = Aj + j;Aj1 = Aj + l;
+            //Aj+=k;Aq = A + l * *n + k; /* Lucas (2004) has '1' in place of 'k' */
+            Aj = Aj0;
+            Aq = Aq0;
+            for (;Aj < Aend;Aj++,Aq++) *Aj1 -= *Aq * *Aj;
+            // A[i + *n * l ] = *Aj1;
+            *Ail = *Aj1;
+          }
+	}
       } /* end parallel section */
     } /* if (k + jb < *n) */
   } /* k loop */

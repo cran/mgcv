@@ -6,7 +6,9 @@
    documentation in `Writing R extensions', but is apparently 
    intentional. However, most compilers with openMP support supply 
    a pre-defined compiler macro _OPENMP. So... */
-#if (!defined SUPPORT_OPENMP && defined _OPENMP)
+/* #if (!defined SUPPORT_OPENMP && defined _OPENMP)
+  ...update: Rconfig.h:SUPPORT_OPENMP deprecated from R 2.3.2 */
+#if defined _OPENMP
 #define SUPPORT_OPENMP 1 
 #endif
 /* ... note also that there is no actual *need* to protect #pragmas with 
@@ -78,15 +80,15 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
             double *dH,int *deriv,int *nsp,int *nt);
 
 /* discretized covariate methods */
-void XWXd(double *XWX,double *X,double *w,int *k, int *m,int *p, int *n, int *nx, 
+void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
           int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
           int *ar_row,double *ar_weights);
-void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *m,int *p, int *n, 
+void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *ks, int *m,int *p, int *n, 
 	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
           int *ar_stop,int *ar_row,double *ar_weights);
-void Xbd(double *f,double *beta,double *X,int *k, int *m,int *p, int *n, 
+void Xbd(double *f,double *beta,double *X,int *k, int *ks, int *m,int *p, int *n, 
 	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc);
-void diagXVXt(double *diag,double *V,double *X,int *k,int *m,int *p, int *n, 
+void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int *n, 
 	      int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *pv,int *nthreads);
 
 /* various service routines */

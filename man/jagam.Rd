@@ -119,7 +119,7 @@ Wood, S.N. (in press) Just Another Gibbs Additive Modeller: Interfacing JAGS and
 Marra, G. and S.N. Wood (2011) Practical variable selection for generalized additive models.
 Computational Statistics & Data Analysis 55(7): 2372-2387
 
-Here is a key early reference to smoothing using BUGS (although the approach and smooths used are different to jagam)
+Here is a key early reference to smoothing using BUGS (although the approach and smooths used are a bit different to jagam)
 
 Crainiceanu, C. M. D Ruppert, & M.P. Wand (2005) Bayesian Analysis for Penalized Spline Regression Using WinBUGS Journal of Statistical Software 14.
 }
@@ -133,7 +133,7 @@ Gibb's sampling is a very slow inferential method for standard GAMs. It is only 
 Check that the parameters of the priors on the parameters are fit for your purpose.
 } 
 
-\seealso{\code{\link{gam}, \link{gamm}}
+\seealso{\code{\link{gam}}, \code{\link{gamm}}, \code{\link{bam}}
 }
 
 \examples{

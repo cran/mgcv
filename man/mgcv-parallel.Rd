@@ -3,11 +3,12 @@
 \title{Parallel computation in mgcv.
 }
 \description{
-\code{mgcv} can make some use of multiple cores or a cluster. Function \code{\link{bam}} uses the 
-facilities provided in the \link[parallel]{parallel} package for this purpose. See examples below. Note that most multi-core machines are memory bandwidth limited, so parallel speed up tends to be rather variable. 
 
-\code{\link{bam}} can also use an alternative openMP based parallelization approach alongside discretisation of covariates to 
-achieve substantial speed ups. This is selected using the \code{discrete=TRUE} option to \code{bam}, with the number of threads controlled via the \code{nthreads} argument. See example below.
+\code{mgcv} can make some use of multiple cores or a cluster.
+
+\code{\link{bam}} can use an openMP based parallelization approach alongside discretisation of covariates to achieve substantial speed ups. This is selected using the \code{discrete=TRUE} option to \code{bam}, withthe number of threads controlled via the \code{nthreads} argument. This is the approach that scales best. See example below.
+
+Alternatively, function \code{\link{bam}} can use the facilities provided in the \link[parallel]{parallel} package. See examples below. Note that most multi-core machines are memory bandwidth limited, so parallel speed up tends to be rather variable. 
 
 Function \code{\link{gam}} can use parallel threads on a (shared memory) multi-core 
 machine via \code{openMP} (where this is supported). To do this, set the desired number of threads by setting \code{nthreads} to the number of cores to use, in the \code{control} argument of \code{\link{gam}}. Note that, for the most part, only the dominant \eqn{O(np^2)}{O(np^2)} steps are parallelized (n is number of data, p number of parameters). For additive Gaussian models estimated by GCV, the speed up can be disappointing as these employ an \eqn{O(p^3)}{O(p^3)} SVD step that can also have substantial cost in practice. 
