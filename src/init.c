@@ -20,10 +20,10 @@ R_CallMethodDef CallMethods[] = {
 };
 
 R_CMethodDef CEntries[] = {
-    {"diagXVXt", (DL_FUNC) &diagXVXt,15},
-    {"XWXd", (DL_FUNC) &XWXd,17},
-    {"XWyd", (DL_FUNC) &XWyd,17},
-    {"Xbd", (DL_FUNC) &Xbd,14},
+    {"diagXVXt", (DL_FUNC) &diagXVXt,16},
+    {"XWXd", (DL_FUNC) &XWXd,18},
+    {"XWyd", (DL_FUNC) &XWyd,18},
+    {"Xbd", (DL_FUNC) &Xbd,15},
     {"vcorr", (DL_FUNC) &vcorr, 5},
     {"dchol", (DL_FUNC) &dchol, 4},
     {"mgcv_omp", (DL_FUNC) &mgcv_omp, 1},

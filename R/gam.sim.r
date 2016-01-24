@@ -57,8 +57,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2,verbose=TRUE) {
     y <- f*x1 + e
     return(data.frame(y=y,x1=x1,x2=x2,f=f))
   } else if (eg==4) { ## factor `by' variable
-    if (verbose) cat("Factor `by' variable example\n")
-    n <- 400   
+    if (verbose) cat("Factor `by' variable example\n")   
     x0 <- runif(n, 0, 1)
     x1 <- runif(n, 0, 1)
     x2 <- runif(n, 0, 1)
@@ -67,7 +66,7 @@ gamSim <- function(eg=1,n=400,dist="normal",scale=2,verbose=TRUE) {
     f3 <-  0.2 * x2^11 * (10 * (1 - x2))^6 + 
            10 * (10 * x2)^3 * (1 - x2)^10
     e <- rnorm(n, 0, scale)
-    fac<-as.factor(c(rep(1,100),rep(2,100),rep(3,200)))
+    fac<-as.factor(sample(1:3,n,replace=TRUE))
     fac.1<-as.numeric(fac==1);fac.2<-as.numeric(fac==2);
     fac.3<-as.numeric(fac==3)
     y<-f1*fac.1+f2*fac.2+f3*fac.3+ e 

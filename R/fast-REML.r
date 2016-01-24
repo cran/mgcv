@@ -651,7 +651,9 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv) {
                                  sum(db[,j]*Skb[[k]]))                                  
     }
   }
-  list(bSb=sum(beta*Sb),bSb1=bSb1,bSb2=bSb2,d1b=db,rss1=rss1,rss2=rss2)
+  list(bSb=sum(beta*Sb),bSb1=bSb1,bSb2=bSb2,
+       d1b=db ## BUG - this needs transforming as coef - here, or where used
+       ,rss1=rss1,rss2=rss2)
 } ## end Sl.iftChol
 
 
@@ -662,7 +664,7 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
 ## yy = y'Wy in order to get derivsatives w.r.t. phi. 
   
   rho <- if (is.null(L)) rho + rho0 else L%*%rho + rho0
-
+  if (length(rho)<length(rho0)) rho <- rho0 ## ncol(L)==0 or length(rho)==0
   ## get log|S|_+ without stability transform... 
   fixed <- rep(FALSE,length(rho))
   ldS <- ldetS(Sl,rho,fixed,np=ncol(XX),root=FALSE,repara=FALSE,nt=nt)
@@ -708,7 +710,8 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
     rss.bSb <- yy - sum(beta*f) ## use identity ||y-Xb|| + b'Sb = y'y - b'X'y (b is minimizer)
     reml1[n+1] <- (-rss.bSb/phi + nobs - Mp)/2
     d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi)
-    reml2 <- rbind(cbind(reml2,d[1:n]),d)
+    reml2 <- rbind(cbind(reml2,d[1:n]),d) 
+    if (!is.null(L)) L <- rbind(cbind(L,rep(0,nrow(L))),c(rep(0,ncol(L)),1))
   }
 
   if (!is.null(L)) {
@@ -718,22 +721,23 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
   uconv.ind <- (abs(reml1) > tol)|(abs(diag(reml2))>tol)
   hess <- reml2
   grad <- reml1
-  if (sum(uconv.ind)!=ncol(reml2)) { 
-    reml1 <- reml1[uconv.ind]
-    reml2 <- reml2[uconv.ind,uconv.ind]
-  }
+  if (length(grad)>0) {
+    if (sum(uconv.ind)!=ncol(reml2)) { 
+      reml1 <- reml1[uconv.ind]
+      reml2 <- reml2[uconv.ind,uconv.ind]
+    }
 
-  er <- eigen(reml2,symmetric=TRUE)
-  er$values <- abs(er$values)
-  me <- max(er$values)*.Machine$double.eps^.5
-  er$values[er$values<me] <- me
-  step <- rep(0,length(uconv.ind))
-  step[uconv.ind] <- -er$vectors%*%((t(er$vectors)%*%reml1)/er$values)
+    er <- eigen(reml2,symmetric=TRUE)
+    er$values <- abs(er$values)
+    me <- max(er$values)*.Machine$double.eps^.5
+    er$values[er$values<me] <- me
+    step <- rep(0,length(uconv.ind))
+    step[uconv.ind] <- -er$vectors%*%((t(er$vectors)%*%reml1)/er$values)
 
-  ## limit the step length...
-  ms <- max(abs(step))
-  if (ms>4) step <- 4*step/ms
-
+    ## limit the step length...
+    ms <- max(abs(step))
+    if (ms>4) step <- 4*step/ms
+  } else step <- 0
   ## return the coefficient estimate, the reml grad and the Newton step...
   list(beta=beta,grad=grad,step=step,db=dift$d1b,PP=PP,R=R,piv=piv,rank=r,
        hess=hess,ldetS=ldS$ldetS,ldetXXS=ldetXXS)
@@ -1045,7 +1049,6 @@ Sl.postproc <- function(Sl,fit,undrop,X0,cov=FALSE,scale = -1,L,nt=nt) {
     }
     Vp <- PP * scale ## cov matrix
     ## sp uncertainty correction... 
-    ## BUG: possibility of L ignored here.
     if (!is.null(L)) d1b <- d1b%*%L
     M <- ncol(d1b) 
     ev <- eigen(fit$outer.info$hess,symmetric=TRUE)
