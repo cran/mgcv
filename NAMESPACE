@@ -1,6 +1,7 @@
 useDynLib(mgcv, .registration = TRUE, .fixes = "C_")
 
-export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
+export(anova.gam, bam, bam.update,bandchol, betar, cox.ph,concurvity, 
+       cSplineDes,
        exclude.too.far,extract.lme.cov, extract.lme.cov2,
        formXtViX, full.score, formula.gam,fixDependence,fix.family.link,
        fix.family.var, fix.family.ls, fix.family.qf,fix.family.rd,   
@@ -22,6 +23,7 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        place.knots, plot.gam, polys.plot,print.anova.gam,
        print.gam,print.summary.gam,predict.gam,predict.bam,
        PredictMat,Predict.matrix,Predict.matrix2,
+       Predict.matrix.Bspline.smooth,
        Predict.matrix.cr.smooth,
        Predict.matrix.duchon.spline,
        Predict.matrix.cs.smooth,
@@ -40,10 +42,11 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        Predict.matrix.gp.smooth,
        qq.gam,
        residuals.gam,rig,rTweedie,rmvn, 
-       Rrank,s,scat,
+       Rrank,s,scat,sdiag,"sdiag<-",
        sim2jam,
        slanczos,
        smoothCon,smooth.construct,smooth.construct2,
+       smooth.construct.bs.smooth.spec,
        smooth.construct.cc.smooth.spec,
        smooth.construct.cp.smooth.spec,
        smooth.construct.cr.smooth.spec,
@@ -65,7 +68,7 @@ export(anova.gam, bam, bam.update, betar, cox.ph,concurvity, cSplineDes,
        summary.gam,sp.vcov,
        spasm.construct,spasm.sp,spasm.smooth,
        t2,te,ti,tensor.prod.model.matrix,tensor.prod.penalties,
-       Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
+       trichol,Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
 
 importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,heat.colors,terrain.colors,topo.colors)
 importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,
@@ -90,6 +93,7 @@ importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix,getGroupsForm
 importMethodsFrom(Matrix,t,colMeans,colSums,chol,solve,lu,expand)
 importFrom(Matrix,Diagonal,sparseMatrix,Matrix)
 importFrom(methods,cbind2,as)
+importFrom(stats,weighted.mean)
 
 S3method(anova, gam)
 S3method(influence, gam)
@@ -131,6 +135,7 @@ S3method(fix.family.link,family)
 S3method(fix.family.link,extended.family)
 S3method(fix.family.link,general.family)
 S3method(smooth.construct,ad.smooth.spec)
+S3method(smooth.construct,bs.smooth.spec)
 S3method(smooth.construct, cc.smooth.spec)
 S3method(smooth.construct,cp.smooth.spec)
 S3method(smooth.construct, cr.smooth.spec)
@@ -150,6 +155,7 @@ S3method(smooth.construct, tensor.smooth.spec)
 S3method(smooth.construct, t2.smooth.spec)
 S3method(smooth.construct, ts.smooth.spec)
 
+S3method(Predict.matrix,Bspline.smooth)
 S3method(Predict.matrix,cr.smooth)
 S3method(Predict.matrix,cs.smooth)
 S3method(Predict.matrix,cyclic.smooth)

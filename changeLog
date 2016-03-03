@@ -3,10 +3,44 @@
 
 Currently deprecated and liable to be removed: 
 - bam(...,sparse=TRUE) [1.8-5]
-- negbin() with search for `theta' - use 'nb' instead [1.8-0]
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 	
+
+1.8-12
+
+** "bs" B-spline smoothing basis. B-splines with derivative based penalties
+  of various orders.
+
+* 'gamm' now uses a fixed scale parameter in PQL estimation for Poisson and 
+  binomial data via the `sigma' option in lmeControl.
+
+* bam null deviance computation was wrong with prior weights (including 
+  binomial other than binary case), and returned deviance was wrong for 
+  non-binary binomial. Fixed (did not affect estimation). 
+
+* improvements to "bfgs" optimizer to better deal with `infinite' smoothing
+  parameters.
+
+* changed scheme=3 in default 2-D plotting to grey scale version of 
+  scheme=2.
+
+* 'trichol' and 'bandchol' added for banded Cholesky decompositions, plus
+  'sdiag' functions added for extracting and setting matrix sub- and
+  super-  diagonals.
+
+* p-spline constructor and Predict.matrix.pspline.smooth now allow set 
+  up of SCOP-spline monotonic smoothers, and derivatives of smooths. Not
+  used in modelling functions yet. 
+
+* s(...,bs="re") now allows known precision matrix structures to be defined
+  using the `xt' argument of 's' see ?smooth.construct.re.smooth.spec for
+  details and example.
+
+* negbin() with a grid search for `theta' is no longer supported - use 
+  'nb' instead.
+
+* bug fix to bam aic computation with AR rho correction.
 	
 1.8-11
 

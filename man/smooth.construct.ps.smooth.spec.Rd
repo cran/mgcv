@@ -34,7 +34,7 @@ The advantage of P-splines is the flexible way that penalty and basis order can 
 
 }
 
-\value{ An object of class \code{"ps.smooth"} or \code{"cp.smooth"}. See \code{\link{smooth.construct}}, 
+\value{ An object of class \code{"pspline.smooth"} or \code{"cp.smooth"}. See \code{\link{smooth.construct}}, 
 for the elements that this object will contain.
 }
 
@@ -54,16 +54,25 @@ span that includes no data!). Note that P-splines don't make much sense with une
 Linear extrapolation is used for prediction that requires extrapolation 
 (i.e. prediction outside the range of the interior \code{k-m[1]} knots). Such extrapolation is not
 allowed in basis construction, but is when predicting.
+
+For the \code{"ps"} basis it is possible to set flags in the smooth specification object, requesting setup
+according to the SCOP-spline monotonic smoother construction of Pya and Wood (2015). As yet this is not 
+supported by any modelling functions in \code{mgcv} (see package \code{scam}). Similarly it is possible to set a 
+\code{deriv} flag in a smooth specification or smooth object, so that a model or prediction matrix produces the
+requested derivative of the spline, rather than evaluating it. See examples below. 
+
 }
 
 \references{
 Eilers, P.H.C. and B.D. Marx (1996) Flexible Smoothing with B-splines and Penalties. 
 Statistical Science, 11(2):89-121
+
+Pya, N., and Wood, S.N. (2015). Shape constrained additive models. Statistics and Computing, 25(3), 543-559.
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
-\seealso{\code{\link{cSplineDes}}}
+\seealso{\code{\link{cSplineDes}}, \code{\link{adaptive.smooth}}}
 
 \examples{
 ## see ?gam
@@ -92,6 +101,48 @@ Statistical Science, 11(2):89-121
   plot(b,select=2,shade=TRUE);lines(z,0*z,col=2)
   plot(bk,select=1,shade=TRUE);lines(x,f-mean(f),col=2)
   plot(bk,select=2,shade=TRUE);lines(z,0*z,col=2)
+  
+## Example using montonic constraints via the SCOP-spline
+## construction, and of computng derivatives...
+  x <- seq(0,1,length=100); dat <- data.frame(x)
+  sspec <- s(x,bs="ps")
+  sspec$mono <- 1
+  sm <- smoothCon(sspec,dat)[[1]]
+  sm$deriv <- 1
+  Xd <- PredictMat(sm,dat)
+## generate random coeffients in the unconstrainted 
+## parameterization...
+  b <- runif(10)*3-2.5
+## exponentiate those parameters indicated by sm$g.index 
+## to obtain coefficients meeting the constraints...
+  b[sm$g.index] <- exp(b[sm$g.index]) 
+## plot monotonic spline and its derivative
+  par(mfrow=c(2,2))
+  plot(x,sm$X\%*\%b,type="l",ylab="f(x)")
+  plot(x,Xd\%*\%b,type="l",ylab="f'(x)")
+## repeat for decrease...
+  sspec$mono <- -1
+  sm1 <- smoothCon(sspec,dat)[[1]]
+  sm1$deriv <- 1
+  Xd1 <- PredictMat(sm1,dat)
+  plot(x,sm1$X\%*\%b,type="l",ylab="f(x)")
+  plot(x,Xd1\%*\%b,type="l",ylab="f'(x)")
+
+## Now with sum to zero constraints as well...
+  sspec$mono <- 1
+  sm <- smoothCon(sspec,dat,absorb.cons=TRUE)[[1]]
+  sm$deriv <- 1
+  Xd <- PredictMat(sm,dat)
+  b <- b[-1] ## dropping first param
+  plot(x,sm$X\%*\%b,type="l",ylab="f(x)")
+  plot(x,Xd\%*\%b,type="l",ylab="f'(x)")
+  
+  sspec$mono <- -1
+  sm1 <- smoothCon(sspec,dat,absorb.cons=TRUE)[[1]]
+  sm1$deriv <- 1
+  Xd1 <- PredictMat(sm1,dat)
+  plot(x,sm1$X\%*\%b,type="l",ylab="f(x)")
+  plot(x,Xd1\%*\%b,type="l",ylab="f'(x)")
   
 }
 \keyword{models} \keyword{regression}%-- one or more ..

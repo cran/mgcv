@@ -11,8 +11,8 @@ regression terms. This method can be used with \code{\link{gam}} by making use o
 \code{\link{smooth.construct.re.smooth.spec}}, for full details. The basic idea is that, e.g., \code{s(x,z,g,bs="re")} generates an i.i.d. Gaussian 
 random effect with model matrix given by \code{model.matrix(~x:z:g-1)} --- in principle such terms can take any number of arguments. This simple 
 approach is sufficient for implementing a wide range of commonly used random effect structures. For example if \code{g} is a factor then 
-\code{s(g,bs="re")} produces a random coefficient for each level of \code{g}, with the radndom coefficients all modelled as i.i.d. normal. If \code{g} is a factor and \code{x} is numeric, then \code{s(x,g,bs="re")} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then \code{s(h,g,bs="re")} produces the usual i.i.d. normal \code{g} - \code{h} interaction. Note that a rather useful approximate 
-test for zero random effect is also implemented for tsuch terms based on Wood (2013).
+\code{s(g,bs="re")} produces a random coefficient for each level of \code{g}, with the radndom coefficients all modelled as i.i.d. normal. If \code{g} is a factor and \code{x} is numeric, then \code{s(x,g,bs="re")} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then \code{s(h,g,bs="re")} produces the usual i.i.d. normal \code{g} - \code{h} interaction. Note that a rather useful approximate test for zero random effect is also implemented for tsuch terms based on Wood (2013). If the precision
+matrix is known to within a multiplicative constant, then this can be supplied via the \code{xt} argument of \code{s}. See \link{smooth.construct.re.smooth.spec} for details and example. 
 
 Alternatively, but less straightforwardly, the \code{paraPen} argument to \code{\link{gam}} can be used: 
 see \code{\link{gam.models}}. If smoothing parameter estimation is by ML or REML (e.g. \code{gam(...,method="REML")}) then this approach is 
@@ -53,7 +53,7 @@ generalized additive mixed models. Biometrics 62(4):1025-1036
 }
 
 \examples{
-## see also examples for gam.models, gam.vcomp and gamm
+## see also examples for gam.models, gam.vcomp, gamm and smooth.construct.re.smooth.spec
 
 ## simple comparison of lme and gam
 require(mgcv)

@@ -194,6 +194,10 @@ Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statis
 
 \section{WARNINGS }{
 
+\code{gamm} was a somewhat different argument list to \code{\link{gam}},
+\code{gam} arguments such as \code{gamma} supplied to \code{gamm} will
+just be ignored.  
+
 \code{gamm} performs poorly with binary data, since it uses PQL. It is 
 better to use \code{gam} with \code{s(...,bs="re")} terms, or \code{gamm4}.
 

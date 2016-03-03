@@ -1,4 +1,4 @@
-## (c) Simon N. Wood (2013, 2014) coxph model extended family. 
+## (c) Simon N. Wood (2013, 2014) coxph model general family. 
 ## Released under GPL2 ...
 
 cox.ph <- function (link = "identity") { 
@@ -20,12 +20,6 @@ cox.ph <- function (link = "identity") {
   env <- new.env(parent = .GlobalEnv)
   validmu <- function(mu) all(is.finite(mu))
 
-   
-#    aic <- function(y, mu, theta=NULL, wt, dev) {
-#      ## this needs to call coxlpl - not really enough info 
-#      ## use store and retrieve approach, actually this is not needed (gam.fit5 computes from likelihood)
-#      get(".log.partial.likelihood")
-#    }
     
 
     ## initialization is tough here... need data frame in reverse time order,
@@ -76,7 +70,8 @@ cox.ph <- function (link = "identity") {
     ## = censoring)
       tr <- unique(y);r <- match(y,tr);nt <- length(tr)
       oo <- .C("coxpp",as.double(X%*%beta),A=as.double(X),as.integer(r),d=as.integer(wt),
-               h=as.double(rep(0,nt)),q=as.double(rep(0,nt)),km=as.double(rep(0,nt)),n=as.integer(nrow(X)),p=as.integer(ncol(X)),
+               h=as.double(rep(0,nt)),q=as.double(rep(0,nt)),km=as.double(rep(0,nt)),
+               n=as.integer(nrow(X)),p=as.integer(ncol(X)),
                nt=as.integer(nt),PACKAGE="mgcv")
       p <- ncol(X)
       list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[p*nt],p,nt),nt=nt,r=r,km=oo$km)
@@ -116,15 +111,18 @@ cox.ph <- function (link = "identity") {
     ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
     ## function defining the cox model log lik.
     ## Calls C code "coxlpl"
-    ## deriv codes: 0 - eval; 1 - grad and Hessian
-    ##              2 - d1H (diagonal only)
-    ##              3 - d1H; 4 d2H (diag)
+    ## deriv codes: 0   - evaluate the log likelihood
+    ##              1   - evaluate the grad and Hessian, H, of log lik w.r.t. coefs (beta)
+    ##              2/3 - evaluate d1H =dH/drho given db/drho in d1b 
+    ##                    (2 is for evaluation of diagonal only)
+    ##              4 -  given d1b and d2b evaluate trHid2H= tr(Hp^{-1}d2H/drhodrho')
     ## Hp is the preconditioned penalized hessian of the log lik
     ##    which is of rank 'rank'.
     ## fh is a factorization of Hp - either its eigen decomposition 
     ##    or its Choleski factor
     ## D is the diagonal pre-conditioning matrix used to obtain Hp
     ##   if Hr is the raw Hp then Hp = D*t(D*Hr)
+
       ##tr <- sort(unique(y),decreasing=TRUE)
       tr <- unique(y)
       r <- match(y,tr)
@@ -138,8 +136,6 @@ cox.ph <- function (link = "identity") {
       } else M <- d1H <- 0
       if (deriv > 2) {
         d2H <- rep(0,p*M*(M+1)/2)
-        #X <- t(forwardsolve(t(L),t(X)))
-        #d1b <- L %*% d1b; d2b <- L %*% d2b
         if (is.list(fh)) {
           ev <- fh
         } else  { ## need to compute eigen here

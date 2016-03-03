@@ -909,10 +909,11 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
         if (scheme == 1) { ## perspective plot 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
-        } else if (scheme==2) {
+        } else if (scheme==2||scheme==3) {
+          if (scheme==3) colors <- grey(0:50/50)
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
-          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=3,...)
+          contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=contour.col,...)
           if (rug) {  
             if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
             points(P$raw$x,P$raw$y,...)
@@ -954,7 +955,8 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
         if (scheme==1) { 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                           zlab=P$main,theta=theta,phi=phi,xlim=P$xlim,ylim=P$ylim,...)
-        } else if (scheme==2) {
+        } else if (scheme==2||scheme==3) {
+          if (scheme==3) colors <- grey(0:50/50)
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
           contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=contour.col,...)
