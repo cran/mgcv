@@ -69,8 +69,8 @@ which \code{gam} is called.}
 
 \item{offset}{Can be used to supply a model offset for use in fitting. Note
 that this offset will always be completely ignored when predicting, unlike an offset 
-included in \code{formula}: this conforms to the behaviour of
-\code{lm} and \code{glm}.}
+included in \code{formula} (this used to conform to the behaviour of
+\code{lm} and \code{glm}).}
 
 \item{control}{A list of fit control parameters to replace defaults returned by 
 \code{\link{gam.control}}. Values not set assume default values. }

@@ -3,7 +3,7 @@
 ## Code offering JAGS/BUGS support for mgcv.
 ## In particular autogenerates the code and data to fit an mgcv
 ## style GAM in JAGS, and re-packages the simulation output
-## in a form suitable for plotting and predcition. 
+## in a form suitable for plotting and prediction. 
 ## Idea is that the code would be modified to add the sort
 ## of random effects structure most appropriately handled in JAGS.
 

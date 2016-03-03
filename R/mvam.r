@@ -160,9 +160,11 @@ mvn <- function(d=2) {
     ll <- function(y,X,coef,wt,family,deriv=0,d1b=NULL,d2b=NULL,Hp=NULL,rank=0,fh=NULL,D=NULL) {
     ## function defining the Multivariate Normal model log lik.
     ## Calls C code "mvn_ll"
-    ## deriv codes: 0 - eval; 1 - grad and Hessian
-    ##              2 - d1H (diagonal only - not implemented efficiently)
-    ##              3 - d1H; 4 d2H (diag - not implemented)
+    ## deriv codes: 0   - evaluate the log likelihood
+    ##              1   - evaluate the grad and Hessian, H, of log lik w.r.t. coefs (beta)
+    ##              2/3 - evaluate d1H =dH/drho given db/drho in d1b 
+    ##                    (2 is diagonal only - not implemented efficiently)
+    ##              4 -  given d1b and d2b evaluate trHid2H= tr(Hp^{-1}d2H/drhodrho') (not implemented)
     ## Hp is the preconditioned penalized hessian of the log lik
     ##    which is of rank 'rank'.
     ## fh is a factorization of Hp - either its eigen decomposition 

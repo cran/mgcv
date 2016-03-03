@@ -1345,150 +1345,6 @@ formula.gam <- function(x, ...)
 }
 
 
-gam.negbin <- function(lsp,fscale,family,control,method,optimizer,gamma,G,scale,...) {
-## negative binomial gam fit, using `negbin' family, when some sort of 
-## search for theta parameter is required. If the `theta' parameter to `negbin'
-## is a length 2 array with theta[2]>theta[1] then `theta is taken as the 
-## search interval over which to optimize theta. Otherwise `theta' is taken
-## to be an array giving a discrete set of theta values over which to optimize
-## by exhaustive search. Note that AIC is used as the criterion, since the 
-## deviance depends on theta, UBRE is not proportional to AIC if theta is varied.
-## DEPRECATED in favour of using nb() with gam.fit4
-  
-  warning("`negbin' with unknown theta and outer iteration is deprecated - use `nb'. ")
-
-  if (method%in%c("ML","REML","P-REML","P-ML")) { use.aic <- FALSE;scoreType=method } 
-                                           else { use.aic <- TRUE;scoreType="UBRE"}
-
-  theta <- family$getTheta()
-  link <- family$link
-  if (length(theta)==2&&(theta[2]>theta[1])) { ## perform interval search
-    l.theta <- seq(log(theta[2]),log(theta[1]),length=25) ## grid over which to search
-    golden <- TRUE    
-
-  } else { ## perform discrete value search
-    l.theta <- log(sort(theta,decreasing=TRUE)) ## the supplied grid
-    golden <- FALSE
-  }
-   
-  n.th <- length(l.theta)
-
-  mustart <- list(...)[["mustart"]]
-
-  for (i in 1:n.th) { ## search through theta values
-    family <- fix.family.link(negbin(theta=exp(l.theta[i]),link=link))
-    if (optimizer[2]=="bfgs") b <- bfgs(
-                  lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                  offset=G$offset,U1=G$U1,Mp = G$Mp,
-                  family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) else
-    if (optimizer[2]=="newton") b <- newton(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) else
-    b <- simplyFit(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...)
-    if (use.aic) score <- b$object$aic + 2*b$object$trA ## AIC
-    else score <- b$score ## (P-)(RE)ML
-    if (i==1 || score<best.score) {
-      best.score <- score
-      b.est <- b
-      ib <- i
-    }
-    lsp <- b$lsp 
-    mustart <- b$object$fitted.values
-  } ## end of discrete search `b.est' contains the best model
-   
-  if (golden) { ## refine `theta' estimate by golden section search
-    tau <- 2/(1+sqrt(5)) ## golden ratio
-    ## get bracket ....
-    if (ib == 1) { lt0 <- l.theta[2];lt1 <- l.theta[1]} else
-    if (ib == n.th) { lt0 <- l.theta[n.th];lt1 <- l.theta[n.th-1]} else
-    { lt0 <- l.theta[ib+1];lt1 <- l.theta[ib-1]}
-    ## initial evaluations
-    lsp <- b.est$lsp 
-    mustart <- b.est$object$fitted.values
-    lt.tau <- lt0 + tau*(lt1-lt0)
-    lt.1tau <- lt0 + (1-tau)*(lt1-lt0)
-    for (lt in c(lt.1tau,lt.tau))
-    { family <- fix.family.link(negbin(theta=exp(lt),link=link))
-      if (optimizer[2]=="bfgs") b <- bfgs(
-                  lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                  offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) else 
-      if (optimizer[2]=="newton") b <- newton(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                  offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) else
-    b <- simplyFit(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) 
-      if (use.aic) score <- b$object$aic + 2*b$object$trA ## AIC
-      else score <- b$score 
-      if (lt==lt.tau) f.tau <- score else f.1tau <- score
-    }
-    lsp <- b$lsp 
-    mustart <- b$object$fitted.values
-#    tol <- abs(lt1-lt0)*1e-7    
-    while (round(exp(lt.tau),digits=3)!=round(exp(lt.1tau),digits=3)) {
-      if (f.tau<f.1tau) {
-        lt0 <- lt.1tau
-        lt.1tau <- lt.tau;f.1tau <- f.tau
-        lt.new <- lt.tau <- lt0 + tau*(lt1-lt0)
-        f.tau.update <- TRUE
-      } else {
-        lt1 <- lt.tau
-        lt.tau <- lt.1tau;f.tau <- f.1tau
-        lt.new <- lt.1tau <- lt0 + (1-tau)*(lt1-lt0)
-        f.tau.update <- FALSE 
-      }
-     
-      family <- fix.family.link(negbin(theta=exp(lt.new),link=link))
-       if (optimizer[2]=="bfgs") b <- bfgs(
-                  lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                  offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...) else
-      if (optimizer[2]=="newton") b <- newton(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                  offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...)  else
-      b <- simplyFit(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,
-                offset=G$offset,U1=G$U1,Mp = G$Mp,family=family,weights=G$w,
-                  control=control,gamma=gamma,scale=1,conv.tol=control$newton$conv.tol,
-                  maxNstep=control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf,
-                  printWarn=FALSE,scoreType=scoreType,mustart=mustart,null.coef=G$null.coef,...)
-      if (use.aic) score <- b$object$aic + 2*b$object$trA ## AIC
-      else score <- b$score       
-      if (f.tau.update) f.tau <- score else f.1tau <- score
-    }
-    b.est <- b
-  }
-  object <- b.est$object
-  object$GACV <- object$D2 <- object$P2 <- object$UBRE2 <- object$trA2 <- 
-  object$GACV1 <- object$GACV2 <- object$GCV2 <- object$D1 <- object$P1 <- NULL
-  object$sp <- exp(b.est$lsp)
-  b <- list(conv=b$conv,iter=b$iter,grad=b$grad,hess=b$hess,score.hist=b$score.hist) ## return info
-  object$outer.info <- b
-  object$gcv.ubre <- as.numeric(b.est$score)
-  object
-} ## gam.negbin
-
-
-
 
 gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale,gamma,G,...)
 # function for smoothing parameter estimation by outer optimization. i.e.
@@ -1508,8 +1364,9 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
     optimizer[2] <- "no.sps" ## will cause gam2objective to be called, below
   }
   nbGetTheta <- substr(family$family[1],1,17)=="Negative Binomial" && length(family$getTheta())>1
+  if (nbGetTheta) stop("Please provide a single value for theta or use nb to estimate it")
   if (optimizer[2]=="nlm.fd") {
-    if (nbGetTheta) stop("nlm.fd not available with negative binomial Theta estimation")
+    #if (nbGetTheta) stop("nlm.fd not available with negative binomial Theta estimation")
     if (method%in%c("REML","ML","GACV.Cp","P-ML","P-REML")) stop("nlm.fd only available for GCV/UBRE")
     um<-nlm(full.score,lsp,typsize=lsp,fscale=fscale, stepmax = 
             control$nlm$stepmax, ndigit = control$nlm$ndigit,
@@ -1530,14 +1387,15 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   if (method%in%c("REML","ML","P-REML","P-ML")) family <- fix.family.ls(family)
   
 
-  if (nbGetTheta) {
-    if (!(optimizer[2]%in%c("newton","bfgs","no.sps"))) {
-      warning("only outer methods `newton' & `bfgs' supports `negbin' family and theta selection: reset")
-      optimizer[2] <- "newton"
-    } 
-    object <- gam.negbin(lsp,fscale,family,control,method,optimizer,gamma,G,...)
+  #if (nbGetTheta) {
+  #  if (!(optimizer[2]%in%c("newton","bfgs","no.sps"))) {
+  #    warning("only outer methods `newton' & `bfgs' supports `negbin' family and theta selection: reset")
+  #    optimizer[2] <- "newton"
+  #  } 
+  #  object <- gam.negbin(lsp,fscale,family,control,method,optimizer,gamma,G,...)
     ## make sure criterion gets set to UBRE
-  } else if (optimizer[2]=="newton"||optimizer[2]=="bfgs"){ ## the gam.fit3 method -- not negbin
+  #} else 
+  if (optimizer[2]=="newton"||optimizer[2]=="bfgs"){ ## the gam.fit3 method 
     if (optimizer[2]=="bfgs") 
     b <- bfgs(lsp=lsp,X=G$X,y=G$y,Eb=G$Eb,UrS=G$UrS,L=G$L,lsp0=G$lsp0,offset=G$offset,U1=G$U1,Mp = G$Mp,
                 family=family,weights=G$w,control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
@@ -1995,6 +1853,8 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
     ## check whether family requires intercept to be dropped...
     drop.intercept <- if (is.null(family$drop.intercept) || !family$drop.intercept) FALSE else TRUE
+ 
+    if (inherits(family,"general.family")&&!is.null(family$presetup)) eval(family$presetup)
 
     gsname <- if (is.list(formula)) "gam.setup.list" else "gam.setup" 
 

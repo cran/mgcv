@@ -1938,7 +1938,7 @@ int icompare (const void * a, const void * b)
 
 
 void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,double *z,double *raw,double *R,
-           double *nulli,double *dev_hess,double *P, double *K,double *Vt,double *PKtz,double *Q1,
+           double *Rh,double *nulli,double *dev_hess,double *P, double *K,double *Vt,double *PKtz,double *Q1,
            int *nind,int *pivot1,int *drop,
            int *n,int *q,int *Mp,int neg_w, int *nt,int *Enrow,int *rank,int *n_drop,int deriv2,int ScS, int *REML,
       double *rank_tol,double *ldetXWXS,int *type)
@@ -2090,13 +2090,28 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     }
 
     for (i=0;i < *rank;i++) {
-      d[i] = 1 - 2*d[i]*d[i];
-      if (d[i]<=0) d[i]=0.0; 
+      work[i] = d[i] = 1 - 2*d[i]*d[i];
+      if (d[i]<=0) work[i] = d[i] = 0.0; 
       else {
         ldetI2D += log(d[i]); /* log|I-2D^2| */ 
-        d[i] = 1/sqrt(d[i]);
+        work[i] = sqrt(d[i]);
+        d[i] = 1/work[i];
       }
     } /* d now contains diagonal of diagonal matrix (I-2D^2)^{-1/2} (possibly pseudoinverse) */
+    
+    /* copy uppertriangle of R (nr by rank) temporarily to P (rank by rank)... */
+    for (p0=P,i=0;i < *rank;i++) {
+      for (p1 = R + i*nr,p2 = p1 + i;p1 <= p2;p1++,p0++) *p0 = *p1;
+      p2 = p0 + *rank - i - 1;
+      for (;p0<p2;p0++) *p0 = 0.0;
+    } 
+    /* form Rh = Vt R... */
+    bt=0;ct=0;mgcv_pmmult(Rh,Vt,P,&bt,&ct,rank,rank,rank,nt);
+    /* finally Rh = (I-2D^2)^.5 Vt R ... */
+    for (p0=Rh,i=0;i < *rank;i++)
+    for (p1=work,p2=work + *rank;p1<p2;p1++,p0++) *p0 *= *p1;
+    /* ... so now Rh'Rh = XWX+S */
+
     /* Now form (I-2D^2)^-.5 Vt and store in Vt... */
     for (p0=Vt,i=0;i < *rank;i++)
     for (p1=d,p2=d + *rank;p1<p2;p1++,p0++) *p0 *= *p1;
@@ -2108,14 +2123,20 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     if (*type==0) mgcv_pmmult(K,Q1,Vt,&bt,&ct,n,rank,rank,nt);
   
     FREE(d);   
-  } else { /* no negative weights so P and K much simpler */
+  } else { /* no negative weights so Rh, P and K much simpler */
     if (*type==0) { /* Form K now */
       for (p0=K,p1=Q1,j=0;j< *rank;j++,p1 += *n) /* copy just Q1 into K */
       for (p2 = p1,p3=p1 + *n;p2<p3;p0++,p2++) *p0 = *p2;
     } 
     /* Form P */
     for (p0=P,p1=Ri,j=0;j < *rank;j++,p0+= *rank) /* copy R^{-1} into P */
-    for (p2=p0,p3=p0 + *rank;p2<p3;p1++,p2++) *p2 = *p1;  
+    for (p2=p0,p3=p0 + *rank;p2<p3;p1++,p2++) *p2 = *p1;
+    /* form Rh s.t. Rh'Rh = XWX+S, by simply copying R... */  
+    for (p0=Rh,i=0;i < *rank;i++) {
+      for (p1 = R + i*nr,p2 = p1 + i;p1 <= p2;p1++,p0++) *p0 = *p1;
+      p2 = p0 + *rank - i - 1;
+      for (;p0<p2;p0++) *p0 = 0.0;
+    }       
   }
 
   /* At this stage P is complete and K is complete for type==0 */
@@ -2186,7 +2207,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           double *ldet, double *ldet1,double *ldet2,double *rV,
           double *rank_tol,int *rank_est,
 	  int *n,int *q, int *M,int *n_theta, int *Mp,int *Enrow,int *rSncol,int *deriv,
-	  int *fixed_penalty,int *nt,int *type)     
+	  int *fixed_penalty,int *nt,int *type,double *dVkk)     
 /* Extended GAM derivative function, for independent data beyond exponential family.
    
    On entry *ldet < 0 indicates that ML ingredients should be computed, else REML 
@@ -2245,7 +2266,8 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
       This information is used by get_detS2().
    *i nt number of threads to use, if supported.
    *i type 0 for computation using |w|^{-1} scaling, 1 to avoif this.    
-
+   *o dVkk is M by M matrix containing curvature terms for objective w.r.t smoothing 
+      params (is zero when second deriv is zero, but otherwise is not second deriv).
 
    The method has 4 main parts:
 
@@ -2276,7 +2298,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
 { double *work,*p0,*p1,*p2,*p3,*p4,*p5,*p6,*p7,*K=NULL,
     *Vt,*b2=NULL,*P,xx=0.0,*eta1=NULL,*eta2=NULL,
     *PKtz,*wi=NULL,*w2=NULL,*Tk=NULL,*Tkm=NULL,
-    *dev_hess=NULL,*R,*raw,*Q1,*Q,*nulli,*WX,*tau,*R1;
+    *dev_hess=NULL,*R,*Rh,*raw,*Q1,*Q,*nulli,*WX,*tau,*R1;
   int i,j,k,*pivot1,ScS,*pi,rank,*pivot,
     ntot,n_2dCols=0,n_drop,*drop,tp,
     n_work,deriv2,neg_w=0,*nind,nr,TRUE=1,FALSE=0,ML=0; 
@@ -2310,6 +2332,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
   nr = *q + *Enrow;
   R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
+  Rh = (double *)CALLOC((size_t)*q * *q,sizeof(double)); /* to hold Rh s.t. Rh'Rh = X'WX + S */
   pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
   if (deriv2) dev_hess = (double *)CALLOC((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
   K = (double *)CALLOC((size_t) *n * *q,sizeof(double));
@@ -2331,7 +2354,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   if (*type==1) z=wz; /* need to pass wz to gdiPK */ 
 
   gdiPK(work,X,E,Es,rS,U1,z,raw,
-        R,nulli,dev_hess,P,K,Vt,PKtz,Q1,
+        R,Rh,nulli,dev_hess,P,K,Vt,PKtz,Q1,
         nind,pivot1,drop,
         n,q,Mp,neg_w,nt,Enrow,
         &rank,&n_drop,
@@ -2354,7 +2377,12 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           Det_th,Det2_th,Det3,Det_th2,
           b1,b2,eta1,eta2,
           n,&rank,M,n_theta,rSncol,&deriv2,&neg_w,&nr);
-  
+    
+    if (*M>0) {
+      i=0;mgcv_mmult(work,Rh,b1,&i,&i,&rank,M,&rank); /* Rh db/drho */
+      /* Now obtain dVkk = db'/drho Rh' Rh db/drho ... */
+      getXtX(dVkk,work,&rank,M);  
+    }
     /* compute the grad of the deviance... */
     for (p4 = Dth,p0=D1,p1=eta1,i=0;i < *n_theta;i++,p0++) {
       for (*p0=0.0,p2 = Det,p3=Det + *n;p2<p3;p2++,p1++,p4++) *p0 += *p1 * *p2 + *p4;
@@ -2535,7 +2563,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     FREE(Vt);FREE(nind);
   }
   FREE(PKtz);FREE(nulli);FREE(drop);
-  FREE(work);FREE(R);FREE(pivot1);FREE(K);
+  FREE(work);FREE(R);FREE(Rh);FREE(pivot1);FREE(K);
   FREE(P);FREE(Q1);
 
 } /* gdi2 */
@@ -2549,7 +2577,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
          double *D1,double *D2,double *P0, double *P1,double *P2,double *trA,
     double *trA1,double *trA2,double *rV,double *rank_tol,double *conv_tol, int *rank_est,
 	 int *n,int *q, int *M,int *Mp,int *Enrow,int *rSncol,int *deriv,
-	  int *REML,int *fisher,int *fixed_penalty,int *nt)     
+	  int *REML,int *fisher,int *fixed_penalty,int *nt,double *dVkk)     
 /* 
    Version of gdi, based on derivative ratios and Implicit Function Theorem 
    calculation of the derivatives of beta. Assumption is that Fisher is only used 
@@ -2655,7 +2683,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     *af1=NULL,*af2=NULL,*a1,*a2,*eta1=NULL,*eta2=NULL,
     *PKtz,*v1,*v2,*wi,*w2,*pw2,*Tk,*Tkm,*Tfk=NULL,*Tfkm=NULL,
          *pb2, *dev_grad,*dev_hess=NULL,
-         ldetXWXS=0.0,reml_penalty=0.0,bSb=0.0,*R,
+    ldetXWXS=0.0,reml_penalty=0.0,bSb=0.0,*R,*Rh,
     *alpha1,*alpha2,*raw,*Q1,*nulli;
   int i,j,k,*pivot=NULL,*pivot1,ScS,*pi,rank,tp,bt,ct,iter=0,m,one=1,
     n_2dCols=0,n_b2,n_drop,*drop,nt1,
@@ -2688,6 +2716,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
   nr = *q + *Enrow;
   R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
+  Rh = (double *)CALLOC((size_t)*q * *q,sizeof(double)); /* to hold Rh s.t. Rh'Rh = X'WX + S */
   pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
   if (deriv2) dev_hess = (double *)CALLOC((size_t) *q * *q,sizeof(double)); else dev_hess=NULL;
   K = (double *)CALLOC((size_t) *n * *q,sizeof(double));
@@ -2706,7 +2735,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   
   /* get  R,nulli,dev_hess,P,K,Vt,PKtz,Q1, nind,pivot1,drop,rank,n_drop,ldetXWXS */
   gdiPK(work,X,E,Es,rS,U1,z,raw,
-        R,nulli,dev_hess,P,K,Vt,PKtz,Q1,
+        R,Rh,nulli,dev_hess,P,K,Vt,PKtz,Q1,
         nind,pivot1,drop,
         n,q,Mp,neg_w,nt,Enrow,
         &rank,&n_drop,
@@ -2823,7 +2852,11 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     /* Note that PKtz used as pivoted version of beta, but not clear that PKtz really essential if IFT used */
 
     ift1(R,Vt,X,rS,PKtz,sp,w,a1,b1,b2,eta1,eta2,n,&rank,M,rSncol,&deriv2,&neg_w,&nr);
-  
+    if (*M>0) {
+      i=0;mgcv_mmult(work,Rh,b1,&i,&i,&rank,M,&rank); /* Rh db/drho */
+      /* Now obtain dVkk = diag(db'/drho Rh' Rh db/drho) ... */
+      getXtX(dVkk,work,&rank,M); 
+    }
     /* Now use IFT based derivatives to obtain derivatives of W and hence the T_* terms */
 
     /* get derivatives of w */  
@@ -3052,6 +3085,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   FREE(nulli);
   FREE(pivot1);
   FREE(P);FREE(K);
+  FREE(Rh);
   if (*deriv) { 
     FREE(Tk);FREE(Tkm);
     if (! *REML && ! *fisher) { FREE(Tfk);FREE(Tfkm);}

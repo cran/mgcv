@@ -19,7 +19,9 @@ R_CallMethodDef CallMethods[] = {
   {NULL, NULL, 0}
 };
 
-R_CMethodDef CEntries[] = {
+R_CMethodDef CEntries[] = { 
+    {"band_chol",(DL_FUNC) band_chol,4},
+    {"tri_chol",(DL_FUNC) tri_chol,4},
     {"diagXVXt", (DL_FUNC) &diagXVXt,16},
     {"XWXd", (DL_FUNC) &XWXd,18},
     {"XWyd", (DL_FUNC) &XWyd,18},
@@ -41,8 +43,8 @@ R_CMethodDef CEntries[] = {
     {"magic", (DL_FUNC) &magic, 19},
     {"mgcv_mmult", (DL_FUNC) &mgcv_mmult,8},
     {"mgcv_pmmult", (DL_FUNC) &mgcv_pmmult,9},
-    {"gdi1",(DL_FUNC) &gdi1,48},
-    {"gdi2",(DL_FUNC) &gdi2,47},
+    {"gdi1",(DL_FUNC) &gdi1,49},
+    {"gdi2",(DL_FUNC) &gdi2,48},
     {"R_cond",(DL_FUNC) &R_cond,5} ,
     {"pls_fit1",(DL_FUNC)&pls_fit1,14},
     {"tweedious",(DL_FUNC)&tweedious,13},

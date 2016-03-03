@@ -46,6 +46,10 @@ If the nature of the random effect specification is not clear, consider a couple
 while  \code{s(x,v,w,bs="re")} would result in  \code{model.matrix(~x:v:w-1)} being appended to the model 
 matrix. In both cases the corresponding model coefficients are assumed i.i.d. normal, and are hence 
 subject to ridge penalties.
+
+If the random effect precision matrix is of the form \eqn{\sum_j \lambda_j S_j}{sum_j p_j S_j} for known matrices \eqn{S_j}{S_j} and unknown parameters \eqn{\lambda_j}{p_j}, then a list containing the \eqn{S_j}{S_j} can be supplied in the \code{xt} argument of 
+\code{\link{s}}. In this case an array \code{rank} should also be supplied in \code{xt} giving the ranks of the \eqn{S_j}{S_j} matrices. See simple example below. 
+
   
 Note that smooth \code{id}s are not supported for random effect terms. Unlike most smooth terms, side 
 conditions are never applied to random effect terms in the event of nesting (since they are identifiable 
@@ -59,6 +63,7 @@ models with more coefficients than data.
 The situation in which factor variable random effects intentionally have unobserved levels requires special handling. 
 You should set \code{drop.unused.levels=FALSE} in the model fitting function, \code{\link{gam}}, \code{\link{bam}} 
 or \code{\link{gamm}}, having first ensured that any fixed effect factors do not contain unobserved levels.
+
 
 }
 
@@ -74,6 +79,29 @@ Wood, S.N. (2008) Fast stable direct fitting and smoothness
 
 \examples{
 ## see ?gam.vcomp
+
+require(mgcv)
+## simulate simple random effect example
+set.seed(4)
+nb <- 50; n <- 400
+b <- rnorm(nb)*2 ## random effect
+r <- sample(1:nb,n,replace=TRUE) ## r.e. levels
+y <- 2 + b[r] + rnorm(n)
+r <- factor(r)
+## fit model....
+b <- gam(y ~ s(r,bs="re"),method="REML")
+gam.vcomp(b)
+
+## example with supplied precision matrices...
+b <- c(rnorm(nb/2)*2,rnorm(nb/2)*.5) ## random effect now with 2 variances
+r <- sample(1:nb,n,replace=TRUE) ## r.e. levels
+y <- 2 + b[r] + rnorm(n)
+r <- factor(r)
+## known precision matrix components...
+S <- list(diag(rep(c(1,0),each=nb/2)),diag(rep(c(0,1),each=nb/2)))
+b <- gam(y ~ s(r,bs="re",xt=list(S=S,rank=c(nb/2,nb/2))),method="REML")
+gam.vcomp(b)
+summary(b)
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

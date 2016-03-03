@@ -581,7 +581,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
             n.theta=as.integer(length(theta)), Mp=as.integer(Mp),Enrow=as.integer(rows.E),
             rSncol=as.integer(rSncol),deriv=as.integer(deriv),
 	    fixed.penalty = as.integer(rp$fixed.penalty),nt=as.integer(control$nthreads),
-            type=as.integer(gdi.type))
+            type=as.integer(gdi.type),dVkk=as.double(rep(0,nSp^2)))
 ## test code used to ensure type 0 and type 1 produce identical results, when both should work. 
 #   oot <- .C(C_gdi2,
 #            X=as.double(x[good,]),E=as.double(Sr),Es=as.double(Eb),rS=as.double(unlist(rS)),
@@ -685,7 +685,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
         scale.est=scale,reml.scale=scale,
         aic=aic.model,
         rank=oo$rank.est,
-        K=Kmat,control=control
+        K=Kmat,control=control,
+        dVkk = matrix(oo$dVkk,nSp,nSp)
         #,D1=oo$D1,D2=D2,
         #ldet=oo$ldet,ldet1=oo$ldet1,ldet2=ldet2,
         #bSb=oo$P,bSb1=oo$P1,bSb2=bSb2,
@@ -761,7 +762,8 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
  
 
   ## get log likelihood, grad and Hessian (w.r.t. coefs - not s.p.s) ...
-  ll <- family$ll(y,x,coef,weights,family,deriv=1) 
+  llf <- family$ll
+  ll <- llf(y,x,coef,weights,family,deriv=1) 
   ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
   rank.checked <- FALSE ## not yet checked the intrinsic rank of problem 
   rank <- q;drop <- NULL
@@ -776,7 +778,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       fdg <- ll$lb*0; fdh <- ll$lbb*0
       for (k in 1:length(coef)) {
         coef1 <- coef;coef1[k] <- coef[k] + eps
-        ll.fd <- family$ll(y,x,coef1,weights,family,deriv=1)
+        ll.fd <- llf(y,x,coef1,weights,family,deriv=1)
         fdg[k] <- (ll.fd$l-ll$l)/eps
         fdh[,k] <- (ll.fd$lb-ll$lb)/eps
       }
@@ -833,15 +835,15 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     }
     ## try the Newton step...
     coef1 <- coef + step 
-    ll <- family$ll(y,x,coef1,weights,family,deriv=1) 
+    ll <- llf(y,x,coef1,weights,family,deriv=1) 
     ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
     khalf <- 0;fac <- 2
     while (ll1 < ll0 && khalf < 25) { ## step halve until it succeeds...
       step <- step/fac;coef1 <- coef + step
-      ll <- family$ll(y,x,coef1,weights,family,deriv=0)
+      ll <- llf(y,x,coef1,weights,family,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (ll1>=ll0) {
-        ll <- family$ll(y,x,coef1,weights,family,deriv=1)
+        ll <- llf(y,x,coef1,weights,family,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
       }
@@ -856,10 +858,10 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 
     while (ll1 < ll0 && khalf < 25) { ## step cut until it succeeds...
       step <- step/10;coef1 <- coef + step
-      ll <- family$ll(y,x,coef1,weights,family,deriv=0)
+      ll <- llf(y,x,coef1,weights,family,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (ll1>=ll0) {
-        ll <- family$ll(y,x,coef1,weights,family,deriv=1)
+        ll <- llf(y,x,coef1,weights,family,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
       }
@@ -878,7 +880,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
             perturbed <- perturbed + 1
             coef <- coef*(1+(runif(length(coef))*.02-.01)*perturbed) + 
                     (runif(length(coef)) - 0.5 ) * mean(abs(coef))*1e-5*perturbed 
-            ll <- family$ll(y,x,coef,weights,family,deriv=1) 
+            ll <- llf(y,x,coef,weights,family,deriv=1) 
             ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
           } else {        
             rank.checked <- TRUE
@@ -914,7 +916,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
               } ## lpi adjustment done
               attr(x,"lpi") <- lpi
               attr(x,"drop") <- drop ## useful if family has precomputed something from x
-              ll <- family$ll(y,x,coef,weights,family,deriv=1) 
+              ll <- llf(y,x,coef,weights,family,deriv=1) 
               ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
             } 
           }
@@ -943,7 +945,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     fcoef <- rep(0,length(bdrop));fcoef[!bdrop] <- coef
   } else fcoef <- coef
 
-  d1l <- d2l <- d1bSb <- d2bSb <- d1b <- d2b <- d1ldetH <- d2ldetH <- d1b <- d2b <- NULL
+  dVkk <- d1l <- d2l <- d1bSb <- d2bSb <- d1b <- d2b <- d1ldetH <- d2ldetH <- d1b <- d2b <- NULL
 
   if (deriv>0) {  ## Implicit differentiation for derivs...
 
@@ -953,6 +955,9 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     if (nSp) for (i in 1:m) d1b[,i] <- 
        -D*(backsolve(L,forwardsolve(t(L),(D*Sib[[i]][!bdrop])[piv]))[ipiv])
   
+    ## obtain the curvature check matrix...
+    dVkk <- crossprod(L[,ipiv]%*%(d1b/D))
+
     if (!is.null(drop)) { ## create full version of d1b with zeros for unidentifiable 
       fd1b <-  matrix(0,q,m)
       fd1b[!bdrop,] <- d1b
@@ -961,7 +966,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ## Now call the family again to get first derivative of Hessian w.r.t
     ## smoothing parameters, in list d1H...
 
-    ll <- family$ll(y,x,coef,weights,family,deriv=3,d1b=d1b)
+    ll <- llf(y,x,coef,weights,family,deriv=3,d1b=d1b)
     d1l <- colSums(ll$lb*d1b)
     
 
@@ -978,7 +983,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   
       ## Now call family for last time to get trHid2H the tr(H^{-1} d^2 H / drho_i drho_j)...
 
-      llr <- family$ll(y,x,coef,weights,family,deriv=4,d1b=d1b,d2b=d2b,
+      llr <- llf(y,x,coef,weights,family,deriv=4,d1b=d1b,d2b=d2b,
                        Hp=Hp,rank=rank,fh = L,D=D)
 
       ## Now compute Hessian of log lik w.r.t. log sps using chain rule
@@ -1095,7 +1100,12 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
        #S=rp$ldetS,S1=rp$ldet1,S2=rp$ldet2,
        #Hp=ldetHp,Hp1=d1ldetH,Hp2=d2ldetH,
        #b2 = d2b)
-       H = ll$lbb,dH = ll$d1H)#,d2H=llr$d2H)
+       H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
+    ## debugging code to allow components of 2nd deriv of hessian w.r.t. sp.s 
+    ## to be passed to deriv.check.... 
+    #if (!is.null(ll$ghost1)&&!is.null(ll$ghost2)) { 
+    #  ret$ghost1 <- ll$ghost1; ret$ghost2 <- ret$ghost2
+    #} 
     ret
 } ## end of gam.fit5
 

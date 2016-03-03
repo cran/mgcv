@@ -18,6 +18,82 @@ rmvn <- function(n,mu,V) {
   z
 } ## rmvn
 
+sdiag <- function(A,k=0) {
+## extract sub or super diagonal of matrix (k=0 is leading)  
+ p <- ncol(A)
+ n <- nrow(A)
+ if (k>p-1||-k > n-1) return()
+ if (k >= 0) {
+   i <- 1:n
+   j <- (k+1):p
+ } else {
+   i <- (-k+1):n
+   j <- 1:p
+ }
+ if (length(i)>length(j)) i <- i[1:length(j)] else j <- j[1:length(i)]
+ ii <- i + (j-1) * n 
+ A[ii]
+} ## sdiag
+
+"sdiag<-" <- function(A,k=0,value) {
+ p <- ncol(A)
+ n <- nrow(A)
+ if (k>p-1||-k > n-1) return()
+ if (k >= 0) {
+   i <- 1:n
+   j <- (k+1):p
+ } else {
+   i <- (-k+1):n
+   j <- 1:p
+ }
+ if (length(i)>length(j)) i <- i[1:length(j)] else j <- j[1:length(i)]
+ ii <- i + (j-1) * n 
+ A[ii] <- value
+ A
+} ## "sdiag<-"
+
+bandchol <- function(B) {
+## obtain R such that R'R = A. Where A is banded matrix contained in R.
+  n <- ncol(B)
+  k <- 0
+  if (n==nrow(B)) { ## square matrix. Extract the diagonals
+    A <- B*0
+    for (i in 1:n) {
+      b <- sdiag(B,i-1)
+      if (sum(b!=0)!=0) {
+        k <- i ## largest index of a non-zero band
+        A[i,1:length(b)] <- b
+      }
+    } 
+    B <- A[1:k,]
+  }
+  oo <- .C(C_band_chol,B=as.double(B),n=as.integer(n),k=as.integer(nrow(B)),info=as.integer(0))
+  if (oo$info<0) stop("something wrong with inputs to LAPACK routine")
+  if (oo$info>0) stop("not positive definite")
+  B <- matrix(oo$B,nrow(B),n)
+  if (k>0) { ## was square on entry, so also on exit...
+    A <- A * 0
+    for (i in 1:k) sdiag(A,i-1) <- B[i,1:(n-i+1)]
+    B <- A
+  }
+  B
+} ## bandchol
+
+trichol <- function(ld,sd) {
+## obtain chol factor R of symm tridiag matrix, A, with leading diag
+## ld and sub/super diags sd. R'R = A. On exit ld is diag of R and
+## sd its super diagonal.
+  n <- length(ld)
+  if (n<2) stop("don't be silly")
+  if (n!=length(sd)+1) stop("sd should have exactly one less entry than ld")
+  oo <- .C(C_tri_chol,ld=as.double(ld),sd=as.double(sd),n=as.integer(n),info=as.integer(0))
+  if (oo$info<0) stop("something wrong with inputs to LAPACK routine")
+  if (oo$info>0) stop("not positive definite")
+  ld <- sqrt(oo$ld)
+  sd <- oo$sd*ld[1:(n-1)]
+  list(ld=ld,sd=sd)
+}
+
 mgcv.omp <- function() {
 ## does open MP appear to be available?
   oo <- .C(C_mgcv_omp,a=as.integer(-1))
