@@ -270,6 +270,21 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
   if (is.null(weights)) weights <- rep.int(1, nobs)
   if (is.null(offset)) offset <- rep.int(0, nobs)
 
+  linkinv <- family$linkinv
+  valideta <- family$valideta
+  validmu <- family$validmu
+  dev.resids <- family$dev.resids
+
+  ## need an initial `null deviance' to test for initial divergence...
+  ## if (!is.null(start)) null.coef <- start - can be on edge of feasible - not good
+  null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
+  old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
+
+  if (!is.null(start)) { ## check it's at least better than null.coef
+    pdev <- sum(dev.resids(y, linkinv(x%*%start+as.numeric(offset)), weights,theta)) + t(start)%*%St%*%start
+    if (pdev>old.pdev) start <- mustart <- etastart <- NULL
+  }
+
   ## call the families initialization code...
 
   if (is.null(mustart)) {
@@ -299,18 +314,15 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    ##mu.eta <- family$mu.eta
    ##Dd <- family$Dd
 
-   linkinv <- family$linkinv
-   valideta <- family$valideta
-   validmu <- family$validmu
-   dev.resids <- family$dev.resids
  
    mu <- linkinv(eta);etaold <- eta
      
    ## need an initial `null deviance' to test for initial divergence...
    ## if (!is.null(start)) null.coef <- start - can be on edge of feasible - not good
+   #null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
+   #old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
+
    coefold <- null.coef
-   null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
-   old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
    conv <-  boundary <- FALSE
  
    for (iter in 1:control$maxit) { ## start of main fitting iteration 
@@ -719,10 +731,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   penalized <- if (length(Sl)>0) TRUE else FALSE
 
   nSp <- length(lsp)
-  ##sp <- exp(lsp) 
-  ## rank.tol <- .Machine$double.eps*100 ## tolerance to use for rank deficiency
   q <- ncol(x)
-  ##n <- 
   nobs <- length(y)
   
   if (penalized) {
@@ -763,7 +772,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 
   ## get log likelihood, grad and Hessian (w.r.t. coefs - not s.p.s) ...
   llf <- family$ll
-  ll <- llf(y,x,coef,weights,family,deriv=1) 
+  ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1) 
   ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
   rank.checked <- FALSE ## not yet checked the intrinsic rank of problem 
   rank <- q;drop <- NULL
@@ -778,7 +787,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       fdg <- ll$lb*0; fdh <- ll$lbb*0
       for (k in 1:length(coef)) {
         coef1 <- coef;coef1[k] <- coef[k] + eps
-        ll.fd <- llf(y,x,coef1,weights,family,deriv=1)
+        ll.fd <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
         fdg[k] <- (ll.fd$l-ll$l)/eps
         fdh[,k] <- (ll.fd$lb-ll$lb)/eps
       }
@@ -792,8 +801,6 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       if (eigen.fix) {
         eh <- eigen(Hp,symmetric=TRUE);
         ev <- abs(eh$values)
-        #thresh <- min(ev[ev>0])
-        #ev[ev<thresh] <- thresh
         Hp <- eh$vectors%*%(ev*t(eh$vectors))
       } else {
         Ib <- diag(rank)*abs(min(D))
@@ -835,15 +842,15 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     }
     ## try the Newton step...
     coef1 <- coef + step 
-    ll <- llf(y,x,coef1,weights,family,deriv=1) 
+    ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1) 
     ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
     khalf <- 0;fac <- 2
     while (ll1 < ll0 && khalf < 25) { ## step halve until it succeeds...
       step <- step/fac;coef1 <- coef + step
-      ll <- llf(y,x,coef1,weights,family,deriv=0)
+      ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (ll1>=ll0) {
-        ll <- llf(y,x,coef1,weights,family,deriv=1)
+        ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
       }
@@ -858,10 +865,10 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 
     while (ll1 < ll0 && khalf < 25) { ## step cut until it succeeds...
       step <- step/10;coef1 <- coef + step
-      ll <- llf(y,x,coef1,weights,family,deriv=0)
+      ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (ll1>=ll0) {
-        ll <- llf(y,x,coef1,weights,family,deriv=1)
+        ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
       }
@@ -880,7 +887,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
             perturbed <- perturbed + 1
             coef <- coef*(1+(runif(length(coef))*.02-.01)*perturbed) + 
                     (runif(length(coef)) - 0.5 ) * mean(abs(coef))*1e-5*perturbed 
-            ll <- llf(y,x,coef,weights,family,deriv=1) 
+            ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1) 
             ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
           } else {        
             rank.checked <- TRUE
@@ -900,23 +907,23 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
               bdrop <- 1:q %in% drop ## TRUE FALSE version
               ## now drop the parameters and recompute ll0...
               lpi <- attr(x,"lpi")
+              xat <- attributes(x)
+              xat$dim <- xat$dimnames <- NULL
               coef <- coef[-drop]
               St <- St[-drop,-drop]
               x <- x[,-drop] ## dropping columns from model matrix
               if (!is.null(lpi)) { ## need to adjust column indexes as well
                 ii <- (1:q)[!bdrop];ij <- rep(NA,q)
                 ij[ii] <- 1:length(ii) ## col i of old model matrix is col ij[i] of new 
-                #k <- 0
+               
                 for (i in 1:length(lpi)) {
-                  #kk <- sum(lpi[[i]]%in%drop==FALSE) ## how many left undropped?
-                  #lpi[[i]] <- 1:kk + k ## new index - note strong assumptions on structure here
-                  #k <- k + kk
                   lpi[[i]] <- ij[lpi[[i]][!(lpi[[i]]%in%drop)]] # drop and shuffle up
                 }
               } ## lpi adjustment done
+              for (i in 1:length(xat)) attr(x,names(xat)[i]) <- xat[[i]]
               attr(x,"lpi") <- lpi
               attr(x,"drop") <- drop ## useful if family has precomputed something from x
-              ll <- llf(y,x,coef,weights,family,deriv=1) 
+              ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1) 
               ll0 <- ll$l - (t(coef)%*%St%*%coef)/2
             } 
           }
@@ -966,8 +973,8 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ## Now call the family again to get first derivative of Hessian w.r.t
     ## smoothing parameters, in list d1H...
 
-    ll <- llf(y,x,coef,weights,family,deriv=3,d1b=d1b)
-    d1l <- colSums(ll$lb*d1b)
+    ll <- llf(y,x,coef,weights,family,offset=offset,deriv=3,d1b=d1b)
+    # d1l <- colSums(ll$lb*d1b) # cancels
     
 
     if (deriv>1) { ## Implicit differentiation for the second derivatives is now possible...
@@ -983,17 +990,18 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   
       ## Now call family for last time to get trHid2H the tr(H^{-1} d^2 H / drho_i drho_j)...
 
-      llr <- llf(y,x,coef,weights,family,deriv=4,d1b=d1b,d2b=d2b,
+      llr <- llf(y,x,coef,weights,family,offset=offset,deriv=4,d1b=d1b,d2b=d2b,
                        Hp=Hp,rank=rank,fh = L,D=D)
 
       ## Now compute Hessian of log lik w.r.t. log sps using chain rule
        
-      d2la <- colSums(ll$lb*d2b)
-      k <- 0
+      # d2la <- colSums(ll$lb*d2b) # cancels
+      # k <- 0
       d2l <- matrix(0,m,m)
       for (i in 1:m) for (j in i:m) {
-        k <- k + 1
-        d2l[j,i] <- d2l[i,j] <- d2la[k] + t(d1b[,i])%*%ll$lbb%*%d1b[,j] 
+        # k <- k + 1
+        d2l[j,i] <- d2l[i,j] <- # d2la[k] + # cancels
+	                        t(d1b[,i])%*%ll$lbb%*%d1b[,j] 
       }
     } ## if (deriv > 1)
   } ## if (deriv > 0)
@@ -1016,11 +1024,14 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       k <- k + 1
       d2ldetH[i,j] <- -sum(d1Hp[[i]]*t(d1Hp[[j]])) - llr$trHid2H[k] 
       if (i==j) { ## need to add term relating to smoothing penalty
-        A <- t(Sl.mult(rp$Sl,diag(q),i,full=FALSE))
-        bind <- rowSums(A)!=0
-        ind <- which(bind)
-        bind <- bind[!bdrop]
-        A <- A[!bdrop,!bdrop[ind]]
+        #A <- t(Sl.mult(rp$Sl,diag(q),i,full=FALSE))
+        #bind <- rowSums(abs(A))!=0 ## FIX: abs 3/3/16 
+        #ind <- which(bind)
+        #bind <- bind[!bdrop]
+        #A <- A[!bdrop,!bdrop[ind]]
+        A <- Sl.mult(rp$Sl,diag(q),i,full=TRUE)[!bdrop,!bdrop]
+        bind <- rowSums(abs(A))!=0 ## row/cols of non-zero block
+        A <- A[,bind] ## drop the zero columns  
         A <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,])
         d2ldetH[i,j] <- d2ldetH[i,j] + sum(diag(A[bind,]))
       } else d2ldetH[j,i] <- d2ldetH[i,j]
@@ -1030,23 +1041,24 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   ## Compute derivs of b'Sb...
 
   if (deriv>0) {
-    Sb <- St%*%coef
+    # Sb <- St%*%coef
     Skb <- Sl.termMult(rp$Sl,fcoef,full=TRUE)
     d1bSb <- rep(0,m)
     for (i in 1:m) { 
       Skb[[i]] <- Skb[[i]][!bdrop]
-      d1bSb[i] <- 2*sum(d1b[,i]*Sb) + sum(coef*Skb[[i]])
+      d1bSb[i] <- # 2*sum(d1b[,i]*Sb) + # cancels
+                  sum(coef*Skb[[i]])
     }
   }
  
   if (deriv>1) {
     d2bSb <- matrix(0,m,m)
-    k <- 0
+    # k <- 0
     for (i in 1:m) {
       Sd1b <- St%*%d1b[,i] 
       for (j in i:m) {
-        k <- k + 1
-        d2bSb[j,i] <- d2bSb[i,j] <- 2*sum(d2b[,k]*Sb + 
+         k <- k + 1
+         d2bSb[j,i] <- d2bSb[i,j] <- 2*sum( # d2b[,k]*Sb + # cancels 
          d1b[,i]*Skb[[j]] + d1b[,j]*Skb[[i]] + d1b[,j]*Sd1b)
       }
       d2bSb[i,i] <-  d2bSb[i,i] + sum(coef*Skb[[i]]) 
@@ -1054,30 +1066,34 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   }
 
   ## get grad and Hessian of REML score...
-  REML <- -as.numeric(ll$l - t(coef)%*%St%*%coef/2 + rp$ldetS/2 - ldetHp/2 + Mp*log(2*pi)/2)
+  REML <- -as.numeric(ll$l - t(coef)%*%St%*%coef/2 + rp$ldetS/2  - ldetHp/2  + Mp*log(2*pi)/2)
  
-  REML1 <- if (deriv>0) -as.numeric(d1l - d1bSb/2 + rp$ldet1/2 - d1ldetH/2) else NULL 
+  REML1 <- if (deriv<1) NULL else -as.numeric( # d1l # cancels
+                                   - d1bSb/2 + rp$ldet1/2  - d1ldetH/2 ) 
+
   if (control$trace) {
     cat("\niter =",iter,"  ll =",ll$l,"  REML =",REML,"  bSb =",t(coef)%*%St%*%coef/2,"\n")
     cat("log|S| =",rp$ldetS,"  log|H+S| =",ldetHp,"  n.drop =",length(drop),"\n")
     if (!is.null(REML1)) cat("REML1 =",REML1,"\n")
   }
-  REML2 <- if (deriv>1) -(d2l - d2bSb/2 + rp$ldet2/2 - d2ldetH/2) else NULL 
+  REML2 <- if (deriv<2) NULL else -( d2l - d2bSb/2 + rp$ldet2/2  - d2ldetH/2 ) 
  ## bSb <- t(coef)%*%St%*%coef
   lpi <- attr(x,"lpi")
   if (is.null(lpi)) { 
-    linear.predictors <- as.numeric(x%*%coef)
+    linear.predictors <- if (is.null(offset)) as.numeric(x%*%coef) else as.numeric(x%*%coef+offset)
     fitted.values <- family$linkinv(linear.predictors) 
   } else {
     fitted.values <- linear.predictors <- matrix(0,nrow(x),length(lpi))
+    if (!is.null(offset)) offset[[length(lpi)+1]] <- 0
     for (j in 1:length(lpi)) {
       linear.predictors[,j] <- as.numeric(x[,lpi[[j]],drop=FALSE] %*% coef[lpi[[j]]])
+      if (!is.null(offset[[j]])) linear.predictors[,j] <-  linear.predictors[,j] + offset[[j]]
       fitted.values[,j] <- family$linfo[[j]]$linkinv( linear.predictors[,j]) 
     }
   }
   coef <- Sl.repara(rp$rp,fcoef,inverse=TRUE) ## undo re-parameterization of coef 
  
-  if (!is.null(drop)) { ## create full version of d1b with zeros for unidentifiable 
+  if (!is.null(drop)&&!is.null(d1b)) { ## create full version of d1b with zeros for unidentifiable 
     db.drho <- matrix(0,length(bdrop),ncol(d1b));db.drho[!bdrop,] <- d1b
   } else db.drho <- d1b
   ## and undo re-para...
@@ -1088,7 +1104,8 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
        scale.est=1, ### NOTE: needed by newton, but what is sensible here? 
        REML= REML,REML1= REML1,REML2=REML2,
        rank=rank,aic = -2*ll$l, ## 2*edf needs to be added
-       l= ll$l,l1 =d1l,l2 =d2l,
+       ##deviance = -2*ll$l,
+       l= ll$l,## l1 =d1l,l2 =d2l,
        lbb = ll$lbb, ## Hessian of log likelihood
        L=L, ## chol factor of pre-conditioned penalized hessian
        bdrop=bdrop, ## logical index of dropped parameters
@@ -1097,10 +1114,11 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
        rp = rp$rp,
        db.drho = db.drho, ## derivative of penalty coefs w.r.t. log sps.
        #bSb = bSb, bSb1 =  d1bSb,bSb2 =  d2bSb,
+       S1=rp$ldet1,
        #S=rp$ldetS,S1=rp$ldet1,S2=rp$ldet2,
        #Hp=ldetHp,Hp1=d1ldetH,Hp2=d2ldetH,
        #b2 = d2b)
-       H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
+       niter=iter,H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
     ## debugging code to allow components of 2nd deriv of hessian w.r.t. sp.s 
     ## to be passed to deriv.check.... 
     #if (!is.null(ll$ghost1)&&!is.null(ll$ghost2)) { 
@@ -1109,7 +1127,91 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ret
 } ## end of gam.fit5
 
-gam.fit5.post.proc <- function(object,Sl,L,S,off) {
+efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
+                     control=gam.control(),Mp=-1,start=NULL) {
+## Extended Fellner-Schall method
+## tr(S^-S_j) is returned by ldetS as ldet1 - S1 from gam.fit5
+## b'S_jb is computed as d1bSb in gam.fit5
+## tr(V S_j) will need to be computed using Sl.termMult
+##   Sl returned by ldetS and Vb computed as in gam.fit5.postproc.
+  tol <- 1e-6
+  lsp <- lsp + 2.5
+  mult <- 1
+  fit <- gam.fit5(x=x,y=y,lsp=lsp,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
+                     control=control,Mp=Mp,start=start)
+  score.hist <- rep(0,200)
+  for (iter in 1:200) {
+    start <- fit$coefficients
+    ## obtain Vb...
+    ipiv <- piv <- attr(fit$L,"pivot")
+    p <- length(piv)
+    ipiv[piv] <- 1:p
+    Vb <- crossprod(forwardsolve(t(fit$L),diag(fit$D,nrow=p)[piv,,drop=FALSE])[ipiv,,drop=FALSE])
+    if (sum(fit$bdrop)) { ## some coefficients were dropped...
+      q <- length(fit$bdrop)
+      ibd <- !fit$bdrop
+      Vtemp <- Vb; Vb <- matrix(0,q,q)
+      Vb[ibd,ibd] <- Vtemp
+    }
+    Vb <- Sl.repara(fit$rp,Vb,inverse=TRUE)
+    SVb <- Sl.termMult(Sl,Vb) ## this could be made more efficient
+    trVS <- rep(0,length(SVb))
+    for (i in 1:length(SVb)) {
+      ind <- attr(SVb[[i]],"ind")
+      trVS[i] <- sum(diag(SVb[[i]][,ind]))
+    }
+    Sb <- Sl.termMult(Sl,start,full=TRUE)
+    bSb <- rep(0,length(Sb))
+    for (i in 1:length(Sb)) {
+      bSb[i] <- sum(start*Sb[[i]])
+    }
+    a <- pmax(0,fit$S1*exp(-lsp) - trVS)
+    r <- a/pmax(0,bSb)
+    r[a==0&bSb==0] <- 1
+    r[!is.finite(r)] <- 1e6
+    lsp1 <- pmin(lsp + log(r)*mult,12)
+    old.reml <- fit$REML
+    fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,
+                    family=family,control=control,Mp=Mp,start=start)
+    ## some step length control...
+   
+    if (fit$REML<=old.reml) { ## improvement
+      if (max(abs(log(r))<.05)) { ## consider step extension
+        lsp2 <- pmin(lsp + log(r)*mult*2,12) ## try extending step...
+        fit2 <- gam.fit5(x=x,y=y,lsp=lsp2,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
+                     control=control,Mp=Mp,start=start)
+     
+        if (fit2$REML < fit$REML) { ## improvement - accept extension
+          fit <- fit2;lsp <- lsp2
+	  mult <- mult * 2
+        } else { ## accept old step
+          lsp <- lsp1
+        }
+      } else lsp <- lsp1
+    } else { ## no improvement 
+      while (fit$REML > old.reml&&mult>1) { ## don't contract below 1 as update doesn't have to improve REML 
+          mult <- mult/2 ## contract step
+          lsp1 <- pmin(lsp + log(r)*mult,12)
+	  fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
+                        control=control,Mp=Mp,start=start)
+      }
+      lsp <- lsp1
+      if (mult<1) mult <- 1
+    }
+    score.hist[iter] <- fit$REML
+    if (iter==1) old.ll <- fit$l else {
+      if (abs(old.ll-fit$l)<tol*abs(fit$l)) break
+      old.ll <- fit$l
+    }
+  }
+  fit$sp <- exp(lsp)
+  fit$niter <- iter
+  fit$outer.info <- list(iter = iter,score.hist=score.hist[1:iter])
+  fit$outer.info$conv <- if (iter==200) "iteration limit reached" else "full convergence"
+  fit
+} ## efsud
+
+gam.fit5.post.proc <- function(object,Sl,L,lsp0,S,off) {
 ## object is object returned by gam.fit5, Sl is penalty object, L maps working sp
 ## vector to full sp vector 
 ## Computes:
@@ -1181,7 +1283,7 @@ gam.fit5.post.proc <- function(object,Sl,L,S,off) {
   }  
 
   ## compute the smoothing parameter uncertainty correction...
-  if (!is.null(object$outer.info$hess)) { 
+  if (!is.null(object$outer.info$hess)&&!is.null(object$db.drho)) { 
     if (!is.null(L)) object$db.drho <- object$db.drho%*%L ## transform to derivs w.r.t. working
     ev <- eigen(object$outer.info$hess,symmetric=TRUE)
     d <- ev$values;ind <- d <= 0
@@ -1218,9 +1320,9 @@ gam.fit5.post.proc <- function(object,Sl,L,S,off) {
   ## model. This is larger than edf2 should be, because of bias correction variability,
   ##  but is bounded in a way that is not *guaranteed* for edf2. Note that 
   ## justification only applies to sum(edf1/2) not elementwise   
-  if (!is.null(object$outer.info$hess)) { 
+  if (!is.null(object$outer.info$hess)&&!is.null(object$db.drho)) { 
     ## second correction term is easier computed in original parameterization...
-    Vc2 <- Vb.corr(R,L,S,off,dw=NULL,w=NULL,log(object$sp),Vr)
+    Vc2 <- Vb.corr(R,L,lsp0,S,off,dw=NULL,w=NULL,log(object$sp),Vr)
     Vc <- Vc + Vc2
   }
   edf1 <- 2*edf - rowSums(t(F)*F)

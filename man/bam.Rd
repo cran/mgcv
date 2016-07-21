@@ -21,8 +21,8 @@ bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,
     paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-    sparse=FALSE,cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,
-    samfrac=1,drop.unused.levels=TRUE,G=NULL,fit=TRUE,...)
+    cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,
+    samfrac=1,drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -129,10 +129,6 @@ there are no breaks in AR1 correlaion.}
 \item{discrete}{with \code{method="fREML"} it is possible to discretize covariates for storage and efficiency reasons.
 If \code{discrete} is \code{TRUE}, a number or a vector of numbers for each smoother term, then discretization happens. If numbers are supplied they give the number of discretization bins. Experimental at present. }
 
-\item{sparse}{Deprecated. If all smooths are P-splines and all tensor products are of the form \code{te(...,bs="ps",np=FALSE)} 
-then in principle computation could be made faster using sparse matrix methods, and you could set this to \code{TRUE}. 
-In practice the speed up is disappointing, and the computation is less well conditioned than the default. See details.}
-
 \item{cluster}{\code{bam} can compute the computationally dominant QR decomposition in parallel using \link[parallel]{parLapply}
 from the \code{parallel} package, if it is supplied with a cluster on which to do this (a cluster here can be some cores of a 
 single machine). See details and example code. 
@@ -160,6 +156,9 @@ involving factor variables you might want to turn this off. Only do so if you kn
 
 \item{fit}{if \code{FALSE} then the model is set up for fitting but not estimated, and an object is returned, suitable for passing as the \code{G} argument to \code{bam}.}
 
+\item{drop.intercept}{Set to \code{TRUE} to force the model to really not have the a constant in the parametric model part,
+even with factor variables present.}
+
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }
 
@@ -170,8 +169,7 @@ An object of class \code{"gam"} as described in \code{\link{gamObject}}.
 }
 
 
-\details{ When \code{discrete=FALSE}, \code{bam} operates by first setting up the basis characteristics for the smooths, using a representative subsample 
-of the data. Then the model matrix is constructed in blocks using \code{\link{predict.gam}}. For each block the factor R,
+\details{ When \code{discrete=FALSE}, \code{bam} operates by first setting up the basis characteristics for the smooths, using a representative subsample of the data. Then the model matrix is constructed in blocks using \code{\link{predict.gam}}. For each block the factor R,
 from the QR decomposition of the whole model matrix is updated, along with Q'y. and the sum of squares of y. At the end of 
 block processing, fitting takes place, without the need to ever form the whole model matrix. 
 
@@ -192,21 +190,14 @@ If \code{cluster} is provided as a cluster set up using \code{\link[parallel]{ma
 
 When \code{discrete=TRUE} the covariate data are first discretized. Discretization takes place on a smooth by smooth basis, or in the case of tensor product smooths (or any smooth that can be represented as such, such as random effects), separately for each marginal smooth. The required spline bases are then evaluated at the discrete values, and stored, along with index vectors indicating which original observation they relate to. Fitting is by a version of performance oriented iteration/PQL using REML smoothing parameter selection on each iterative working model (as for the default method). The iteration is based on the derivatives of the REML score, without computing the score itself, allowing the expensive computations to be reduced to one parallel block Cholesky decomposition per iteration (plus two basic operations of equal cost, but easily parallelized). Unlike standard POI/PQL, only one step of the smoothing parameter update for the working model is taken at each step (rather than iterating to the optimal set of smoothing parameters for each working model). At each step a weighted model matrix crossproduct of the model matrix is required - this is efficiently computed from the pre-computed basis functions evaluated at the discretized covariate values. Efficient computation with tensor product terms means that some terms within a tensor product may be re-ordered for maximum efficiency. Parallel computation is controlled using the \code{nthreads} argument. For this method no cluster computation is used, and the \code{parallel} package is not required. 
 
-If the deprecated argument \code{sparse=TRUE} then QR updating is replaced by an alternative scheme, in which the model matrix is stored whole
- as a sparse matrix. This only makes sense if all smooths are P-splines and all tensor products are of the 
-form \code{te(...,bs="ps",np=FALSE)}, but no check is made. The computations are then based on the Choleski decomposition of 
-the crossproduct of the sparse model matrix. Although this crossproduct is nearly dense, sparsity should make its 
-formation efficient, which is useful as it is the leading order term in the operations count. However there is no benefit 
-in using sparse methods to form the Choleski decomposition, given that the crossproduct is dense. 
-In practice the sparse matrix handling overheads mean that modest or no speed ups are produced 
-by this approach, while the computation is less stable than the default, and the memory footprint often higher 
-(but please let the author know if you find an example where the speedup is really worthwhile). 
-
 }
 
 
 \references{
-Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.  
+Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.
+
+Wood, S.N., Li, Z., Shaddick, G. & Augustin N.H. (2016) Generalized additive models for gigadata: modelling the UK black smoke network daily data. Journal of the American Statistical Association.
+
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
@@ -218,7 +209,7 @@ Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large dat
 
 The routine will be slow if the default \code{"tp"} basis is used. 
 
-You must have more unique combinations of covariates than the model has total
+Unless discrete=TRUE, you must have more unique combinations of covariates than the model has total
 parameters. (Total parameters is sum of basis dimensions plus sum of non-spline 
 terms less the number of spline terms). 
 
@@ -226,7 +217,6 @@ This routine is less stable than `gam' for the same dataset.
 
 The negbin family is only supported for the *known theta* case.
 
-AIC computation does not currently take account of an AR1 model, if used.
 
 } 
 

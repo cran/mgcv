@@ -222,7 +222,7 @@ will occasionally fail. See details section for suggestions, or try the
 
 \code{gamm} is usually much slower than \code{gam}, and on some platforms you may need to
 increase the memory available to R in order to use it with large data sets
-(see \code{\link{mem.limits}}).
+(see \code{\link{memory.limit}}).
 
 Note that the weights returned in the fitted GAM object are dummy, and not
 those used by the PQL iteration: this makes partial residual plots look odd.

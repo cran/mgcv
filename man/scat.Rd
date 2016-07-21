@@ -32,7 +32,10 @@ An object of class \code{extended.family}.
 \author{ Natalya Pya (nyp20@bath.ac.uk)
 }
 \references{
-Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models.
+Journal of the American Statistical Association.
+\url{http://arxiv.org/abs/1511.03864}
 }
 
 

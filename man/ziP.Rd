@@ -45,7 +45,10 @@ Zero inflated models are often over-used. Having lots of zeroes in the data does
 }
 
 \references{
-Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models.
+Journal of the American Statistical Association.
+\url{http://arxiv.org/abs/1511.03864}
 }
 
 \seealso{\code{\link{ziplss}}}

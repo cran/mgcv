@@ -2,8 +2,8 @@
 \alias{sdiag}
 \alias{sdiag<-}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Extract of modify diagonals of a matrix}
-\description{ Extracts of modifies sub- or super- diagonals of a matrix.
+\title{Extract or modify diagonals of a matrix}
+\description{ Extracts or modifies sub- or super- diagonals of a matrix.
 }
 \usage{
 sdiag(A,k=0)
@@ -17,7 +17,7 @@ sdiag(A,k=0) <- value
 
 }
 
-\value{A vector containing the requested diagonal, or a matris with the requested diagonal replaced by \code{value}.
+\value{A vector containing the requested diagonal, or a matrix with the requested diagonal replaced by \code{value}.
 
 }
 

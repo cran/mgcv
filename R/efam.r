@@ -795,7 +795,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
     y1 <- y + (y == 0)
     theta <- if (p == 1) log(y1/mu) else (y1^(1 - p) - mu^(1 - p))/(1 - p)
     kappa <- if (p == 2) log(y1/mu) else (y^(2 - p) - mu^(2 - p))/(2 - p)
-    2 * (y * theta - kappa) * wt
+    pmax(2 * (y * theta - kappa) * wt,0)
   }
     
   Dd <- function(y, mu, theta, wt, level=0) {

@@ -5,7 +5,7 @@
 \description{
 This routine returns a matrix or data frame containing all the unique rows of the
 matrix or data frame supplied as its argument. That is, all the duplicate rows are
-stripped out. Note that the ordering of the rows on exit is not the same
+stripped out. Note that the ordering of the rows on exit need not be the same
 as on entry. It also returns an index attribute for relating the result back 
 to the original matrix.
 }
@@ -18,12 +18,19 @@ uniquecombs(x)
 }
 \details{ Models with more parameters than unique combinations of
   covariates are not identifiable. This routine provides a means of
-  evaluating the number of unique combinations of coavariates in a
-  model. The routine calls compiled C code, and is based on sorting, 
-  with consequent O(nlog(n)) cost. In principle a hash table based solution 
-  should be only O(n).
+  evaluating the number of unique combinations of covariates in a
+  model. 
+
+  When \code{x} has only one column then the routine
+  uses \code{\link{unique}} and \code{\link{match}} to get the index. When there are
+  multiple columns then it uses \code{\link{paste0}} to produce labels for each row, 
+  which should be unique if the row is unique. Then \code{unique} and \code{match} 
+  can be used as in the single column case. Obviously the pasting is inefficient, but 
+  still quicker for large n than the C based code that used to be called by this routine, which 
+  had O(nlog(n)) cost. In principle a hash table based solution in C 
+  would be only O(n) and much quicker in the multicolumn case. 
    
- \code{\link{unique}} and \code{\link{duplicated}}, can sometimes be used 
+ \code{\link{unique}} and \code{\link{duplicated}}, can be used 
  in place of this, if the full index is not needed. Relative performance is variable. 
 
  If \code{x} is not a matrix or data frame on entry then an attmept is made to coerce 
@@ -37,9 +44,9 @@ matrix that contains row i of the original matrix.
  
 }
 
-\seealso{\code{\link{unique}}, \code{\link{duplicated}}.}
+\seealso{\code{\link{unique}}, \code{\link{duplicated}}, \code{\link{match}}.}
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} with thanks to Jonathan Rougier}
 
 
 \examples{

@@ -6,7 +6,7 @@
 }
 
 \usage{
-cSplineDes(x, knots, ord = 4)
+cSplineDes(x, knots, ord = 4, derivs=0)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -16,6 +16,7 @@ cSplineDes(x, knots, ord = 4)
 
 \item{ord}{ order of the basis. 4 is a cubic spline basis. Must be >1.}
 
+\item{derivs}{ order of derivative of the spline to evaluate, between 0 and \code{ord}-1. Recycled to length of \code{x}. }
 }
 
 \details{ The routine is a wrapper that sets up a B-spline basis, where the basis functions wrap at the first and 

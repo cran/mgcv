@@ -2,7 +2,7 @@
 \alias{bug.reports.mgcv}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Reporting mgcv bugs.}
-\description{\code{mgcv} works largely because many people have reported bugs over the years. If you find something that looks like a bug, please report it, so that the package can be improved. \code{mgcv} does not have a large development budget, so it is a big help if bug reports follow the following guidlines.
+\description{\code{mgcv} works largely because many people have reported bugs over the years. If you find something that looks like a bug, please report it, so that the package can be improved. \code{mgcv} does not have a large development budget, so it is a big help if bug reports follow the following guidelines.
 
 The ideal report consists of an email to \email{simon.wood@r-project.org} with a subject line including \code{mgcv} somewhere, containing
 

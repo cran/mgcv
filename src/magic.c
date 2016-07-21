@@ -590,7 +590,8 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
       if (iter>3) /* test for convergence */
       { converged=1;
         if (d_score> *tol*(1+min_score)) converged=0;
-        for (xx=0.0,i=0;i<mp;i++) xx+=grad[i]*grad[i];xx=sqrt(xx); 
+        for (xx=0.0,i=0;i<mp;i++) xx+=grad[i]*grad[i];
+	xx=sqrt(xx); 
         if (xx>pow(*tol,1/3.0)*(1+fabs(min_score))) converged=0;
         if (try==max_half) converged=1; /* can't improve score */
         if (converged) { msg=sqrt(xx*xx/mp);if (try==max_half) step_fail=1;}
@@ -674,7 +675,8 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
   for (p1=V,p2=rV;p2<rV+q*rank;p2+=q)
   for (pi=pivot;pi<pivot+q;pi++,p1++) p2[*pi] = *p1;
   /* now unpivot the parameters ...*/
-  for (i=0;i<q;i++) d[i]=b[i];for (i=0;i<q;i++) b[pivot[i]]=d[i]; /* unpivot parameters */
+  for (i=0;i<q;i++) d[i]=b[i];
+  for (i=0;i<q;i++) b[pivot[i]]=d[i]; /* unpivot parameters */
   for (i=0;i<mp;i++) sp0[i]=exp(sp0[i]); /* exponentiate smoothing parameters */
   *gamma = score; /* return GCV/UBRE score */
   *tol = msg; /* the root mean square gradient at convergence */  

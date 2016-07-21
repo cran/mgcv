@@ -98,7 +98,7 @@ void tensorXty(double *Xy,double *work,double *work1, double *y,double *X,
    Note: constraint not dealt with here. Thread safe.
    k[,kstart[i] + *koff] is the index for the ith term (starting at i=0)
 */
-  int pb=1,i,j,pd,q;
+  int pb=1,i,j,pd;
   double *p1,*yn,*p0,*M; 
   yn = y + *n;
   M = X;
@@ -442,7 +442,8 @@ void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n,
     }
     /* split cols between threads... */  
     dk = pt[b] / *nthreads; //rk = pt[b] % *nthreads;
-    if (dk * *nthreads < pt[b]) dk++;start[0]=0; 
+    if (dk * *nthreads < pt[b]) dk++;
+    start[0]=0; 
     for (i=0;i<*nthreads;i++) { 
       start[i+1] = start[i] + dk;
       if (start[i+1]>pt[b]) start[i+1]=pt[b];

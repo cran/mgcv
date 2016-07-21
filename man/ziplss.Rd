@@ -39,7 +39,10 @@ avoid problems. For 1D smooths uses e.g. \code{s(x,m=1)} and for isotropic smoot
 \author{ Simon N. Wood \email{simon.wood@r-project.org}
 }
 \references{
-Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models.
+Journal of the American Statistical Association.
+\url{http://arxiv.org/abs/1511.03864}
 }
 
 \section{WARNINGS }{

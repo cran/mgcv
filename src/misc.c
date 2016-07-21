@@ -178,8 +178,6 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         log { sum_j exp(x_j)} = log { sum_j exp(x_j-x_max) } + x_max
    digamma and trigamma functions are from Rmath.h
 
-
-
    NOTE: still some redundancy for readability 
  
 */
@@ -482,6 +480,148 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
   FREE(alogy);FREE(wb);FREE(wb1);//FREE(wb2);
   FREE(logy1p2);FREE(logy1p3);FREE(wp1);FREE(wp2);FREE(wpp);
 } /* tweedious */
+
+
+void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
+	       double *w2pp,double *y,double *eps,int *n,
+               double *th,double *rho,double *a, double *b)
+/* Routine to perform tedious series summation needed for Tweedie distribution
+   evaluation, following Dunn & Smyth (2005) Statistics and Computing 15:267-280.
+   Notation as in that paper. For 
+   
+   log W returned in w. (where W means sum_j W_j)
+   d logW / drho in w1, 
+   d2 logW / d rho2 in w2.
+   d logW / dth in w1p
+   d2 logW / dth2 in w2p
+   d2 logW / dth drho in W2pp
+
+   rho=log(phi), and th defines p = (a + b * exp(th))/(exp(th)+1). 
+   note, 1<a<b<2 (all strict) 
+
+   The somewhat involved approach is all about avoiding overflow or underflow. 
+   Extensive use is made of 
+        log { sum_j exp(x_j)} = log { sum_j exp(x_j-x_max) } + x_max
+   digamma and trigamma functions are from Rmath.h
+
+   NOTE: still some redundancy for readability 
+ 
+*/
+{ int j_max,i,j,ok,incr;
+  double x,x1,x2,xx,alpha,alogy,lgammaj1,
+    wbj,wb1j,wp1jb,wp2jb,wppjb,
+    wp1j,wp2j,wppj,dpth1,dpth2,
+    w_base,wp_base,wp2_base,wj_scaled,wdlogwdp,
+    wdW2d2W,dWpp,exp_th,
+    wmax,wmin,
+    wi,w1i,w2i,
+    log_eps,wj,w1j,jalogy,onep,onep2,twop,logy1p2,logy1p3,p,phi;
+
+  log_eps = log(*eps);
+
+  for (i=0;i<*n;i++) { /* loop through y */
+    phi = exp(rho[i]);
+    if (th[i]>0) { 
+        exp_th =  exp(-th[i]);
+        x = 1 + exp_th;p = (*b + *a * exp_th)/x;
+        x1 = x*x;dpth1 = exp_th*(*b - *a)/x1;
+        dpth2 =  ((*a - *b)*exp_th+(*b - *a)*exp_th*exp_th)/(x1*x);
+    } else {
+        exp_th =  exp(th[i]);
+        x = exp_th+1;p = (*b * exp_th + *a)/x;
+        x1 = x*x;dpth1 = exp_th*(*b - *a)/x1;
+        dpth2 = ((*a - *b)*exp_th*exp_th+(*b - *a)*exp_th)/(x*x1);
+    }
+    /* first find the location of the series maximum... */
+    x = pow(y[i],2 - p)/(phi * (2 - p));
+    j_max = (int) floor(x);
+    if (x - j_max  > .5||j_max<1) j_max++; 
+    
+    j = j_max; 
+    onep = 1 - p;onep2 = onep * onep;
+    twop = 2 - p;
+    alpha = twop/onep;
+    alogy = log(y[i]);
+    logy1p2 = alogy/(onep2);
+    logy1p3 = logy1p2/onep;
+    alogy *= alpha; /* alpha * log(y[i]) */
+
+    wdW2d2W= wdlogwdp=dWpp=0.0;
+    wi=w1i=w2i=0.0;
+
+    /* get terms that are repeated in logWj etc., but simply multiplied by j */
+    w_base = alpha * log(-onep) + rho[i]/onep - log(twop);
+    wp_base = (log(-onep) + rho[i])/onep2 - alpha/onep + 1/twop;
+    wp2_base= 2*(log(-onep) + rho[i])/(onep2*onep) - (3*alpha-2)/(onep2) + 1/(twop*twop);
+
+    wmax = j * w_base - lgamma((double)j+1) - lgamma(-j * alpha) - j*alogy;
+    wmin = wmax + log_eps; 
+   
+    /* start upsweep/downsweep to convergence */
+    ok = 0;//xmax=x1max=x2max=0.0;
+    //for (j=j_max+j0,jb=j_max;jb<=j_hi;jb++,j++) { // note initially wi etc initialized to 1 and summation starts 1 later
+    incr = 1;
+    lgammaj1 = lgamma((double)j+1); // lgamma(j+1) to be computed by recursion
+    while (!ok) {
+      wbj = j * w_base - lgammaj1 - lgamma(-j * alpha);
+      wb1j = -j/onep;
+      xx = j/onep2;
+      x = xx*digamma(-j*alpha);
+      wp1jb = j * wp_base + x; /* base for d logW_j/dp */
+     
+      xx = trigamma(-j*alpha) * xx * xx;
+      wp2jb = j * wp2_base + 2*x/onep - xx;
+      wppjb = j /onep2;
+
+      jalogy = j * alogy;
+      wj = wbj - jalogy;
+      w1j = wb1j;
+      wp1j = wp1jb - j * logy1p2; /* d log W / dp */
+      
+      wp2j = wp2jb - 2 * j * logy1p3; /* d^2 log W/ dp^2 */
+      
+      /* transform to working parameterization ... */
+      wp2j = wp1j * dpth2 + wp2j * dpth1 * dpth1; /* d^2 log W/ dth^2 */
+      wp1j *= dpth1; /* d log W / dth */
+      wppj = wppjb * dpth1; 
+
+      wj_scaled =  exp(wj-wmax);
+      wi += wj_scaled; /* sum of the scaled W_j */
+
+      w1i += wj_scaled * w1j; /* sum W_j dlogW_j / d rho */
+      w2i += wj_scaled * w1j*w1j; /*  sum W_j d^2logW_j / d rho^2 */ 
+ 
+      x = wj_scaled*wp1j;
+      wdlogwdp += x;    /* sum_j W_j dlogW_j/dp */
+      //Rprintf("wdlogwdp=%g   wj_scaled=%g  wp1j=%g\n",wdlogwdp,wj_scaled,wp1j);
+      x1 = wj_scaled*(wp1j*wp1j + wp2j);
+      wdW2d2W += x1;  /* sum_j  (dlog W_j/dp)^2 + W_j d^2logW_j/dp^2 */     
+      
+      x2 = wj_scaled*(wp1j*j/onep + wppj);
+      dWpp += x2; 
+      j += incr;
+      if (incr>0) { // upsweep
+	lgammaj1 += log(j);
+        if (wj < wmin) { j = j_max - 1;incr = -1;
+	  if (j==0) ok=1; // finished
+          lgammaj1 = lgamma((double)j+1);
+	} // change to downsweep
+      } else {
+	lgammaj1 += -log(j+1);
+        if (wj < wmin||j<1) ok=1; // finished
+      }
+    } /* end of upsweep/downsweep */ 
+    //Rprintf("wdlogwdp = %g\n",wdlogwdp);
+    /* Summation now complete: need to do final transformations */
+    w[i] = wmax + log(wi);    /* contains log W */
+    w2[i] = w2i/wi - (w1i/wi)*(w1i/wi);
+    w2p[i] = wdW2d2W/wi - (wdlogwdp/wi)*(wdlogwdp/wi);
+    w2pp[i] = (w1i/wi)*(wdlogwdp/wi) + dWpp/wi;
+    w1[i] = -w1i/wi;
+    w1p[i] =  wdlogwdp/wi;
+
+  } /* end of looping through y */
+} /* tweedious2 */
 
 
 

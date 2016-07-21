@@ -66,8 +66,8 @@ matrix initmat(int rows,int cols)
   if ((cols==1)||(rows==1))
   { if (A.M)
     A.M[0]=(double *)CALLOC((size_t)(cols*rows+2*pad),sizeof(double));
-    for (i=1;i<rows+2*pad;i++)
-    A.M[i]=A.M[0]+i*cols;A.vec=1;
+    for (i=1;i<rows+2*pad;i++) A.M[i]=A.M[0]+i*cols;
+    A.vec=1;
   } else
   { if (A.M)
     for (i=0;i<rows+2*pad;i++)
@@ -180,28 +180,24 @@ void matrixintegritycheck()
   error(_("You are trying to check matrix integrity without defining RANGECHECK."));
 #endif
   B=bottom;
-  while (k<matrallocd)
-  { A=B->mat;
-    if (A.vec)
-    { for (i=-pad;i<0;i++)
+  while (k<matrallocd) {
+    A=B->mat;
+    if (A.vec) {
+      for (i=-pad;i<0;i++)
       if ((A.V[i]!=PADCON)||(A.V[i+A.original_r*A.original_c+pad]!=PADCON))
       ok=0;
-    } else
-    { for (i=-pad;i<A.original_r+pad;i++)
-      { for (j=A.original_c;j<A.original_c+pad;j++) if (A.M[i][j]!=PADCON)
-	     ok=0;
-	     for (j=-pad;j<0;j++) if (A.M[i][j]!=PADCON)
-        ok=0;
+    } else {
+      for (i=-pad;i<A.original_r+pad;i++) {
+        for (j=A.original_c;j<A.original_c+pad;j++) if (A.M[i][j]!=PADCON) ok=0;
+	for (j=-pad;j<0;j++) if (A.M[i][j]!=PADCON) ok=0;
       }
-      for (i=-pad;i<A.original_c+pad;i++)
-      { for (j=A.original_r;j<A.original_r+pad;j++) if (A.M[j][i]!=PADCON)
-	     ok=0;
-	     for (j=-pad;j<0;j++) if (A.M[j][i]!=PADCON)
-	     ok=0;
+      for (i=-pad;i<A.original_c+pad;i++) {
+	for (j=A.original_r;j<A.original_r+pad;j++) if (A.M[j][i]!=PADCON) ok=0;
+	for (j=-pad;j<0;j++) if (A.M[j][i]!=PADCON) ok=0;
       }
     }
-    if (!ok)
-    { error(_("An out of bound write to matrix has occurred!"));
+    if (!ok) {
+      error(_("An out of bound write to matrix has occurred!"));
     }
     k++;B=B->fp;
   }

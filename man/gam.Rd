@@ -17,7 +17,7 @@ with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
 (when an isotropic smooth is inappropriate), and users can add smooths. 
-Linear functionals of smooths can alos be included in models.
+Linear functionals of smooths can also be included in models.
 For an overview of the smooths available see \code{\link{smooth.terms}}. 
 For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. For more on model selection see \code{\link{gam.selection}}. Do read \code{\link{gam.check}} and \code{\link{choose.k}}.
 
@@ -31,7 +31,8 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action,offset=NULL,method="GCV.Cp",
     optimizer=c("outer","newton"),control=list(),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
-    fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,...)
+    fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,
+    drop.intercept=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -85,7 +86,8 @@ exponential family \code{"REML"} is the default, and the only other option is \c
 parameter estimation criterion (given by \code{method}). \code{"perf"} for performance iteration. \code{"outer"} 
 for the more stable direct approach. \code{"outer"} can use several alternative optimizers, specified in the 
 second element of \code{optimizer}: \code{"newton"} (default), \code{"bfgs"}, \code{"optim"}, \code{"nlm"} 
-and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). }
+and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). \code{"efs"}
+for the extended Fellner Schall method - only currently available for general families.}
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
 scale parameter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
@@ -149,6 +151,9 @@ be estimated by RE/ML.}
 
 \item{drop.unused.levels}{by default unused levels are dropped from factors before fitting. For some smooths 
 involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
+
+\item{drop.intercept}{Set to \code{TRUE} to force the model to really not have the a constant in the parametric model part,
+even with factor variables present. Can be vector when \code{formula} is a list.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }
@@ -385,6 +390,11 @@ gam.check(b)
 G <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE,data=dat)
 b <- gam(G=G)
 print(b)
+
+## 2 part fit enabling manipulation of smoothing parameters...
+G <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),fit=FALSE,data=dat,sp=b$sp)
+G$lsp0 <- log(b$sp*10) ## provide log of required sp vec
+gam(G=G) ## it's smoother
 
 ## change the smoothness selection method to REML
 b0 <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="REML")

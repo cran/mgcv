@@ -16,7 +16,7 @@ An object of class \code{general.family}.
 }
 
 \details{
-The model has K linear predictors, \eqn{\eta_j}{h_j}, each dependent on smooth functions of predictor variables, in the usual way. If response variable, y, contains the class labels 0,...,K then the likelihood for y>0 is \eqn{\exp(\eta_y)/\{1+\sum_j \exp(\eta_j) \}}{exp(h_y)/(1 + sum_j exp(h_j) )}. If y=0 the likelihood is \eqn{1/\{1+\sum_j \exp(\eta_j) \}}{1/(1 + sum_j exp(h_j) )}. In the two class case this is just a binary logistic regression model. The implementation uses the approach to GAMLSS models described in Wood, Pya and Saefken (2015).
+The model has K linear predictors, \eqn{\eta_j}{h_j}, each dependent on smooth functions of predictor variables, in the usual way. If response variable, y, contains the class labels 0,...,K then the likelihood for y>0 is \eqn{\exp(\eta_y)/\{1+\sum_j \exp(\eta_j) \}}{exp(h_y)/(1 + sum_j exp(h_j) )}. If y=0 the likelihood is \eqn{1/\{1+\sum_j \exp(\eta_j) \}}{1/(1 + sum_j exp(h_j) )}. In the two class case this is just a binary logistic regression model. The implementation uses the approach to GAMLSS models described in Wood, Pya and Saefken (2016).
 
 The residuals returned for this model are simply the square root of -2 times the deviance for each observation, with a positive sign if the observed y is the most probable class for this observation, and a negative sign otherwise. 
 
@@ -31,7 +31,10 @@ Note that the model is not completely invariant to category relabelling, even if
 }
 
 \references{
-Wood, S.N., N. Pya and B. Saefken (2015), Smoothing parameter and model selection for general smooth models. \url{http://arxiv.org/abs/1511.03864}
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models.
+Journal of the American Statistical Association.
+\url{http://arxiv.org/abs/1511.03864}
 }
 
 \seealso{\code{\link{ocat}}}

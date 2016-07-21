@@ -51,6 +51,11 @@ It is possible to set a \code{deriv} flag in a smooth specification or smooth ob
 
 \seealso{\code{\link{p.spline}}}
 
+\references{
+Wood, S.N. (2016) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. \url{http://arxiv.org/abs/1605.02446}
+}
+
+
 \examples{
   require(mgcv)
   set.seed(5)
@@ -73,7 +78,20 @@ It is possible to set a \code{deriv} flag in a smooth specification or smooth ob
   Xp <- PredictMat(sm,data.frame(x=seq(xk[1]+h0/2,max(xk)-h0/2,h0)))
   sum((Xp\%*\%b)^2*h0) ## numerical approximation to penalty
   b\%*\%sm$S[[1]]\%*\%b  ## `exact' version
-  
+
+  ## ...repeated with uneven knot spacing...
+  m <- c(4,2); k <- 15; b <- runif(k)
+  ## produce the required 20 unevenly spaced knots...
+  knots <- data.frame(x=c(-.4,-.3,-.2,-.1,-.001,.05,.15,
+        .21,.3,.32,.4,.6,.65,.75,.9,1.001,1.1,1.2,1.3,1.4))
+  sm <- smoothCon(s(x,bs="bs",m=m,k=k),data.frame(x),
+        knots=knots,scale.penalty=FALSE)[[1]]
+  sm$deriv <- m[2]
+  h0 <- 1e-3; xk <- sm$knots[(m[1]+1):(k+1)]
+  Xp <- PredictMat(sm,data.frame(x=seq(xk[1]+h0/2,max(xk)-h0/2,h0)))
+  sum((Xp\%*\%b)^2*h0) ## numerical approximation to penalty
+  b\%*\%sm$S[[1]]\%*\%b  ## `exact' version
+
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 
