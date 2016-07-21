@@ -1030,7 +1030,8 @@ void kba_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,
   k_nn_work(kd,X,dist,ni,&nn,d,&d2k); /* get 2d+k nearest neighbours */
   
   /* d0 = average of distance to 2d+k nearest neighbours - a useful basic length scale */
-  for (d0=0.0,p=dist,p1=dist+ *n * d2k;p<p1;p++) d0 += *p;d0 /= *n * d2k;
+  for (d0=0.0,p=dist,p1=dist+ *n * d2k;p<p1;p++) d0 += *p;
+  d0 /= *n * d2k;
 
   x = (double *)CALLOC((size_t) *d,sizeof(double));
   /* need to get typical box scale */ 

@@ -267,7 +267,7 @@ gam.check <- function(b, old.style=FALSE,
              napredict(b$na.action, b$linear.predictors[,1]) else 
              napredict(b$na.action, b$linear.predictors)
 ##  if (b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","mle.REML","mle.ML","PQL")) { 
-    old.par<-par(mfrow=c(2,2))
+    if (is.null(.Platform$GUI) || .Platform$GUI != "RStudio") old.par <- par(mfrow=c(2,2))
     if (old.style)
       qqnorm(resid,...)
     else
@@ -326,7 +326,7 @@ gam.check <- function(b, old.style=FALSE,
       cat("indicate that k is too low, especially if edf is close to k\'.\n\n")
       printCoefmat(kchck,digits=3);
     }
-    par(old.par)
+    if (is.null(.Platform$GUI) ||.Platform$GUI != "RStudio") par(old.par)
 ##  } else plot(linpred,resid,xlab="linear predictor",ylab="residuals",...)
 } ## end of gam.check
 
@@ -675,7 +675,6 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
     fac <- rep(x$flev,rep(n,nf))
     dat <- data.frame(fac,xx)
     names(dat) <- c(x$fterm,x$base$term)
-#    X <- Predict.matrix.fs.interaction(x,dat)
     X <- PredictMat(x,dat)
     if (is.null(xlab)) xlabel <- x$base$term else xlabel <- xlab
     if (is.null(ylab)) ylabel <- label else ylabel <- ylab
@@ -683,7 +682,8 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
              main="",x=xx,n=n,nf=nf))
   } else { ## produce the plot
     ind <- 1:P$n
-    plot(P$x[ind],P$fit[ind],ylim=range(P$fit),xlab=P$xlab,ylab=P$ylab,type="l")
+    if(is.null(ylim)) ylim <- range(P$fit) 
+    plot(P$x[ind],P$fit[ind],ylim=ylim,xlab=P$xlab,ylab=P$ylab,type="l",...)
     if (P$nf>1) for (i in 2:P$nf) {
       ind <- ind + P$n
       if (scheme==0) lines(P$x,P$fit[ind],lty=i,col=i) else 
@@ -867,17 +867,17 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
             if (min.r < ylimit[1]) ylimit[1] <- min.r
           }
         }
-        if (!is.null(ylim)) ylimit <- ylim
+        ylimit <- if (is.null(ylim)) ylimit <- ylimit + shift else ylim
          
         ## plot the smooth... 
         if (shade) { 
-          plot(P$x,trans(P$fit+shift),type="n",xlab=P$xlab,ylim=trans(ylimit+shift),
+          plot(P$x,trans(P$fit+shift),type="n",xlab=P$xlab,ylim=trans(ylimit),
                  xlim=P$xlim,ylab=P$ylab,main=P$main,...)
           polygon(c(P$x,P$x[n:1],P$x[1]),
                     trans(c(ul,ll[n:1],ul[1])+shift),col = shade.col,border = NA)
           lines(P$x,trans(P$fit+shift),...)
         } else { ## ordinary plot 
-          plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,ylim=trans(ylimit+shift),xlim=P$xlim,
+          plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,ylim=trans(ylimit),xlim=P$xlim,
                  ylab=P$ylab,main=P$main,...)
           if (is.null(list(...)[["lty"]])) { 
             lines(P$x,trans(ul+shift),lty=2,...)
@@ -936,9 +936,10 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
         if (scale==0&&is.null(ylim)) { 
           if (partial.resids) ylimit <- range(P$p.resid,na.rm=TRUE) else ylimit <-range(P$fit)
         }
-        if (!is.null(ylim)) ylimit <- ylim
+        ylimit <- if (is.null(ylim)) ylimit <- ylimit + shift else ylim
+        
         plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,
-             ylab=P$ylab,ylim=trans(ylimit+shift),xlim=P$xlim,main=P$main,...)
+             ylab=P$ylab,ylim=trans(ylimit),xlim=P$xlim,main=P$main,...)
         if (rug) { 
           if (jit) rug(jitter(as.numeric(P$raw)),...)
           else rug(as.numeric(P$raw),...) 
@@ -1442,15 +1443,15 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
       lo.col <- "green"
       hi.col <- "red"
     }
-    if (!is.null(zlim))
-    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
+    if (!is.null(zlim)) {
+      if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
       min.z<-zlim[1]
       max.z<-zlim[2]
-    } else
-    { z.max<-max(fv$fit+fv$se.fit*se,na.rm=TRUE)
-      z.min<-min(fv$fit-fv$se.fit*se,na.rm=TRUE)
+    } else {
+      max.z<-max(fv$fit+fv$se.fit*se,na.rm=TRUE)
+      min.z<-min(fv$fit-fv$se.fit*se,na.rm=TRUE)
+      zlim<-c(min.z,max.z)
     }
-    zlim<-c(z.min,z.max)
     z<-fv$fit-fv$se.fit*se;z<-matrix(z,n.grid,n.grid)
     if (plot.type=="contour") warning("sorry no option for contouring with errors: try plot.gam")
 

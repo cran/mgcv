@@ -25,6 +25,8 @@ SEs etc to be calculated).
 
 \item \bold{How do I test whether a smooth is significantly different from a straight line}. See \code{\link{tprs}} and the example therein.
 
+\item \bold{An example from an mgcv helpfile gives an error - is this a bug?} It might be, but first please check that the version of mgcv you have loaded into R corresponds to the version from which the helpfile came. Many such problems are caused by trying to run code only supported in a later mgcv version in an earlier version. Another possibility is that you have an object loaded whose name clashes with an mgcv function (for example you are trying to use the mgcv \code{multinom} function, but have another object called \code{multinom} loaded.)
+
 \item \bold{Some code from Wood (2006) causes an error: why?} The book was written using mgcv version 1.3. To allow for 
 REML estimation of smoothing parameters in versions 1.5, some changes had to be made to the syntax. In particular the 
 function \code{gam.method} no longer exists. The smoothness selection method (GCV, REML etc) is now controlled by the

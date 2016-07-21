@@ -96,6 +96,9 @@ void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int
 void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
 	       double *y,double *eps,int *n,
                double *th,double *rho,double *a, double *b);
+void tweedious2(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
+	       double *y,double *eps,int *n,
+               double *th,double *rho,double *a, double *b);
 void psum(double *y, double *x,int *index,int *n);
 void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans,double *work);
 void in_out(double *bx, double *by, double *break_code, double *x,double *y,int *in, int *nb, int *n);

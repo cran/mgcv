@@ -408,7 +408,8 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
   if (*fixed_penalty) { 
     Mf = *M + 1;  /* total number of components, including fixed one */
     spf = (double *)CALLOC((size_t)Mf,sizeof(double));
-    for (i=0;i<*M;i++) spf[i]=sp[i];spf[*M]=1.0; /* includes sp for fixed term */
+    for (i=0;i<*M;i++) spf[i]=sp[i];
+    spf[*M]=1.0; /* includes sp for fixed term */
   } 
   else {spf=sp;Mf = *M;} /* total number of components, including fixed one */
 
@@ -416,7 +417,8 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
      rS1 is repeatedly orthogonally transformed, while rS2 is row pivoted. 
   */
   if (*deriv) { /* only need to modify if derivatives needed */
-    for (j=i=0;i<Mf;i++) j += rSncol[i];tot_col=j;
+    for (j=i=0;i<Mf;i++) j += rSncol[i];
+    tot_col=j;
     j *= *q;
     rS1 = (double *)CALLOC((size_t) j,sizeof(double));
     rS2 = (double *)CALLOC((size_t) j,sizeof(double));
@@ -686,7 +688,8 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
   if (*fixed_penalty) { 
     Mf = *M + 1;  /* total number of components, including fixed one */
     spf = (double *)CALLOC((size_t)Mf,sizeof(double));
-    for (i=0;i<*M;i++) spf[i]=sp[i];spf[*M]=1.0; /* includes sp for fixed term */
+    for (i=0;i<*M;i++) spf[i]=sp[i];
+    spf[*M]=1.0; /* includes sp for fixed term */
   } 
   else {spf=sp;Mf = *M;} /* total number of components, including fixed one */
 
@@ -1694,7 +1697,8 @@ void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
       if (i< *n_theta && k < *n_theta) {
         p0 = Det_th2 + *n * kk;
         bt=1;ct=0;mgcv_mmult(work,X,p0,&bt,&ct,r,&one,n);
-        for (j=0;j<*r;j++) Db_th[j] -=  work[j];kk++;
+        for (j=0;j<*r;j++) Db_th[j] -=  work[j];
+	kk++;
       } else if (i==k) {
         multSk(work1,beta,&one,i - *n_theta,rS,rSncol,r,work); /* get S_i \beta */
         for (j=0;j<*r;j++) Db_th[j] -= work1[j] * sp[i - *n_theta] *2 ;

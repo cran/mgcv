@@ -11,7 +11,7 @@ is that it is useable with \code{gamm4} from package \code{gamm4}.
 }
 
 \usage{t2(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,
-               id=NULL,sp=NULL,full=FALSE,ord=NULL)
+               id=NULL,sp=NULL,full=FALSE,ord=NULL,pc=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -78,6 +78,12 @@ achieved by an arbitrary rescaling of null space basis vectors.}
 
 \item{ord}{an array giving the orders of terms to retain. Here order means number of marginal range spaces
 used in the construction of the component. \code{NULL} to retain everything. }
+
+\item{pc}{If not \code{NULL}, signals a point constraint: the smooth should pass through zero at the
+point given here (as a vector or list with names corresponding to the smooth names). Never ignored
+if supplied. See \code{\link{identifiability}}. }
+
+
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases

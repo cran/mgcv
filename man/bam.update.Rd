@@ -48,7 +48,9 @@ to the data (e.g. default knot locations).
 
 
 }
-
+\section{WARNINGS }{
+AIC computation does not currently take account of AR model, if used.
+}
 
 \seealso{\code{\link{mgcv-package}}, \code{\link{bam}}
  }

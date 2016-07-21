@@ -427,7 +427,7 @@ smooth2random.t2.smooth <- function(object,vnames,type=1) {
 ##         2. rind: and index vector such that if br is the vector of 
 ##            random coefficients for the term, br[rind] is the coefs in 
 ##            order for this term. rinc - dummy here.
-##         3. A matrix, U, that transforms coefs, in order [rand1, rand2,... fix]
+##         3. A matrix, trans.D, that transforms coefs, in order [rand1, rand2,... fix]
 ##            back to original parameterization. If null, then not needed.
 ##         4. A matrix Xf for the fixed effects, if any.
 ##         5. fixed TRUE/FALSE if its fixed or not. If fixed the other stuff is
@@ -483,7 +483,7 @@ smooth2random.mgcv.smooth <- function(object,vnames,type=1) {
 ## Returns 1. a list of random effects, including grouping factors, and 
 ##            a fixed effects matrix. Grouping factors, model matrix and 
 ##            model matrix name attached as attributes, to each element. 
-##         2. rind: and index vector such that if br is the vector of 
+##         2. rind: an index vector such that if br is the vector of 
 ##            random coefficients for the term, br[rind] is the coefs in 
 ##            order for this term. rinc - dummy here.
 ##         3. A matrix, U, + vec D that transforms coefs, in order [rand1, rand2,... fix]
@@ -546,7 +546,7 @@ smooth2random.tensor.smooth <- function(object,vnames,type=1) {
 ## Returns 1. a list of random effects, including grouping factors, and 
 ##            a fixed effects matrix. Grouping factors, model matrix and 
 ##            model matrix name attached as attributes, to each element. 
-##         2. rind: and index vector such that if br is the vector of 
+##         2. rind: an index vector such that if br is the vector of 
 ##            random coefficients for the term, br[rind] is the coefs in 
 ##            order for this term. rinc - dummy here.
 ##         3. A matrix, U, that transforms coefs, in order [rand1, rand2,... fix]
@@ -1201,7 +1201,10 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 # random terms. correlation describes the correlation structure. This routine is basically an interface
 # between the basis constructors provided in mgcv and the gammPQL routine used to estimate the model.
 { if (inherits(family,"extended.family")) warning("family are not designed for use with gamm!")
-  
+  ## lmeControl turns sigma=NULL into sigma=0, but if you supply sigma=0 rejects it,
+  ## which will break the standard handling of the control list. Following line fixes.
+  ## but actually Martin M has now fixed lmeControl...
+  ##if (!is.null(control$sigma)&&control$sigma==0) control$sigma <- NULL
   control <- do.call("lmeControl",control) 
     # check that random is a named list
     if (!is.null(random))
@@ -1248,7 +1251,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       mf$min.sp <- mf$H <- mf$gamma <- mf$fit <- mf$niterPQL <- mf$verbosePQL <- mf$G <- mf$method <- mf$... <- NULL
     }
     mf$drop.unused.levels <- drop.unused.levels
-    mf[[1]] <- as.name("model.frame")
+    mf[[1]] <- quote(stats::model.frame) ## as.name("model.frame")
     pmf <- mf
     gmf <- eval(mf, parent.frame()) # the model frame now contains all the data, for the gam part only 
     gam.terms <- attr(gmf,"terms") # terms object for `gam' part of fit -- need this for prediction to work properly
@@ -1268,7 +1271,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
   
     ## summarize the *raw* input variables
     ## note can't use get_all_vars here -- buggy with matrices
-    vars <- all.vars(gp$fake.formula[-2]) ## drop response here
+    vars <- all.vars1(gp$fake.formula[-2]) ## drop response here
     inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
     dl <- eval(inp, data, parent.frame())
     names(dl) <- vars ## list of all variables needed

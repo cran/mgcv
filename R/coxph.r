@@ -33,7 +33,9 @@ cox.ph <- function (link = "identity") {
       y.order <- order(G$y,decreasing=TRUE)
       G$family$data$y.order <- y.order
       G$y <- G$y[y.order]
+      attrX <- attributes(G$X)
       G$X <- G$X[y.order,,drop=FALSE]
+      attributes(G$X) <- attrX
       G$w <- G$w[y.order]
     })
     
@@ -108,7 +110,7 @@ cox.ph <- function (link = "identity") {
 
     rd <- qf <- NULL ## these functions currently undefined for Cox PH
 
-    ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
+    ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
     ## function defining the cox model log lik.
     ## Calls C code "coxlpl"
     ## deriv codes: 0   - evaluate the log likelihood
@@ -122,7 +124,7 @@ cox.ph <- function (link = "identity") {
     ##    or its Choleski factor
     ## D is the diagonal pre-conditioning matrix used to obtain Hp
     ##   if Hr is the raw Hp then Hp = D*t(D*Hr)
-
+      if (!is.null(offset)&&sum(offset!=0)) stop("cox.ph does not yet handle offsets")
       ##tr <- sort(unique(y),decreasing=TRUE)
       tr <- unique(y)
       r <- match(y,tr)

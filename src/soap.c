@@ -233,7 +233,8 @@ void pde_coeffs(int *G,double *x,int *ii,int *jj,int *n,int *nx,int *ny,double *
   int i,j,*ip,outside,Gk0,Gk1,k0,k1;
   double xc,dx2,dy2,thresh=0.0;
   thresh = dx2= 1.0/(*dx * *dx);dy2 = 1.0/(*dy * *dy);
-  if (dy2 < thresh) thresh = dy2;thresh *= .5;
+  if (dy2 < thresh) thresh = dy2;
+  thresh *= .5;
   outside = - *nx * *ny - 1;
   *n=0; 
   for (ip=G,i=0;i<*nx;i++) for (j=0;j<*ny;j++,ip++) if (*ip > outside){

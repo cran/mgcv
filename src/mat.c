@@ -420,7 +420,8 @@ int mgcv_pchol(double *A,int *piv,int *n,int *nt) {
 */
   int i,j,k,r,q,n1,*pk,*pq,kn,qn,*a,N,m,b;
   double *Aj,*Ak,*Aq,*Aend,x,Ajk,Akk,thresh=0.0;
-  if (*nt < 1) *nt = 1; if (*nt > *n) *nt = *n;
+  if (*nt < 1) *nt = 1;
+  if (*nt > *n) *nt = *n;
   m = *nt;  
   a = (int *)CALLOC((size_t) (*nt+1),sizeof(int));
   a[0] = 0;a[m] = *n; /* ... initialize column block splitting array */ 
@@ -563,7 +564,7 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
    are a number of indexing errors there, and down-date cancellation 
    strategy is only described in words). 
 */ 
-  int jb,pb,i,j,k,m,*p0,nb0,q,one=1,ok_norm=1,*mb,*kb,rt,nth;
+  int jb,pb,i,j,k=0,m,*p0,nb0,q,one=1,ok_norm=1,*mb,*kb,rt,nth;
   double *cn,*icn,x,*a0,*a1,*F,*Ak,*Aq,*work,tol,xx,done=1.0,dmone=-1.0,dzero=0.0; 
   char trans='T',nottrans='N';
 #ifdef OMP_REPORT
@@ -1156,7 +1157,6 @@ void getXtX(double *XtX,double *X,int *r,int *c)
 void getXXt(double *XXt,double *X,int *r,int *c)
 /* form XX' (nearly) as efficiently as possible - uses BLAS*/
 { double alpha=1.0,beta=0.0;
-  int i,j;
   ptrdiff_t ii,jj;
   char uplo = 'L',trans='N';
   F77_CALL(dsyrk)(&uplo,&trans,r, c, &alpha,X,r,&beta,XXt,r);
@@ -1229,7 +1229,8 @@ void getXtMX(double *XtMX,double *X,double *M,int *r,int *c,double *work)
   for (i=0;i< *c;i++) { 
     /* first form MX[:,i] */
     p2 = work + *r;pM=M;
-    for (p1=work;p1<p2;pM++,p1++) *p1 = *pX0 * *pM;pX0++;
+    for (p1=work;p1<p2;pM++,p1++) *p1 = *pX0 * *pM;
+    pX0++;
     for (j=1;j< *r;j++,pX0++) 
     for (p1=work;p1<p2;pM++,p1++) *p1 += *pX0 * *pM;
     /* now form ith row and column of X'MX */
@@ -2688,7 +2689,7 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
           4. Could use selective orthogonalization, but cost of full orth is only 2nj, while n^2 of method is
              unavoidable, so probably not worth it.  
 */
-    int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,ni,pi,converged,incx=1,ri,ci,cir,one=1;
+  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,ni,pi,converged,incx=1,ri,ci=0,cir,one=1;
   double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*zp,*qp,normTj,eps_stop,max_err,alpha=1.0,beta=0.0;
   unsigned long jran=1,ia=106,ic=1283,im=6075; /* simple RNG constants */
   const char uplo='U',trans='T';
@@ -2809,7 +2810,8 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
     
 
     /* calculate b[j]=||z||.... */
-    for (xx=0.0,zp=z,p0=zp+*n;zp<p0;zp++) xx += *zp * *zp;b[j]=sqrt(xx); 
+    for (xx=0.0,zp=z,p0=zp+*n;zp<p0;zp++) xx += *zp * *zp;
+    b[j]=sqrt(xx); 
   
      /* get q[j+1]      */
     if (j < *n-1)

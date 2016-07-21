@@ -12,8 +12,8 @@ write.jagslp <- function(resp,family,file,use.weights,offset=FALSE) {
 ## write the JAGS code for the linear predictor  
 ## and response distribution. 
   iltab <- ## table of inverse link functions
-    c("eta[i]","exp(eta[i])","ilogit(eta[i])","1/eta[i]","eta[i]^2")
-  names(iltab) <- c("identity","log","logit","inverse","sqrt")
+    c("eta[i]","exp(eta[i])","ilogit(eta[i])","phi(eta[i])","1/eta[i]","eta[i]^2")
+  names(iltab) <- c("identity","log","logit","probit","inverse","sqrt")
   if (!family$link%in%names(iltab)) stop("sorry link not yet handled")
   
   ## code linear predictor and expected response...
@@ -114,7 +114,7 @@ sp.prior = "gamma",diagonalize=FALSE) {
   mf$family <- mf$knots <- mf$sp <- mf$file <- mf$control <- 
   mf$centred <- mf$sp.prior <- mf$diagonalize <- NULL
   mf$drop.unused.levels <- drop.unused.levels
-  mf[[1]]<-as.name("model.frame")
+  mf[[1]] <- quote(stats::model.frame) ##as.name("model.frame")
   pmf <- mf
  
   pmf$formula <- gp$pf
@@ -165,7 +165,7 @@ sp.prior = "gamma",diagonalize=FALSE) {
   ## get initial values, for use by JAGS, and to guess suitable values for
   ## uninformative priors...
 
-  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$off,G$L) ## initial sp values
+  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$off,offset=G$offset,L=G$L) ## initial sp values
   jags.ini <- list()
   lam <- if (is.null(G$L)) lambda else G$L%*%lambda
   jin <- jini(G,lam)

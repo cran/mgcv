@@ -50,9 +50,8 @@ outside \code{R} (see example code, below). }
 \item{terms}{if \code{type=="terms"} or \code{type="iterms"} then only results for the terms (smooth or parametric) named in this array
 will be returned. Otherwise any smooth terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
 
-\item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array
-will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
-If \code{NULL} then no terms are excluded.}
+\item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
+If \code{NULL} then no terms are excluded. Note that this is the term names as it appears in the model summary, see example.}
 
 \item{block.size}{maximum number of predictions to process per call to underlying
 code: larger is quicker, but more memory intensive. Set to < 1 to use total number
@@ -148,6 +147,7 @@ b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3),data=dat)
 
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
+pred0 <- predict(b,newd,exclude="s(x0)") ## prediction excluding a term
 
 #############################################
 ## difference between "terms" and "iterms"

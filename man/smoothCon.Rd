@@ -17,7 +17,7 @@ although this behaviour can be over-ridden.
 smoothCon(object,data,knots=NULL,absorb.cons=FALSE,
           scale.penalty=TRUE,n=nrow(data),dataX=NULL,
           null.space.penalty=FALSE,sparse.cons=0,
-          diagonal.penalty=FALSE,apply.by=TRUE)
+          diagonal.penalty=FALSE,apply.by=TRUE,modCon=0)
 PredictMat(object,data,n=nrow(data))
 }
 %- maybe also `usage' for other objects documented here.
@@ -50,9 +50,9 @@ constraints are used for sparse smooths. None of these options has an effect if 
 constraint.}
 
 \item{diagonal.penalty}{ If \code{TRUE} then the smooth is reparameterized to turn the penalty into an identity matrix, 
-with the final diagonal elements zeroed (corresponding to the penalty nullspace). May result in a matrix \code{diagRP} in the returned object for use by \code{PredictMat}. 
+with the final diagonal elements zeroed (corresponding to the penalty nullspace). May result in a matrix \code{diagRP} in the returned object for use by \code{PredictMat}.}
 
-}
+\item{modCon}{force modification of any smooth supplied constraints. 0 - do nothing. 1 - delete supplied constraints, replacing with automatically generated ones. 2 - set fit and predict constraint to predict constraint. 3 - set fit and predict constraint to fit constraint.}
 
 }
 

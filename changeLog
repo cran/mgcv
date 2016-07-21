@@ -2,10 +2,98 @@
 *** denotes really big changes 
 
 Currently deprecated and liable to be removed: 
-- bam(...,sparse=TRUE) [1.8-5]
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
+
+
+1.8-13
+
+* Added help file ?one.se.rule on the `one standard error rule' for obtaining 
+  smoother models.
+
+* bam(...,discrete=TRUE) no longer complains about more coefficients than data.
+
+* 's', 'te', 'ti' and 't2' modified to allow user to specify that the smooth
+  should pass through zero at a specified point. See ?identifiability.
+
+* anova.gam modified to use more appropriate reference degrees of freedom 
+  for multiple model call, where possible. Also fixed to allow multiple 
+  formulae models and to use -2*logLik in place of `deviance' for 
+  general.family models.
+
+* offsets allowed with multinomial, ziplss and gaulss families.
+
+* gevlss family implementing generalized extreme value location, sclae and 
+  shape models. 
+
+* Faster code used in 'uniquecombs'. Speeds up discretization step in 
+  'bam(...,discrete=TRUE)'. Could still be improved for multi-column case.
+
+* modification to 'smoothCon' to allow resetting of smooth supplied 
+  constraints - enables fix of bug in bam handling of 't2' terms, where
+  parameterization of penalty and model matrix did not previously match 
+  properly. 
+
+* clarification of `exclude' argument to predict.gam in help files.
+
+* modification to 'plot.gam' etc, so that 'ylim' is no longer shifted by 
+  'shift'. 
+
+* ylim and ... handling improved for 'fs' plot method (thanks Dave Miller)
+
+* gam.check now recognises RStudio and plots appropriately.
+
+* bam(...,sparse=TRUE) removed - not efficient, because of unavoidability 
+  of dense off diagonal terms in X'X or equivalent. Deprecated since 1.8-5.
+
+* tweak to initial.sp/g to avoid infinite loop in s.p. initialization, in 
+  rather unusual circumstances. Thanks to Mark Bravington.
+
+* bam and gam have `drop.intercept' argument to force the parametric terms not 
+  to include a constant in their span, even when there are factor variables. 
+
+* Fix in Vb.corr (2nd order edf correction) for fixed smoothing parameter case.
+
+* added 'all.vars1' to enable terms like s(x$y) in model formulae. 
+
+* modification to gam.fit4 to ignore 'start' if it is immediately worse than 
+  'null.coef'.
+
+* cSplineDes can now accept a 'derivs' argument.
+
+* added drop.intercept handling for multiple formulae (mod by Matteo Fasiolo).
+
+* 'gam.side' fix to avoid duplication of smooth model matrices to be tested 
+  against, when checking for numerical degeneracy. Problem could occasionally 
+  cause a failure (especially with bam), when the total matrix to be tested 
+  against ended upo with more columns than rows.
+
+* 4 occurances of as.name("model.frame") changed to quote(stats::model.frame)
 	
+* fix in predict.bamd discrete prediction code to be a bit more relaxed about 
+  use of as.factor, etc in formulae.
+
+* fix in predict.gam handling of 'na.action' to avoid trying to get type of
+  na.action from name of na.action function - this was fragile to nesting
+  and could cause predict.bam to fail in the presence of NA's.
+
+* fix of gam.outer so that general families (e.g. cox.ph) can have all
+  their smoothing parameters supplied without then ignoring the penalties!
+
+* fix in multiple formulae handling of fixed smoothing parameters.
+
+* Fix of bug in zlim handling in vis.gam perspective plot with standard 
+  errors. Thanks Petra Kuhnert. 
+
+* probit link added to 'jagam' (suggested by Kenneth Knoblauch).
+
+* 'Sl.' routines revised to allow operation with non-linearly parameterized
+  smoothers. 	
+
+* bug fix in Hessian computation in gam.fit5 - leading diagonal of Hessian of 
+  log|Hp| could be wrong where Hp is penalized Hessian. 
+
+* better use of crossprod in gamlss.gH
 
 1.8-12
 

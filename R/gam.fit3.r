@@ -842,12 +842,12 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
         scale.est=scale.est,reml.scale= reml.scale,aic=aic.model,rank=oo$rank.est,K=Kmat)
 } ## end gam.fit3
 
-Vb.corr <- function(X,L,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
+Vb.corr <- function(X,L,lsp0,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
 ## compute higher order Vb correction...
 ## If w is NULL then X should be root Hessian, and 
 ## dw is treated as if it was 0, otherwise X should be model 
 ## matrix.
-## dw is derivative w.r.t. all the smoothing parameters and family parametres as if these 
+## dw is derivative w.r.t. all the smoothing parameters and family parameters as if these 
 ## were not linked, but not the scale parameter, of course. Vr includes scale uncertainty,
 ## if scale extimated...
 ## nth is the number of initial elements of rho that are not smoothing 
@@ -859,8 +859,10 @@ Vb.corr <- function(X,L,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
     if (!is.null(L)) L <- L[-nrow(L),-ncol(L),drop=FALSE]
     Vr <- Vr[-nrow(Vr),-ncol(Vr),drop=FALSE]
   }
-  ## ??? rho0???
-  lambda <- if (is.null(L)) exp(rho) else exp(L[1:M,,drop=FALSE]%*%rho)
+ 
+  if (is.null(lsp0)) lsp0 <- if (is.null(L)) rho*0 else rep(0,nrow(L))
+  ## note that last element of lsp0 can be a scale parameter...
+  lambda <- if (is.null(L)) exp(rho+lsp0[1:length(rho)]) else exp(L%*%rho + lsp0[1:nrow(L)])
   
   ## Re-create the Hessian, if is.null(w) then X assumed to be root
   ## unpenalized Hessian...
@@ -925,7 +927,7 @@ Vb.corr <- function(X,L,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
   vcorr(dR,Vr,FALSE) ## NOTE: unscaled!!
 } ## Vb.corr
 
-gam.fit3.post.proc <- function(X,L,S,off,object) {
+gam.fit3.post.proc <- function(X,L,lsp0,S,off,object) {
 ## get edf array and covariance matrices after a gam fit. 
 ## X is original model matrix, L the mapping from working to full sp
   scale <- if (object$scale.estimated) object$scale.est else object$scale
@@ -978,7 +980,7 @@ gam.fit3.post.proc <- function(X,L,S,off,object) {
     ## parameters excluding any scale parameter, but Vr includes info for scale parameter
     ## if it has been estiamted. 
     nth <- if (is.null(object$family$n.theta)) 0 else object$family$n.theta ## any parameters of family itself
-    Vc2 <- scale*Vb.corr(R,L,S,off,object$dw.drho,w=NULL,log(object$sp),Vr,nth,object$scale.estimated)
+    Vc2 <- scale*Vb.corr(R,L,lsp0,S,off,object$dw.drho,w=NULL,log(object$sp),Vr,nth,object$scale.estimated)
     
     Vc <- Vb + Vc + Vc2 ## Bayesian cov matrix with sp uncertainty
     ## finite sample size check on edf sanity...
@@ -2088,7 +2090,7 @@ gam2derivative <- function(lsp,args,...)
   b<-gam.fit3(x=args$X, y=args$y, sp=lsp,Eb=args$Eb,UrS=args$UrS,
      offset = args$offset,U1=args$U1,Mp=args$Mp,family = args$family,weights=args$w,deriv=1,
      control=args$control,gamma=args$gamma,scale=args$scale,scoreType=args$scoreType,
-     null.coef=args$null.coef,n.true=args$n.true,...)
+     null.coef=args$null.coef,n.true=args$n.true,Sl=args$Sl,...)
   if (reml) {
           ret <- b$REML1 
   } else if (args$scoreType=="GACV") {
@@ -2112,7 +2114,7 @@ gam2objective <- function(lsp,args,...)
   b<-gam.fit3(x=args$X, y=args$y, sp=lsp,Eb=args$Eb,UrS=args$UrS,
      offset = args$offset,U1=args$U1,Mp=args$Mp,family = args$family,weights=args$w,deriv=0,
      control=args$control,gamma=args$gamma,scale=args$scale,scoreType=args$scoreType,
-     null.coef=args$null.coef,n.true=args$n.true,...)
+     null.coef=args$null.coef,n.true=args$n.true,Sl=args$Sl,start=args$start,...)
   if (reml) {
           ret <- b$REML 
   } else if (args$scoreType=="GACV") {
@@ -2138,7 +2140,7 @@ gam4objective <- function(lsp,args,...)
   b<-gam.fit3(x=args$X, y=args$y, sp=lsp, Eb=args$Eb,UrS=args$UrS,
      offset = args$offset,U1=args$U1,Mp=args$Mp,family = args$family,weights=args$w,deriv=1,
      control=args$control,gamma=args$gamma,scale=args$scale,scoreType=args$scoreType,
-     null.coef=args$null.coef,...)
+     null.coef=args$null.coef,Sl=args$Sl,start=args$start,...)
   
   if (reml) {
           ret <- b$REML;at <- b$REML1
@@ -2671,9 +2673,10 @@ mini.roots <- function(S,off,np,rank=NULL)
 }
 
 
-ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999) {
+ldTweedie0 <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999) {
 ## evaluates log Tweedie density for 1<=p<=2, using series summation of
 ## Dunn & Smyth (2005) Statistics and Computing 15:267-280.
+## Original fixed p and phi version.
 
   if (!is.na(rho)&&!is.na(theta)) { ## use rho and theta and get derivs w.r.t. these
     if (length(rho)>1||length(theta)>1) stop("only scalar `rho' and `theta' allowed.")
@@ -2712,7 +2715,7 @@ ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999) {
 
   if (p == 1) { ## It's Poisson like
     ## ld[,1] <- dpois(x = y/phi, lambda = mu/phi,log=TRUE)
-    if (sum(!is.integer(y/phi))) stop("y must be an integer multiple of phi for Tweedie(p=1)")
+    if (all.equal(y/phi,round(y/phi))!=TRUE) stop("y must be an integer multiple of phi for Tweedie(p=1)")
     ind <- (y!=0)|(mu!=0) ## take care to deal with y log(mu) when y=mu=0
     bkt <- y*0
     bkt[ind] <- (y[ind]*log(mu[ind]/phi) - mu[ind])
@@ -2797,8 +2800,199 @@ if (FALSE) { ## DEBUG disconnetion of density terms
 } 
 
   ld
-} ## ldTweedie
+} ## ldTweedie0
 
+
+
+ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999,all.derivs=FALSE) {
+## evaluates log Tweedie density for 1<=p<=2, using series summation of
+## Dunn & Smyth (2005) Statistics and Computing 15:267-280.
+  n <- length(y)
+  if (!is.na(rho)&&!is.na(theta)) { ## use rho and theta and get derivs w.r.t. these
+    #if (length(rho)>1||length(theta)>1) stop("only scalar `rho' and `theta' allowed.")
+    if (a>=b||a<=1||b>=2) stop("1<a<b<2 (strict) required")
+    work.param <- TRUE
+    ## should buffered code for fixed p and phi be used?
+    buffer <- if (length(unique(theta))==1&&length(unique(rho))==1) TRUE else FALSE 
+    theta <- th <- array(theta,dim=n);
+    phi <- exp(rho)
+    ind <- th > 0;dpth1 <- dpth2 <-p <- rep(0,n)
+    ethi <- exp(-th[ind])
+    ethni <- exp(th[!ind])
+    p[ind] <- (b+a*ethi)/(1+ethi)
+    p[!ind] <- (b*ethni+a)/(ethni+1)
+    dpth1[ind] <- ethi*(b-a)/(1+ethi)^2
+    dpth1[!ind] <- ethni*(b-a)/(ethni+1)^2
+    dpth2[ind] <-((a-b)*ethi+(b-a)*ethi^2)/(ethi+1)^3
+    dpth2[!ind] <- ((a-b)*ethni^2+(b-a)*ethni)/(ethni+1)^3
+    #p <- if (th>0) (b+a*exp(-th))/(1+exp(-th)) else (b*exp(th)+a)/(exp(th)+1) 
+    #dpth1 <- if (th>0) exp(-th)*(b-a)/(1+exp(-th))^2 else exp(th)*(b-a)/(exp(th)+1)^2
+    #dpth2 <- if (th>0) ((a-b)*exp(-th)+(b-a)*exp(-2*th))/(exp(-th)+1)^3 else
+    #               ((a-b)*exp(2*th)+(b-a)*exp(th))/(exp(th)+1)^3
+  } else { ## still need working params for tweedious call...
+    work.param <- FALSE
+    if (all.derivs) warning("all.derivs only available in rho, theta parameterization")
+    #if (length(p)>1||length(phi)>1) stop("only scalar `p' and `phi' allowed.")
+    buffer <- if (length(unique(p))==1&&length(unique(phi))==1) TRUE else FALSE 
+    rho <- log(phi)
+    if (min(p)>=1&&max(p)<=2) {
+      ind <- p>1&p<2
+      if (sum(ind)) {
+        p.ind <- p[ind]
+        if (min(p.ind) <= a) a <- (1+min(p.ind))/2
+        if (max(p.ind) >= b) b <- (2+max(p.ind))/2
+        pabp <- theta <- dthp1 <- dthp2 <- rep(0,n)
+        pabp[ind] <- (p.ind-a)/(b-p.ind)
+        theta[ind] <- log((p.ind-a)/(b-p.ind))
+        dthp1[ind] <- (1+pabp[ind])/(p.ind-a)
+        dthp2[ind] <- (pabp[ind]+1)/((p.ind-a)*(b-p.ind)) -(pabp[ind]+1)/(p.ind-a)^2
+      }
+    }
+  }
+
+  if (min(p)<1||max(p)>2) stop("p must be in [1,2]")
+  ld <- cbind(y,y,y);ld <- cbind(ld,ld*NA)
+  if (work.param&&all.derivs) ld <- cbind(ld,ld[,1:3]*0,y*0)
+  if (length(p)!=n) p <- array(p,dim=n);
+  if (length(phi)!=n) phi <- array(phi,dim=n)
+  if (length(mu)!=n) mu <- array(mu,dim=n)
+  ind <- p == 2
+  if (sum(ind)) { ## It's Gamma
+    if (sum(y[ind]<=0)) stop("y must be strictly positive for a Gamma density")
+    ld[ind,1] <- dgamma(y[ind], shape = 1/phi[ind],rate = 1/(phi[ind] * mu[ind]),log=TRUE)
+    ld[ind,2] <- (digamma(1/phi[ind]) + log(phi[ind]) - 1 + y[ind]/mu[ind] - log(y[ind]/mu[ind]))/(phi[ind]*phi[ind])
+    ld[ind,3] <- -2*ld[ind,2]/phi[ind] + (1-trigamma(1/phi[ind])/phi[ind])/(phi[ind]^3)
+    #return(ld)
+  }  
+
+  ind <- p == 1
+  if (sum(ind)) { ## It's Poisson like
+    ## ld[,1] <- dpois(x = y/phi, lambda = mu/phi,log=TRUE)
+    if (all.equal(y[ind]/phi[ind],round(y[ind]/phi[ind]))!=TRUE) stop("y must be an integer multiple of phi for Tweedie(p=1)")
+    indi <- (y[ind]!=0)|(mu[ind]!=0) ## take care to deal with y log(mu) when y=mu=0
+    bkt <- y[ind]*0
+    bkt[indi] <- ((y[ind])[indi]*log((mu[ind]/phi[ind])[indi]) - (mu[ind])[indi])
+    dig <- digamma(y[ind]/phi[ind]+1)
+    trig <- trigamma(y[ind]/phi[ind]+1)
+    ld[ind,1] <- bkt/phi[ind] - lgamma(y[ind]/phi[ind]+1)
+    ld[ind,2] <- (-bkt - y[ind] + dig[ind]*y[ind])/(phi[ind]^2)
+    ld[ind,3] <- (2*bkt + 3*y[ind] - 2*dig*y[ind] - trig * y[ind]^2/phi[ind])/(phi[ind]^3)
+    #return(ld) 
+  }
+
+  ## .. otherwise need the full series thing....
+  ## first deal with the zeros  
+  
+  ind <- y==0&p>1&p<2;ld[ind,] <- 0
+  ind <- ind & mu>0 ## need mu condition otherwise may try to find log(0)
+  if (sum(ind)) {
+    mu.ind <- mu[ind];p.ind <- p[ind];phii <- phi[ind]
+    ld[ind,1] <- -mu.ind^(2-p.ind)/(phii*(2-p.ind))
+    ld[ind,2] <- -ld[ind,1]/phii  ## dld/d phi 
+    ld[ind,3] <- -2*ld[ind,2]/phii ## d2ld/dphi2
+    ld[ind,4] <- -ld[ind,1] * (log(mu.ind) - 1/(2-p.ind)) ## dld/dp
+    ld[ind,5] <- 2*ld[ind,4]/(2-p.ind) + ld[ind,1]*log(mu.ind)^2 ## d2ld/dp2
+    ld[ind,6] <- -ld[ind,4]/phii ## d2ld/dphidp
+    if (work.param&&all.derivs) {
+      mup <- mu.ind^p.ind
+      ld[ind,7] <- -mu.ind/(mup*phii)
+      ld[ind,8] <- -(1-p.ind)/(mup*phii)
+      ld[ind,9] <- log(mu.ind)*mu.ind/(mup*phii)
+      ld[ind,10] <- -ld[ind,7]/phii
+    }
+  }
+  if (sum(!ind)==0) return(ld)
+ 
+  ## now the non-zeros
+  ind <- which(y>0&p>1&p<2)
+  y <- y[ind];mu <- mu[ind];p<- p[ind]
+  w <- w1 <- w2 <- y*0
+  if (length(ind)>0) {
+    if (buffer) { ## use code that can buffer expensive lgamma,digamma and trigamma evaluations...
+      oo <- .C(C_tweedious,w=as.double(w),w1=as.double(w1),w2=as.double(w2),w1p=as.double(y*0),w2p=as.double(y*0),
+               w2pp=as.double(y*0),y=as.double(y),eps=as.double(.Machine$double.eps^2),n=as.integer(length(y)),
+               th=as.double(theta[1]),rho=as.double(rho[1]),a=as.double(a),b=as.double(b))
+    } else { ## use code that is not able to buffer as p and phi variable...
+      if (length(theta)!=n) theta <- array(theta,dim=n)
+      if (length(rho)!=n) rho <- array(rho,dim=n)
+      oo <- .C(C_tweedious2,w=as.double(w),w1=as.double(w1),w2=as.double(w2),w1p=as.double(y*0),w2p=as.double(y*0),
+           w2pp=as.double(y*0),y=as.double(y),eps=as.double(.Machine$double.eps^2),n=as.integer(length(y)),
+           th=as.double(theta[ind]),rho=as.double(rho[ind]),a=as.double(a),b=as.double(b))
+    }
+    phii <- phi[ind]
+    if (!work.param) { ## transform working param derivatives to p/phi derivs...
+      if (length(dthp1)!=n) dthp1 <- array(dthp1,dim=n)
+      if (length(dthp2)!=n) dthp2 <- array(dthp2,dim=n)
+      dthp1i <- dthp1[ind]
+      oo$w2 <- oo$w2/phii^2 - oo$w1/phii^2
+      oo$w1 <- oo$w1/phii
+      oo$w2p <- oo$w2p*dthp1i^2 + dthp2[ind] * oo$w1p
+      oo$w1p <- oo$w1p*dthp1i
+      oo$w2pp <- oo$w2pp*dthp1i/phii ## this appears to be wrong
+    }
+
+
+    log.mu <- log(mu)
+    onep <- 1-p
+    twop <- 2-p
+    mu1p <- theta <- mu^onep
+    k.theta <- mu*theta/twop ## mu^(2-p)/(2-p)
+    theta <- theta/onep ## mu^(1-p)/(1-p)
+    a1 <- (y/onep-mu/twop)
+    l.base <-  mu1p*a1/phii
+    ld[ind,1] <- l.base - log(y) ## log density
+    ld[ind,2] <- -l.base/phii  ## d log f / dphi
+    ld[ind,3] <- 2*l.base/(phii^2)  ## d2 logf / dphi2
+    x <- theta*y*(1/onep - log.mu)/phii + k.theta*(log.mu-1/twop)/phii
+    ld[ind,4] <- x
+    ld[ind,5] <- theta * y * (log.mu^2 - 2*log.mu/onep + 2/onep^2)/phii -
+                  k.theta * (log.mu^2 - 2*log.mu/twop + 2/twop^2)/phii ## d2 logf / dp2
+    ld[ind,6] <- - x/phii ## d2 logf / dphi dp
+  } ## length(ind)>0
+
+  if (work.param) { ## transform derivs to derivs wrt working
+    ld[,3] <- ld[,3]*phi^2 + ld[,2]*phi
+    ld[,2] <- ld[,2]*phi
+    ld[,5] <- ld[,5]*dpth1^2 + ld[,4]*dpth2
+    ld[,4] <- ld[,4]*dpth1
+    ld[,6] <- ld[,6]*dpth1*phi
+    colnames(ld)[1:6] <- c("l","rho","rho.2","th","th.2","th.rho")
+  }
+
+  if (work.param&&all.derivs&&length(ind)>0) {
+    #ld <- cbind(ld,ld[,1:4]*0)
+    a2 <- mu1p/(mu*phii) ## 1/(mu^p*phii)
+    ld[ind,7] <- a2*(onep*a1-mu/twop)   ## deriv w.r.t mu
+    ld[ind,8] <- -a2*(onep*p*a1/mu+2*onep/twop) ## 2nd deriv w.r.t. mu
+    ld[ind,9] <- a2*(-log.mu*onep*a1-a1 + onep*(y/onep^2-mu/twop^2)+mu*log.mu/twop-mu/twop^2) ## mu p
+    ld[ind,10] <- a2*(mu/(phii*twop) - onep*a1/phii) ## mu phi
+    ## transform to working...
+    ld[,10] <- ld[,10]*phi
+    ld[,9] <- ld[,9]*dpth1
+    colnames(ld) <- c("l","rho","rho.2","th","th.2","th.rho","mu","mu.2","mu.theta","mu.rho")
+  }
+
+
+  if (length(ind)>0) { 
+    ld[ind,1] <- ld[ind,1] + oo$w ## log density
+    ld[ind,2] <- ld[ind,2] + oo$w1   ## d log f / dphi
+    ld[ind,3] <- ld[ind,3] + oo$w2 ## d2 logf / dphi2
+    ld[ind,4] <- ld[ind,4] + oo$w1p 
+    ld[ind,5] <- ld[ind,5] + oo$w2p  ## d2 logf / dp2
+    ld[ind,6] <- ld[ind,6] + oo$w2pp ## d2 logf / dphi dp
+  } 
+
+if (FALSE) { ## DEBUG disconnetion of density terms
+  ld[ind,1] <-  oo$w ## log density
+  ld[ind,2] <-  oo$w1   ## d log f / dphi
+  ld[ind,3] <-  oo$w2 ## d2 logf / dphi2
+  ld[ind,4] <-  oo$w1p 
+  ld[ind,5] <-  oo$w2p  ## d2 logf / dp2
+  ld[ind,6] <-  oo$w2pp ## d2 logf / dphi dp
+} 
+
+  ld
+} ## ldTweedie
 
 
 Tweedie <- function(p=1,link=power(0)) {
@@ -2840,7 +3034,7 @@ Tweedie <- function(p=1,link=power(0)) {
         if (p == 2)
             kappa <- log(y1/mu)
         else kappa <- (y^(2 - p) - mu^(2 - p))/(2 - p)
-        2 * wt * (y * theta - kappa)
+        pmax(2 * wt * (y * theta - kappa),0)
     }
     initialize <- expression({
         n <- rep(1, nobs)

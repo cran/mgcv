@@ -336,7 +336,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   ## the Hessian...
   lbb <- matrix(0,p,p)
   for (i in 1:K) for (j in i:K) {
-    A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
+    ## A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
+    A <- crossprod(X[,jj[[i]],drop=FALSE],l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
     lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
     if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A) 
   } 
@@ -380,7 +381,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
           ind <- ind + n
         }
         ## d1H[[l]][jj[[j]],jj[[i]]] <- 
-        A <- t(X[,jj[[i]],drop=FALSE])%*%(v*X[,jj[[j]],drop=FALSE])
+        ## A <- t(X[,jj[[i]],drop=FALSE])%*%(v*X[,jj[[j]],drop=FALSE])
+        A <- crossprod(X[,jj[[i]],drop=FALSE],v*X[,jj[[j]],drop=FALSE])
         d1H[[l]][jj[[i]],jj[[j]]] <- d1H[[l]][jj[[i]],jj[[j]]] + A
         if (j>i) d1H[[l]][jj[[j]],jj[[i]]] <- d1H[[l]][jj[[j]],jj[[i]]] + t(A)
       } 
@@ -443,6 +445,45 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   list(lb=lb,lbb=lbb,d1H=d1H,d2H=d2H,trHid2H=trHid2H)
 } ## end of gamlss.gH
 
+fitNull <- function(y,family,wt,offset,nlp=1,tol=1e-7) {
+## fit the null model to the data in y for a general family
+## model has one constant per predictor - initially indended
+## to provide null deviance, but really that makes no sense
+## since different scale parameters lead to deviances that
+## can not really be compared.
+  X <- matrix(1,length(y),nlp)
+  lpi <- list(); for (i in 1:nlp) lpi[[i]] <- i
+  attr(X,"lpi") <- lpi
+  coef <- rep(0,nlp)
+  ok <- FALSE
+  while (!ok) {
+    b <- family$ll(y,X,coef,wt,family,offset,deriv=1)
+    eb <- eigen(-b$lbb)
+    eb$values <- abs(eb$values)
+    ind <- eb$values>0
+    eb$values[ind] <- 1/eb$values[ind]
+    d <- as.numeric(eb$vectors %*% (eb$values*(t(eb$vectors) %*% b$lb)))
+    step.ok <- FALSE; k <- 0
+    while (!step.ok&&k<20) {
+      k <- k + 1
+      b1 <- family$ll(y,X,coef+d,wt,family,offset,deriv=0)
+      if (b1$l>=b$l) {
+        step.ok <- TRUE
+        coef <- coef + d
+      } else d <- d/2
+    }
+    if (!step.ok) ok <- TRUE ## stop on step failure
+    if (abs(b1$l-b$l)<tol*abs(b$l)) ok <- TRUE 
+  }
+  ## now transform to response scale...
+  eta <- t(coef*t(X))
+  if (!is.null(offset)) offset[[nlp+1]] <- 0
+  if (!is.null(offset)) for (i in 1:nlp) if (!is.null(offset[[i]])) eta[,i] <- eta[,i] + offset[[i]] 
+  mu <- eta
+  for (i in 1:nlp) mu[,i] <- family$linfo[[i]]$linkinv(eta[,i])
+  list(eta=eta,mu=mu)
+} ## fitNull
+
 
 gaulss <- function(link=list("identity","logb"),b=0.01) {
 ## Extended family for Gaussian location scale model...
@@ -493,10 +534,15 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     }
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
+    ## in principle the following seems reasonable, but because no
+    ## price is paid for the high null variance, it leads to silly
+    ## % deviance explained...
+    #er <- fitNull(G$y,G$family,G$w,G$offset,nlp=length(attr(G$X,"lpi")),tol=1e-7)
+    #object$null.deviance <- sum(((object$y-er$mu[,1])*er$mu[,2])^2*G$w)
     object$null.deviance <- sum(((object$y-mean(object$y))*object$fitted[,2])^2)
   })
 
-  ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
   ## function defining the gamlss Gaussian model log lik. 
   ## N(mu,sigma^2) parameterized in terms of mu and log(sigma)
   ## deriv: 0 - eval
@@ -504,10 +550,13 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
   ##        2 - diagonal of first deriv of Hess
   ##        3 - first deriv of Hess
   ##        4 - everything.
+    if (!is.null(offset)) offset[[3]] <- 0
     jj <- attr(X,"lpi") ## extract linear predictor index
     eta <- X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]]
+    if (!is.null(offset[[1]])) eta <- eta + offset[[1]]
     mu <- family$linfo[[1]]$linkinv(eta)
-    eta1 <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] 
+    eta1 <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]]
+    if (!is.null(offset[[2]])) eta1 <- eta1 + offset[[2]]
     tau <-  family$linfo[[2]]$linkinv(eta1) ## tau = 1/sig here
     
     n <- length(y)
@@ -585,9 +634,12 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
       use.unscaled <- if (!is.null(attr(E,"use.unscaled"))) TRUE else FALSE
       if (is.null(start)) {
         jj <- attr(x,"lpi")
+	#offs <- attr(x,"offset")
+	if (!is.null(offset)) offset[[3]] <- 0
         start <- rep(0,ncol(x))
         yt1 <- if (family$link[[1]]=="identity") y else 
                family$linfo[[1]]$linkfun(abs(y)+max(y)*1e-7)
+	if (!is.null(offset[[1]])) yt1 <- yt1 - offset[[1]]
         x1 <- x[,jj[[1]],drop=FALSE]
         e1 <- E[,jj[[1]],drop=FALSE] ## square root of total penalty
         #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
@@ -599,6 +651,7 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
         } else startji <- pen.reg(x1,e1,yt1)
         start[jj[[1]]] <- startji
         lres1 <- log(abs(y-family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]])))
+	if (!is.null(offset[[2]])) lres1 <- lres1 - offset[[2]]
         x1 <-  x[,jj[[2]],drop=FALSE];e1 <- E[,jj[[2]],drop=FALSE]
         #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
         if (use.unscaled) {
@@ -685,6 +738,7 @@ multinom <- function(K=1) {
       for (i in 1:K) { 
         Xi <- X[,lpi[[i]],drop=FALSE]
         eta[,i] <- Xi%*%beta[lpi[[i]]] ## ith linear predictor
+	if (!is.null(off[[i]])) eta[,i] <- eta[,i] + off[[i]]
         if (se) { ## variance and covariances for kth l.p.
           ve[,i] <- drop(pmax(0,rowSums((Xi%*%Vb[lpi[[i]],lpi[[i]]])*Xi)))
           ii <- 0
@@ -736,7 +790,7 @@ multinom <- function(K=1) {
     object$null.deviance <- -2*sum(multinom$gamma[object$y+1])
   })
 
-  ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL) {
   ## Function defining the logistic multimomial model log lik. 
   ## Assumption is that coding runs from 0..K, with 0 class having no l.p.
   ## argument eta is for debugging only, and allows direct FD testing of the 
@@ -753,7 +807,10 @@ multinom <- function(K=1) {
       jj <- attr(X,"lpi") ## extract linear predictor index
       K <- length(jj) ## number of linear predictors 
       eta <- matrix(1,n,K+1) ## linear predictor matrix (dummy 1's in first column)
-      for (i in 1:K) eta[,i+1] <- X[,jj[[i]],drop=FALSE]%*%coef[jj[[i]]]
+      if (is.null(offset)) offset <- list()
+      offset[[K+1]] <- 0
+      for (i in 1:K) if (is.null(offset[[i]])) offset[[i]] <- 0
+      for (i in 1:K) eta[,i+1] <- X[,jj[[i]],drop=FALSE]%*%coef[jj[[i]]] + offset[[i]]
     } else { l2 <- 0;K <- ncol(eta);eta <- cbind(1,eta); return.l <- TRUE}
  
     if (K!=family$nlp) stop("number of linear predictors doesn't match")
@@ -1170,12 +1227,15 @@ ziplss <-  function(link=list("identity","identity")) {
   ## if se = FALSE returns one item list containing matrix otherwise 
   ## list of two matrices "fit" and "se.fit"... 
 
-    if (is.null(eta)) { 
+    if (is.null(eta)) {
+      if (is.null(off)) off <- list(0,0)
+      off[[3]] <- 0
+      for (i in 1:2) if (is.null(off[[i]])) off[[i]] <- 0
       lpi <- attr(X,"lpi") 
       X1 <- X[,lpi[[1]],drop=FALSE]
       X2 <- X[,lpi[[2]],drop=FALSE]
-      gamma <- drop(X1%*%beta[lpi[[1]]]) ## linear predictor for poisson parameter 
-      eta <- drop(X2%*%beta[lpi[[2]]]) ## linear predictor for presence parameter 
+      gamma <- drop(X1%*%beta[lpi[[1]]] + off[[1]]) ## linear predictor for poisson parameter 
+      eta <- drop(X2%*%beta[lpi[[2]]] + off[[2]])  ## linear predictor for presence parameter 
       if (se) {
         v.g <- drop(pmax(0,rowSums((X1%*%Vb[lpi[[1]],lpi[[1]]])*X1))) ## var of gamma
         v.e <- drop(pmax(0,rowSums((X1%*%Vb[lpi[[1]],lpi[[1]]])*X1))) ## var of eta
@@ -1264,7 +1324,7 @@ ziplss <-  function(link=list("identity","identity")) {
   }) ## postproc
 
 
-  ll <- function(y,X,coef,wt,family,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
   ## function defining the gamlss ZIP model log lik. 
   ## First l.p. defines Poisson mean, given presence (lambda)
   ## Second l.p. defines probability of presence (p)
@@ -1273,10 +1333,12 @@ ziplss <-  function(link=list("identity","identity")) {
   ##        2 - diagonal of first deriv of Hess
   ##        3 - first deriv of Hess
   ##        4 - everything.
+    if (is.null(offset)) offset <- list(0,0) else offset[[3]] <- 0
+    for (i in 1:2) if (is.null(offset[[i]])) offset[[i]] <- 0
     jj <- attr(X,"lpi") ## extract linear predictor index
-    eta <- X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]]
+    eta <- X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]] + offset[[1]]
     lambda <- family$linfo[[1]]$linkinv(eta)
-    eta1 <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] 
+    eta1 <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] +offset[[2]]
     p <-  family$linfo[[2]]$linkinv(eta1) 
     
     ##n <- length(y)
@@ -1380,3 +1442,376 @@ ziplss <-  function(link=list("identity","identity")) {
 
 
 
+gevlss <- function(link=list("identity","identity","logit")) {
+## General family for GEV location scale model...
+## so mu is mu1, rho = log(sigma) is mu2 and xi is mu3
+## 1. get derivatives wrt mu, rho and xi.
+## 2. get required link derivatives and tri indices.
+## 3. transform derivs to derivs wrt eta (gamlss.etamu).
+## 4. get the grad and Hessian etc for the model
+##    via a call to gamlss.gH  
+  
+  ## first deal with links and their derivatives...
+  if (length(link)!=3) stop("gevlss requires 3 links specified as character strings")
+  okLinks <- list(c("log", "identity"),"identity",c("identity","logit"))
+  stats <- list()
+  for (i in 1:3) {
+    if (link[[i]] %in% okLinks[[i]]) stats[[i]] <- make.link(link[[i]]) else 
+    stop(link[[i]]," link not available for mu parameter of gaulss")
+    fam <- structure(list(link=link[[i]],canonical="none",linkfun=stats[[i]]$linkfun,
+           mu.eta=stats[[i]]$mu.eta),
+           class="family")
+    fam <- fix.family.link(fam)
+    stats[[i]]$d2link <- fam$d2link
+    stats[[i]]$d3link <- fam$d3link
+    stats[[i]]$d4link <- fam$d4link
+  }
+  if (link[[3]]=="logit") { ## shifted logit link to confine xi to (-1,.5) 
+    stats[[3]]$linkfun <- function(mu) binomial()$linkfun((mu + 1)/1.5)
+    stats[[3]]$mu.eta <- function(eta) binomial()$mu.eta(eta)*1.5
+    stats[[3]]$linkinv <- function(eta) 1.5* binomial()$linkinv(eta) - 1
+    stats[[3]]$d2link <- function(mu) { mu <- (mu+ 1)/1.5; (1/(1 - mu)^2 - 1/mu^2)/1.5^2}
+    stats[[3]]$d3link <- function(mu) { mu <- (mu+ 1)/1.5; (2/(1 - mu)^3 + 2/mu^3)/1.5^3}
+    stats[[3]]$d4link <- function(mu) {  mu <- (mu+ 1)/1.5; (6/(1-mu)^4 - 6/mu^4)/1.5^4}
+  }
+
+  residuals <- function(object,type=c("deviance","pearson","response")) {
+      mu <- object$fitted[,1]
+      rho <- object$fitted[,2]
+      xi <- object$fitted[,3]
+      y <- object$y
+      fv <- mu + exp(rho)*(gamma(1-xi)-1)/xi 
+      eps <- 1e-7; xi[xi>=0&xi<eps] <- eps; xi[xi<0&xi>-eps] <- -eps
+      type <- match.arg(type)
+      if (type=="deviance") {
+        rsd <- (xi+1)/xi * log(1+(y-mu)*exp(-rho)*xi) + (1+(y-mu)*exp(-rho)*xi)^(-1/xi) +
+	       (1+xi)*log(1+xi) - (1 + xi) ## saturated part
+        rsd <- sqrt(pmax(0,rsd))*sign(y-fv)
+      } else if (type=="pearson") {
+        sd <- exp(rho)/xi*sqrt(pmax(0,gamma(1-2*xi)-gamma(1-xi)^2))
+        rsd <- (y-fv)/sd
+      } else {
+        rsd <- y-fv
+      }
+      rsd
+    }
+    
+  postproc <- expression({
+    ## code to evaluate in estimate.gam, to evaluate null deviance
+    ## It's difficult to define a sensible version of this that ensures
+    ## that the data fall in the support of the null model, whilst being
+    ## somehow equivalent to the full fit
+    object$null.deviance <- NA
+    
+  })
+
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
+  ## function defining the gamlss GEV model log lik. 
+  ## deriv: 0 - eval
+  ##        1 - grad and Hess
+  ##        2 - diagonal of first deriv of Hess
+  ##        3 - first deriv of Hess
+  ##        4 - everything.
+    jj <- attr(X,"lpi") ## extract linear predictor index
+    eta <- X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]]
+    mu <- family$linfo[[1]]$linkinv(eta) ## mean
+    etar <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] ## log sigma
+    rho <- family$linfo[[2]]$linkinv(etar) ## log sigma
+    etax <- X[,jj[[3]],drop=FALSE]%*%coef[jj[[3]]] ## shape parameter
+    xi <- family$linfo[[3]]$linkinv(etax) ## shape parameter
+    
+    ## Avoid xi == 0 - using a separate branch for xi==0 requires
+    ## seperate treatment of derivative w.r.t. xi, and statistically
+    ## brings us nothing. 
+    eps <- 1e-7 
+ 
+    xi[xi>=0&xi<eps] <- eps
+    xi[xi<0&xi>-eps] <- -eps
+
+    n <- length(y)
+    l1 <- matrix(0,n,3)
+    
+    ## note that the derivative code is largely auto-generated, and
+    ## auto-simplified. Optimized Maxima derivs exported as Maxima
+    ## code, translated to R code in R, then processed in R to
+    ## remove redundant auxiliary variables and their definitions.
+    ## Modifications of auto code (but not the consequent substitutions) are
+    ## flagged '## added'. Code post auto and non-auto modification has
+    ## been tested against raw translated code. 
+
+    exp1 <- exp(1); ## facilitates lazy auto-translation
+    aa0 <- (xi*(y-mu))/exp1^rho # added
+    log.aa1 <- log1p(aa0) # added
+    aa1 <- aa0 + 1 # (xi*(y-mu))/exp1^rho+1;
+    aa2 <- 1/xi;
+    l  <-  sum((-aa2*(1+xi)*log.aa1)-1/aa1^aa2-rho);
+
+    if (deriv>0) {
+      ## first derivatives m, r, x...
+      bb1 <- 1/exp1^rho;
+      bb2 <- bb1*xi*(y-mu)+1;
+      l1[,1]  <-  (bb1*(xi+1))/bb2-bb1*bb2^((-1/xi)-1);
+      cc2 <- y-mu;
+      cc0 <- bb1*xi*cc2 ## added
+      log.cc3 <- log1p(cc0) ## added
+      cc3 <- cc0 + 1 ##bb1*xi*cc2+1;
+      l1[,2]  <-  (-bb1*cc2*cc3^((-1/xi)-1))+(bb1*(xi+1)*cc2)/cc3-1;
+      dd3 <- xi+1;
+      dd6 <- 1/cc3;
+      dd7 <- log.cc3;
+      dd8 <- 1/xi^2;
+      l1[,3]  <-  (-(dd8*dd7-bb1*aa2*cc2*dd6)/cc3^aa2)+dd8*dd3*dd7-
+                 aa2*dd7-bb1*aa2*dd3*cc2*dd6;
+
+      ## the second derivatives mm mr mx rr rx xx
+    
+      l2 <- matrix(0,n,6)
+      ee1 <- 1/exp1^(2*rho);
+      ee3 <- -1/xi;
+      l2[,1]  <-  ee1*(ee3-1)*xi*aa1^(ee3-2)+(ee1*xi*(xi+1))/aa1^2;
+      ff7 <- ee3-1;
+      l2[,2]  <-  bb1*cc3^ff7+ee1*ff7*xi*cc2*cc3^(ee3-2)-(bb1*dd3)/cc3+
+                  (ee1*xi*dd3*cc2)/cc3^2;
+      gg7 <- -aa2;
+      l2[,3]  <-  (-bb1*cc3^(gg7-1)*(log.cc3/xi^2-bb1*aa2*cc2*dd6))+
+                  ee1*cc2*cc3^(gg7-2)+bb1*dd6-(ee1*(xi+1)*cc2)/cc3^2;
+      hh4 <- cc2^2;
+      l2[,4]  <-  bb1*cc2*cc3^ff7+ee1*ff7*xi*hh4*cc3^(ee3-2)-
+              (bb1*dd3*cc2)/cc3+(ee1*xi*dd3*hh4)/cc3^2;
+      l2[,5]  <-  (-bb1*cc2*cc3^(gg7-1)*(log.cc3/xi^2-bb1*aa2*cc2*dd6))+
+                  ee1*hh4*cc3^(gg7-2)+bb1*cc2*dd6-(ee1*(xi+1)*hh4)/cc3^2;
+      jj08 <- 1/cc3^2;
+      jj12 <- 1/xi^3;
+      jj13 <- 1/cc3^aa2;
+      l2[,6]  <-  (-jj13*(dd8*dd7-bb1*aa2*cc2*dd6)^2)-jj13*(ee1*aa2*hh4*jj08+
+                   2*bb1*dd8*cc2*dd6-2*jj12*dd7)-2*jj12*dd3*dd7+2*dd8*dd7+
+		   2*bb1*dd8*dd3*cc2*dd6-2*bb1*aa2*cc2*dd6+ee1*aa2*dd3*hh4*jj08;
+
+      ## need some link derivatives for derivative transform
+      ig1 <- cbind(family$linfo[[1]]$mu.eta(eta),family$linfo[[2]]$mu.eta(etar),
+                   family$linfo[[3]]$mu.eta(etax))
+      g2 <- cbind(family$linfo[[1]]$d2link(mu),family$linfo[[2]]$d2link(rho),
+                  family$linfo[[3]]$d2link(xi))
+    }
+ 
+    l3 <- l4 <- g3 <- g4 <- 0 ## defaults
+
+    if (deriv>1) {
+      ## the third derivatives
+      ## order mmm mmr mmx mrr mrx mxx rrr rrx rxx xxx
+      l3 <- matrix(0,n,10) 
+      kk1 <- 1/exp1^(3*rho);
+      kk2 <- xi^2;
+      l3[,1]  <-  (2*kk1*kk2*(xi+1))/aa1^3-kk1*(ee3-2)*(ee3-1)*kk2*aa1^(ee3-3);
+      ll5 <- (xi*cc2)/exp1^rho+1;
+      ll8 <- ee3-2;
+      l3[,2]  <-  (-2*ee1*ff7*xi*ll5^ll8)-kk1*ll8*ff7*kk2*cc2*ll5^(ee3-3)-
+                  (2*ee1*xi*dd3)/ll5^2+(2*kk1*kk2*dd3*cc2)/ll5^3;
+      mm10 <- cc3^(gg7-3);
+      mm11 <- gg7-2;
+      mm12 <- cc3^mm11;
+      l3[,3]  <-  ee1*(gg7-1)*xi*mm12*(log.cc3/xi^2-(bb1*aa2*cc2)/cc3)-ee1*mm12-
+                  kk1*mm11*xi*cc2*mm10+kk1*cc2*mm10+ee1*dd3*jj08+ee1*xi*jj08-
+		  (2*kk1*xi*dd3*cc2)/cc3^3;
+      l3[,4]  <-  (-bb1*cc3^ff7)-3*ee1*ff7*xi*cc2*cc3^ll8-kk1*ll8*ff7*kk2*hh4*
+                  cc3^(ee3-3)+(bb1*dd3)/cc3-(3*ee1*xi*dd3*cc2)/cc3^2+
+		  (2*kk1*kk2*dd3*hh4)/cc3^3;
+      oo10 <- gg7-1;
+      oo13 <- log.cc3/xi^2;
+      l3[,5]  <-  bb1*cc3^oo10*(bb1*oo10*cc2*dd6+oo13)+ee1*oo10*xi*cc2*mm12*
+                  (bb1*mm11*cc2*dd6+oo13)+ee1*aa2*cc2*mm12+ee1*oo10*cc2*mm12-
+		  bb1*dd6+2*ee1*dd3*cc2*jj08+ee1*xi*cc2*jj08-
+		  (2*xi*dd3*cc2^2)/(exp1^(3*rho)*cc3^3);
+      pp07 <- (-1/xi)-1;
+      pp08 <- cc3^pp07;
+      l3[,6]  <-  (-bb1*pp08*(bb1*pp07*cc2*dd6+dd8*dd7)^2)-bb1*pp08*
+                  ((-ee1*pp07*hh4*jj08)+2*bb1*dd8*cc2*dd6-(2*dd7)/xi^3)-
+		  2*ee1*cc2*jj08+(2*(xi+1)*hh4)/(exp1^(3*rho)*cc3^3);
+      qq05 <- cc2^3;
+      l3[,7]  <-  (-bb1*cc2*cc3^ff7)-3*ee1*ff7*xi*hh4*cc3^ll8-
+                  kk1*ll8*ff7*kk2*qq05*cc3^(ee3-3)+(bb1*dd3*cc2)/cc3-
+		  (3*ee1*xi*dd3*hh4)/cc3^2+(2*kk1*kk2*dd3*qq05)/cc3^3;
+      rr17 <- log.cc3/xi^2-bb1*aa2*cc2*dd6;
+      l3[,8]  <-  bb1*cc2*cc3^oo10*rr17+ee1*oo10*xi*hh4*mm12*rr17-2*ee1*hh4*mm12-
+                  kk1*mm11*xi*qq05*mm10+kk1*qq05*mm10-bb1*cc2*dd6+
+		  2*ee1*dd3*hh4*jj08+ee1*xi*hh4*jj08-(2*kk1*xi*dd3*qq05)/cc3^3;
+      l3[,9]  <-  (-bb1*cc2*pp08*(bb1*pp07*cc2*dd6+dd8*dd7)^2)-bb1*cc2*pp08*
+                  ((-ee1*pp07*hh4*jj08)+2*bb1*dd8*cc2*dd6-(2*dd7)/xi^3)-
+		  2*ee1*hh4*jj08+(2*(xi+1)*cc2^3)/(exp1^(3*rho)*cc3^3);
+      tt08 <- 1/cc3^3;
+      tt16 <- 1/xi^4;
+      tt18 <- dd8*dd7-bb1*aa2*cc2*dd6;
+      l3[,10]  <-  (-jj13*tt18^3)-3*jj13*(ee1*aa2*hh4*jj08+2*bb1*dd8*cc2*dd6-2*jj12*dd7)*
+              tt18-jj13*((-2*kk1*aa2*qq05*tt08)-3*ee1*dd8*hh4*jj08-6*bb1*jj12*cc2*dd6+
+	      6*tt16*dd7)+6*tt16*dd3*dd7-6*jj12*dd7-6*bb1*jj12*dd3*cc2*dd6+
+	      6*bb1*dd8*cc2*dd6-3*ee1*dd8*dd3*hh4*jj08+3*ee1*aa2*hh4*jj08-
+	      2*kk1*aa2*dd3*qq05*tt08;
+ 
+      g3 <- cbind(family$linfo[[1]]$d3link(mu),family$linfo[[2]]$d3link(rho),
+                  family$linfo[[3]]$d3link(xi))
+    }
+
+    if (deriv>3) {
+      ## the fourth derivatives
+      ## mmmm mmmr mmmx mmrr mmrx mmxx mrrr mrrx mrxx mxxx
+      ## rrrr rrrx rrxx rxxx xxxx
+      l4 <- matrix(0,n,15)
+      uu1 <- 1/exp1^(4*rho);
+      uu2 <- xi^3;
+      l4[,1]  <-  uu1*(ee3-3)*(ee3-2)*(ee3-1)*uu2*aa1^(ee3-4)+(6*uu1*uu2*(xi+1))/aa1^4;
+      vv09 <- ee3-3;
+      l4[,2]  <-  3*kk1*ll8*ff7*kk2*ll5^vv09+uu1*vv09*ll8*ff7*uu2*cc2*ll5^(ee3-4)-
+                 (6*kk1*kk2*dd3)/ll5^3+(6*uu1*uu2*dd3*cc2)/ll5^4;
+      ww11 <- gg7-3;
+      ww12 <- cc3^(gg7-4);
+      ww15 <- cc3^ww11;
+      l4[,3]  <- (-kk1*mm11*oo10*kk2*ww15*(log.cc3/kk2-(bb1*aa2*cc2)/cc3))+
+                 2*kk1*mm11*xi*ww15-kk1*ww15+uu1*ww11*mm11*kk2*cc2*ww12-
+		 uu1*oo10*xi*cc2*ww12-uu1*ww11*xi*cc2*ww12+2*kk1*kk2*tt08+
+		 4*kk1*xi*dd3*tt08-(6*uu1*kk2*dd3*cc2)/cc3^4;
+      l4[,4]  <-  4*ee1*ff7*xi*ll5^ll8+5*kk1*ll8*ff7*kk2*cc2*ll5^vv09+
+                  uu1*vv09*ll8*ff7*uu2*hh4*ll5^(ee3-4)+(4*ee1*xi*dd3)/ll5^2-
+		  (10*kk1*kk2*dd3*cc2)/ll5^3+(6*uu1*uu2*dd3*hh4)/ll5^4;
+      yy18 <- log.cc3/kk2;
+      l4[,5]  <-  (-2*ee1*oo10*xi*mm12*(bb1*mm11*cc2*dd6+yy18))-
+                   kk1*mm11*oo10*kk2*cc2*ww15*(bb1*ww11*cc2*dd6+yy18)-
+		   2*ee1*aa2*mm12-2*ee1*oo10*mm12-2*kk1*mm11*oo10*xi*cc2*ww15-
+		   kk1*oo10*cc2*ww15-kk1*mm11*cc2*ww15-2*ee1*dd3*jj08-
+		   2*ee1*xi*jj08+2*kk1*kk2*cc2*tt08+8*kk1*xi*dd3*cc2*tt08-
+		   (6*kk2*dd3*cc2^2)/(exp1^(4*rho)*cc3^4);
+      l4[,6]  <-  ee1*oo10*xi*mm12*tt18^2-2*ee1*mm12*tt18-2*kk1*mm11*xi*cc2*ww15*tt18+
+                  2*kk1*cc2*ww15*tt18+ee1*oo10*xi*mm12*(ee1*aa2*hh4*jj08+2*bb1*
+		  dd8*cc2*dd6-(2*dd7)/xi^3)+4*kk1*cc2*ww15+2*uu1*ww11*xi*hh4*ww12-
+		  4*uu1*hh4*ww12+2*ee1*jj08-4*kk1*dd3*cc2*tt08-4*kk1*xi*cc2*tt08+
+		  (6*uu1*xi*dd3*hh4)/cc3^4;
+      l4[,7]  <-  bb1*cc3^ff7+7*ee1*ff7*xi*cc2*cc3^ll8+6*kk1*ll8*ff7*kk2*hh4*cc3^vv09+
+                  uu1*vv09*ll8*ff7*uu2*qq05*cc3^(ee3-4)-(bb1*dd3)/cc3+
+		  (7*ee1*xi*dd3*cc2)/cc3^2-(12*kk1*kk2*dd3*hh4)/cc3^3+
+		  (6*uu1*uu2*dd3*qq05)/cc3^4;
+      l4[,8]  <-  (-bb1*cc3^oo10*(bb1*oo10*cc2*dd6+yy18))-3*ee1*oo10*xi*cc2*mm12*
+                  (bb1*mm11*cc2*dd6+yy18)-kk1*mm11*oo10*kk2*hh4*ww15*
+		  (bb1*ww11*cc2*dd6+yy18)-3*ee1*aa2*cc2*mm12-3*ee1*oo10*cc2*mm12-
+		  2*kk1*mm11*oo10*xi*hh4*ww15-kk1*oo10*hh4*ww15-kk1*mm11*hh4*ww15+
+		  bb1*dd6-4*ee1*dd3*cc2*jj08-3*ee1*xi*cc2*jj08+2*kk1*kk2*hh4*tt08+
+		  10*kk1*xi*dd3*hh4*tt08-(6*kk2*dd3*cc2^3)/(exp1^(4*rho)*cc3^4); 
+      ad17 <- 2*bb1*dd8*cc2*dd6;
+      ad19 <- -(2*dd7)/xi^3;
+      ad20 <- cc3^oo10;
+      ad21 <- dd8*dd7;
+      ad22 <- ad21+bb1*mm11*cc2*dd6;
+      l4[,9] <-  bb1*ad20*(bb1*oo10*cc2*dd6+ad21)^2+ee1*oo10*xi*cc2*mm12*ad22^2+
+                  2*ee1*aa2*cc2*mm12*ad22+2*ee1*oo10*cc2*mm12*ad22+
+		  bb1*ad20*((-ee1*oo10*hh4*jj08)+ad17+ad19)+ee1*oo10*xi*cc2*mm12*
+		  ((-ee1*mm11*hh4*jj08)+ad17+ad19)+4*ee1*cc2*jj08-6*kk1*dd3*hh4*tt08-
+		  4*kk1*xi*hh4*tt08+(6*xi*dd3*cc2^3)/(exp1^(4*rho)*cc3^4);
+      ae16 <- dd8*dd7+bb1*pp07*cc2*dd6;
+      l4[,10]  <- (-bb1*pp08*ae16^3)-3*bb1*pp08*((-ee1*pp07*hh4*jj08)+
+                  2*bb1*dd8*cc2*dd6-2*jj12*dd7)*ae16-bb1*pp08*(2*kk1*pp07*qq05*tt08-
+		  3*ee1*dd8*hh4*jj08-6*bb1*jj12*cc2*dd6+(6*dd7)/xi^4)+6*kk1*hh4*tt08-
+		  (6*(xi+1)*qq05)/(exp1^(4*rho)*cc3^4);
+      af05 <- cc2^4;
+      l4[,11]  <-  bb1*cc2*cc3^ff7+7*ee1*ff7*xi*hh4*cc3^ll8+6*kk1*ll8*ff7*kk2*qq05*
+                   cc3^vv09+uu1*vv09*ll8*ff7*uu2*af05*cc3^(ee3-4)-(bb1*dd3*cc2)/cc3+
+		   (7*ee1*xi*dd3*hh4)/cc3^2-(12*kk1*kk2*dd3*qq05)/cc3^3+
+		   (6*uu1*uu2*dd3*af05)/cc3^4;
+      ag23 <- log.cc3/kk2-bb1*aa2*cc2*dd6;
+      l4[,12]  <- (-bb1*cc2*cc3^oo10*ag23)-3*ee1*oo10*xi*hh4*mm12*ag23-
+                  kk1*mm11*oo10*kk2*qq05*ww15*ag23+4*ee1*hh4*mm12+
+		  5*kk1*mm11*xi*qq05*ww15-4*kk1*qq05*ww15+uu1*ww11*mm11*kk2*af05*ww12-
+		  uu1*oo10*xi*af05*ww12-uu1*ww11*xi*af05*ww12+bb1*cc2*dd6-
+		  4*ee1*dd3*hh4*jj08-3*ee1*xi*hh4*jj08+2*kk1*kk2*qq05*tt08+
+		  10*kk1*xi*dd3*qq05*tt08-(6*uu1*kk2*dd3*af05)/cc3^4;
+      ah24 <- (-(2*dd7)/xi^3)+2*bb1*dd8*cc2*dd6+ee1*aa2*hh4*jj08;
+      ah27 <- tt18^2;
+      l4[,13]  <- bb1*cc2*ad20*ah27+ee1*oo10*xi*hh4*mm12*ah27-4*ee1*hh4*mm12*tt18-
+                  2*kk1*mm11*xi*qq05*ww15*tt18+2*kk1*qq05*ww15*tt18+bb1*cc2*ad20*ah24+
+		  ee1*oo10*xi*hh4*mm12*ah24+6*kk1*qq05*ww15+2*uu1*ww11*xi*af05*ww12-
+		  4*uu1*af05*ww12+4*ee1*hh4*jj08-6*kk1*dd3*qq05*tt08-
+		  4*kk1*xi*qq05*tt08+(6*uu1*xi*dd3*af05)/cc3^4;
+      l4[,14]  <- (-bb1*cc2*pp08*ae16^3)-3*bb1*cc2*pp08*((-ee1*pp07*hh4*jj08)+
+                  2*bb1*dd8*cc2*dd6-2*jj12*dd7)*ae16-bb1*cc2*pp08*(2*kk1*pp07*qq05*
+		  tt08-3*ee1*dd8*hh4*jj08-6*bb1*jj12*cc2*dd6+(6*dd7)/xi^4)+
+		  6*kk1*qq05*tt08-(6*(xi+1)*cc2^4)/(exp1^(4*rho)*cc3^4);
+      aj08 <- 1/cc3^4;
+      aj20 <- 1/xi^5;
+      aj23 <- (-2*jj12*dd7)+2*bb1*dd8*cc2*dd6+ee1*aa2*hh4*jj08;
+      l4[,15]  <- (-jj13*tt18^4)-6*jj13*aj23*tt18^2-3*jj13*aj23^2-
+                  4*jj13*((-2*kk1*aa2*qq05*tt08)-3*ee1*dd8*hh4*jj08-6*bb1*jj12*cc2*dd6+
+		  6*tt16*dd7)*tt18-jj13*(6*uu1*aa2*af05*aj08+8*kk1*dd8*qq05*tt08+
+		  12*ee1*jj12*hh4*jj08+24*bb1*tt16*cc2*dd6-24*aj20*dd7)-
+		  24*aj20*dd3*dd7+24*tt16*dd7+24*bb1*tt16*dd3*cc2*dd6-
+		  24*bb1*jj12*cc2*dd6+12*ee1*jj12*dd3*hh4*jj08-12*ee1*dd8*hh4*jj08+
+		  8*kk1*dd8*dd3*qq05*tt08-8*kk1*aa2*qq05*tt08+6*uu1*aa2*dd3*af05*aj08;
+   
+      g4 <- cbind(family$linfo[[1]]$d4link(mu),family$linfo[[2]]$d4link(rho),
+                  family$linfo[[3]]$d4link(xi))
+    }
+    if (deriv) {
+      i2 <- family$tri$i2; i3 <- family$tri$i3
+      i4 <- family$tri$i4
+   
+      ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
+      de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,deriv-1)
+
+      ## get the gradient and Hessian...
+      ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D) 
+    } else ret <- list()
+    ret$l <- l; ret
+  } ## end ll gevlss
+
+  initialize <- expression({
+  ## start out with xi close to zero. If xi==0 then
+  ## mean is mu + sigma*gamma and var is sigma^2*pi^2/6
+  ## where sigma = exp(rho) and gamma is Euler's constant.  
+  ## idea is to regress g(y) on model matrix for mean, and then 
+  ## to regress the corresponding log absolute residuals on 
+  ## the model matrix for log(sigma) - may be called in both
+  ## gam.fit5 and initial.spg... note that appropriate E scaling
+  ## for full calculation may be inappropriate for initialization 
+  ## which is basically penalizing something different here.
+  ## best we can do here is to use E only as a regularizer.
+      .euler <- 0.5772156649015328606065121 ## Euler's constant
+      n <- rep(1, nobs)
+      ## should E be used unscaled or not?..
+      use.unscaled <- if (!is.null(attr(E,"use.unscaled"))) TRUE else FALSE
+      if (is.null(start)) {
+        jj <- attr(x,"lpi")
+        start <- rep(0,ncol(x))
+        yt1 <- if (family$link[[1]]=="identity") y else 
+               family$linfo[[1]]$linkfun(abs(y)+max(y)*1e-7)
+        x1 <- x[,jj[[1]],drop=FALSE]
+        e1 <- E[,jj[[1]],drop=FALSE] ## square root of total penalty
+        #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
+        if (use.unscaled) {
+          qrx <- qr(rbind(x1,e1))
+          x1 <- rbind(x1,e1)
+          startji <- qr.coef(qr(x1),c(yt1,rep(0,nrow(E))))
+          startji[!is.finite(startji)] <- 0       
+        } else startji <- pen.reg(x1,e1,yt1)
+        start[jj[[1]]] <- startji
+        lres1 <- log(abs(y-family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]])))
+        x1 <-  x[,jj[[2]],drop=FALSE];e1 <- E[,jj[[2]],drop=FALSE]
+        #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
+        if (use.unscaled) {
+          x1 <- rbind(x1,e1)
+          startji <- qr.coef(qr(x1),c(lres1,rep(0,nrow(E))))   
+          startji[!is.finite(startji)] <- 0
+        } else startji <- pen.reg(x1,e1,lres1)
+        start[jj[[2]]] <- startji
+	x1 <-  x[,jj[[3]],drop=FALSE]
+	startji <- qr.coef(qr(x1),c(rep(family$linfo[[3]]$linkfun(1e-3),nrow(x1))))   
+        startji[!is.finite(startji)] <- 0
+	start[jj[[3]]] <- startji
+      }
+  }) ## initialize gevlss
+
+  structure(list(family="gevlss",ll=ll,link=paste(link),nlp=3,
+    tri = trind.generator(3), ## symmetric indices for accessing derivative arrays
+    initialize=initialize,postproc=postproc,residuals=residuals,
+    linfo = stats, ## link information list
+    d2link=1,d3link=1,d4link=1, ## signals to fix.family.link that all done    
+    ls=1, ## signals that ls not needed here
+    available.derivs = 2 ## can use full Newton here
+    ),class = c("general.family","extended.family","family"))
+} ## end gevlss

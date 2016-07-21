@@ -15,9 +15,9 @@
 }
 
 \usage{te(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,
-              mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL)
+              mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL,pc=NULL)
 ti(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,
-              np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL)
+              np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL,pc=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -93,7 +93,10 @@ all marginals are constrained, which is what is appropriate for, e.g., functiona
 \code{'ti'} only applies constraints to the marginals, so if you turn off all marginal constraints the term 
 will have no identifiability constraints. Only use this if you really understand how marginal constraints work. 
 }
-
+\item{pc}{If not \code{NULL}, signals a point constraint: the smooth should pass through zero at the
+point given here (as a vector or list with names corresponding to the smooth names). Never ignored
+if supplied. See \code{\link{identifiability}}. }
+  
 }
 
 \details{ Smooths of several covariates can be constructed from tensor products of the bases

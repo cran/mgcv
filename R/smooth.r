@@ -1,4 +1,4 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2015
+##  R routines for the package mgcv (c) Simon Wood 2000-2016
 
 ##  This file is primarily concerned with defining classes of smoother,
 ##  via constructor methods and prediction matrix methods. There are
@@ -163,11 +163,31 @@ uniquecombs <- function(x) {
     xo <- x
     x <- data.matrix(xo) ## ensure all data are numeric
   } else xo <- NULL
-  ind <- rep(0,nrow(x))
-  res<-.C(C_RuniqueCombs,x=as.double(x),ind=as.integer(ind),
-          r=as.integer(nrow(x)),c=as.integer(ncol(x)))
-  n <- res$r*res$c
-  x <- matrix(res$x[1:n],res$r,res$c)
+  if (ncol(x)==1) { ## faster to use R 
+     xu <- unique(x)
+     ind <- match(as.numeric(x),xu)
+     x <- matrix(xu,ncol=1,nrow=length(xu))
+  } else { ## no R equivalent that directly yields indices
+ 
+    txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=","),")",sep="")
+    xt <- eval(parse(text=txt))
+    dup <- duplicated(xt)
+    ind <- match(xt,xt[!dup])
+    x <- x[!dup,]
+    ## old slower...
+    # ind <- rep(0,nrow(x))
+    # res<-.C(C_RuniqueCombs,x=as.double(x),ind=as.integer(ind),
+    #         r=as.integer(nrow(x)),c=as.integer(ncol(x)))
+    # n <- res$r*res$c
+    # x <- matrix(res$x[1:n],res$r,res$c)
+    # ind <- res$ind+1 ## C to R index gotcha
+    # ## what if I muddle this index?
+    # #ri <- ii <- sample(1:length(ind),length(ind),replace=FALSE)
+    # #ri[ii] <- 1:length(ii) 
+    # #ind <- ri[ind]
+    # #x <- x[ii,] ## end of debug muddle tryout
+    
+  }
   if (!is.null(xo)) { ## original was a data.frame
     x <- as.data.frame(x)
     names(x) <- names(xo)
@@ -178,11 +198,11 @@ uniquecombs <- function(x) {
       contrasts(x[,i]) <- contrasts(xo[,i])
     }
   }
-  attr(x,"index") <- res$ind+1 ## C to R index gotcha 
+  attr(x,"index") <- ind 
   x
 } ## uniquecombs
 
-cSplineDes <- function (x, knots, ord = 4)
+cSplineDes <- function (x, knots, ord = 4,derivs=0)
 { ## cyclic version of spline design...
   ##require(splines)
   nk <- length(knots)
@@ -195,10 +215,10 @@ cSplineDes <- function (x, knots, ord = 4)
   ## copy end intervals to start, for wrapping purposes...
   knots <- c(k1-(knots[nk]-knots[(nk-ord+1):(nk-1)]),knots)
   ind <- x>xc ## index for x values where wrapping is needed
-  X1 <- splines::splineDesign(knots,x,ord,outer.ok=TRUE)
+  X1 <- splines::splineDesign(knots,x,ord,outer.ok=TRUE,derivs=derivs)
   x[ind] <- x[ind] - max(knots) + k1
-  if (sum(ind)) {
-    X2 <- splines::splineDesign(knots,x[ind],ord,outer.ok=TRUE) ## wrapping part
+  if (sum(ind)) { ## wrapping part...
+    X2 <- splines::splineDesign(knots,x[ind],ord,outer.ok=TRUE,derivs=derivs) 
     X1[ind,] <- X1[ind,] + X2
   }
   X1 ## final model matrix
@@ -228,7 +248,7 @@ get.var <- function(txt,data,vecMat = TRUE)
 ## functions for use in `gam(m)' formulae ......
 ################################################
 
-ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL) {
+ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL,pc=NULL) {
 ## function to use in gam formula to specify a te type tensor product interaction term
 ## ti(x) + ti(y) + ti(x,y) is *much* preferable to te(x) + te(y) + te(x,y), as ti(x,y)
 ## automatically excludes ti(x) + ti(y). Uses general fact about interactions that 
@@ -236,7 +256,7 @@ ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NUL
 ## of main effects gives identifiable interaction...
 ## mc allows selection of which marginals to apply constraints to. Default is all.
   by.var <- deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
-  object <- te(...,k=k,bs=bs,m=m,d=d,fx=fx,np=np,xt=xt,id=id,sp=sp)
+  object <- te(...,k=k,bs=bs,m=m,d=d,fx=fx,np=np,xt=xt,id=id,sp=sp,pc=pc)
   object$inter <- TRUE
   object$by <- by.var
   object$mc <- mc
@@ -244,7 +264,7 @@ ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NUL
   object
 } ## ti
 
-te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL)
+te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL,pc=NULL)
 # function for use in gam formulae to specify a tensor product smooth term.
 # e.g. te(x0,x1,x2,k=c(5,4,4),bs=c("tp","cr","cr"),m=c(1,1,2),by=x3) specifies a rank 80 tensor  
 # product spline. The first basis is rank 5, t.p.r.s. basis penalty order 1, and the next 2 bases
@@ -350,11 +370,17 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
   }
   ret<-list(margin=margin,term=term,by=by.var,fx=fx,label=label,dim=dim,mp=mp,np=np,
             id=id,sp=sp,inter=FALSE)
+  if (!is.null(pc)) {
+    if (length(pc)<d) stop("supply a value for each variable for a point constraint")
+    if (!is.list(pc)) pc <- as.list(pc)
+    if (is.null(names(pc))) names(pc) <- unlist(lapply(vars,all.vars))
+    ret$point.con <- pc
+  }
   class(ret) <- "tensor.smooth.spec"
   ret
 } ## end of te
 
-t2 <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,id=NULL,sp=NULL,full=FALSE,ord=NULL)
+t2 <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,id=NULL,sp=NULL,full=FALSE,ord=NULL,pc=NULL)
 # function for use in gam formulae to specify a type 2 tensor product smooth term.
 # e.g. te(x0,x1,x2,k=c(5,4,4),bs=c("tp","cr","cr"),m=c(1,1,2),by=x3) specifies a rank 80 tensor  
 # product spline. The first basis is rank 5, t.p.r.s. basis penalty order 1, and the next 2 bases
@@ -462,13 +488,19 @@ t2 <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,xt=NULL,id=NULL,sp=NULL,full=FA
   if (is.na(full)) full <- FALSE
   ret<-list(margin=margin,term=term,by=by.var,fx=fx,label=label,dim=dim,
             id=id,sp=sp,full=full,ord=ord)
+  if (!is.null(pc)) {
+    if (length(pc)<d) stop("supply a value for each variable for a point constraint")
+    if (!is.list(pc)) pc <- as.list(pc)
+    if (is.null(names(pc))) names(pc) <- unlist(lapply(vars,all.vars))
+    ret$point.con <- pc
+  }
   class(ret) <- "t2.smooth.spec" 
   ret
 } ## end of t2
 
 
 
-s <- function (..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL)
+s <- function (..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL,pc=NULL)
 # function for use in gam formulae to specify smooth term, e.g. s(x0,x1,x2,k=40,m=3,by=x3) specifies 
 # a rank 40 thin plate regression spline of x0,x1 and x2 with a third order penalty, to be multiplied by
 # covariate x3, when it enters the model.
@@ -508,9 +540,14 @@ s <- function (..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL)
     } 
    id <- as.character(id)
   }
-
-  ret<-list(term=term,bs.dim=k,fixed=fx,dim=d,p.order=m,by=by.var,label=label,xt=xt,
+  ret <- list(term=term,bs.dim=k,fixed=fx,dim=d,p.order=m,by=by.var,label=label,xt=xt,
             id=id,sp=sp)
+  if (!is.null(pc)) {
+    if (length(pc)<d) stop("supply a value for each variable for a point constraint")
+    if (!is.list(pc)) pc <- as.list(pc)
+    if (is.null(names(pc))) names(pc) <- unlist(lapply(vars,all.vars))
+    ret$point.con <- pc
+  }
   class(ret)<-paste(bs,".smooth.spec",sep="")
   ret
 } ## end of s
@@ -587,6 +624,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
   m <- length(object$margin)  # number of marginal bases
   if (inter) { 
     object$mc <- if (is.null(object$mc)) rep(TRUE,m) else as.logical(object$mc) 
+    object$sparse.cons <-  if (is.null(object$sparse.cons)) rep(0,m) else object$sparse.cons
   } else {
     object$mc <- rep(FALSE,m)
   }
@@ -595,7 +633,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
   object$plot.me <- TRUE 
   mono <- rep(FALSE,m) ## indicator for monotonic parameteriztion margins
   for (i in 1:m) { 
-    if (!is.null(object$mono)&&object$mono!=0) mono[i] <- TRUE
+    if (!is.null(object$margin[[i]]$mono)&&object$margin[[i]]$mono!=0) mono[i] <- TRUE
     knt <- dat <- list()
     term <- object$margin[[i]]$term
     for (j in 1:length(term)) { 
@@ -603,7 +641,8 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
       knt[[term[j]]] <- knots[[term[j]]] 
     }
     object$margin[[i]] <- 
-    if (object$mc[i]) smoothCon(object$margin[[i]],dat,knt,absorb.cons=TRUE,n=length(dat[[1]]))[[1]] else
+    if (object$mc[i]) smoothCon(object$margin[[i]],dat,knt,absorb.cons=TRUE,n=length(dat[[1]]),
+                                sparse.cons=object$sparse.cons[i])[[1]] else
                       smooth.construct(object$margin[[i]],dat,knt)
     Xm[[i]] <- object$margin[[i]]$X
     if (!is.null(object$margin[[i]]$te.ok)) {
@@ -628,7 +667,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
     km <- which(mono)
     g <- list(); for (i in 1:length(km)) g[[i]] <- object$margin[[km[i]]]$g.index
     for (i in 1:length(object$margin)) {
-      d <- object$margin[[i]]$bs.dim
+      d <- ncol(object$margin[[i]]$X)
       for (j in length(km)) if (i!=km[j]) g[[j]] <- if (i > km[j])  rep(g[[j]],each=d) else rep(g[[j]],d)
     }
     object$g.index <- as.logical(rowSums(matrix(unlist(g),length(g[[1]]),length(g))))
@@ -692,7 +731,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
     X <- X[,ind]
     if (!is.null(object$g.index)) object$g.index <- object$g.index[ind]
     #for (i in 1:length(S)) {
-      ## next line is equivalent to setting coefs for delted to zero! 
+      ## next line is equivalent to setting coefs for deleted to zero! 
       #S[[i]] <- S[[i]][ind,ind] 
     #}
     ## Instead we need to drop the differences involving deleted coefs
@@ -704,7 +743,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
     ## drop rows corresponding to differences that involve a dropped 
     ## basis function, and crossproduct...
     for (i in 1:m) { 
-      D <- S[[i]][rowSums(S[[i]][,-ind])==0,ind]
+      D <- S[[i]][rowSums(S[[i]][,-ind,drop=FALSE])==0,ind]
       r[i] <- nrow(D) ## penalty rank
       S[[i]] <- crossprod(D)
     }
@@ -1630,13 +1669,23 @@ smooth.construct.ps.smooth.spec <- function(object,data,knots)
     p <- ncol(object$X)
     B <- matrix(as.numeric(rep(1:p,p)>=rep(1:p,each=p)),p,p) ## coef summation matrix
     if (object$mono < 0) B[,2:p] <- -B[,2:p] ## monotone decrease case
-    object$X <- object$X %*% B
-    object$g.index <- c(FALSE,rep(TRUE,p-1)) ## indicator of which coefficients must be positive (exponentiated)
     object$D <- cbind(0,-diff(diag(p-1)))
+    if (object$mono==2||object$mono==-2) { ## drop intercept term
+      object$D <- object$D[,-1] 
+      B <- B[,-1]
+      object$null.space.dim <- 1
+      object$g.index <- rep(TRUE,p-1)
+      object$C <- matrix(0,0,ncol(object$X)) # null constraint matrix
+    } else { 
+      object$g.index <- c(FALSE,rep(TRUE,p-1)) 
+      object$null.space.dim <- 2
+    }
+    ## ... g.index is indicator of which coefficients must be positive (exponentiated)
+    object$X <- object$X %*% B
+    
     object$S <- list(crossprod(object$D)) ## penalty for a scop-spline
     object$B <- B
     object$rank <- p-2
-    object$null.space.dim <- 2
   } else {
     ## now construct conventional P-spline penalty        
     object$D <- S <- if (m[2]>0) diff(diag(object$bs.dim),differences=m[2]) else diag(object$bs.dim);
@@ -1877,6 +1926,7 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
   
   object$P <- rp$P ## X' = X%*%P, where X is original version
   object$fterm <- fterm ## the factor name...
+  if (!is.factor(fac)) warning("no factor supplied to fs smooth")
   object$flev <- levels(fac)
 
   ## now full penalties ...
@@ -3199,6 +3249,10 @@ smooth.construct3 <- function(object,data,knots) {
   ind <- attr(dk$data,"index") ## repeats index 
   object$ind <- ind
   class(object) <- c(class(object),"mgcv.smooth")
+  if (!is.null(object$point.con)) { ## 's' etc has requested a point constraint
+    object$C <- Predict.matrix3(object,object$point.con)$X ## handled by 's'
+    attr(object$C,"always.apply") <- TRUE ## if constraint requested then always apply it!
+  }
   object
 } ## smooth.construct3
 
@@ -3271,7 +3325,7 @@ ExtractData <- function(object,data,knots) {
 
 smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRUE,n=nrow(data),
                       dataX = NULL,null.space.penalty = FALSE,sparse.cons=0,diagonal.penalty=FALSE,
-                      apply.by=TRUE)
+                      apply.by=TRUE,modCon=0)
 ## wrapper function which calls smooth.construct methods, but can then modify
 ## the parameterization used. If absorb.cons==TRUE then a constraint free
 ## parameterization is used. 
@@ -3284,9 +3338,11 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
 ## in which case a list will do.
 ## If present dataX specifies the data to be used to set up the model matrix, given the 
 ## basis set up using data (but n same for both).
+## modCon: 0 (do nothing); 1 (delete supplied con); 2 (set fit and predict to predict)
+##         3 (set fit and predict to fit)
 { sm <- smooth.construct3(object,data,knots)
   if (!is.null(attr(sm,"qrc"))) warning("smooth objects should not have a qrc attribute.")
- 
+  if (modCon==1) sm$C <- sm$Cp <- NULL ## drop any supplied constraints in favour of auto-cons
   ## add plotting indicator if not present.
   ## plot.me tells `plot.gam' whether or not to plot the term
   if (is.null(sm$plot.me)) sm$plot.me <- TRUE
@@ -3299,14 +3355,15 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
   ## automatically produce centering constraint...
   ## must be done here on original model matrix to ensure same
   ## basis for all `id' linked terms...
-  if (!is.null(sm$g.index)) { ## then it's a monotonic smooth or a tensor product with monotonic margins
-    ## computer the ingredients for sweep and drop cons...
+  if (!is.null(sm$g.index)&&is.null(sm$C)) { ## then it's a monotonic smooth or a tensor product with monotonic margins
+    ## compute the ingredients for sweep and drop cons...
     sm$C <- matrix(colMeans(sm$X),1,ncol(sm$X))
     if (length(sm$S)) {
-      upen <- rowMeans(sm$S[[1]])==0
-      if (length(sm$S)>1) for (i in 2:length(sm$S)) upen <- upen &  rowMeans(sm$S[[i]])==0
-      if (sum(upen)==0) stop("something wrong in monotone setup - no unpenalized terms!")
-      drop <- min(which(upen))
+      upen <- rowMeans(abs(sm$S[[1]]))==0
+      if (length(sm$S)>1) for (i in 2:length(sm$S)) upen <- upen &  rowMeans(abs(sm$S[[i]]))==0
+      if (sum(upen)>0) drop <- min(which(upen)) else {
+        drop <- min(which(!sm$g.index))
+      }
     } else drop <- 1
     sm$g.index <- sm$g.index[-drop]
   } else drop <- -1 ## signals not to use sweep and drop (may be modified below)
@@ -3345,7 +3402,9 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
     }
     ## conSupplied <- FALSE
     alwaysCon <- FALSE
-  } else { 
+  } else { ## sm$C supplied
+    if (modCon==2&&!is.null(sm$Cp)) sm$C <- sm$Cp ## reset fit con to predict
+    if (modCon>=3) sm$Cp <- NULL ## get rid of separate predict con
     ## should supplied constraint be applied even if not needed? 
     if (is.null(attr(sm$C,"always.apply"))) alwaysCon <- FALSE else alwaysCon <- TRUE
   }
@@ -3758,7 +3817,10 @@ PredictMat <- function(object,data,n=nrow(data))
   if (inherits(qrc,"sweepDrop")) { ## needs dealing with first...
     ## Sweep and drop constraints. First element is index to drop. 
     ## Remainder are constants to be swept out of remaining columns 
-    if (is.null(object$deriv)||object$deriv==0) 
+    deriv <- if (is.null(object$deriv)||object$deriv==0) FALSE else TRUE
+    if (!deriv&&!is.null(object$margin)) for (i in 1:length(object$margin))
+    if (!is.null(object$margin[[i]]$deriv)&&object$margin[[i]]$deriv!=0) deriv <- TRUE 
+    if (!deriv) 
       pm$X <- pm$X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(pm$X),ncol(pm$X)-1,byrow=TRUE)
     else pm$X <- pm$X[,-qrc[1],drop=FALSE]
   }
