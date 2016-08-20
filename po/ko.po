@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.8-4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-02 20:44+0000\n"
+"POT-Creation-Date: 2016-08-19 13:28+0100\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -33,7 +33,7 @@ msgstr ""
 msgid "Failed to initialize memory for matrix."
 msgstr "행렬생성에 필요한 메모리 초기화에 실패했습니다."
 
-#: matrix.c:142 matrix.c:204
+#: matrix.c:142 matrix.c:200
 msgid "An out of bound write to matrix has occurred!"
 msgstr ""
 
@@ -45,40 +45,40 @@ msgstr ""
 msgid "You are trying to check matrix integrity without defining RANGECHECK."
 msgstr ""
 
-#: matrix.c:242
+#: matrix.c:238
 msgid "Target matrix too small in mcopy"
 msgstr ""
 
-#: matrix.c:262 matrix.c:270 matrix.c:283 matrix.c:291
+#: matrix.c:258 matrix.c:266 matrix.c:279 matrix.c:287
 msgid "Incompatible matrices in matmult."
 msgstr ""
 
-#: matrix.c:378
+#: matrix.c:374
 msgid "Attempt to invert() non-square matrix"
 msgstr ""
 
-#: matrix.c:400
+#: matrix.c:396
 msgid "Singular Matrix passed to invert()"
 msgstr "특이함수(singular matrix)가 invert()에 전달되었습니다."
 
-#: matrix.c:1320
+#: matrix.c:1316
 msgid "svd() not converged"
 msgstr ""
 
-#: matrix.c:1396
+#: matrix.c:1392
 #, c-format
 msgid "svdroot matrix not +ve semi def. %g"
 msgstr ""
 
-#: matrix.c:1424
+#: matrix.c:1420
 msgid "Sort failed"
 msgstr "정렬에 실패했습니다."
 
-#: qp.c:58
+#: qp.c:59
 msgid "ERROR in addconQT."
 msgstr "addconQT 에서 에러가 발생했습니다."
 
-#: qp.c:464
+#: qp.c:465
 msgid "QPCLS - Rank deficiency in model"
 msgstr ""
 
@@ -91,5 +91,3 @@ msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"
 msgstr ""
-
-

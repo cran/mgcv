@@ -3494,7 +3494,7 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
     }
   } ## end of initial setup of by variables
 
-  if (absorb.cons&&drop>0) { ## sweep and drop constraints have to be applied before by variables
+  if (absorb.cons&&drop>0&&nrow(sm$C)>0) { ## sweep and drop constraints have to be applied before by variables
      if (!is.null(sm$by.done)) warning("sweep and drop constraints unlikely to work well with self handling of by vars")
      qrc <- c(drop,as.numeric(sm$C)[-drop])
      class(qrc) <- "sweepDrop"
