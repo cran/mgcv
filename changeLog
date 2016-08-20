@@ -5,6 +5,11 @@ Currently deprecated and liable to be removed:
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 
+1.8-14
+
+* bug fix to smoothCon that could generate NAs in model matrix when using bam
+  with numeric by variables. The problem was introduced as part of the 
+  bam(...,discrete=TRUE) coding. 
 
 1.8-13
 
@@ -23,7 +28,7 @@ Currently deprecated and liable to be removed:
 
 * offsets allowed with multinomial, ziplss and gaulss families.
 
-* gevlss family implementing generalized extreme value location, sclae and 
+* gevlss family implementing generalized extreme value location, scale and 
   shape models. 
 
 * Faster code used in 'uniquecombs'. Speeds up discretization step in 

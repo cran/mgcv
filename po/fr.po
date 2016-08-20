@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.3-10\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-02 20:44+0000\n"
+"POT-Creation-Date: 2016-08-19 13:28+0100\n"
 "PO-Revision-Date: 2005-12-08 00:40+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -29,7 +29,7 @@ msgstr "magic, l'optimisateur gcv/ubre, n'a pas convergé après 400 itérations."
 msgid "Failed to initialize memory for matrix."
 msgstr "L'initialisation de la mémoire pour une matrice a échoué."
 
-#: matrix.c:142 matrix.c:204
+#: matrix.c:142 matrix.c:200
 msgid "An out of bound write to matrix has occurred!"
 msgstr "Une écrite hors des limites de la matrice s'est produite !"
 
@@ -43,40 +43,40 @@ msgstr ""
 "Vous essayez de vérifier l'intégrité de la matrice sans avoir défini "
 "RANGECHECK."
 
-#: matrix.c:242
+#: matrix.c:238
 msgid "Target matrix too small in mcopy"
 msgstr "Matrice cible trop petite dans mcopy"
 
-#: matrix.c:262 matrix.c:270 matrix.c:283 matrix.c:291
+#: matrix.c:258 matrix.c:266 matrix.c:279 matrix.c:287
 msgid "Incompatible matrices in matmult."
 msgstr "Matrices incompatibles dans matmult."
 
-#: matrix.c:378
+#: matrix.c:374
 msgid "Attempt to invert() non-square matrix"
 msgstr "Tentative d'inversion d'une matrice non carrée"
 
-#: matrix.c:400
+#: matrix.c:396
 msgid "Singular Matrix passed to invert()"
 msgstr "Matrice singulière passée à invert()"
 
-#: matrix.c:1320
+#: matrix.c:1316
 msgid "svd() not converged"
 msgstr "svd() n'a pas convergé"
 
-#: matrix.c:1396
+#: matrix.c:1392
 #, c-format
 msgid "svdroot matrix not +ve semi def. %g"
 msgstr "la matrice svdroot n'est pas +ve semi def. %g"
 
-#: matrix.c:1424
+#: matrix.c:1420
 msgid "Sort failed"
 msgstr "Le tri a échoué"
 
-#: qp.c:58
+#: qp.c:59
 msgid "ERROR in addconQT."
 msgstr "ERREUR dans addconQT."
 
-#: qp.c:464
+#: qp.c:465
 msgid "QPCLS - Rank deficiency in model"
 msgstr "QPCLS - Déficience de rang dans le modèle"
 
@@ -91,5 +91,3 @@ msgid ""
 msgstr ""
 "Un terme a moins de combinaisons de covariables uniques que le degré de "
 "liberté maximum spécifié"
-
-

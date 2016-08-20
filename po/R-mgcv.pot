@@ -1,8 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: R 3.2.2\n"
-"Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-10-23 16:27\n"
+"Project-Id-Version: mgcv 1.8-14\n"
+"POT-Creation-Date: 2016-08-19 13:28\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -44,10 +43,16 @@ msgstr ""
 msgid "Too many cluster nodes to use all efficiently"
 msgstr ""
 
-msgid "non-finite coefficients at iteration"
+msgid "iterms reset to terms"
+msgstr ""
+
+msgid "exclude ignored by discrete prediction at present"
 msgstr ""
 
 msgid "family not recognized"
+msgstr ""
+
+msgid "extended families not supported by bam"
 msgstr ""
 
 msgid "un-supported smoothness selection method"
@@ -60,9 +65,6 @@ msgid "discrete method does not use parallel cluster - use nthreads instead"
 msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
-msgstr ""
-
-msgid "sparse=TRUE not supported with fast REML, reset to REML."
 msgstr ""
 
 msgid "Not enough (non-NA) data to do anything meaningful"
@@ -80,15 +82,6 @@ msgstr ""
 msgid "Model has more coefficients than data"
 msgstr ""
 
-msgid "sparse=TRUE is deprecated"
-msgstr ""
-
-msgid "model matrix too dense for any possible benefit from sparse"
-msgstr ""
-
-msgid "AR1 parameter rho unused with sparse fitting"
-msgstr ""
-
 msgid "AR1 parameter rho unused with generalized model"
 msgstr ""
 
@@ -102,6 +95,9 @@ msgid "link not available for coxph family; available link is \"identity\""
 msgstr ""
 
 msgid "NA times supplied for cox.ph prediction"
+msgstr ""
+
+msgid "cox.ph does not yet handle offsets"
 msgstr ""
 
 msgid "link not available for ordered categorical family; available links are \"identity\""
@@ -293,6 +289,9 @@ msgstr ""
 msgid "y must be an integer multiple of phi for Tweedie(p=1)"
 msgstr ""
 
+msgid "all.derivs only available in rho, theta parameterization"
+msgstr ""
+
 msgid "Only 1<p<=2 supported"
 msgstr ""
 
@@ -338,6 +337,15 @@ msgstr ""
 msgid "link not available for precision parameter of gaulss"
 msgstr ""
 
+msgid "number of categories must be at least 2"
+msgstr ""
+
+msgid "number of linear predictors doesn't match"
+msgstr ""
+
+msgid "response not in 0 to number of predictors + 1"
+msgstr ""
+
 msgid "ziplss requires 2 links specified as character strings"
 msgstr ""
 
@@ -351,6 +359,9 @@ msgid "Non-integer response variables are not allowed with ziplss"
 msgstr ""
 
 msgid "Using ziplss for binary data makes no sense"
+msgstr ""
+
+msgid "gevlss requires 3 links specified as character strings"
 msgstr ""
 
 msgid "An object of length %d does not match the required parameter size"
@@ -536,6 +547,9 @@ msgstr ""
 msgid "Model matrix not full column rank"
 msgstr ""
 
+msgid "can't handle [[ in formula"
+msgstr ""
+
 msgid "single linear predictor indices are ignored"
 msgstr ""
 
@@ -572,7 +586,13 @@ msgstr ""
 msgid "absorb.cons must be TRUE for multi-formula models"
 msgstr ""
 
-msgid "dropping unidentifiable parameteric terms from model"
+msgid "length(drop.intercept) should be equal to number of model formulas"
+msgstr ""
+
+msgid "shared offsets not allowed"
+msgstr ""
+
+msgid "dropping unidentifiable parametric terms from model"
 msgstr ""
 
 msgid "First argument is no sort of formula!"
@@ -602,22 +622,16 @@ msgstr ""
 msgid "elements of min.sp must be non negative."
 msgstr ""
 
-msgid "`negbin' with unknown theta and outer iteration is deprecated - use `nb'."
-msgstr ""
-
 msgid "unknown outer optimization method."
 msgstr ""
 
-msgid "nlm.fd not available with negative binomial Theta estimation"
+msgid "Extended Fellner Schall only implemented for general families"
+msgstr ""
+
+msgid "Please provide a single value for theta or use nb to estimate it"
 msgstr ""
 
 msgid "nlm.fd only available for GCV/UBRE"
-msgstr ""
-
-msgid "only outer methods `newton' & `bfgs' supports `negbin' family and theta selection: reset"
-msgstr ""
-
-msgid "sorry, general families currently ignore offsets"
 msgstr ""
 
 msgid "unknown optimizer"
@@ -669,6 +683,12 @@ msgid "Step size truncated: out of bounds."
 msgstr ""
 
 msgid "`object' is not of class \"gam\""
+msgstr ""
+
+msgid "unrecognised na.action"
+msgstr ""
+
+msgid "na.action not character or function"
 msgstr ""
 
 msgid "Smoothness uncertainty corrected covariance not available"
@@ -734,6 +754,9 @@ msgstr ""
 msgid ","
 msgstr ""
 
+msgid "un-supported test"
+msgstr ""
+
 msgid "test argument ignored"
 msgstr ""
 
@@ -776,6 +799,18 @@ msgstr ""
 msgid "mu dimensions wrong"
 msgstr ""
 
+msgid "something wrong with inputs to LAPACK routine"
+msgstr ""
+
+msgid "not positive definite"
+msgstr ""
+
+msgid "don't be silly"
+msgstr ""
+
+msgid "sd should have exactly one less entry than ld"
+msgstr ""
+
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
@@ -783,6 +818,9 @@ msgid "a has wrong number of rows"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
+msgstr ""
+
+msgid "mvn does not yet handle offsets"
 msgstr ""
 
 msgid "mvn dimension error"
@@ -887,6 +925,9 @@ msgstr ""
 msgid "only first element of `id' used"
 msgstr ""
 
+msgid "supply a value for each variable for a point constraint"
+msgstr ""
+
 msgid "ord is wrong. reset to NULL."
 msgstr ""
 
@@ -912,6 +953,9 @@ msgid "reparameterization unstable for margin: not done"
 msgstr ""
 
 msgid "single penalty tensor product smooths are deprecated and likely to be removed soon"
+msgstr ""
+
+msgid "basis not usable with reduced te"
 msgstr ""
 
 msgid "fx length wrong from t2 term: ignored"
@@ -974,13 +1018,22 @@ msgstr ""
 msgid "penalty order too high for basis dimension"
 msgstr ""
 
+msgid "there is *no* information about some basis coefficients"
+msgstr ""
+
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "requested non-existent derivative in B-spline penalty"
 msgstr ""
 
 msgid "fs smooths can only have one factor argument"
 msgstr ""
 
 msgid "\"fs\" smooth cannot use a multiply penalized basis (wrong basis in xt)"
+msgstr ""
+
+msgid "no factor supplied to fs smooth"
 msgstr ""
 
 msgid "\"fs\" terms can not be fixed here"
@@ -999,6 +1052,12 @@ msgid "penalty basis too small"
 msgstr ""
 
 msgid "random effects don't work with ids."
+msgstr ""
+
+msgid "Please put term with most levels last in 're' to avoid spoiling supplied penalties"
+msgstr ""
+
+msgid "supplied S matrices are wrong diminsion"
 msgstr ""
 
 msgid "MRF basis dimension set too high"
@@ -1071,6 +1130,9 @@ msgid "handling `by' variables in smooth constructors may not work with the summ
 msgstr ""
 
 msgid "Can't find by variable"
+msgstr ""
+
+msgid "sweep and drop constraints unlikely to work well with self handling of by vars"
 msgstr ""
 
 msgid "factor `by' variables can not be used with matrix arguments."

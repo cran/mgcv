@@ -3,7 +3,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Gaussian location-scale model family}
 \description{The \code{gaulss} family implements Gaussian location scale additive models in which 
-the mean and the inverse of the standard deviation can depend on additive smooth predictors. Useable 
+the mean and the logb of the standard deviation (see details) can depend on additive smooth predictors. Useable 
 only with \code{\link{gam}}, the linear predictors are specified via a list of formulae.
 }
 
@@ -25,7 +25,7 @@ Link functions \code{"identity"}, \code{"inverse"}, \code{"log"} and \code{"sqrt
 
 The fitted values for this family will be a two column matrix. The first column is the mean, and the second column is the inverse of the 
 standard deviation. Predictions using \code{\link{predict.gam}} will also produce 2 column matrices for \code{type} 
-\code{"link"} and \code{"response"}.
+\code{"link"} and \code{"response"}. The second column when \code{type="response"} is again on the reciprocal standard deviation scale (i.e. the square root precision scale). 
 
 The null deviance reported for this family is the sum of squares of the difference between the response and the mean response divided by the standard deviation of the response according to the model. The deviance is the sum of squares of residuals divided by model standard deviations. 
 

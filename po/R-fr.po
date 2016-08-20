@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.3-10\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2015-03-30 11:44\n"
+"POT-Creation-Date: 2016-08-19 13:28\n"
 "PO-Revision-Date: 2005-12-09 09:13+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -16,6 +16,12 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "bam can not discretize with this nesting structure"
+msgstr ""
+
+msgid "discretization can not handle smooth ids"
+msgstr ""
 
 msgid "'family' argument seems not to be a valid family object"
 msgstr ""
@@ -45,20 +51,32 @@ msgstr "probabilits d'ajustement numrique de 0 ou 1 rencontres"
 msgid "fitted rates numerically 0 occurred"
 msgstr "taux d'ajustement numriques de 0 rencontrs"
 
+msgid "Too many cluster nodes to use all efficiently"
+msgstr ""
+
 #, fuzzy
-msgid "non-finite coefficients at iteration"
-msgstr "Coefficients non finis  l'itration"
+msgid "iterms reset to terms"
+msgstr "Type inconnu, rinitialis  `terms'."
+
+msgid "exclude ignored by discrete prediction at present"
+msgstr ""
 
 msgid "family not recognized"
 msgstr "famille non reconnue"
 
+msgid "extended families not supported by bam"
+msgstr ""
+
 msgid "un-supported smoothness selection method"
 msgstr ""
 
-msgid "min.sp not supported with fast REML computation, and ignored."
+msgid "discretization only available with fREML"
 msgstr ""
 
-msgid "sparse=TRUE not supported with fast REML, reset to REML."
+msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
+
+msgid "min.sp not supported with fast REML computation, and ignored."
 msgstr ""
 
 msgid "Not enough (non-NA) data to do anything meaningful"
@@ -67,17 +85,14 @@ msgstr "Pas assez de donnes (non-NA) pour faire quoi que ce soit d'utile"
 msgid "AR.start must be logical"
 msgstr ""
 
-msgid "Model has more coefficients than data"
-msgstr "Le modle a plus de coefficients que le nombre de donnes"
-
 msgid "chunk.size < number of coefficients. Reset to %d"
 msgstr ""
 
-msgid "model matrix too dense for any possible benefit from sparse"
+msgid "unknown tensor constraint type"
 msgstr ""
 
-msgid "AR1 parameter rho unused with sparse fitting"
-msgstr ""
+msgid "Model has more coefficients than data"
+msgstr "Le modle a plus de coefficients que le nombre de donnes"
 
 msgid "AR1 parameter rho unused with generalized model"
 msgstr ""
@@ -92,6 +107,9 @@ msgid "link not available for coxph family; available link is \"identity\""
 msgstr ""
 
 msgid "NA times supplied for cox.ph prediction"
+msgstr ""
+
+msgid "cox.ph does not yet handle offsets"
 msgstr ""
 
 msgid ""
@@ -154,6 +172,9 @@ msgid "Using ziP for binary data makes no sense"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
+msgstr ""
+
+msgid "Huber scale estiamte not converged"
 msgstr ""
 
 msgid "unsupported order of differentiation requested of gam.fit3"
@@ -239,9 +260,6 @@ msgstr "L'algorithme n'a pas converg"
 msgid "Algorithm stopped at boundary value"
 msgstr "L'algorithme est arrt aux valeurs limites"
 
-msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
-msgstr ""
-
 msgid "deriv should be 1 or 2"
 msgstr ""
 
@@ -254,6 +272,12 @@ msgstr ""
 #, fuzzy
 msgid "L has inconsistent dimensions."
 msgstr "H a des mauvaises dimensions"
+
+msgid "Fitting terminated with step failure - check results carefully"
+msgstr ""
+
+msgid "Iteration limit reached without full convergence - check carefully"
+msgstr ""
 
 msgid "link not implemented for extended families"
 msgstr ""
@@ -300,6 +324,9 @@ msgid "y must be strictly positive for a Gamma density"
 msgstr ""
 
 msgid "y must be an integer multiple of phi for Tweedie(p=1)"
+msgstr ""
+
+msgid "all.derivs only available in rho, theta parameterization"
 msgstr ""
 
 msgid "Only 1<p<=2 supported"
@@ -349,6 +376,16 @@ msgstr ""
 msgid "link not available for precision parameter of gaulss"
 msgstr ""
 
+#, fuzzy
+msgid "number of categories must be at least 2"
+msgstr "le nombre maximum d'itrations doit tre > 0"
+
+msgid "number of linear predictors doesn't match"
+msgstr ""
+
+msgid "response not in 0 to number of predictors + 1"
+msgstr ""
+
 msgid "ziplss requires 2 links specified as character strings"
 msgstr ""
 
@@ -362,6 +399,9 @@ msgid "Non-integer response variables are not allowed with ziplss"
 msgstr ""
 
 msgid "Using ziplss for binary data makes no sense"
+msgstr ""
+
+msgid "gevlss requires 3 links specified as character strings"
 msgstr ""
 
 #, fuzzy
@@ -446,6 +486,9 @@ msgid "iteration %d"
 msgstr ""
 
 msgid "gamm not converged, try increasing niterPQL"
+msgstr ""
+
+msgid "family are not designed for use with gamm!"
 msgstr ""
 
 msgid "random argument must be a *named* list."
@@ -570,6 +613,9 @@ msgstr ""
 msgid "Model matrix not full column rank"
 msgstr ""
 
+msgid "can't handle [[ in formula"
+msgstr ""
+
 #, fuzzy
 msgid "single linear predictor indices are ignored"
 msgstr "Valeurs de prdiction linaire dans un modle vide"
@@ -610,7 +656,13 @@ msgstr ""
 msgid "absorb.cons must be TRUE for multi-formula models"
 msgstr ""
 
-msgid "dropping unidentifiable parameteric terms from model"
+msgid "length(drop.intercept) should be equal to number of model formulas"
+msgstr ""
+
+msgid "shared offsets not allowed"
+msgstr ""
+
+msgid "dropping unidentifiable parametric terms from model"
 msgstr ""
 
 msgid "First argument is no sort of formula!"
@@ -644,26 +696,17 @@ msgstr "valeurs manquantes (NA) dans min.sp"
 msgid "elements of min.sp must be non negative."
 msgstr "les lments de min.sp doivent tre positifs ou nulls."
 
-msgid ""
-"`negbin' with unknown theta and outer iteration is deprecated - use `nb'."
-msgstr ""
-
 #, fuzzy
 msgid "unknown outer optimization method."
 msgstr "Mthode d'optimisation externe GAM inconnue."
 
-msgid "nlm.fd not available with negative binomial Theta estimation"
+msgid "Extended Fellner Schall only implemented for general families"
+msgstr ""
+
+msgid "Please provide a single value for theta or use nb to estimate it"
 msgstr ""
 
 msgid "nlm.fd only available for GCV/UBRE"
-msgstr ""
-
-msgid ""
-"only outer methods `newton' & `bfgs' supports `negbin' family and theta "
-"selection: reset"
-msgstr ""
-
-msgid "sorry, general families currently ignore offsets"
 msgstr ""
 
 msgid "unknown optimizer"
@@ -726,6 +769,13 @@ msgstr "Taille du pas tronque : hors de plage."
 msgid "`object' is not of class \"gam\""
 msgstr "l'objet ne semble pas tre de la classe lme"
 
+#, fuzzy
+msgid "unrecognised na.action"
+msgstr "link non reconnu (vecteur ?)"
+
+msgid "na.action not character or function"
+msgstr ""
+
 msgid "Smoothness uncertainty corrected covariance not available"
 msgstr ""
 
@@ -749,6 +799,10 @@ msgid "type iterms not available for multiple predictor cases"
 msgstr ""
 
 msgid "non-existent terms requested - ignoring"
+msgstr "terme inexistant requis - il est ignor"
+
+#, fuzzy
+msgid "non-existent exclude terms requested - ignoring"
 msgstr "terme inexistant requis - il est ignor"
 
 msgid "requires an object of class gam"
@@ -794,6 +848,9 @@ msgstr "Les arguments suivants de anova.glm(..) sont incorrects et ignors :"
 msgid ","
 msgstr ","
 
+msgid "un-supported test"
+msgstr ""
+
 msgid "test argument ignored"
 msgstr "argument test ignor"
 
@@ -807,6 +864,9 @@ msgstr "fam n'est pas un objet family"
 #, fuzzy
 msgid "argument is not a gam object"
 msgstr "fam n'est pas un objet family"
+
+msgid "S.scale vector doesn't match S list - please report to maintainer"
+msgstr ""
 
 msgid "Supplied matrix not symmetric"
 msgstr "La matrice fournie n'est pas symtrique"
@@ -839,10 +899,29 @@ msgstr "X a perdu ses dimensions dans magic !!"
 msgid "mu dimensions wrong"
 msgstr "la dimension de fx est incorrecte"
 
+#, fuzzy
+msgid "something wrong with inputs to LAPACK routine"
+msgstr "il y a quelque chose d'anormal avec l'argument d."
+
+msgid "not positive definite"
+msgstr ""
+
+msgid "don't be silly"
+msgstr ""
+
+msgid "sd should have exactly one less entry than ld"
+msgstr ""
+
+msgid "internal error in vcorr, please report to simon.wood@r-project.org"
+msgstr ""
+
 msgid "a has wrong number of rows"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
+msgstr ""
+
+msgid "mvn does not yet handle offsets"
 msgstr ""
 
 msgid "mvn dimension error"
@@ -926,12 +1005,6 @@ msgstr "limite infrieure >= limite suprieure dans l'appel  mono.con()"
 msgid "x is null"
 msgstr "x est null"
 
-msgid "x has no row attribute"
-msgstr "x n'a pas d'attribut de lignes"
-
-msgid "x has no col attribute"
-msgstr "x n'a pas d'attribut de colonnes"
-
 msgid "order too low"
 msgstr ""
 
@@ -967,6 +1040,9 @@ msgstr "Les variables rptes comme arguments d'un lissage ne sont pas permises"
 msgid "only first element of `id' used"
 msgstr ""
 
+msgid "supply a value for each variable for a point constraint"
+msgstr ""
+
 msgid "ord is wrong. reset to NULL."
 msgstr ""
 
@@ -995,6 +1071,9 @@ msgstr ""
 msgid ""
 "single penalty tensor product smooths are deprecated and likely to be "
 "removed soon"
+msgstr ""
+
+msgid "basis not usable with reduced te"
 msgstr ""
 
 msgid "fx length wrong from t2 term: ignored"
@@ -1064,7 +1143,13 @@ msgstr ""
 msgid "penalty order too high for basis dimension"
 msgstr ""
 
+msgid "there is *no* information about some basis coefficients"
+msgstr ""
+
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "requested non-existent derivative in B-spline penalty"
 msgstr ""
 
 msgid "fs smooths can only have one factor argument"
@@ -1073,7 +1158,15 @@ msgstr ""
 msgid "\"fs\" smooth cannot use a multiply penalized basis (wrong basis in xt)"
 msgstr ""
 
+#, fuzzy
+msgid "no factor supplied to fs smooth"
+msgstr "Aucune donne fournie  gam.setup"
+
 msgid "\"fs\" terms can not be fixed here"
+msgstr ""
+
+msgid ""
+"fs smooth not suitable for discretisation with more than one metric predictor"
 msgstr ""
 
 msgid "the adaptive smooth class is limited to 1 or 2 covariates."
@@ -1087,6 +1180,15 @@ msgstr ""
 
 msgid "random effects don't work with ids."
 msgstr ""
+
+msgid ""
+"Please put term with most levels last in 're' to avoid spoiling supplied "
+"penalties"
+msgstr ""
+
+#, fuzzy
+msgid "supplied S matrices are wrong diminsion"
+msgstr "H a des mauvaises dimensions"
 
 msgid "MRF basis dimension set too high"
 msgstr ""
@@ -1153,6 +1255,14 @@ msgstr ""
 msgid "basis dimension reset to minimum possible"
 msgstr "la dimension de base, k, est augmente  la valeur minimale possible"
 
+msgid "incorrect arguments to GP smoother"
+msgstr ""
+
+#, fuzzy
+msgid "more knots than data in an ms term: knots ignored."
+msgstr ""
+"plus de noeuds que de donnes dans un terme tp : des noeuds sont ignors."
+
 msgid "smooth objects should not have a qrc attribute."
 msgstr "les objets lissage ne devraient pas avoir d'attribut qrc."
 
@@ -1166,6 +1276,11 @@ msgstr ""
 
 msgid "Can't find by variable"
 msgstr "Impossible de trouver la variable 'by'"
+
+msgid ""
+"sweep and drop constraints unlikely to work well with self handling of by "
+"vars"
+msgstr ""
 
 msgid "factor `by' variables can not be used with matrix arguments."
 msgstr ""
@@ -1236,6 +1351,16 @@ msgstr ""
 
 msgid "object not fully initialized"
 msgstr ""
+
+#, fuzzy
+#~ msgid "non-finite coefficients at iteration"
+#~ msgstr "Coefficients non finis  l'itration"
+
+#~ msgid "x has no row attribute"
+#~ msgstr "x n'a pas d'attribut de lignes"
+
+#~ msgid "x has no col attribute"
+#~ msgstr "x n'a pas d'attribut de colonnes"
 
 #~ msgid ""
 #~ "NA's passed to eig: please email Simon.Wood@R-project.org with details"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-02 20:44+0000\n"
+"POT-Creation-Date: 2016-08-19 13:28+0100\n"
 "PO-Revision-Date: 2014-03-24 17:59+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -40,7 +40,7 @@ msgstr "Nie udało się zainicjalizować pamięci dla macierzy."
 # (_("An out of bound write to matrix has occurred!"),1)
 # mgcv/src/matrix.c: 210
 # (_("An out of bound write to matrix has occurred!"),1)
-#: matrix.c:142 matrix.c:204
+#: matrix.c:142 matrix.c:200
 msgid "An out of bound write to matrix has occurred!"
 msgstr "Nastąpił zapis poza zakresem macierzy!"
 
@@ -58,7 +58,7 @@ msgstr "Próbujesz sprawdzić integralność macierzy bez określania 'RANGECHEC
 
 # mgcv/src/matrix.c: 248
 # (_("Target matrix too small in mcopy"),1)
-#: matrix.c:242
+#: matrix.c:238
 msgid "Target matrix too small in mcopy"
 msgstr "Docelowa macierz jest zbyt mała, aby wykonać 'mcopy'"
 
@@ -70,50 +70,50 @@ msgstr "Docelowa macierz jest zbyt mała, aby wykonać 'mcopy'"
 # (_("Incompatible matrices in matmult."),1)
 # mgcv/src/matrix.c: 297
 # (_("Incompatible matrices in matmult."),1)
-#: matrix.c:262 matrix.c:270 matrix.c:283 matrix.c:291
+#: matrix.c:258 matrix.c:266 matrix.c:279 matrix.c:287
 msgid "Incompatible matrices in matmult."
 msgstr "Niespójne macierze w 'matmult'."
 
 # mgcv/src/matrix.c: 384
 # (_("Attempt to invert() non-square matrix"),1)
-#: matrix.c:378
+#: matrix.c:374
 msgid "Attempt to invert() non-square matrix"
 msgstr "Próba odwrócenia metodą 'invert()' niekwadratowej macierzy"
 
 # mgcv/src/matrix.c: 406
 # (_("Singular Matrix passed to invert()"),1)
-#: matrix.c:400
+#: matrix.c:396
 msgid "Singular Matrix passed to invert()"
 msgstr "Przekazano osobliwą macierz do 'invert()'"
 
 # mgcv/src/matrix.c: 1327
 # (_("svd() not converged"),1)
-#: matrix.c:1320
+#: matrix.c:1316
 msgid "svd() not converged"
 msgstr "'svd()' nie uzbieżnił się"
 
 # mgcv/src/matrix.c: 1403
 # sprintf(err,_("svdroot matrix not +ve semi def. %g"),w.V[i]*w.V[i])
-#: matrix.c:1396
+#: matrix.c:1392
 #, c-format
 msgid "svdroot matrix not +ve semi def. %g"
 msgstr "macierz 'svdroot' nie jest dodatnio określona %g"
 
 # mgcv/src/matrix.c: 1431
 # (_("Sort failed"),1)
-#: matrix.c:1424
+#: matrix.c:1420
 msgid "Sort failed"
 msgstr "Sortowanie nie powiodło się"
 
 # mgcv/src/qp.c: 60
 # (_("ERROR in addconQT."),1)
-#: qp.c:58
+#: qp.c:59
 msgid "ERROR in addconQT."
 msgstr "BŁĄD w addconQT."
 
 # mgcv/src/qp.c: 466
 # (_("QPCLS - Rank deficiency in model"),1)
-#: qp.c:464
+#: qp.c:465
 msgid "QPCLS - Rank deficiency in model"
 msgstr "QPCLS - Niedobór rang w modelu"
 
@@ -139,5 +139,3 @@ msgid ""
 msgstr ""
 "Człon posiada mniej unikalnych kombinacji zmiennych niezależnych niż "
 "określona maksymalna liczba stopni swobody"
-
-

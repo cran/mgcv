@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-03-30 11:44\n"
+"POT-Creation-Date: 2016-08-19 13:28\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -23,6 +23,12 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "bam can not discretize with this nesting structure"
+msgstr ""
+
+msgid "discretization can not handle smooth ids"
+msgstr ""
 
 msgid "'family' argument seems not to be a valid family object"
 msgstr "'family' 인자는 올바른 family 객체가 아닌 것 같이 보입니다."
@@ -50,25 +56,33 @@ msgstr "적합된 확률값이 수치적으로 0 또는 1 입니다."
 msgid "fitted rates numerically 0 occurred"
 msgstr "적합된 비율(rates)가 수치적으로 0입니다."
 
-msgid "non-finite coefficients at iteration"
+msgid "Too many cluster nodes to use all efficiently"
 msgstr ""
-"다음의 반복단계에서 얻어진 계수(coefficients)의 값이 유한(finite)하지 않습니"
-"다."
+
+msgid "iterms reset to terms"
+msgstr ""
+
+msgid "exclude ignored by discrete prediction at present"
+msgstr ""
 
 msgid "family not recognized"
 msgstr "family에 대한 정보를 찾을 수 없습니다."
 
+msgid "extended families not supported by bam"
+msgstr ""
+
 msgid "un-supported smoothness selection method"
 msgstr "지원되지 않는 평활화 선택법(smoothness selection method)입니다."
+
+msgid "discretization only available with fREML"
+msgstr ""
+
+msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
 msgstr ""
 "fREML(fast REML 연산)을 method로 선택한 경우 min.sp는 사용되지 않습니다."
-
-msgid "sparse=TRUE not supported with fast REML, reset to REML."
-msgstr ""
-"sparse=TRUE인 경우 method는 fREML(fast REML)을 사용할 수 없으므로 REML을 사용"
-"합니다."
 
 msgid "Not enough (non-NA) data to do anything meaningful"
 msgstr ""
@@ -77,17 +91,14 @@ msgstr ""
 msgid "AR.start must be logical"
 msgstr "AR.start는 반드시 논리형(logical)이어야 합니다."
 
-msgid "Model has more coefficients than data"
-msgstr "모형(model)이 가진 계수(coefficients)가 데이터의 개수보다 많습니다."
-
 msgid "chunk.size < number of coefficients. Reset to %d"
 msgstr ""
 
-msgid "model matrix too dense for any possible benefit from sparse"
+msgid "unknown tensor constraint type"
 msgstr ""
 
-msgid "AR1 parameter rho unused with sparse fitting"
-msgstr ""
+msgid "Model has more coefficients than data"
+msgstr "모형(model)이 가진 계수(coefficients)가 데이터의 개수보다 많습니다."
 
 msgid "AR1 parameter rho unused with generalized model"
 msgstr ""
@@ -104,6 +115,9 @@ msgstr ""
 "(link)는 \"identity\"입니다."
 
 msgid "NA times supplied for cox.ph prediction"
+msgstr ""
+
+msgid "cox.ph does not yet handle offsets"
 msgstr ""
 
 msgid ""
@@ -182,6 +196,9 @@ msgid "Using ziP for binary data makes no sense"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
+msgstr ""
+
+msgid "Huber scale estiamte not converged"
 msgstr ""
 
 msgid "unsupported order of differentiation requested of gam.fit3"
@@ -263,11 +280,6 @@ msgstr "알고리즘이 수렴하지 않았습니다."
 msgid "Algorithm stopped at boundary value"
 msgstr "알고리즘이 경계값(boundary value)에서 멈추었습니다."
 
-msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
-msgstr ""
-"피어슨 척도 (Pearson scale)에 대한 추정치가 안정적(stable)이지 않은 것 같습니"
-"다.  ?gam.scale을 확인해 보시길 바랍니다."
-
 msgid "deriv should be 1 or 2"
 msgstr "deriv의 값은 1 또는 2이어야 합니다."
 
@@ -278,6 +290,12 @@ msgid "L must have at least as many rows as columns."
 msgstr "L이 가지고 있는 행의 개수는 적어도 열의 개수만큼 있어야 합니다."
 
 msgid "L has inconsistent dimensions."
+msgstr ""
+
+msgid "Fitting terminated with step failure - check results carefully"
+msgstr ""
+
+msgid "Iteration limit reached without full convergence - check carefully"
 msgstr ""
 
 msgid "link not implemented for extended families"
@@ -333,6 +351,9 @@ msgid "y must be an integer multiple of phi for Tweedie(p=1)"
 msgstr ""
 "Tweedie(p=1)의 경우 y는 반드시 phi의 배수(integer multiple)이어야 합니다."
 
+msgid "all.derivs only available in rho, theta parameterization"
+msgstr ""
+
 msgid "Only 1<p<=2 supported"
 msgstr "p는 반드시 1<p<=2라는 조건을 만족해야 합니다."
 
@@ -381,6 +402,16 @@ msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니�
 msgid "link not available for precision parameter of gaulss"
 msgstr "gaulss 모형의 모수 precision에 사용가능한 링크(link)가 아닙니다."
 
+#, fuzzy
+msgid "number of categories must be at least 2"
+msgstr "최대 반복수(iteration)는 반드시 0 보다 커야 합니다."
+
+msgid "number of linear predictors doesn't match"
+msgstr ""
+
+msgid "response not in 0 to number of predictors + 1"
+msgstr ""
+
 msgid "ziplss requires 2 links specified as character strings"
 msgstr "ziplss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
 
@@ -395,6 +426,10 @@ msgstr ""
 
 msgid "Using ziplss for binary data makes no sense"
 msgstr ""
+
+#, fuzzy
+msgid "gevlss requires 3 links specified as character strings"
+msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
 
 msgid "An object of length %d does not match the required parameter size"
 msgstr "object의 길이 %d는 요구되어지는 모수의 크기와 일치하지 않습니다."
@@ -471,6 +506,9 @@ msgstr "%d번째 반복입니다."
 
 msgid "gamm not converged, try increasing niterPQL"
 msgstr "gamm이 수렴하지 않았습니다. niterPQL의 올려보면 어떨까요?"
+
+msgid "family are not designed for use with gamm!"
+msgstr ""
 
 msgid "random argument must be a *named* list."
 msgstr ""
@@ -591,6 +629,9 @@ msgstr ""
 msgid "Model matrix not full column rank"
 msgstr ""
 
+msgid "can't handle [[ in formula"
+msgstr ""
+
 msgid "single linear predictor indices are ignored"
 msgstr ""
 
@@ -632,7 +673,13 @@ msgstr ""
 "여러개의 모델식(multi-formula models)을 사용하는 경우에 absorb.cons은 반드시 "
 "TRUE이어야 합니다."
 
-msgid "dropping unidentifiable parameteric terms from model"
+msgid "length(drop.intercept) should be equal to number of model formulas"
+msgstr ""
+
+msgid "shared offsets not allowed"
+msgstr ""
+
+msgid "dropping unidentifiable parametric terms from model"
 msgstr ""
 
 msgid "First argument is no sort of formula!"
@@ -670,28 +717,18 @@ msgstr "min.sp내에서 NA가 발견되었습니다."
 msgid "elements of min.sp must be non negative."
 msgstr "min.sp의 구성요소는 반드시 음수이어서는 안됩니다."
 
-msgid ""
-"`negbin' with unknown theta and outer iteration is deprecated - use `nb'."
-msgstr ""
-
 msgid "unknown outer optimization method."
 msgstr "알 수 없는 최적화 방법(optimization method)입니다."
 
-msgid "nlm.fd not available with negative binomial Theta estimation"
-msgstr "nlm.fd 방법은 음이항분포의 Theta 추정에 사용할 수 없습니다."
+#, fuzzy
+msgid "Extended Fellner Schall only implemented for general families"
+msgstr "본 페밀리(family)에 사용가능한 링크(link)가 없습니다."
+
+msgid "Please provide a single value for theta or use nb to estimate it"
+msgstr ""
 
 msgid "nlm.fd only available for GCV/UBRE"
 msgstr "nlm.fd 방법은 오로지 GCV/UBRE인 경우에만 사용할 수 있습니다."
-
-msgid ""
-"only outer methods `newton' & `bfgs' supports `negbin' family and theta "
-"selection: reset"
-msgstr ""
-"오로지 `newton'와 `bfgs' 방법만이 `negbin' 페밀리와 theta 선택에 사용될 수 있"
-"습니다: reset"
-
-msgid "sorry, general families currently ignore offsets"
-msgstr ""
 
 msgid "unknown optimizer"
 msgstr ""
@@ -749,6 +786,13 @@ msgstr ""
 msgid "`object' is not of class \"gam\""
 msgstr "`object'는 클래스 \"gam\"가 아닙니다."
 
+#, fuzzy
+msgid "unrecognised na.action"
+msgstr "알 수 없는 (벡터 또는) 링크입니다."
+
+msgid "na.action not character or function"
+msgstr ""
+
 msgid "Smoothness uncertainty corrected covariance not available"
 msgstr ""
 
@@ -769,6 +813,9 @@ msgid "type iterms not available for multiple predictor cases"
 msgstr ""
 
 msgid "non-existent terms requested - ignoring"
+msgstr ""
+
+msgid "non-existent exclude terms requested - ignoring"
 msgstr ""
 
 msgid "requires an object of class gam"
@@ -816,6 +863,9 @@ msgstr "다음의 인자들은 anova.glm(..)에 유효하지 않으므로 사용
 msgid ","
 msgstr ","
 
+msgid "un-supported test"
+msgstr ""
+
 msgid "test argument ignored"
 msgstr ""
 
@@ -827,6 +877,9 @@ msgstr "객체의 클래스가 gam이 아닙니다."
 
 msgid "argument is not a gam object"
 msgstr "인자의 클래스가 gam이 아닙니다."
+
+msgid "S.scale vector doesn't match S list - please report to maintainer"
+msgstr ""
 
 msgid "Supplied matrix not symmetric"
 msgstr "입력된 행렬은 대칭(symmetric)이 아닙니다."
@@ -856,11 +909,30 @@ msgstr ""
 msgid "mu dimensions wrong"
 msgstr "fx의 차원(dimension)이 올바르지 않습니다."
 
+#, fuzzy
+msgid "something wrong with inputs to LAPACK routine"
+msgstr "zlim이 올바르지 않습니다."
+
+msgid "not positive definite"
+msgstr ""
+
+msgid "don't be silly"
+msgstr ""
+
+msgid "sd should have exactly one less entry than ld"
+msgstr ""
+
+msgid "internal error in vcorr, please report to simon.wood@r-project.org"
+msgstr ""
+
 msgid "a has wrong number of rows"
 msgstr "a가 가진 행의 개수가 올바르지 않습니다."
 
 msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn은 둘 이상의 차원을 가진 데이터를 필요로 합니다."
+
+msgid "mvn does not yet handle offsets"
+msgstr ""
 
 msgid "mvn dimension error"
 msgstr ""
@@ -940,12 +1012,6 @@ msgstr ""
 msgid "x is null"
 msgstr "x는 아무런 구성요소도 가지고 있지 않습니다."
 
-msgid "x has no row attribute"
-msgstr "x는 행속성(row attribute)를 가지고 있지 않습니다."
-
-msgid "x has no col attribute"
-msgstr "x는 열속성(col attribute)를 가지고 있지 않습니다."
-
 msgid "order too low"
 msgstr ""
 
@@ -979,6 +1045,9 @@ msgstr ""
 msgid "only first element of `id' used"
 msgstr "`id'의 첫번째 요소만이 사용되었습니다."
 
+msgid "supply a value for each variable for a point constraint"
+msgstr ""
+
 msgid "ord is wrong. reset to NULL."
 msgstr "ord가 올바르지 않아 NULL로 설정합니다."
 
@@ -1007,6 +1076,9 @@ msgstr ""
 msgid ""
 "single penalty tensor product smooths are deprecated and likely to be "
 "removed soon"
+msgstr ""
+
+msgid "basis not usable with reduced te"
 msgstr ""
 
 msgid "fx length wrong from t2 term: ignored"
@@ -1071,7 +1143,13 @@ msgstr ""
 msgid "penalty order too high for basis dimension"
 msgstr ""
 
+msgid "there is *no* information about some basis coefficients"
+msgstr ""
+
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "requested non-existent derivative in B-spline penalty"
 msgstr ""
 
 msgid "fs smooths can only have one factor argument"
@@ -1080,7 +1158,15 @@ msgstr ""
 msgid "\"fs\" smooth cannot use a multiply penalized basis (wrong basis in xt)"
 msgstr ""
 
+#, fuzzy
+msgid "no factor supplied to fs smooth"
+msgstr "gam.setup에 이용될 데이터가 없습니다."
+
 msgid "\"fs\" terms can not be fixed here"
+msgstr ""
+
+msgid ""
+"fs smooth not suitable for discretisation with more than one metric predictor"
 msgstr ""
 
 msgid "the adaptive smooth class is limited to 1 or 2 covariates."
@@ -1094,6 +1180,15 @@ msgstr ""
 
 msgid "random effects don't work with ids."
 msgstr ""
+
+msgid ""
+"Please put term with most levels last in 're' to avoid spoiling supplied "
+"penalties"
+msgstr ""
+
+#, fuzzy
+msgid "supplied S matrices are wrong diminsion"
+msgstr "H의 열과 행의 길이가 같아야 합니다."
 
 msgid "MRF basis dimension set too high"
 msgstr ""
@@ -1153,6 +1248,12 @@ msgstr ""
 msgid "basis dimension reset to minimum possible"
 msgstr ""
 
+msgid "incorrect arguments to GP smoother"
+msgstr ""
+
+msgid "more knots than data in an ms term: knots ignored."
+msgstr ""
+
 msgid "smooth objects should not have a qrc attribute."
 msgstr ""
 
@@ -1166,6 +1267,11 @@ msgstr ""
 
 msgid "Can't find by variable"
 msgstr "by 변수(variable)를 찾을 수 없습니다."
+
+msgid ""
+"sweep and drop constraints unlikely to work well with self handling of by "
+"vars"
+msgstr ""
 
 msgid "factor `by' variables can not be used with matrix arguments."
 msgstr ""
@@ -1236,3 +1342,34 @@ msgstr ""
 
 msgid "object not fully initialized"
 msgstr "완전히 초기화된 object가 아닙니다."
+
+#~ msgid "non-finite coefficients at iteration"
+#~ msgstr ""
+#~ "다음의 반복단계에서 얻어진 계수(coefficients)의 값이 유한(finite)하지 않습"
+#~ "니다."
+
+#~ msgid "sparse=TRUE not supported with fast REML, reset to REML."
+#~ msgstr ""
+#~ "sparse=TRUE인 경우 method는 fREML(fast REML)을 사용할 수 없으므로 REML을 "
+#~ "사용합니다."
+
+#~ msgid "Pearson scale estimate maybe unstable. See ?gam.scale."
+#~ msgstr ""
+#~ "피어슨 척도 (Pearson scale)에 대한 추정치가 안정적(stable)이지 않은 것 같"
+#~ "습니다.  ?gam.scale을 확인해 보시길 바랍니다."
+
+#~ msgid "nlm.fd not available with negative binomial Theta estimation"
+#~ msgstr "nlm.fd 방법은 음이항분포의 Theta 추정에 사용할 수 없습니다."
+
+#~ msgid ""
+#~ "only outer methods `newton' & `bfgs' supports `negbin' family and theta "
+#~ "selection: reset"
+#~ msgstr ""
+#~ "오로지 `newton'와 `bfgs' 방법만이 `negbin' 페밀리와 theta 선택에 사용될 "
+#~ "수 있습니다: reset"
+
+#~ msgid "x has no row attribute"
+#~ msgstr "x는 행속성(row attribute)를 가지고 있지 않습니다."
+
+#~ msgid "x has no col attribute"
+#~ msgstr "x는 열속성(col attribute)를 가지고 있지 않습니다."
