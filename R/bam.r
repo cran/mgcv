@@ -658,6 +658,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
     offset <- G$offset
     family <- G$family
     G$family <- gaussian() ## needed if REML/ML used
+    G$family$drop.intercept <- family$drop.intercept ## needed in predict.gam
     variance <- family$variance
     dev.resids <- family$dev.resids
     ## aic <- family$aic
@@ -1606,7 +1607,7 @@ AR.resid <- function(rsd,rho=0,AR.start=NULL) {
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,
                 min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-                cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
+                cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,coef=NULL,
                 drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
@@ -1674,7 +1675,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     mf$formula <- gp$fake.formula 
     mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
     mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho  <- mf$cluster <- mf$discrete <-
-    mf$use.chol <- mf$samfrac <- mf$nthreads <- mf$G <- mf$fit <- mf$select <- mf$drop.intercept <- mf$...<-NULL
+    mf$use.chol <- mf$samfrac <- mf$nthreads <- mf$G <- mf$fit <- mf$select <- mf$drop.intercept <-
+    mf$coef <- mf$...<-NULL
     mf$drop.unused.levels <- drop.unused.levels
     mf[[1]] <- quote(stats::model.frame) ## as.name("model.frame")
     pmf <- mf
@@ -1714,7 +1716,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     ## from the span of the parametric effects?
     if (is.null(family$drop.intercept)) { ## family does not provide information
       if (is.null(drop.intercept)) drop.intercept <- FALSE else {
-        drop.intercept <- drop.intercept ## force drop.intercept to correct length
+        drop.intercept <- drop.intercept[1] ## force drop.intercept to correct length
 	if (drop.intercept) family$drop.intercept <- drop.intercept ## ensure prediction works
       }
     } else drop.intercept <- as.logical(family$drop.intercept) ## family overrides argument
@@ -1920,13 +1922,12 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho,cl=cluster,
                       gc.level=gc.level,use.chol=use.chol,npt=nthreads)
   } else if (G$discretize) {
-    object <- bgam.fitd(G, mf, gp ,scale ,nobs.extra=0,rho=rho,
+    object <- bgam.fitd(G, mf, gp ,scale ,nobs.extra=0,rho=rho,coef=coef,
                        control = control,npt=nthreads,gc.level=gc.level,...)
                        
   } else {
     G$X  <- matrix(0,0,ncol(G$X)); if (gc.level>1) gc()
     if (rho!=0) warning("AR1 parameter rho unused with generalized model")
-    coef <- NULL
     if (samfrac<1 && samfrac>0) { ## sub-sample first to get close to right answer...
       ind <- sample(1:nrow(mf),ceiling(nrow(mf)*samfrac))
       if (length(ind)<2*ncol(G$X)) warning("samfrac too small - ignored") else {
@@ -1935,7 +1936,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         control1 <- control
         control1$epsilon <- 1e-2
         object <- bgam.fit(G, mf[ind,], chunk.size, gp ,scale ,gamma,method=method,nobs.extra=0,
-                       control = control1,cl=cluster,npt=nthreads,gc.level=gc.level,
+                       control = control1,cl=cluster,npt=nthreads,gc.level=gc.level,coef=coef,
                        use.chol=use.chol,samfrac=1,...)
         G$w <- Gw;G$offset <- Goffset
         coef <- object$coefficients

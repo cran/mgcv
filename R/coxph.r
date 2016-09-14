@@ -43,6 +43,7 @@ cox.ph <- function (link = "identity") {
     ## code to evaluate in estimate.gam, to do with data ordering and 
     ## baseline hazard estimation...
       ## first get the estimated hazard and prediction information...
+      G$X <- Sl.initial.repara(G$Sl,G$X,inverse=TRUE,cov=FALSE,both.sides=FALSE)
       object$family$data <- G$family$hazard(G$y,G$X,object$coefficients,G$w)
       rumblefish <- G$family$hazard(G$y,matrix(0,nrow(G$X),0),object$coefficients,G$w)
       s0.base <- exp(-rumblefish$h[rumblefish$r]) ## no model baseline survival 
@@ -76,7 +77,7 @@ cox.ph <- function (link = "identity") {
                n=as.integer(nrow(X)),p=as.integer(ncol(X)),
                nt=as.integer(nt),PACKAGE="mgcv")
       p <- ncol(X)
-      list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[p*nt],p,nt),nt=nt,r=r,km=oo$km)
+      list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[1:(p*nt)],p,nt),nt=nt,r=r,km=oo$km)
     }
 
     residuals <- function(object,type=c("deviance","martingale")) {

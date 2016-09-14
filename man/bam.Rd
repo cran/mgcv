@@ -21,8 +21,8 @@ bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,
     paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-    cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,
-    samfrac=1,drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
+    cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,
+    coef=NULL,drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -147,6 +147,8 @@ and then finds its Choleski decomposition, at the end. This is somewhat more eff
 
 \item{samfrac}{For very large sample size Generalized additive models the number of iterations needed for the model fit can 
 be reduced by first fitting a model to a random sample of the data, and using the results to supply starting values. This initial fit is run with sloppy convergence tolerances, so is typically very low cost. \code{samfrac} is the sampling fraction to use. 0.1 is often reasonable. }
+
+\item{coef}{initial values for model coefficients}
 
 \item{drop.unused.levels}{by default unused levels are dropped from factors before fitting. For some smooths 
 involving factor variables you might want to turn this off. Only do so if you know what you are doing.}

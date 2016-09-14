@@ -1,4 +1,4 @@
-#  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
+##  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
 ##  With contributions from Henric Nilsson
 
 
@@ -307,11 +307,11 @@ gam.check <- function(b, old.style=FALSE,
          
         if (!b$mgcv.conv$fully.converged)
         cat(" by steepest\ndescent step failure.\n") else cat(".\n")
-        cat("The RMS",b$method,"score gradiant at convergence was",b$mgcv.conv$rms.grad,".\n")
+        cat("The RMS",b$method,"score gradient at convergence was",b$mgcv.conv$rms.grad,".\n")
         if (b$mgcv.conv$hess.pos.def)
         cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
-        cat("The estimated model rank was ",b$mgcv.conv$rank,
-                   " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
+        #cat("The estimated model rank was ",b$mgcv.conv$rank,
+        #           " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
       }
     }
     if (!is.null(b$rank)) {
@@ -438,7 +438,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=0,colors=heat.colors(100),
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(100),
                      contour.col=3,...) {
 ## plot method function for sos.smooth terms
   if (scheme>1) return(plot.mgcv.smooth(x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
@@ -446,7 +446,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,scheme=scheme-2,
-                     colors=colors,contour.col=contour.col,...))
+                     hcolors=hcolors,contour.col=contour.col,...))
   ## convert location of pole in plotting grid to radians
   phi <- phi*pi/180
   theta <- theta*pi/180
@@ -506,7 +506,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     if (scheme == 0) {
       col <- 1# "lightgrey 
       zz[P$ind] <- P$fit
-      image(P$xm,P$ym,matrix(zz,m,m),col=colors,axes=FALSE,xlab="",ylab="",...)
+      image(P$xm,P$ym,matrix(zz,m,m),col=hcolors,axes=FALSE,xlab="",ylab="",...)
       if (rug) { 
         if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
         points(P$raw$x,P$raw$y,...)
@@ -696,7 +696,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
-                     shift=0,trans=I,by.resids=FALSE,scheme=0,colors=heat.colors(50),
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(50),
                      contour.col=3,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
 ## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
@@ -910,9 +910,9 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
         } else if (scheme==2||scheme==3) {
-          if (scheme==3) colors <- grey(0:50/50)
+          if (scheme==3) hcolors <- grey(0:50/50)
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
-                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=hcolors,...)
           contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=contour.col,...)
           if (rug) {  
             if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
@@ -957,9 +957,9 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                           zlab=P$main,theta=theta,phi=phi,xlim=P$xlim,ylim=P$ylim,...)
         } else if (scheme==2||scheme==3) {
-          if (scheme==3) colors <- grey(0:50/50)
+          if (scheme==3) hcolors <- grey(0:50/50)
           image(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
-                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=colors,...)
+                  main=P$main,xlim=P$xlim,ylim=P$ylim,col=hcolors,...)
           contour(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),add=TRUE,col=contour.col,...)
           if (rug) {  
             if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else

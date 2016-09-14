@@ -2,6 +2,7 @@
 \alias{predict.gam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction from fitted GAM model}
+
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} 
 and produces predictions given a new set of values for the model covariates 
 or the original values used for the model fit. Predictions can be accompanied
@@ -128,7 +129,11 @@ Chambers and Hastie (1993) (but is not a clone).
 
 }
 
-\section{WARNING }{ Note that the behaviour of this function is not identical to 
+\section{WARNING }{
+Predictions are likely to be incorrect if data dependent transformations of the covariates
+are used within calls to smooths. See examples.
+
+Note that the behaviour of this function is not identical to 
 \code{predict.gam()} in Splus.
 
 \code{type=="terms"} does not exactly match what \code{predict.lm} does for
@@ -190,6 +195,19 @@ mean(res);var(res)
 ## loop is replace-able by following .... 
 
 res <- colSums(log(abs(Xp \%*\% t(br))))
+
+##################################################################
+# illustration of unsafe scale dependent transforms in smooths....
+##################################################################
+
+b0 <- gam(y~s(x0)+s(x1)+s(x2)+scale(x3),data=dat) ## safe
+b1 <- gam(y~s(x0)+s(I(x1/2))+s(x2)+scale(x3),data=dat) ## safe
+b2 <- gam(y~s(x0)+s(scale(x1))+s(x2)+scale(x3),data=dat) ## unsafe
+pd <- dat; pd$x1 <- pd$x1/2; pd$x3 <- pd$x3/2
+par(mfrow=c(1,2))
+plot(predict(b0,pd),predict(b1,pd),main="b0 and b1 predictions match");abline(0,1,col=2)
+plot(predict(b0,pd),predict(b2,pd),main="b2 unsafe, doesn't match");abline(0,1,col=2)
+
 
 ##################################################################
 ## The following shows how to use use an "lpmatrix" as a lookup 

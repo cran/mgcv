@@ -211,8 +211,10 @@ void get_bSb(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
 */
 { double *Sb,*Skb,*work,*work1,*p1,*p0,*p2,xx;
   int i,j,bt,ct,one=1,m,k,rSoff,mk,km,Mtot; 
+  j = *q; for (i=0;i<*M;i++) if (rSncol[i]>j) j = rSncol[i];
+  j += *M0; /* work space needed */
   
-  work = (double *)CALLOC((size_t)*q+*M0,sizeof(double)); 
+  work = (double *)CALLOC((size_t)j,sizeof(double)); 
   Sb = (double *)CALLOC((size_t)*q,sizeof(double));
   bt=0;ct=0;mgcv_mmult(work,E,beta,&bt,&ct,Enrow,&one,q);
   bt=1;ct=0;mgcv_mmult(Sb,E,work,&bt,&ct,q,&one,Enrow); /* S \hat \beta */
@@ -221,9 +223,8 @@ void get_bSb(double *bSb,double *bSb1, double *bSb2,double *sp,double *E,
 
   if (*deriv <=0) {FREE(work);FREE(Sb);return;}
 
-  work1 = (double *)CALLOC((size_t)*q,sizeof(double));
+  work1 = (double *)CALLOC((size_t)j,sizeof(double));
   Skb = (double *)CALLOC((size_t)*M * *q,sizeof(double));
- 
   for (p1=Skb,rSoff=0,i=0;i<*M;i++) { /* first part of first derivatives */
      /* form S_k \beta * sp[k]... */
      bt=1;ct=0;mgcv_mmult(work,rS + rSoff ,beta,&bt,&ct,rSncol+i,&one,q);

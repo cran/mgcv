@@ -845,7 +845,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1) 
     ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
     khalf <- 0;fac <- 2
-    while (ll1 < ll0 && khalf < 25) { ## step halve until it succeeds...
+    while ((!is.finite(ll1)||ll1 < ll0) && khalf < 25) { ## step halve until it succeeds...
       step <- step/fac;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
@@ -858,12 +858,12 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       if (khalf>5) fac <- 5
     } ## end step halve
  
-    if (ll1 < ll0) { ## switch to steepest descent... 
+    if (!is.finite(ll1) || ll1 < ll0) { ## switch to steepest descent... 
       step <- -.5*drop(grad)*mean(abs(coef))/mean(abs(grad))
       khalf <- 0
     }
 
-    while (ll1 < ll0 && khalf < 25) { ## step cut until it succeeds...
+    while ((!is.finite(ll1)||ll1 < ll0) && khalf < 25) { ## step cut until it succeeds...
       step <- step/10;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
@@ -875,7 +875,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       khalf <- khalf + 1
     }
 
-    if (ll1 >= ll0||iter==control$maxit) { ## step ok. Accept and test
+    if ((is.finite(ll1)&&ll1 >= ll0)||iter==control$maxit) { ## step ok. Accept and test
       coef <- coef + step
       ## convergence test...
       ok <- (iter==control$maxit||(abs(ll1-ll0) < control$epsilon*abs(ll0) 
@@ -1097,7 +1097,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     db.drho <- matrix(0,length(bdrop),ncol(d1b));db.drho[!bdrop,] <- d1b
   } else db.drho <- d1b
   ## and undo re-para...
-  if (!is.null(d1b)) db.drho <- t(Sl.repara(rp$p,t(db.drho),inverse=TRUE,both.sides=FALSE)) 
+  if (!is.null(d1b)) db.drho <- t(Sl.repara(rp$rp,t(db.drho),inverse=TRUE,both.sides=FALSE)) 
 
   ret <- list(coefficients=coef,family=family,y=y,prior.weights=weights,
        fitted.values=fitted.values, linear.predictors=linear.predictors,

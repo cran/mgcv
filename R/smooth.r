@@ -3039,12 +3039,13 @@ gpE <- function(x,xk,defn = NA) {
   if (rho <= 0) rho <- max(E) ## approximately the K & W choise
   E <- E/rho
   if (!type%in%1:5||k>2||k<=0) stop("incorrect arguments to GP smoother")
+  if (type>2) eE <- exp(-E)
   E <- switch(type,
               (1 - 1.5*E + 0.5 *E^3)*(E<=rho), ## 1 spherical
               exp(-E^k), ## 2 power exponential
-              (1 + E) * exp(-E), ## 3 Matern k = 1.5
-	      (1 + E + E^2/3) * exp(-E), ## 4 Matern k = 2.5
-	      (1 + E + .4 * E^2 + E^3 / 15) * exp(-E) ## 5 Matern k = 3.5
+              (1 + E) * eE, ## 3 Matern k = 1.5
+	      eE + (E*eE)*(1+E/3), ## 4 Matern k = 2.5
+	      eE + (E*eE)*(1+.4*E+E^2/15) ## 5 Matern k = 3.5
 	     )
   attr(E,"defn") <- c(type,rho,k)
   E

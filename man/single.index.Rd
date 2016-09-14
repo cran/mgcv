@@ -17,7 +17,7 @@ require(mgcv)
 
 si <- function(theta,y,x,z,opt=TRUE,k=10,fx=FALSE) {
 ## Fit single index model using gam call, given theta (defines alpha). 
-## Return ML is opt==TRUE and fitted gam with theta added otherwise.
+## Return ML if opt==TRUE and fitted gam with theta added otherwise.
 ## Suitable for calling from 'optim' to find optimal theta/alpha.
   alpha <- c(1,theta) ## constrained alpha defined using free theta
   kk <- sqrt(sum(alpha^2))

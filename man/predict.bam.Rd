@@ -135,7 +135,10 @@ Chambers and Hastie (1993) (but is not a clone).
 
 }
 
-
+\section{WARNING }{
+Predictions are likely to be incorrect if data dependent transformations of the covariates
+are used within calls to smooths. See examples in \code{\link{predict.gam}}.
+}
 
 \seealso{  \code{\link{bam}}, \code{\link{predict.gam}}}
 

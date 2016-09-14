@@ -243,7 +243,7 @@ Linked smoothing parameters and adaptive smoothing are not supported.
 \code{\link{predict.gam}},
   \code{\link{plot.gam}}, \code{\link{summary.gam}}, \code{\link{negbin}}, 
 \code{\link{vis.gam}},\code{\link{pdTens}}, \code{gamm4} (
-\url{http://cran.r-project.org/package=gamm4})
+\url{https://cran.r-project.org/package=gamm4})
  }
 
 \examples{
