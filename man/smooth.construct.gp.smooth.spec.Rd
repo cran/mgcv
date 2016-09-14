@@ -30,7 +30,7 @@ Usually invoked by an \code{s(...,bs="gp")} term in a \code{gam} formula. Argume
 \value{ An object of class \code{"gp.smooth"}. In addition to the usual elements of a 
 smooth class documented under \code{\link{smooth.construct}}, this object will contain:
 \item{shift}{A record of the shift applied to each covariate in order to center it around zero and 
-avoid any co-linearity problems that might otehrwise occur in the penalty null space basis of the term. }
+avoid any co-linearity problems that might otherwise occur in the penalty null space basis of the term. }
 \item{Xu}{A matrix of the unique covariate combinations for this smooth (the basis is constructed by first stripping 
 out duplicate locations).}
 \item{UZ}{The matrix mapping the smoother parameters back to the parameters of a full GP smooth.}

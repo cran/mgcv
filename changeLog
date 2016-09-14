@@ -5,6 +5,23 @@ Currently deprecated and liable to be removed:
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 
+1.8-15
+
+* Fix of survival function prediction in cox.ph family. Code used expression 
+  (8.8.5) in Klein and Moeschberger (2003), which is missing a term. Correct
+  expression is, e.g., (10) from Andersen, Weis Bentzon and Klein (1996)
+  Scandinavian Journal of Statistics.  
+
+* Added help file 'cox.pht' for Cox PH regression with time dependent 
+  covariates. 
+
+* fix of potential seg fault in gdi.c:get_bSb if single smooth model 
+  rank deficient (insufficient workspace allocated).
+
+* gam.fit5 modified to step half if trial penalized likelihood is infinite.
+
+* Fix so that bam works properly with drop.intercept=TRUE.
+
 1.8-14
 
 * bug fix to smoothCon that could generate NAs in model matrix when using bam

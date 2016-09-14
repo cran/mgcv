@@ -1506,7 +1506,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   object$control <- control
   if (inherits(family,"general.family")) {
     mv <- gam.fit5.post.proc(object,G$Sl,G$L,G$lsp0,G$S,G$off)
-    object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
+    ## object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
   } else mv <- gam.fit3.post.proc(G$X,G$L,G$lsp0,G$S,G$off,object)
   ## note: use of the following in place of Vp appears to mess up p-values for smooths,
   ##       but doesn't change r.e. p-values of course. 
@@ -1561,6 +1561,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
 
        method <- "REML" ## any method you like as long as it's REML
        G$Sl <- Sl.setup(G) ## prepare penalty sequence
+       ## Xorig <- G$X ## store original X incase it is needed by family - poor option pre=proc can manipulate G$X
        G$X <- Sl.initial.repara(G$Sl,G$X,both.sides=FALSE) ## re-parameterize accordingly
  
        if (!is.null(start)) start <- Sl.initial.repara(G$Sl,start,inverse=FALSE,both.sides=FALSE)
@@ -1762,9 +1763,14 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
   names(object$edf) <- G$term.names
   names(object$edf1) <- G$term.names
 
-  ## extended family may need to manipulate fit object...
-    
-  if (!is.null(G$family$postproc)) eval(G$family$postproc)
+  if (inherits(family,"general.family")) {
+    object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
+  }
+  
+  ## extended family may need to manipulate fit object. Code
+  ## will need to include the following line if G$X used...
+  ## G$X <- Sl.initial.repara(G$Sl,G$X,inverse=TRUE,cov=FALSE,both.sides=FALSE)
+  if (!is.null(G$family$postproc)) eval(G$family$postproc) 
 
   if (!is.null(G$P)) { ## matrix transforming from fit to prediction parameterization
     object$coefficients <- as.numeric(G$P %*% object$coefficients)

@@ -25,7 +25,7 @@ void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,dou
    The new data are in descending order on entry, as is tr. 
    On exit n - vectors s and se contain the estimated survival function and its se.
 */
-  double eta,*p1,*p2,*p3,*v,*pv,*pa,x,vVv,hi; 
+  double eta,*p1,*p2,*p3,*v,*pv,*pa,x,vVv,hi,exp_eta; 
   int ir=0,i=0;
   v = (double *)CALLOC((size_t)*p,sizeof(double)); 
   for (i=0;i<*n;i++) { /* loop through new data */
@@ -43,14 +43,15 @@ void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,dou
         eta += *p1 * *p3; /* X beta */
         *pv = *pa - *p1 * hi; /* v = a - x * h */
       }
-      s[i] = exp(-hi*exp(eta)); /* estimated survivor function */
+      exp_eta = exp(eta);
+      s[i] = exp(-hi*exp_eta); /* estimated survivor function */
       /* now get the s.e. for this... */
       p1 = Vb;pv = v;p2 = pv + *p;
       for (vVv=0;pv<p2;pv++) {
         for (x=0.0,p3 = v;p3<p2;p3++,p1++) x += *p3 * *p1;
         vVv += x * *pv; /* v'Vbv */
       }
-      se[i] = s[i]*sqrt(q[ir] + vVv); /* standard error on survivor function */
+      se[i] = exp_eta*s[i]*sqrt(q[ir] + vVv); /* standard error on survivor function */
     }
     X++; /* next prediction */
   } /* data loop */
@@ -67,7 +68,7 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
    are arranged in reverse time order. There are 'nt' unique times. 
    r[i] is the index of the unique time corresponding to row i of 'X'.
    The latest times have the lowest indices. Notionally tr[r[i]] is the 
-   time corresponding to row i, although this functions does not use 'tr'.
+   time corresponding to row i, although this function does not use 'tr'.
    'X' is 'n' by 'p'.
 
    On exit:
@@ -105,7 +106,7 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
       gamma_p[j] +=  gamma_i; gamma_np[j] += 1.0;
       dc[j] += d[i]; /* count the events */
       /* accumulate gamma[i]*X[i,] into bj */
-      for (p1=bj,p2=p1 + *p,Xp = X + i;p1<p2;p1++,Xp += *n) *bj += *Xp * gamma_i; 
+      for (p1=bj,p2=p1 + *p,Xp = X + i;p1<p2;p1++,Xp += *n) *p1 += *Xp * gamma_i; 
       i++; /* increase the data counter */
     }
     bj += *p; /* move on to next b^+ vector */
@@ -117,7 +118,7 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
   x =  dc[j]/gamma_p[j];h[j] = x;km[j] = dc[j]/gamma_np[j];
   x /= gamma_p[j];q[j] = x;
   i = j * *p;
-  for (aj=X+i,p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++) *aj = *p1 * x;
+  for (aj=X+i,p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++) *aj = *p2 * x;
   for (j--;j>=0;j--) { /* back recursion, forwards in time */
     y = dc[j];
     x = y/gamma_p[j];
@@ -128,7 +129,8 @@ void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
     q[j] = q[j+1] + x;
     /* now accumulate the a vectors into X for return */
     i = j * *p;
-    for (aj=X+i,aj1=p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++) *aj = *aj1 + *p1 * x; 
+    //for (aj=X+i,aj1=p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++) *aj = *aj1 + *p1 * x; 
+    for (aj=X+i,aj1=p1=aj+ *p,p2=b+i;aj<p1;p2++,aj++,aj1++) *aj = *aj1 + *p2 * x;
   }
   FREE(b);FREE(gamma);FREE(dc);
   FREE(gamma_p);FREE(gamma_np);

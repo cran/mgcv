@@ -18,7 +18,7 @@ gevlss(link=list("identity","identity","logit"))
 
 \details{Used with \code{\link{gam}} to fit Generalized Extreme Value location scale and shape models. \code{gam} is called with a list containing 3 formulae: the first specifies the response on the left hand side and the structure of the linear predictor for the location parameter on the right hand side. The second is one sided, specifying the linear predictor for the log scale parameter on the right hand side. The third is one sided specifying the linear predictor for the shape parameter.
 
-Link functions \code{"identity"} and \code{"log"} are available for the location (mu) parameter. There is no choice of link for the log scale parameter (\eqn{\rho = \log \sigma}{rho = log sigma}). The shape parameter (xi) defaults to a modified logit link restricting its range to (-1,.5), the upper limit is required to ensure existence of an MLE.
+Link functions \code{"identity"} and \code{"log"} are available for the location (mu) parameter. There is no choice of link for the log scale parameter (\eqn{\rho = \log \sigma}{rho = log sigma}). The shape parameter (xi) defaults to a modified logit link restricting its range to (-1,.5), the upper limit is required to ensure finite variance, while the lower limit ensures consistency of the MLE (Smith, 1985).
 
 The fitted values for this family will be a three column matrix. The first column is the location parameter, the second column is the log scale parameter, the third column is the shape parameter.
 
@@ -28,6 +28,9 @@ The derivative system code for this family is mostly auto-generated, and the fam
 }
 
 \references{
+Smith, R.L. (1985) Maximum likelihood estimation in a class of
+nonregular cases. Biometrika 72(1):67-90
+
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association.

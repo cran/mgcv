@@ -1466,7 +1466,9 @@ gevlss <- function(link=list("identity","identity","logit")) {
     stats[[i]]$d3link <- fam$d3link
     stats[[i]]$d4link <- fam$d4link
   }
-  if (link[[3]]=="logit") { ## shifted logit link to confine xi to (-1,.5) 
+  if (link[[3]]=="logit") { ## shifted logit link to confine xi to (-1,.5)
+    ## Smith '85 Biometrika shows that -1 limit needed for MLE consistency
+    ## but would need -0.5 for normality...
     stats[[3]]$linkfun <- function(mu) binomial()$linkfun((mu + 1)/1.5)
     stats[[3]]$mu.eta <- function(eta) binomial()$mu.eta(eta)*1.5
     stats[[3]]$linkinv <- function(eta) 1.5* binomial()$linkinv(eta) - 1

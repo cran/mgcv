@@ -37,7 +37,7 @@ This is a restricted, but faster, version of \code{rtweedie} from the \code{twee
 
 \references{
 Peter K Dunn (2009). tweedie: Tweedie exponential family models. R
-  package version 2.0.2. http://CRAN.R-project.org/package=tweedie
+  package version 2.0.2. \url{https://cran.r-project.org/package=tweedie}
 }
 
 
