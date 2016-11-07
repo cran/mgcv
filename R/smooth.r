@@ -152,41 +152,44 @@ mono.con<-function(x,up=TRUE,lower=NA,upper=NA)
 } ## end mono.con
 
 
-uniquecombs <- function(x) {
+uniquecombs <- function(x,ordered=FALSE) {
 ## takes matrix x and counts up unique rows
 ## `unique' now does this in R
   if (is.null(x)) stop("x is null")
   if (is.null(nrow(x))||is.null(ncol(x))) x <- data.frame(x)
-  #if (is.null(nrow(x))) stop("x has no row attribute")
-  #if (is.null(ncol(x))) stop("x has no col attribute")
   if (inherits(x,"data.frame")) {
     xo <- x
     x <- data.matrix(xo) ## ensure all data are numeric
   } else xo <- NULL
   if (ncol(x)==1) { ## faster to use R 
-     xu <- unique(x)
+     xu <- if (ordered) sort(unique(x)) else unique(x)
      ind <- match(as.numeric(x),xu)
      x <- matrix(xu,ncol=1,nrow=length(xu))
   } else { ## no R equivalent that directly yields indices
- 
+    if (ordered) {
+      chloc <- Sys.getlocale("LC_CTYPE")
+      Sys.setlocale("LC_CTYPE","C")
+    }
     txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=","),")",sep="")
-    xt <- eval(parse(text=txt))
-    dup <- duplicated(xt)
-    ind <- match(xt,xt[!dup])
-    x <- x[!dup,]
-    ## old slower...
-    # ind <- rep(0,nrow(x))
-    # res<-.C(C_RuniqueCombs,x=as.double(x),ind=as.integer(ind),
-    #         r=as.integer(nrow(x)),c=as.integer(ncol(x)))
-    # n <- res$r*res$c
-    # x <- matrix(res$x[1:n],res$r,res$c)
-    # ind <- res$ind+1 ## C to R index gotcha
-    # ## what if I muddle this index?
-    # #ri <- ii <- sample(1:length(ind),length(ind),replace=FALSE)
-    # #ri[ii] <- 1:length(ii) 
-    # #ind <- ri[ind]
-    # #x <- x[ii,] ## end of debug muddle tryout
-    
+    xt <- eval(parse(text=txt)) ## text representation of rows
+    dup <- duplicated(xt)       ## identify duplicates
+    xtu <- xt[!dup]             ## unique text rows
+    x <- x[!dup,]               ## unique rows in original format
+    #ordered <- FALSE
+    if (ordered) { ## return unique in same order regardless of entry order
+      ## ordering of character based labels is locale dependent
+      ## so that e.g. running the same code interactively and via
+      ## R CMD check can give different answers. 
+      coloc <- Sys.getlocale("LC_COLLATE")
+      Sys.setlocale("LC_COLLATE","C")
+      ii <- order(xtu)
+      Sys.setlocale("LC_COLLATE",coloc)
+      Sys.setlocale("LC_CTYPE",chloc)
+      xtu <- xtu[ii]
+      x <- x[ii,]
+    }
+    ind <- match(xt,xtu)   ## index each row to the unique duplicate deleted set
+
   }
   if (!is.null(xo)) { ## original was a data.frame
     x <- as.data.frame(x)
@@ -198,7 +201,7 @@ uniquecombs <- function(x) {
       contrasts(x[,i]) <- contrasts(xo[,i])
     }
   }
-  attr(x,"index") <- ind 
+  attr(x,"index") <- ind
   x
 } ## uniquecombs
 
@@ -238,7 +241,12 @@ get.var <- function(txt,data,vecMat = TRUE)
     if (inherits(x,"try-error")) x <- NULL
   }
   if (!is.numeric(x)&&!is.factor(x)) x <- NULL
-  if (is.matrix(x)) ismat <- TRUE else ismat <- FALSE
+  if (is.matrix(x)) {
+    if (ncol(x)==1) {
+      x <- as.numeric(x)
+      ismat <- FALSE
+    } else ismat <- TRUE
+  } else ismat <- FALSE
   if (vecMat&&is.matrix(x)) x <- as.numeric(x)
   if (ismat) attr(x,"matrix") <- TRUE
   x
@@ -676,7 +684,7 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
   if (object$np) for (i in 1:m) { # reparameterize 
     if (object$margin[[i]]$dim==1) { 
       # only do classes not already optimal (or otherwise excluded)
-      if (!inherits(object$margin[[i]],c("cs.smooth","cr.smooth","cyclic.smooth","random.effect"))) {
+      if (is.null(object$margin[[i]]$noterp)) { ## apply repara
         x <- get.var(object$margin[[i]]$term,data)
         np <- ncol(object$margin[[i]]$X) ## number of params
         ## note: to avoid extrapolating wiggliness measure
@@ -1160,7 +1168,7 @@ smooth.construct.tp.smooth.spec <- function(object,data,knots)
   warning("more knots than data in a tp term: knots ignored.")}
   ## deal with possibility of large data set
   if (nk==0 && n>xtra$max.knots) { ## then there *may* be too many data  
-    xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
+    xu <- uniquecombs(matrix(x,n,object$dim),TRUE) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
     if (nu>xtra$max.knots) { ## then there is really a problem 
       seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
@@ -1382,7 +1390,8 @@ smooth.construct.cr.smooth.spec <- function(object,data,knots) {
 
   object$df <- object$bs.dim # degrees of freedom,  unconstrained and unpenalized
   object$xp <- k  # knot positions
-  object$F <- oo$F # f'' = t(F)%*%f (at knots) - helps prediction 
+  object$F <- oo$F # f'' = t(F)%*%f (at knots) - helps prediction
+  object$noterp <- TRUE # do not reparameterize in te
   class(object) <- "cr.smooth"
   object
 } ## smooth.construct.cr.smooth.spec
@@ -1508,6 +1517,7 @@ smooth.construct.cc.smooth.spec <- function(object,data,knots)
   object$df<-object$bs.dim-1 # degrees of freedom, accounting for  cycling
   object$null.space.dim <- 1  
   class(object)<-"cyclic.smooth"
+  object$noterp <- TRUE # do not re-parameterize in te
   object
 } ## smooth.construct.cc.smooth.spec
 
@@ -2287,7 +2297,7 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
 
 
   object$random <- TRUE ## treat as a random effect for p-value comp.
-  
+  object$noterp <- TRUE ## do not reparameterize in te
   ## Give object a class
   class(object) <- if (inherits(object,"tensor.smooth.spec")) c("random.effect","tensor.smooth")  else 
                    "random.effect"  
@@ -2384,7 +2394,7 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
 ## If `penalty' is not supplied then it is computed from `nb', which is in turn computed 
 ## from `polys' if `nb' is missing. 
 ## Modified from code by Thomas Kneib.
- 
+  if (!is.factor(data[[object$term]])) warning("argument of mrf should be a factor variable")
   x <- as.factor(data[[object$term]])
   k <- knots[[object$term]]
   if (is.null(k)) {
@@ -2413,20 +2423,24 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   ## If polygons supplied as list with duplicated names, then re-format...
 
   if (!is.null(object$xt$polys)) {
-  a.name <- names(object$xt$polys)
-  d.name <- unique(a.name[duplicated(a.name)]) ## find duplicated names
-  if (length(d.name)) {  ## deal with duplicates
-    for (i in 1:length(d.name)) {
-      ind <- (1:length(a.name))[a.name==d.name[i]] ## index of duplicates 
-      for (j in 2:length(ind)) object$xt$polys[[ind[1]]] <- ## combine matrices for duplicate names
+    a.name <- names(object$xt$polys)
+    d.name <- unique(a.name[duplicated(a.name)]) ## find duplicated names
+    if (length(d.name)) {  ## deal with duplicates
+      for (i in 1:length(d.name)) {
+        ind <- (1:length(a.name))[a.name==d.name[i]] ## index of duplicates 
+        for (j in 2:length(ind)) object$xt$polys[[ind[1]]] <- ## combine matrices for duplicate names
         rbind(object$xt$polys[[ind[1]]],c(NA,NA),object$xt$polys[[ind[j]]])
       }
       ## now delete the un-wanted duplicates...
       ind <- (1:length(a.name))[duplicated(a.name)]
       if (length(ind)>0) for (i in length(ind):1) object$xt$polys[[ind[i]]] <- NULL 
     }
-  } ## polygon list in correct format
-
+    object$plot.me <- TRUE
+    object$dim <- 2 ## signal that it's really 2D here to avoid attempt to plot in te term
+    ## polygon list in correct format
+  } else { 
+    object$plot.me <- FALSE ## can't plot without polygon information
+  }
   ## actual penalty building...
   if (is.null(object$xt$penalty)) { ## must construct penalty 
     if (is.null(object$xt$nb)) { ## no neighbour list... construct one
@@ -2482,7 +2496,7 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
     object$P <- rp$P[,ind] ## re-para matrix
     ##ind <- ind[ind <= rp$rank] ## drop last element as zeros not returned in D
     object$S[[1]] <- diag(c(rp$D[ind[ind <= rp$rank]],rep(0,sum(ind>rp$rank))))
-    object$rank <- rp$rank ## penalty rank
+    object$rank <- sum(ind <= rp$rank) ## rp$rank ## penalty rank
   } else { ## full rank basis, but need to 
            ## numerically evaluate mrf penalty rank... 
     ev <- eigen(object$S[[1]],symmetric=TRUE,only.values=TRUE)$values
@@ -2491,6 +2505,8 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
   object$null.space.dim <- ncol(object$X) - object$rank
   object$knots <- k
   object$df <- ncol(object$X)
+  object$te.ok <- 2 ## OK in te but not to plot
+  object$noterp <- TRUE ## do not re-para in te terms
   class(object)<-"mrf.smooth"
   object
 } ## smooth.construct.mrf.smooth.spec
@@ -2649,7 +2665,7 @@ smooth.construct.sos.smooth.spec<-function(object,data,knots)
   }
   ## deal with possibility of large data set
   if (nk==0) { ## need to create knots
-    xu <- uniquecombs(matrix(x,n,2)) ## find the unique `locations'
+    xu <- uniquecombs(matrix(x,n,2),TRUE) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu>xtra$max.knots) { ## then there is really a problem 
@@ -2855,12 +2871,11 @@ smooth.construct.ds.smooth.spec <- function(object,data,knots)
     warning("more knots than data in a ds term: knots ignored.")
   }
 
-  xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
+  xu <- uniquecombs(matrix(x,n,object$dim),TRUE) ## find the unique `locations'
   if (nrow(xu)<object$bs.dim) stop(
    "A term has fewer unique covariate combinations than specified maximum degrees of freedom")
   ## deal with possibility of large data set
   if (nk==0) { ## need to create knots
-    ## xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu>xtra$max.knots) { ## then there is really a problem 
@@ -3041,7 +3056,7 @@ gpE <- function(x,xk,defn = NA) {
   if (!type%in%1:5||k>2||k<=0) stop("incorrect arguments to GP smoother")
   if (type>2) eE <- exp(-E)
   E <- switch(type,
-              (1 - 1.5*E + 0.5 *E^3)*(E<=rho), ## 1 spherical
+              (1 - 1.5*E + 0.5 *E^3)*(E <= 1), ## 1 spherical 
               exp(-E^k), ## 2 power exponential
               (1 + E) * eE, ## 3 Matern k = 1.5
 	      eE + (E*eE)*(1+E/3), ## 4 Matern k = 2.5
@@ -3090,7 +3105,7 @@ smooth.construct.gp.smooth.spec <- function(object,data,knots)
     warning("more knots than data in an ms term: knots ignored.")
   }
 
-  xu <- uniquecombs(matrix(x,n,object$dim)) ## find the unique `locations'
+  xu <- uniquecombs(matrix(x,n,object$dim),TRUE) ## find the unique `locations'
   if (nrow(xu) < object$bs.dim) stop(
    "A term has fewer unique covariate combinations than specified maximum degrees of freedom")
   ## deal with possibility of large data set
@@ -3454,7 +3469,7 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
     matrixArg <- FALSE
     if (!is.null(sm$ind)) {  ## unpack model matrix + any offset
       offs <- attr(sm$X,"offset")
-      sm$X <- sm$X[sm$ind,]      
+      sm$X <- sm$X[sm$ind,,drop=FALSE]      
       if (!is.null(offs)) attr(sm$X,"offset") <- offs[sm$ind]
     }
   }
@@ -3499,7 +3514,7 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
      if (!is.null(sm$by.done)) warning("sweep and drop constraints unlikely to work well with self handling of by vars")
      qrc <- c(drop,as.numeric(sm$C)[-drop])
      class(qrc) <- "sweepDrop"
-     sm$X <- sm$X[,-drop] - matrix(qrc[-1],nrow(sm$X),ncol(sm$X)-1,byrow=TRUE)
+     sm$X <- sm$X[,-drop,drop=FALSE] - matrix(qrc[-1],nrow(sm$X),ncol(sm$X)-1,byrow=TRUE)
      if (length(sm$S)>0)
      for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
         sm$S[[l]]<-sm$S[[l]][-drop,-drop]
@@ -3566,7 +3581,7 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
           sml[[1]]$X <- matrix(0,n,ncol(sm$X))  
           for (i in 1:n) { ## in this case have to work down the rows
             ind <- ind + 1
-            sml[[1]]$X[i,] <- colSums(by[ind]*sm$X[sm$ind[ind],])
+            sml[[1]]$X[i,] <- colSums(by[ind]*sm$X[sm$ind[ind],,drop=FALSE])
             if (!is.null(offs)) {
               offX[i] <- sum(offs[sm$ind[ind]]*by[ind])
             }      

@@ -2,7 +2,7 @@
 \alias{multinom}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM multinomial logistic regression}
-\description{Family for use with \code{\link{gam}}, implementing regression for categorical response data. Categories must be coded 0 to K, where K is a positive integer. \code{\link{gam}} should be called with a list of K formulae, one for each category except category zero (extra formulae for shared terms may also be supplied). The first formula also specifies the response variable.      
+\description{Family for use with \code{\link{gam}}, implementing regression for categorical response data. Categories must be coded 0 to K, where K is a positive integer. \code{\link{gam}} should be called with a list of K formulae, one for each category except category zero (extra formulae for shared terms may also be supplied: see \code{\link{formula.gam}}). The first formula also specifies the response variable.      
 }
 
 \usage{

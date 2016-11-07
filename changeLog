@@ -5,6 +5,53 @@ Currently deprecated and liable to be removed:
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 
+1.8-16
+
+* slightly improved intial value heuristics for overlapping penalties in 
+  general family case.
+
+* 'ocat' checks that response is numeric.
+
+* plot.gam(...,scale=-1) now changes scale according to 'trans' and 'shift'.
+
+* newton optimizer made slightly more cautious: contracts step if reduction 
+  in true objective too far different from reduction predicted by quadratic 
+  approximation underlying Newton step. Also leaves parameters unchanged 
+  in Newton step while their grad is less than 1% of max grad.  
+
+* Fix to Fisher weight computation in gam.fit4. Previously a weight could
+  (rarely) evaluate as negative machine prec instead of zero, get passed to 
+  gdi2 in C code, generate a NaN when square rooted, resulting in a NaN passed
+  to the LAPACK dgeqp3 routine, which then hung in a non-interuptable way.  
+
+* Fix of 'sp' argument handling with multiple formulae. Allocation to terms 
+  could be incorrect. 
+
+* Option 'edge.correct' added to 'gam.control' to allow better correction
+  of edge of smoothing parameter space effects with 'gam' when RE/ML used. 	
+
+	
+* Fix to setting of penalty rank in smooth.construct.mrf.smooth.spec. 
+  Previously this was wrong, which could cause failure with gamm if the 
+  penalty was rank deficient. Thanks Paul Buerkner.
+
+* Fix to Vb.corr call from gam.fit3.post.proc to ensure that sp not 
+  dropped (wrongly treated as scale estimate) when P-REML or P-ML used. 
+  Could cause failure depending on BLAS. Thanks Matteo Fasiolo.
+
+* Fix in gam.outer that caused failure with "efs" optimizer and fixed sps.
+
+* Fix to `get.var' to drop matrix attributes of 1 column matrix variables.
+
+* Extra argument added to `uniquecombs' to allow result to have same row
+  ordering regardless of input data ordering. Now used by smooth constructors 
+  that subsample unique covariate values during basis setup to ensure 
+  invariance to data re-ordering. 
+
+* Correction of scaling error in spherical correlation structure GP smooth.
+
+* qf and rd functions for binomial family fixed for zero n case. 
+
 1.8-15
 
 * Fix of survival function prediction in cox.ph family. Code used expression 

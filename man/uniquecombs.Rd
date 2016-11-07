@@ -10,11 +10,12 @@ as on entry. It also returns an index attribute for relating the result back
 to the original matrix.
 }
 \usage{
-uniquecombs(x)
+uniquecombs(x,ordered=FALSE)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
  \item{x}{ is an \R matrix (numeric), or data frame. }
+ \item{ordered}{ set to \code{TRUE} to have the rows of the returned object in the same order regardless of input ordering.}
 }
 \details{ Models with more parameters than unique combinations of
   covariates are not identifiable. This routine provides a means of
@@ -59,6 +60,13 @@ Xu <- uniquecombs(X);Xu
 ind <- attr(Xu,"index")
 ## find the value for row 3 of the original from Xu
 Xu[ind[3],];X[3,]
+
+## same with fixed output ordering
+Xu <- uniquecombs(X,TRUE);Xu
+ind <- attr(Xu,"index")
+## find the value for row 3 of the original from Xu
+Xu[ind[3],];X[3,]
+
 
 ## data frame example...
 df <- data.frame(f=factor(c("er",3,"b","er",3,3,1,2,"b")),
