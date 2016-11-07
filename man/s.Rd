@@ -12,7 +12,9 @@
 %- maybe also `usage' for other objects documented here.
 \arguments{
 \item{...}{ a list of variables that are the covariates that this
-    smooth is a function of.}
+    smooth is a function of. Transformations whose form depends on
+    the values of the data are best avoided here: e.g. \code{s(log(x))}
+    is fine, but \code{s(I(x/sd(x)))} is not (see \code{\link{predict.gam}}).}
 
 \item{k}{ the dimension of the basis used to represent the smooth term.
     The default depends on the number of variables that the smooth is a

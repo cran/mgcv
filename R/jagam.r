@@ -165,7 +165,7 @@ sp.prior = "gamma",diagonalize=FALSE) {
   ## get initial values, for use by JAGS, and to guess suitable values for
   ## uninformative priors...
 
-  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$off,offset=G$offset,L=G$L) ## initial sp values
+  lambda <- initial.spg(G$X,G$y,G$w,family,G$S,G$rank,G$off,offset=G$offset,L=G$L) ## initial sp values
   jags.ini <- list()
   lam <- if (is.null(G$L)) lambda else G$L%*%lambda
   jin <- jini(G,lam)

@@ -32,7 +32,7 @@ fix.family.qf <- function(fam) {
     }
   } else if (family=="binomial") {
     fam$qf <- function(p,mu,wt,scale) {
-      qbinom(p,wt,mu)/wt
+      qbinom(p,wt,mu)/(wt + as.numeric(wt==0))
     }
   } else if (family=="Gamma") {
     fam$qf <- function(p,mu,wt,scale) {
@@ -59,7 +59,7 @@ fix.family.rd <- function(fam) {
     }
   } else if (family=="binomial") {
     fam$rd <- function(mu,wt,scale) {
-      rbinom(mu,wt,mu)/wt
+      rbinom(mu,wt,mu)/(wt + as.numeric(wt==0))
     }
   } else if (family=="Gamma") {
     fam$rd <- function(mu,wt,scale) {
@@ -1196,6 +1196,7 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
         if (ll < ylim[1]) ylim[1] <- ll
       } ## partial resids done
     } ## loop end 
+    ylim <- trans(ylim+shift)
   } ## end of common scale computation
   
   ##############################################################

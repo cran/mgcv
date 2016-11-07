@@ -450,6 +450,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       theta <- log(theta)
     }
     R3 <- length(G$family$getTheta())+2
+    if (!is.numeric(G$y)) stop("Response should be integer class labels")
     if (R3>2&&G$family$n.theta>0) { 
       Theta <- ocat.ini(R3,G$y)
       G$family$putTheta(Theta)

@@ -172,10 +172,11 @@ Otherwise the function returns an object of class \code{"gam"} as described in \
 A generalized additive model (GAM) is a generalized linear model (GLM) in which the linear 
 predictor is given by a user specified sum of smooth functions of the covariates plus a 
 conventional parametric component of the linear predictor. A simple example is:
-\deqn{\log(E(y_i)) = f_1(x_{1i})+f_2(x_{2i})}{log(E(y_i))=f_1(x_1i)+f_2(x_2i)}
+\deqn{\log(E(y_i)) = \alpha + f_1(x_{1i})+f_2(x_{2i})}{log(E(y_i))= a + f_1(x_1i)+f_2(x_2i)}
 where the (independent) response variables \eqn{y_i \sim {\rm Poi }}{y_i~Poi}, and
 \eqn{f_1}{f_1} and \eqn{f_2}{f_2} are smooth functions of covariates \eqn{x_1}{x_1} and 
-\eqn{x_2}{x_2}. The log is an example of a link function. 
+\eqn{x_2}{x_2}. The log is an example of a link function. Note that to be identifiable the model
+requires constraints on the smooth functions. By default these are imposed automatically and require that the function sums to zero over the observed covariate values (the presence of a metric \code{by} variable is the only case which usually suppresses this). 
 
 If absolutely any smooth functions were allowed in model fitting then maximum likelihood 
 estimation of such models would invariably result in complex overfitting estimates of 
@@ -215,7 +216,7 @@ Broadly \code{gam} works by first constructing basis functions and one or more q
 coefficient matrices for each smooth term in the model formula, obtaining a model matrix for 
 the strictly parametric part of the model formula, and combining these to obtain a 
 complete model matrix (/design matrix) and a set of penalty matrices for the smooth terms. 
-Some linear identifiability constraints are also obtained at this point. The model is 
+The linear identifiability constraints are also obtained at this point. The model is 
 fit using \code{\link{gam.fit}}, \code{\link{gam.fit3}} or varaints, which are modifications 
 of \code{\link{glm.fit}}. The GAM 
 penalized likelihood maximization problem is solved by Penalized Iteratively 

@@ -15,7 +15,7 @@ gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
             rank.tol=.Machine$double.eps^0.5,
             nlm=list(),optim=list(),newton=list(),
             outerPIsteps=0,idLinksBases=TRUE,scalePenalty=TRUE,
-            keepData=FALSE,scale.est="fletcher") 
+            keepData=FALSE,scale.est="fletcher",edge.correct=FALSE) 
 }
 \arguments{ 
 \item{nthreads}{Some parts of some smoothing parameter selection methods (e.g. REML) can use some
@@ -78,6 +78,10 @@ do so. }
 
 \item{scale.est}{How to estimate the scale parameter for exponential family models estimated
 by outer iteration. See \code{\link{gam.scale}}.}
+
+\item{edge.correct}{With RE/ML smoothing parameter selection in \code{gam} using the default Newton RE/ML optimizer, it is possible to improve inference at the
+`completely smooth' edge of the smoothing parameter space, by decreasing
+ smoothing parameters until there is a small increase in the negative RE/ML (e.g. 0.02). Set to \code{TRUE} or to a number representing the target increase to use. Only changes the corrected smoothing parameter matrix, \code{Vc}.}
 }
 
 \details{ 

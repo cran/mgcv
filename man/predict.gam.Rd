@@ -200,13 +200,15 @@ res <- colSums(log(abs(Xp \%*\% t(br))))
 # illustration of unsafe scale dependent transforms in smooths....
 ##################################################################
 
-b0 <- gam(y~s(x0)+s(x1)+s(x2)+scale(x3),data=dat) ## safe
+b0 <- gam(y~s(x0)+s(x1)+s(x2)+x3,data=dat) ## safe
 b1 <- gam(y~s(x0)+s(I(x1/2))+s(x2)+scale(x3),data=dat) ## safe
 b2 <- gam(y~s(x0)+s(scale(x1))+s(x2)+scale(x3),data=dat) ## unsafe
 pd <- dat; pd$x1 <- pd$x1/2; pd$x3 <- pd$x3/2
 par(mfrow=c(1,2))
-plot(predict(b0,pd),predict(b1,pd),main="b0 and b1 predictions match");abline(0,1,col=2)
-plot(predict(b0,pd),predict(b2,pd),main="b2 unsafe, doesn't match");abline(0,1,col=2)
+plot(predict(b0,pd),predict(b1,pd),main="b0 and b1 predictions match")
+abline(0,1,col=2)
+plot(predict(b0,pd),predict(b2,pd),main="b2 unsafe, doesn't match")
+abline(0,1,col=2)
 
 
 ##################################################################

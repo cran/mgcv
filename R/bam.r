@@ -129,7 +129,7 @@ compress.df <- function(dat,m=NULL) {
     names(dat0) <- names(dat)
     dat <- dat0;rm(dat0)
   }
-  xu <- uniquecombs(dat)
+  xu <- uniquecombs(dat,TRUE)
   if (nrow(xu)>mm*mf) { ## too many unique rows to use only unique
     for (i in 1:d) if (!is.factor(dat[,i])) { ## round the metric variables
       xl <- range(dat[,i])
@@ -138,7 +138,7 @@ compress.df <- function(dat,m=NULL) {
       kx <- round((dat[,i]-xl[1])/dx)+1
       dat[,i] <- xu[kx] ## rounding the metric variables
     }
-    xu <- uniquecombs(dat)
+    xu <- uniquecombs(dat,TRUE)
   }  
   k <- attr(xu,"index")
   ## shuffle rows in order to avoid induced dependencies between discretized

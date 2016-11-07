@@ -16,7 +16,9 @@ is that it is useable with \code{gamm4} from package \code{gamm4}.
 %- maybe also `usage' for other objects documented here.
 \arguments{
 \item{...}{ a list of variables that are the covariates that this
-    smooth is a function of.}
+    smooth is a function of.  Transformations whose form depends on
+    the values of the data are best avoided here: e.g. \code{t2(log(x),z)}
+    is fine, but \code{t2(I(x/sd(x)),z)} is not (see \code{\link{predict.gam}}).}
 
 \item{k}{ the dimension(s) of the bases used to represent the smooth term.
     If not supplied then set to \code{5^d}. If supplied as a single number then this 

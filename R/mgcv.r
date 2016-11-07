@@ -792,7 +792,8 @@ gam.setup.list <- function(formula,pterms,
   #G$contrasts <- list(G$contrasts)
   G$xlevels <- list(G$xlevels)
   G$assign <- list(G$assign)
-  if (!is.null(sp)&&length(G$sp)>0) sp <- sp[-(1:length(G$sp))] ## need to strip off already used sp's
+  used.sp <- length(G$lsp0)
+  if (!is.null(sp)&&used.sp>0) sp <- sp[-(1:used.sp)] ## need to strip off already used sp's
   if (!is.null(min.sp)&&nrow(G$L)>0) min.sp <- min.sp[-(1:nrow(G$L))]  
 
   ## formula[[1]] always relates to the base formula of the first linear predictor...
@@ -810,12 +811,14 @@ gam.setup.list <- function(formula,pterms,
       formula[[i]]$response <- formula$response 
       mv.response <- FALSE
     } else mv.response <- TRUE
-    spind <- if (is.null(sp)) 1 else (length(G$S)+1):length(sp)
+    #spind <- if (is.null(sp)) 1 else (length(G$S)+1):length(sp)
     formula[[i]]$pfok <- 1 ## empty formulae OK here!
     um <- gam.setup(formula[[i]],pterms[[i]],
-              data,knots,sp[spind],min.sp[spind],H,absorb.cons,sparse.cons,select,
+              data,knots,sp,min.sp,#sp[spind],min.sp[spind],
+	      H,absorb.cons,sparse.cons,select,
               idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[i],list.call=TRUE)
-    if (!is.null(sp)&&length(um$sp)>0) sp <- sp[-(1:length(um$sp))] ## need to strip off already used sp's
+    used.sp <- length(um$lsp0)	      
+    if (!is.null(sp)&&used.sp>0) sp <- sp[-(1:used.sp)] ## need to strip off already used sp's
     if (!is.null(min.sp)&&nrow(um$L)>0) min.sp <- min.sp[-(1:nrow(um$L))]  
 
     flpi[[i]] <- formula[[i]]$lpi
@@ -1445,7 +1448,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   family <- fix.family.var(family)
   if (method%in%c("REML","ML","P-REML","P-ML")) family <- fix.family.ls(family)
   
-  if (optimizer[1]=="efs") { ## experimental extended efs
+  if (optimizer[1]=="efs"&& optimizer[2] != "no.sps" ) { ## experimental extended efs
     ##warning("efs is still experimental!")
     object <- efsud(x=G$X,y=G$y,lsp=lsp,Sl=G$Sl,weights=G$w,offset=G$offxset,family=family,
                      control=control,Mp=G$Mp,start=start)
@@ -1461,7 +1464,8 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
                 family=family,weights=G$w,control=control,gamma=gamma,scale=scale,conv.tol=control$newton$conv.tol,
                 maxNstep= control$newton$maxNstep,maxSstep=control$newton$maxSstep,maxHalf=control$newton$maxHalf, 
                 printWarn=FALSE,scoreType=criterion,null.coef=G$null.coef,start=start,
-                pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,...)                
+                pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,
+		edge.correct=control$edge.correct,...)                
                 
     object <- b$object
     object$REML <- object$REML1 <- object$REML2 <-
@@ -1504,6 +1508,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   } 
   
   object$control <- control
+  object$method <- method
   if (inherits(family,"general.family")) {
     mv <- gam.fit5.post.proc(object,G$Sl,G$L,G$lsp0,G$S,G$off)
     ## object$coefficients <- Sl.initial.repara(G$Sl,object$coefficients,inverse=TRUE)
@@ -1662,7 +1667,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
     
   if (!is.null(G$family$preinitialize)) eval(G$family$preinitialize)
 
-  if (length(G$sp)>0) lsp2 <- log(initial.spg(G$X,G$y,G$w,G$family,G$S,G$off,
+  if (length(G$sp)>0) lsp2 <- log(initial.spg(G$X,G$y,G$w,G$family,G$S,G$rank,G$off,
                                   offset=G$offset,L=G$L,lsp0=G$lsp0,E=G$Eb,...))
   else lsp2 <- rep(0,0)
 
@@ -2052,7 +2057,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
                          rank.tol=.Machine$double.eps^0.5,
                          nlm=list(),optim=list(),newton=list(),outerPIsteps=0,
                          idLinksBases=TRUE,scalePenalty=TRUE,
-                         keepData=FALSE,scale.est="fletcher") 
+                         keepData=FALSE,scale.est="fletcher",edge.correct=FALSE) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
 # epsilon is the tolerance to use in the IRLS MLE loop. maxit is the number 
@@ -2063,6 +2068,8 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
 # outerPIsteps is the number of performance iteration steps used to intialize
 #                         outer iteration
 {   scale.est <- match.arg(scale.est,c("fletcher","pearson","deviance"))
+    if (!is.logical(edge.correct)&&(!is.numeric(edge.correct)||edge.correct<0)) stop(
+        "edge.correct must be logical or a positive number")
     if (!is.numeric(nthreads) || nthreads <1) stop("nthreads must be a positive integer") 
     if (!is.numeric(irls.reg) || irls.reg <0.0) stop("IRLS regularizing parameter must be a non-negative number.")
     if (!is.numeric(epsilon) || epsilon <= 0) 
@@ -2108,7 +2115,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
          rank.tol=rank.tol,nlm=nlm,
          optim=optim,newton=newton,outerPIsteps=outerPIsteps,
          idLinksBases=idLinksBases,scalePenalty=scalePenalty,
-         keepData=as.logical(keepData[1]),scale.est=scale.est)
+         keepData=as.logical(keepData[1]),scale.est=scale.est,edge.correct=edge.correct)
     
 }
 
@@ -4112,7 +4119,7 @@ single.sp <- function(X,S,target=.5,tol=.Machine$double.eps*100)
 }
 
 
-initial.spg <- function(x,y,weights,family,S,off,offset=NULL,L=NULL,lsp0=NULL,type=1,
+initial.spg <- function(x,y,weights,family,S,rank,off,offset=NULL,L=NULL,lsp0=NULL,type=1,
                         start=NULL,mustart=NULL,etastart=NULL,E=NULL,...) {
 ## initial smoothing parameter values based on approximate matching 
 ## of Frob norm of XWX and S. If L is non null then it is assumed
@@ -4127,6 +4134,16 @@ initial.spg <- function(x,y,weights,family,S,off,offset=NULL,L=NULL,lsp0=NULL,ty
   eval(family$initialize) 
   if (inherits(family,"general.family")) { ## Cox, gamlss etc...   
     lbb <- family$ll(y,x,start,weights,family,offset=offset,deriv=1)$lbb ## initial Hessian 
+    ## initially work out the number of times that each coefficient is penalized
+    pcount <- rep(0,ncol(lbb))
+    for (i in 1:length(S)) {
+      ind <- off[i]:(off[i]+ncol(S[[i]])-1)
+      dlb <- -diag(lbb[ind,ind])
+      indp <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0
+      ind <- ind[indp] ## drop indices of unpenalized
+      pcount[ind] <- pcount[ind] + 1 ## add up times penalized
+    }
+
     lambda <- rep(0,length(S))
     ## choose lambda so that corresponding elements of lbb and S[[i]]
     ## are roughly in balance...
@@ -4134,12 +4151,17 @@ initial.spg <- function(x,y,weights,family,S,off,offset=NULL,L=NULL,lsp0=NULL,ty
       ind <- off[i]:(off[i]+ncol(S[[i]])-1)
       lami <- 1
       dlb <- -diag(lbb[ind,ind]);dS <- diag(S[[i]])
+      pc <- pcount[ind]
       ## get index of elements doing any actual penalization...
       ind <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0 ## dlb > 0
       ## drop elements that are not penalizing
-      dlb <- dlb[ind];dS <- dS[ind]
-      while (mean(dlb/(dlb + lami * dS)) > 0.4) lami <- lami*5
-      while (mean(dlb/(dlb + lami * dS)) < 0.4) lami <- lami/5
+      dlb <- dlb[ind]/pc[ind] ## idea is to share out between penalties
+      dS <- dS[ind]
+      rm <- max(length(dS)/rank[i],1) ## rough correction for rank deficiency in penalty
+      #while (mean(dlb/(dlb + lami * dS * rm)) > 0.4) lami <- lami*5
+      #while (mean(dlb/(dlb + lami * dS * rm )) < 0.4) lami <- lami/5 
+      while (sqrt(mean(dlb/(dlb + lami * dS * rm))*mean(dlb)/mean(dlb+lami*dS*rm)) > 0.4) lami <- lami*5
+      while (sqrt(mean(dlb/(dlb + lami * dS * rm))*mean(dlb)/mean(dlb+lami*dS*rm)) < 0.4) lami <- lami/5
       lambda[i] <- lami 
       ## norm(lbb[ind,ind])/norm(S[[i]])
     }

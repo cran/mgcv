@@ -849,9 +849,10 @@ Vb.corr <- function(X,L,lsp0,S,off,dw,w,rho,Vr,nth=0,scale.est=FALSE) {
 ## matrix.
 ## dw is derivative w.r.t. all the smoothing parameters and family parameters as if these 
 ## were not linked, but not the scale parameter, of course. Vr includes scale uncertainty,
-## if scale extimated...
+## if scale estimated...
 ## nth is the number of initial elements of rho that are not smoothing 
-## parameters, scale.est is TRUE is scale estimated
+## parameters, scale.est is TRUE if scale estimated by REML and must be
+## dropped from s.p.s
   M <- length(off) ## number of penalty terms
   if (scale.est) {
     ## drop scale param from L, rho and Vr...
@@ -952,43 +953,56 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object) {
   qrx <- pqr(sqrt(object$weights)*X,object$control$nthreads)
   R <- pqr.R(qrx);R[,qrx$pivot] <- R
   if (!is.na(object$reml.scale)&&!is.null(object$db.drho)) { ## compute sp uncertainty correction
-    M <- ncol(object$db.drho)
-    ## transform to derivs w.r.t. working, noting that an extra final row of L
-    ## may be present, relating to scale parameter (for which db.drho is 0 since it's a scale parameter)  
-    if (!is.null(L)) { 
-      object$db.drho <- object$db.drho%*%L[1:M,,drop=FALSE] 
-      M <- ncol(object$db.drho)
-    }
-    ## extract cov matrix for log smoothing parameters...
-    ev <- eigen(object$outer.info$hess,symmetric=TRUE) 
-    d <- ev$values;ind <- d <= 0
-    d[ind] <- 0;d[!ind] <- 1/sqrt(d[!ind])
-    rV <- (d*t(ev$vectors))[,1:M] ## root of cov matrix
-    Vc <- crossprod(rV%*%t(object$db.drho))
-    ## set a prior precision on the smoothing parameters, but don't use it to 
-    ## fit, only to regularize Cov matrix. exp(4*var^.5) gives approx 
-    ## multiplicative range. e.g. var = 5.3 says parameter between .01 and 100 times
-    ## estimate. Avoids nonsense at `infinite' smoothing parameters.   
-#    dpv <- rep(0,ncol(object$outer.info$hess))
-#    dpv[1:M] <- 1/10 ## prior precision (1/var) on log smoothing parameters
-#    Vr <- chol2inv(chol(object$outer.info$hess + diag(dpv,ncol=length(dpv))))[1:M,1:M]
-#    Vc <- object$db.drho%*%Vr%*%t(object$db.drho)
-    d <- ev$values; d[ind] <- 0;d <- 1/sqrt(d+1/10)
-    Vr <- crossprod(d*t(ev$vectors))
-    #Vc2 <- scale*Vb.corr(X,L,S,off,object$dw.drho,object$working.weights,log(object$sp),Vr)
-    ## Note that db.drho and dw.drho are derivatives w.r.t. full set of smoothing 
-    ## parameters excluding any scale parameter, but Vr includes info for scale parameter
-    ## if it has been estiamted. 
-    nth <- if (is.null(object$family$n.theta)) 0 else object$family$n.theta ## any parameters of family itself
-    Vc2 <- scale*Vb.corr(R,L,lsp0,S,off,object$dw.drho,w=NULL,log(object$sp),Vr,nth,object$scale.estimated)
+    hess <- object$outer.info$hess
+    edge.correct <- if (is.null(attr(hess,"edge.correct"))) FALSE else TRUE
+    K <- if (edge.correct) 2 else 1
+    for (k in 1:K) {
+      if (k==1) { ## fitted model computations
+        db.drho <- object$db.drho
+        dw.drho <- object$dw.drho
+        lsp <- log(object$sp)
+      } else { ## edge corrected model computations
+        db.drho <- attr(hess,"db.drho1")
+        dw.drho <- attr(hess,"dw.drho1")
+        lsp <- attr(hess,"lsp1")
+	hess <- attr(hess,"hess1")
+      }
+      M <- ncol(db.drho)
+      ## transform to derivs w.r.t. working, noting that an extra final row of L
+      ## may be present, relating to scale parameter (for which db.drho is 0 since it's a scale parameter)  
+      if (!is.null(L)) { 
+        db.drho <- db.drho%*%L[1:M,,drop=FALSE] 
+        M <- ncol(db.drho)
+      }
+      ## extract cov matrix for log smoothing parameters...
+      ev <- eigen(hess,symmetric=TRUE) 
+      d <- ev$values;ind <- d <= 0
+      d[ind] <- 0;d[!ind] <- 1/sqrt(d[!ind])
+      rV <- (d*t(ev$vectors))[,1:M] ## root of cov matrix
+      Vc <- crossprod(rV%*%t(db.drho))
+      ## set a prior precision on the smoothing parameters, but don't use it to 
+      ## fit, only to regularize Cov matrix. exp(4*var^.5) gives approx 
+      ## multiplicative range. e.g. var = 5.3 says parameter between .01 and 100 times
+      ## estimate. Avoids nonsense at `infinite' smoothing parameters.   
+      d <- ev$values; d[ind] <- 0;
+      d <- if (k==1) 1/sqrt(d+1/10) else 1/sqrt(d+1e-7)
+      Vr <- crossprod(d*t(ev$vectors))
+      ## Note that db.drho and dw.drho are derivatives w.r.t. full set of smoothing 
+      ## parameters excluding any scale parameter, but Vr includes info for scale parameter
+      ## if it has been estimated. 
+      nth <- if (is.null(object$family$n.theta)) 0 else object$family$n.theta ## any parameters of family itself
+      drop.scale <- object$scale.estimated && !(object$method %in% c("P-REML","P-ML"))
+      Vc2 <- scale*Vb.corr(R,L,lsp0,S,off,dw.drho,w=NULL,lsp,Vr,nth,drop.scale)
     
-    Vc <- Vb + Vc + Vc2 ## Bayesian cov matrix with sp uncertainty
-    ## finite sample size check on edf sanity...
-    edf2 <- rowSums(Vc*crossprod(R))/scale
-    if (sum(edf2)>sum(edf1)) { 
-      #cat("\n edf2=",sum(edf2),"  edf1=",sum(edf1)); 
-      edf2 <- edf1
-    } 
+      Vc <- Vb + Vc + Vc2 ## Bayesian cov matrix with sp uncertainty
+      ## finite sample size check on edf sanity...
+      if (k==1) { ## compute edf2 only with fitted model, not edge corrected
+        edf2 <- rowSums(Vc*crossprod(R))/scale
+        if (sum(edf2)>sum(edf1)) { 
+          edf2 <- edf1
+        }
+      }
+    } ## k loop
   } else edf2 <- Vc <- NULL
   list(Vc=Vc,Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,edf2=edf2,hat=hat,F=F,R=R)
 } ## gam.fit3.post.proc
@@ -1238,7 +1252,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
                    control,gamma,scale,conv.tol=1e-6,maxNstep=5,maxSstep=2,
                    maxHalf=30,printWarn=FALSE,scoreType="deviance",start=NULL,
                    mustart = NULL,null.coef=rep(0,ncol(X)),pearson.extra,
-                   dev.extra=0,n.true=-1,Sl=NULL,...)
+                   dev.extra=0,n.true=-1,Sl=NULL,edge.correct=FALSE,...)
 ## Newton optimizer for GAM reml/gcv/aic optimization that can cope with an 
 ## indefinite Hessian. Main enhancements are: 
 ## i) always perturbs the Hessian to +ve definite if indefinite 
@@ -1345,6 +1359,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   ################################
   ## Start of Newton iteration.... 
   ################################
+  qerror.thresh <- .8 ## quadratic approx error to tolerate in a step
   for (i in 1:200) {
    if (control$trace) {
      cat("\n",i,"newton max(|grad|) =",max(abs(grad)),"\n")
@@ -1379,6 +1394,11 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 #         printWarn=FALSE,mustart=mustart,
 #         scoreType=scoreType,eps=eps,null.coef=null.coef,...)
 #    }
+    ## exclude dimensions from Newton step when the derviative is
+    ## tiny relative to largest, as this space is likely to be poorly
+    ## modelled on scale of Newton step...
+    
+    uconv.ind <- uconv.ind & abs(grad)>max(abs(grad))*.001 
 
     ## exclude apparently converged gradients from computation
     hess1 <- hess[uconv.ind,uconv.ind] 
@@ -1403,9 +1423,15 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     Nstep[uconv.ind] <- -drop(U%*%(d*(t(U)%*%grad1))) # (modified) Newton direction
    
     Sstep <- -grad/max(abs(grad)) # steepest descent direction 
+
+    ms <- max(abs(Nstep)) ## note smaller permitted step if !pdef
+    mns <- maxNstep
+#    mns <- if (pdef) maxNstep else maxNstep/3 ## more cautious if not pdef
+#    if (!all(Nstep*Sstep >= 0)) mns <- mns/2   ## bit more cautious if directions differ 
+    if (ms>maxNstep) Nstep <- mns * Nstep/ms
     
-    ms <- max(abs(Nstep))
-    if (ms>maxNstep) Nstep <- maxNstep * Nstep/ms
+    sd.unused <- TRUE ## steepest descent direction not yet tried
+
 
     ## try the step ...
     if (sp.trace) cat(lsp,"\n")
@@ -1429,8 +1455,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
          mustart=mustart,scoreType=scoreType,null.coef=null.coef,
          pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)    
 
-    sd.unused <- TRUE ## steepest descent direction not yet tried
-
+    ## get the change predicted for this step according to the quadratic model
+    pred.change <- sum(grad*Nstep) + 0.5*t(Nstep) %*% hess %*% Nstep
+    
     if (reml) {
       score1 <- b$REML
     } else if (scoreType=="GACV") {
@@ -1440,8 +1467,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     } else score1 <- b$GCV
     ## accept if improvement, else step halve
     ii <- 0 ## step halving counter
-    ##sc.extra <- 1e-4*sum(grad*Nstep) ## -ve sufficient decrease 
-    if (is.finite(score1) && score1<score && pdef) { ## immediately accept step if it worked and positive definite
+    score.change <- score1 - score
+    qerror <- abs(pred.change-score.change)/(max(abs(pred.change),abs(score.change))+score.scale*conv.tol) ## quadratic approx error
+    if (is.finite(score1) && score.change<0 && pdef && qerror < qerror.thresh) { ## immediately accept step if it worked and positive definite
       old.score <- score 
       mustart <- b$fitted.values
       etastart <- b$linear.predictors
@@ -1465,16 +1493,14 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         grad <- rho$rho1*grad
       }
 
-    } else if (!is.finite(score1) || score1>=score) { ## initial step failed to improve score, try step halving ...
+    } else if (!is.finite(score1) || score1>=score||qerror >= qerror.thresh) { ## initial step failed, try step halving ...
       step <- Nstep ## start with the (pseudo) Newton direction
-      ##sc.extra <- 1e-4*sum(grad*step) ## -ve sufficient decrease 
-      while ((!is.finite(score1) || score1>=score) && ii < maxHalf) {
+      while ((!is.finite(score1) || score1>=score ||qerror >= qerror.thresh) && ii < maxHalf) {
         if (ii==3&&i<10) { ## Newton really not working - switch to SD, but keeping step length 
           s.length <- min(sum(step^2)^.5,maxSstep)
           step <- Sstep*s.length/sum(Sstep^2)^.5 ## use steepest descent direction
           sd.unused <- FALSE ## signal that SD already tried
         } else step <- step/2
-        ##if (ii>3) Slength <- Slength/2 ## keep track of SD step length
         if (!is.null(lsp.max)) { ## need to take step in delta space
           delta1 <- delta + step
           lsp1 <- rt(delta1,lsp1.max)$rho ## transform to log sp space
@@ -1485,7 +1511,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
            printWarn=FALSE,start=start,mustart=mustart,scoreType=scoreType,
            null.coef=null.coef,pearson.extra=pearson.extra,
            dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)
-         
+        pred.change <- sum(grad*step) + 0.5*t(step) %*% hess %*% step ## Taylor prediction of change 
         if (reml) {       
           score1 <- b1$REML
         } else if (scoreType=="GACV") {
@@ -1493,8 +1519,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         } else if (scoreType=="UBRE") {
           score1 <- b1$UBRE
         } else score1 <- b1$GCV
-        ##sc.extra <- 1e-4*sum(grad*Nstep) ## -ve sufficient decrease 
-        if (is.finite(score1) && score1 < score) { ## accept
+	score.change <- score1 - score
+	qerror <- abs(pred.change-score.change)/(max(abs(pred.change),abs(score.change))+score.scale*conv.tol) ## quadratic approx error
+        if (is.finite(score1) && score.change < 0 && qerror < qerror.thresh) { ## accept
           if (pdef||!sd.unused) { ## then accept and compute derivatives
             b <- gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
                  offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
@@ -1524,13 +1551,13 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
             }
           } else { ## still need to try the steepest descent step to see if it does better
             b <- b1
-            score2 <- score1 
+            score2 <- score1 ## store temporarily and restore below
           }
-          score1 <- score - abs(score) - 1 ## make sure that score1 < score
+          score1 <- score - abs(score) - 1 ## make sure that score1 < score (restore once out of loop)
         }  # end of if (score1<= score ) # accept
-        if (!is.finite(score1) || score1>=score) ii <- ii + 1
+        if (!is.finite(score1) || score1>=score || qerror >= qerror.thresh) ii <- ii + 1
       } ## end while (score1>score && ii < maxHalf)
-      if (!pdef&&sd.unused&&ii<maxHalf) score1 <- score2
+      if (!pdef&&sd.unused&&ii<maxHalf) score1 <- score2 ## restored (not needed if termination on ii==maxHalf)
     } ## end of step halving branch
 
     ## if the problem is not positive definite, and the sd direction has not 
@@ -1554,6 +1581,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
               printWarn=FALSE,start=start,mustart=mustart,scoreType=scoreType,
               null.coef=null.coef,pearson.extra=pearson.extra,
               dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)
+	pred.change <- sum(grad*step) + 0.5*t(step) %*% hess %*% step ## Taylor prediction of change 
         if (reml) {       
           score3 <- b1$REML
         } else if (scoreType=="GACV") {
@@ -1561,10 +1589,12 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         } else if (scoreType=="UBRE") {
           score3 <- b1$UBRE
         } else score3 <- b1$GCV
-        if (!is.finite(score2)||(is.finite(score3)&&score3<=score2)) { ## accept step - better than last try
+	score.change <- score3 - score
+        qerror <- abs(pred.change-score.change)/(max(abs(pred.change),abs(score.change))+score.scale*conv.tol) ## quadratic approx error 
+        if (!is.finite(score2)||(is.finite(score3)&&score3<=score2&&qerror<qerror.thresh)) { ## record step - best SD step so far
           score2 <- score3
           lsp2 <- lsp3
-          ## if (!is.null(lsp.max)) delta2 <- delta3
+          if (!is.null(lsp.max)) delta2 <- delta3
         }
         ## stop when improvement found, and shorter step is worse...
         if ((is.finite(score2)&&is.finite(score3)&&score2<score&&score3>score2)||kk==40) ok <- FALSE
@@ -1574,7 +1604,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
       if (is.finite(score2) && score2<score1) {
         lsp1 <- lsp2
-        if (!is.null(lsp.max)) delta1 <- delta
+        if (!is.null(lsp.max)) delta1 <- delta2
         score1 <- score2
       }
 
@@ -1634,7 +1664,53 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     warning("Iteration limit reached without full convergence - check carefully")
   } else ct <- "full convergence"
   b$dVkk <- NULL
-  list(score=score,lsp=lsp,lsp.full=L%*%lsp+lsp0,grad=grad,hess=hess,iter=i,conv =ct,score.hist = score.hist[!is.na(score.hist)],object=b)
+  
+  if (as.logical(edge.correct)&&reml) {
+    ## for those smoothing parameters that appear to be at working infinity
+    ## reduce them until there is a detectable increase in RE/ML...
+    flat <- which(abs(grad2) < abs(grad)*100) ## candidates for reduction
+    REML <- b$REML
+    alpha <- if (is.logical(edge.correct)) .02 else abs(edge.correct) ## target RE/ML change per sp
+    b1 <- b; lsp1 <- lsp
+    if (length(flat)) for (i in flat) {
+      REML <- b1$REML + alpha
+      while (b1$REML < REML) {
+        lsp1[i] <- lsp1[i] - 1
+        b1 <- gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
+              offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=0,
+              control=control,gamma=gamma,scale=scale,printWarn=FALSE,start=start,
+              mustart=mustart,scoreType=scoreType,null.coef=null.coef,
+              pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)
+      }
+    }
+   
+    b1 <- gam.fit3(x=X, y=y, sp=L%*%lsp1+lsp0,Eb=Eb,UrS=UrS,
+                 offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=2,
+                 control=control,gamma=gamma,scale=scale,printWarn=FALSE,start=start,
+                 mustart=mustart,scoreType=scoreType,null.coef=null.coef,
+                 pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)
+  
+    score1 <- b1$REML;grad1 <- b1$REML1;hess1 <- b1$REML2 
+           
+    grad1 <- t(L)%*%grad1
+    hess1 <- t(L)%*%hess1%*%L
+    if (!is.null(lsp.max)) { ## need to transform to delta space
+               delta <- delta1
+               rho <- rt(delta,lsp1.max)
+               nr <- length(rho$rho1)
+               hess1 <- diag(rho$rho1,nr,nr)%*%hess1%*%diag(rho$rho1,nr,nr) + diag(rho$rho2*grad1)
+               grad1 <- rho$rho1*grad1
+    }
+    attr(hess,"edge.correct") <- TRUE
+    attr(hess,"hess1") <- hess1
+    attr(hess,"db.drho1") <- b1$db.drho
+    attr(hess,"dw.drho1") <- b1$dw.drho
+    attr(hess,"lsp1") <- lsp1
+    attr(hess,"rp") <- b1$rp
+  } ## if edge.correct
+
+  list(score=score,lsp=lsp,lsp.full=L%*%lsp+lsp0,grad=grad,hess=hess,iter=i,
+       conv =ct,score.hist = score.hist[!is.na(score.hist)],object=b)
 } ## newton
 
 
