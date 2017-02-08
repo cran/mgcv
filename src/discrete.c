@@ -27,11 +27,12 @@
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 #include <Rconfig.h>
-#ifdef SUPPORT_OPENMP
+#include "mgcv.h"
+#ifdef OPENMP_ON
 #include <omp.h>
 #endif
 
-#include "mgcv.h"
+
 
 /* basic extraction operations */ 
 
@@ -270,7 +271,7 @@ void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int
   double *xv,*dc,*p0,*p1,*p2,*p3,*ei,*xi;
   ptrdiff_t bsj,bs,bsf,i,j,kk;
   int one=1;
-  #ifndef SUPPORT_OPENMP
+  #ifndef OPENMP_ON
   *nthreads = 1;
   #endif
   if (*nthreads<1) *nthreads = 1;
@@ -287,7 +288,7 @@ void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int
   } else {
     bsf = bs = *pv;
   }
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel for private(j,bsj,i,kk,p0,p1,p2,p3) num_threads(*nthreads)
   #endif  
   for (j=0;j < *nthreads;j++) {
@@ -402,7 +403,7 @@ void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n,
   ptrdiff_t *off,*voff;
   double *p0,*p1,*p2, *Xi, *Xj, *temp,*tempn,*xwx,*xwx0,
     *XiB,*XjB,*tempB,*tempnB,*x0,*x1,x;
-  #ifndef SUPPORT_OPENMP
+  #ifndef OPENMP_ON
   *nthreads = 1;
   #endif
   if (*nthreads<1) *nthreads = 1;
@@ -448,11 +449,11 @@ void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n,
       start[i+1] = start[i] + dk;
       if (start[i+1]>pt[b]) start[i+1]=pt[b];
     }
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(Xi,Xj,i,q,add,temp,tempn,p0,p1,p2) num_threads(*nthreads)
     #endif 
     { /* begin parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (kk=0;kk<*nthreads;kk++) { 

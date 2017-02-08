@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-19 13:28\n"
+"POT-Creation-Date: 2017-02-06 09:59\n"
 "PO-Revision-Date: 2014-03-25 17:39+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -209,6 +209,9 @@ msgstr ""
 msgid "Must supply theta or R to ocat"
 msgstr ""
 
+msgid "Response should be integer class labels"
+msgstr ""
+
 # mgcv/R/smooth.r: 177
 # stop("'x' out of range")
 #, fuzzy
@@ -298,6 +301,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "Possible divergence detected in fast.REML.fit"
 msgstr ""
 
 # mgcv/R/fast-REML.r: 640
@@ -1238,6 +1244,9 @@ msgid "incorrect number of linear predictors for family"
 msgstr ""
 "niepoprawna liczba parametrów wygładzających dostarczona do członu 'smooth'"
 
+msgid "edge.correct must be logical or a positive number"
+msgstr ""
+
 # mgcv/R/mgcv.r: 32
 # stop("argument 'k' must be positive.")
 #, fuzzy
@@ -1656,6 +1665,9 @@ msgstr ""
 msgid "x is null"
 msgstr "'x' ma wartość NULL"
 
+msgid "uniquecombs has not worked properly"
+msgstr ""
+
 # mgcv/R/smooth.r: 173
 # stop("order too low")
 msgid "order too low"
@@ -2008,6 +2020,14 @@ msgstr ""
 #, fuzzy
 msgid "supplied S matrices are wrong diminsion"
 msgstr "dostarczona kara ma niepoprawny wymiar!"
+
+# mgcv/R/smooth.r: 480
+# warning("argument k of s() should be integer and has been rounded")
+#, fuzzy
+msgid "argument of mrf should be a factor variable"
+msgstr ""
+"argument 'k' w funkcji 's()' powinie być liczbą calkowitą więc został "
+"zaokrąglony"
 
 # mgcv/R/smooth.r: 2062
 # stop("MRF basis dimension set too high")

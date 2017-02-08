@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.2.0 / mgcv 1.8-5\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2016-08-19 13:28\n"
+"POT-Creation-Date: 2017-02-06 09:59\n"
 "PO-Revision-Date: 2015-03-26 13:29+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-Core <r-core@r-project.org>\n"
@@ -125,6 +125,9 @@ msgstr ""
 msgid "Must supply theta or R to ocat"
 msgstr "theta oder R müssen an ocat übergeben werden"
 
+msgid "Response should be integer class labels"
+msgstr ""
+
 msgid "values out of range"
 msgstr "Werte außerhalb des zulässigen Bereichs"
 
@@ -187,6 +190,9 @@ msgid "Using ziP for binary data makes no sense"
 msgstr ""
 "Für binäre Daten macht Gebrauch null-inflationierter Poisson-Verteilung "
 "keinen Sinn"
+
+msgid "Possible divergence detected in fast.REML.fit"
+msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
 msgstr "schneller REML Optimierer erreichte max. Iterationszahl"
@@ -745,6 +751,9 @@ msgstr "in.out falsch: bitte in der Dokumentation nachsehen"
 msgid "incorrect number of linear predictors for family"
 msgstr "falsche Anzahl linearer Prädiktoren für diese Familie"
 
+msgid "edge.correct must be logical or a positive number"
+msgstr ""
+
 msgid "nthreads must be a positive integer"
 msgstr "nthreads muss eine positive, ganze Zahl sein"
 
@@ -1025,6 +1034,9 @@ msgstr "untere Grenze >= obere Grenze im Aufruf von mono.con()"
 msgid "x is null"
 msgstr "x ist Null"
 
+msgid "uniquecombs has not worked properly"
+msgstr ""
+
 msgid "order too low"
 msgstr "Ordnung zu klein"
 
@@ -1218,6 +1230,10 @@ msgstr ""
 #, fuzzy
 msgid "supplied S matrices are wrong diminsion"
 msgstr "Angegebener Strafterm hat falsche Dimension!"
+
+#, fuzzy
+msgid "argument of mrf should be a factor variable"
+msgstr "Argument k von s() sollte ganzzahlig sein und wurde gerundet"
 
 msgid "MRF basis dimension set too high"
 msgstr "MRF Basisdimension ist zu hoch gesetzt"

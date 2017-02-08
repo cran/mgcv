@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2016-08-19 13:28\n"
+"POT-Creation-Date: 2017-02-06 09:59\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -130,6 +130,9 @@ msgstr ""
 msgid "Must supply theta or R to ocat"
 msgstr "theta 또는 R을 ocat에 제공해주어야 합니다."
 
+msgid "Response should be integer class labels"
+msgstr ""
+
 msgid "values out of range"
 msgstr "범위 외의 값을 가집니다."
 
@@ -193,6 +196,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "Possible divergence detected in fast.REML.fit"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
@@ -745,6 +751,9 @@ msgstr "in.out의 사용이 올바르지 않습니다:  도움말을 살펴보�
 msgid "incorrect number of linear predictors for family"
 msgstr ""
 
+msgid "edge.correct must be logical or a positive number"
+msgstr ""
+
 msgid "nthreads must be a positive integer"
 msgstr "nthreads는 반드시 양의 정수이어야 합니다."
 
@@ -1012,6 +1021,9 @@ msgstr ""
 msgid "x is null"
 msgstr "x는 아무런 구성요소도 가지고 있지 않습니다."
 
+msgid "uniquecombs has not worked properly"
+msgstr ""
+
 msgid "order too low"
 msgstr ""
 
@@ -1189,6 +1201,10 @@ msgstr ""
 #, fuzzy
 msgid "supplied S matrices are wrong diminsion"
 msgstr "H의 열과 행의 길이가 같아야 합니다."
+
+#, fuzzy
+msgid "argument of mrf should be a factor variable"
+msgstr "s()의 인자 k는 반드시 정수이어야 하므로 반올림되었습니다."
 
 msgid "MRF basis dimension set too high"
 msgstr ""

@@ -941,7 +941,13 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
   ## idea in following is only to exclude terms with zero first and second derivative
   ## from optimization, as it is only these that slow things down if included...  
   uconv.ind <- (abs(grad) > reml.scale*conv.tol*.1)|(abs(grad2)>reml.scale*conv.tol*.1)
- 
+  ## if all appear converged at this stage, then there is probably something wrong,
+  ## but reset anyway to see if situation can be recovered. If we don't do this then
+  ## need to abort immediately, otherwise fails trying to eigen a 0 by 0 matrix
+  if (sum(uconv.ind)==0) {
+    warning("Possible divergence detected in fast.REML.fit",call.=FALSE,immediate.=TRUE)
+    uconv.ind <- rep(TRUE,length(grad)) 
+  }
   step.failed <- FALSE
   for (iter in 1:200) { ## the Newton loop
     ## Work only with unconverged (much quicker under indefiniteness)

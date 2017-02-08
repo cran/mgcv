@@ -114,7 +114,7 @@ The \code{sim2jam} function takes the partial \code{gam} object (\code{pregam}) 
 
 
 \references{
-Wood, S.N. (in press) Just Another Gibbs Additive Modeller: Interfacing JAGS and mgcv. Journal of Statistical Software (preprint: http://arxiv.org/abs/1602.02539)
+Wood, S.N. (2016) Just Another Gibbs Additive Modeller: Interfacing JAGS and mgcv. Journal of Statistical Software 75(7):1-15 doi:10.18637/jss.v075.i07)
 
 Marra, G. and S.N. Wood (2011) Practical variable selection for generalized additive models.
 Computational Statistics & Data Analysis 55(7): 2372-2387

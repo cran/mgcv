@@ -22,7 +22,7 @@ USA. */
 #include "general.h"
 #include "mgcv.h"
 #include "matrix.h"
-#ifdef SUPPORT_OPENMP
+#ifdef OPENMP_ON
 #include <omp.h>
 #endif
 
@@ -207,15 +207,15 @@ void magic_gH(double *U1U1,double **M,double **K,double *VS,double **My,double *
   /* U_1'U_1 U1 is q by rank ... */
   getXtX(U1U1,U1,&q,&rank);
   /* for (p=S,ip=cS,i=0;ip<cS+m;p+= *ip *q,ip++,i++) */ /* work through all smooths */ 
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(i,j,ip,bt,ct,c,r,p,p1,p2,p3,p4,xx,tid,VSi)
   #endif
   { /* open parallel section */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (i=0;i<m;i++) { 
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif
       ip = cS + i;
@@ -371,7 +371,7 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
   double *sp=NULL,*p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
     min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign,*grad1,*u0,*R;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   m = omp_get_num_procs(); /* detected number of processors */
   if (*nt > m || *nt < 1) *nt = m; /* no point in more threads than m */
   omp_set_num_threads(*nt); /* set number of threads to use */

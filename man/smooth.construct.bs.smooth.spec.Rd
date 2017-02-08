@@ -6,7 +6,7 @@
 \title{Penalized B-splines in GAMs}
 
 \description{\code{\link{gam}} can use smoothing splines based on univariate B-spline bases
-with derivative based penalties, specified via terms like \code{s(x,bs="bs",m=c(3,2))}. \code{m[1]} controls the spline order, with \code{m[1]=3} being a cubic spline, \code{m[1]=2} being quadratic, and so on. The integrated square of the \code{m[2]}th derivative is used as the penalty. So \code{m=c(3,2)} is a convetional cubic spline. If \code{m} is supplied as a single number, then it is taken to be \code{m[1]} and \code{m[2]=m[1]-1}, which is only a conventional smoothing spline in the \code{m=3}, cubic spline case. Notice that the definition of the spline order in terms of \code{m[1]} is intuitive, but differs to that used with the \code{\link{tprs}} and \code{\link{p.spline}} bases. 
+with derivative based penalties, specified via terms like \code{s(x,bs="bs",m=c(3,2))}. \code{m[1]} controls the spline order, with \code{m[1]=3} being a cubic spline, \code{m[1]=2} being quadratic, and so on. The integrated square of the \code{m[2]}th derivative is used as the penalty. So \code{m=c(3,2)} is a convetional cubic spline. If \code{m} is supplied as a single number, then it is taken to be \code{m[1]} and \code{m[2]=m[1]-1}, which is only a conventional smoothing spline in the \code{m=3}, cubic spline case. Notice that the definition of the spline order in terms of \code{m[1]} is intuitive, but differs to that used with the \code{\link{tprs}} and \code{\link{p.spline}} bases. See details for options for controlling the interval over which the penalty is evaluated (which can matter if it is necessary to extrapolate).
 
 }
 
@@ -33,13 +33,12 @@ for the elements that this object will contain.
 
 \details{ The basis and penalty are sparse (although sparse matrices are not used to represent them). \code{m[2]>m[1]} will generate an error, since in that case the penalty would be based on an undefined derivative of the basis, which makes no sense.
 
-The default basis dimension, \code{k}, is the larger of 10 and \code{m}. \code{m[1]} is the lower limit on basis dimension. If knots are supplied, then  the number of supplied knots should be \code{k + m[1] + 1}, and the range of the middle \code{k-m[1]+1} knots should include all the covariate values. Alternatively, 2 knots can be supplied, denoting the 
-lower and upper limits between which the spline can be evaluated (Don't make this range too wide, however, or you 
-can end up with no information about some basis coefficients, because the corresponding basis functions have a 
-span that includes no data!). Unlike P-splines, splines with derivative based penalties can have uneven knot spacing, without a problem. 
+The default basis dimension, \code{k}, is the larger of 10 and \code{m}. \code{m[1]} is the lower limit on basis dimension. If knots are supplied, then  the number of supplied knots should be \code{k + m[1] + 1}, and the range of the middle \code{k-m[1]+1} knots should include all the covariate values. Alternatively, 2 knots can be supplied, denoting the  lower and upper limits between which the spline can be evaluated (making this range too wide mean that there is no information about some basis coefficients, because the corresponding basis functions have a span that includes no data). Unlike P-splines, splines with derivative based penalties can have uneven knot spacing, without a problem.
+
+Another option is to supply 4 knots. Then the outer 2 define the interval over which the penalty is to be evaluated, while the inner 2 define an interval within which all but the outermost 2 knots should lie. Normally the outer 2 knots would be the interval over which predictions might be required, while the inner 2 knots define the interval within which the data lie. This option allows the penalty to apply over a wider interval than the data, while still placing most of the basis functions where the data are. This is useful in situations in which it is necessary to extrapolate slightly with a smooth. Only applying the penalty over the interval containing the data amounts to a model in which the function could be less smooth outside the interval than within it, and leads to very wide extrapolation confidence intervals. However the alternative of evaluating the penalty over the whole real line amounts to asserting certainty that the function has some derivative zeroed away from the data, which is equally unreasonable. It is prefereable to build a model in which the same smoothness assumtions apply over both data and extrapolation intervals, but not over the whole real line. See example code for practical illustration.
 
 Linear extrapolation is used for prediction that requires extrapolation 
-(i.e. prediction outside the range of the interior \code{k-m[1]+1} knots). Such extrapolation is not
+(i.e. prediction outside the range of the interior \code{k-m[1]+1} knots --- the interval over which the penalty is evaluated). Such extrapolation is not
 allowed in basis construction, but is when predicting.
 
 It is possible to set a \code{deriv} flag in a smooth specification or smooth object, so that a model or prediction matrix produces the requested derivative of the spline, rather than evaluating it. 
@@ -47,7 +46,7 @@ It is possible to set a \code{deriv} flag in a smooth specification or smooth ob
 
 \section{WARNING}{\code{m} directly controls the spline order here, which is intuitively sensible, but different to other bases.}
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}. Extrapolation ideas joint with David Miller.}
 
 \seealso{\code{\link{p.spline}}}
 
@@ -65,6 +64,42 @@ Wood, S.N. (2016) P-splines with derivative based penalties and tensor product s
            s(x3,bs=bs,m=c(1,0)),data=dat,method="REML")
   plot(b,pages=1)
 
+  ## Extrapolation example, illustrating the importance of considering
+  ## the penalty carefully if extrapolating...
+  f3 <- function(x) 0.2 * x^11 * (10 * (1 - x))^6 + 10 * (10 * x)^3 * 
+              (1 - x)^10 ## test function
+  n <- 100;x <- runif(n)
+  y <- f3(x) + rnorm(n)*2
+  ## first a model with first order penalty over whole real line (red)
+  b0 <- gam(y~s(x,m=1,k=20),method="ML")
+  ## now a model with first order penalty evaluated over (-.5,1.5) (black)
+  op <- options(warn=-1)
+  b <- gam(y~s(x,bs="bs",m=c(3,1),k=20),knots=list(x=c(-.5,0,1,1.5)),
+           method="ML")
+  options(op)
+  ## and the equivalent with same penalty over data range only (blue)
+  b1 <- gam(y~s(x,bs="bs",m=c(3,1),k=20),method="ML")
+  pd <- data.frame(x=seq(-.7,1.7,length=200))
+  fv <- predict(b,pd,se=TRUE)
+  ul <- fv$fit + fv$se.fit*2; ll <- fv$fit - fv$se.fit*2
+  plot(x,y,xlim=c(-.7,1.7),ylim=range(c(y,ll,ul)),main=
+  "1st order penalties: red tps; blue bs over (0,1); black bs over (-.5,1.5)")
+  ## penalty defined on (-.5,1.5) gives plausible predictions and intervals
+  ## over this range...
+  lines(pd$x,fv$fit);lines(pd$x,ul,lty=2);lines(pd$x,ll,lty=2)
+  fv <- predict(b0,pd,se=TRUE)
+  ul <- fv$fit + fv$se.fit*2; ll <- fv$fit - fv$se.fit*2
+  ## penalty defined on whole real line gives constant width intervals away
+  ## from data, as slope there must be zero, to avoid infinite penalty:
+  lines(pd$x,fv$fit,col=2)
+  lines(pd$x,ul,lty=2,col=2);lines(pd$x,ll,lty=2,col=2)
+  fv <- predict(b1,pd,se=TRUE)
+  ul <- fv$fit + fv$se.fit*2; ll <- fv$fit - fv$se.fit*2
+  ## penalty defined only over the data interval (0,1) gives wild and wide
+  ## extrapolation since penalty has been `turned off' outside data range:
+  lines(pd$x,fv$fit,col=4)
+  lines(pd$x,ul,lty=2,col=4);lines(pd$x,ll,lty=2,col=4)
+
   ## construct smooth of x. Model matrix sm$X and penalty 
   ## matrix sm$S[[1]] will have many zero entries...
   x <- seq(0,1,length=100)
@@ -72,7 +107,8 @@ Wood, S.N. (2016) P-splines with derivative based penalties and tensor product s
 
   ## another example checking penalty numerically...
   m <- c(4,2); k <- 15; b <- runif(k)
-  sm <- smoothCon(s(x,bs="bs",m=m,k=k),data.frame(x),scale.penalty=FALSE)[[1]]
+  sm <- smoothCon(s(x,bs="bs",m=m,k=k),data.frame(x),
+                  scale.penalty=FALSE)[[1]]
   sm$deriv <- m[2]
   h0 <- 1e-3; xk <- sm$knots[(m[1]+1):(k+1)]
   Xp <- PredictMat(sm,data.frame(x=seq(xk[1]+h0/2,max(xk)-h0/2,h0)))

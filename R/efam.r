@@ -439,7 +439,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
   preinitialize <- expression({
     ocat.ini <- function(R,y) {
     ## initialize theta from raw counts in each category
-      if (R<3) return
+      if (R<3) return()
       y <- c(1:R,y) ## make sure there is *something* in each class
       p <- cumsum(tabulate(y[is.finite(y)])/length(y[is.finite(y)]))
       eta <- if (p[1]==0) 5 else -1 - log(p[1]/(1-p[1])) ## mean of latent

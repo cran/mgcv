@@ -1,18 +1,16 @@
 /* main method routines */
 #include <Rinternals.h>
 #include <Rconfig.h>
-/* Rconfig.h sometimes doesn't define SUPPORT_OPENMP although
-   support is available (e.g. on Windows). Doesn't quite match 
-   documentation in `Writing R extensions', but is apparently 
-   intentional. However, most compilers with openMP support supply 
-   a pre-defined compiler macro _OPENMP. So... */
-/* #if (!defined SUPPORT_OPENMP && defined _OPENMP)
-  ...update: Rconfig.h:SUPPORT_OPENMP deprecated from R 2.3.2 */
+/* Most compilers with openMP support supply 
+   a pre-defined compiler macro _OPENMP. Following 
+   facilitates selective turning off (by testing value 
+   or defining multiple versions OPENMP_ON1, OPENMP_ON2...)  */
+
 #if defined _OPENMP
-#define SUPPORT_OPENMP 1 
+#define OPENMP_ON 1 
 #endif
 /* ... note also that there is no actual *need* to protect #pragmas with 
-  #ifdef SUPPORT_OPENMP, since C ignores undefined pragmas, but failing 
+  #ifdef OPENMP_ON, since C ignores undefined pragmas, but failing 
   to do so may produce alot of compilation warnings if openMP is not supported. 
   In contrast functions from omp.h must be protected, and there is 
   non-avoidable use of these in the mgcv code. */
