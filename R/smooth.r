@@ -157,6 +157,87 @@ uniquecombs <- function(x,ordered=FALSE) {
 ## `unique' now does this in R
   if (is.null(x)) stop("x is null")
   if (is.null(nrow(x))||is.null(ncol(x))) x <- data.frame(x)
+  recheck <- FALSE
+  if (inherits(x,"data.frame")) {
+    xoo <- xo <- x
+    ## reset character, logical and factor to numeric, to guarantee that text versions of labels
+    ## are unique iff rows are unique (otherwise labels containing "*" could in principle
+    ## fool it).
+    is.char <- rep(FALSE,length(x)) 
+    for (i in 1:length(x)) {
+      if (is.character(xo[[i]])) {
+        is.char[i] <- TRUE
+        xo[[i]] <- as.factor(xo[[i]])
+      }
+      if (is.factor(xo[[i]])||is.logical(xo[[i]])) x[[i]] <- as.numeric(xo[[i]])
+      if (!is.numeric(x[[i]])) recheck <- TRUE ## input contains unknown type cols 
+    }
+    #x <- data.matrix(xo) ## ensure all data are numeric
+  } else xo <- NULL
+  if (ncol(x)==1) { ## faster to use R 
+     xu <- if (ordered) sort(unique(x[,1])) else unique(x[,1])
+     ind <- match(x[,1],xu)
+     if (is.null(xo)) x <- matrix(xu,ncol=1,nrow=length(xu)) else {
+        x <-  data.frame(xu)
+	names(x) <- names(xo)
+     }
+  } else { ## no R equivalent that directly yields indices
+    if (ordered) {
+      chloc <- Sys.getlocale("LC_CTYPE")
+      Sys.setlocale("LC_CTYPE","C")
+    }
+    ## txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=","),")",sep="")
+    ## ... this can produce duplicate labels e.g. x[,1] = c(1,11), x[,2] = c(12,2)...
+    ## solution is to insert separator not present in representation of a number (any
+    ## factor codes are already converted to numeric by data.matrix call above.)
+    txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=",\"*\","),")",sep="")
+    xt <- eval(parse(text=txt)) ## text representation of rows
+    dup <- duplicated(xt)       ## identify duplicates
+    xtu <- xt[!dup]             ## unique text rows
+    x <- x[!dup,]               ## unique rows in original format
+    #ordered <- FALSE
+    if (ordered) { ## return unique in same order regardless of entry order
+      ## ordering of character based labels is locale dependent
+      ## so that e.g. running the same code interactively and via
+      ## R CMD check can give different answers. 
+      coloc <- Sys.getlocale("LC_COLLATE")
+      Sys.setlocale("LC_COLLATE","C")
+      ii <- order(xtu)
+      Sys.setlocale("LC_COLLATE",coloc)
+      Sys.setlocale("LC_CTYPE",chloc)
+      xtu <- xtu[ii]
+      x <- x[ii,]
+    }
+    ind <- match(xt,xtu)   ## index each row to the unique duplicate deleted set
+
+  }
+  if (!is.null(xo)) { ## original was a data.frame
+    x <- as.data.frame(x)
+    names(x) <- names(xo)
+    for (i in 1:ncol(xo)) {
+      if (is.factor(xo[,i])) { ## may need to reset factors to factors
+        xoi <- levels(xo[,i])
+        x[,i] <- if (is.ordered(xo[,i])) ordered(x[,i],levels=1:length(xoi),labels=xoi) else 
+                 factor(x[,i],levels=1:length(xoi),labels=xoi)
+        contrasts(x[,i]) <- contrasts(xo[,i])
+      }
+      if (is.char[i]) x[,i] <- as.character(x[,i])
+      if (is.logical(xo[,i])) x[,i] <- as.logical(x[,i])
+    }
+  }
+  if (recheck) {
+    if (all.equal(xoo,x[ind,],check.attributes=FALSE)!=TRUE) warning("uniquecombs has not worked properly")
+  }
+  attr(x,"index") <- ind
+  x
+} ## uniquecombs
+
+
+uniquecombs0 <- function(x,ordered=FALSE) {
+## takes matrix x and counts up unique rows
+## `unique' now does this in R
+  if (is.null(x)) stop("x is null")
+  if (is.null(nrow(x))||is.null(ncol(x))) x <- data.frame(x)
   if (inherits(x,"data.frame")) {
     xo <- x
     x <- data.matrix(xo) ## ensure all data are numeric
@@ -170,7 +251,11 @@ uniquecombs <- function(x,ordered=FALSE) {
       chloc <- Sys.getlocale("LC_CTYPE")
       Sys.setlocale("LC_CTYPE","C")
     }
-    txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=","),")",sep="")
+    ## txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=","),")",sep="")
+    ## ... this can produce duplicate labels e.g. x[,1] = c(1,11), x[,2] = c(12,2)...
+    ## solution is to insert separator not present in representation of a number (any
+    ## factor codes are already converted to numeric by data.matrix call above.)
+    txt <- paste("paste0(",paste("x[,",1:ncol(x),"]",sep="",collapse=",\":\","),")",sep="")
     xt <- eval(parse(text=txt)) ## text representation of rows
     dup <- duplicated(xt)       ## identify duplicates
     xtu <- xt[!dup]             ## unique text rows
@@ -203,7 +288,7 @@ uniquecombs <- function(x,ordered=FALSE) {
   }
   attr(x,"index") <- ind
   x
-} ## uniquecombs
+} ## uniquecombs0
 
 cSplineDes <- function (x, knots, ord = 4,derivs=0)
 { ## cyclic version of spline design...
@@ -626,15 +711,15 @@ tensor.prod.penalties <- function(S)
 
 
 
-smooth.construct.tensor.smooth.spec <- function(object,data,knots)
+smooth.construct.tensor.smooth.spec <- function(object,data,knots) {
 ## the constructor for a tensor product basis object
-{ inter <- object$inter ## signal generation of a pure interaction
+  inter <- object$inter ## signal generation of a pure interaction
   m <- length(object$margin)  # number of marginal bases
-  if (inter) { 
-    object$mc <- if (is.null(object$mc)) rep(TRUE,m) else as.logical(object$mc) 
+  if (inter) { ## interaction term so at least some marginals subject to constraint
+    object$mc <- if (is.null(object$mc)) rep(TRUE,m) else as.logical(object$mc) ## which marginals to constrain
     object$sparse.cons <-  if (is.null(object$sparse.cons)) rep(0,m) else object$sparse.cons
   } else {
-    object$mc <- rep(FALSE,m)
+    object$mc <- rep(FALSE,m) ## all marginals unconstrained
   }
   Xm <- list();Sm<-list();nr<-r<-d<-array(0,m)
   C <- NULL
@@ -675,8 +760,8 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots)
     km <- which(mono)
     g <- list(); for (i in 1:length(km)) g[[i]] <- object$margin[[km[i]]]$g.index
     for (i in 1:length(object$margin)) {
-      d <- ncol(object$margin[[i]]$X)
-      for (j in length(km)) if (i!=km[j]) g[[j]] <- if (i > km[j])  rep(g[[j]],each=d) else rep(g[[j]],d)
+      dx <- ncol(object$margin[[i]]$X)
+      for (j in length(km)) if (i!=km[j]) g[[j]] <- if (i > km[j])  rep(g[[j]],each=dx) else rep(g[[j]],dx)
     }
     object$g.index <- as.logical(rowSums(matrix(unlist(g),length(g[[1]]),length(g))))
   }
@@ -1771,12 +1856,21 @@ smooth.construct.bs.smooth.spec <- function(object,data,knots) {
   if (length(k)==2) { 
     xl <- min(k);xu <- max(k);
     if (xl>min(x)||xu<max(x)) stop("knot range does not include data")
-  } 
- 
-  if (is.null(k)||length(k)==2) {
+  }
+  if (!is.null(k)&&length(k)==4&&length(k)<nk+2*m[1]) {
+    ## 4 knots supplied: lower prediction limit, lower data limit,
+    ##   upper data limit, upper prediction limit
+    k <- sort(k)
+    dx <- (k[4]-k[1])/(nk-1)
+    ko <- c(k[1]-dx*m[1],k[4]+dx*m[1]) ## limits for outer knots
+    k <- c(seq(ko[1],k[1],length=m[1]+1),
+       seq(k[2],k[3],length=max(0,nk-2)),
+       seq(k[4],ko[2],length=m[1]+1))
+    
+  } else if (is.null(k)||length(k)==2) {
     xr <- xu - xl # data limits and range
     xl <- xl-xr*0.001;xu <- xu+xr*0.001;dx <- (xu-xl)/(nk-1) 
-    k <- seq(xl-dx*(m[1]),xu+dx*(m[1]),length=nk+2*m[1])   
+    k <- seq(xl-dx*m[1],xu+dx*m[1],length=nk+2*m[1])   
   } else {
     if (length(k)!=nk+2*m[1]) 
     stop(paste("there should be ",nk+2*m[1]," supplied knots"))
@@ -3311,7 +3405,7 @@ ExtractData <- function(object,data,knots) {
      knt[[object$term[i]]] <- get.var(object$term[i],knots)
 
    }
-   names(dat) <- object$term;m <- length(object$term)
+   names(dat) <- object$term; m <- length(object$term)
    if (!is.null(attr(dat[[1]],"matrix"))) { ## strip down to unique covariate combinations
      n <- length(dat[[1]])
      X <- matrix(unlist(dat),n,m)

@@ -25,14 +25,14 @@
 #include <R_ext/Linpack.h> /* only needed for pivoted chol - see note in mgcv_chol */
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
-#ifdef SUPPORT_OPENMP
+#ifdef OPENMP_ON
 #include <omp.h>
 #endif
 
 /*#include <dmalloc.h>*/
 
 void mgcv_omp(int *a) {
-#ifdef SUPPORT_OPENMP
+#ifdef OPENMP_ON
   *a=1;
 #else
   *a=0;
@@ -246,7 +246,7 @@ SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
 /* parallel matrix multiplication using .Call interface */
   double *A,*B,*C;
   int r,col,n,nt,Ct,Bt;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   int m;
   #endif
 
@@ -270,7 +270,7 @@ SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
   B = REAL(b);C=REAL(c);
   a = PROTECT(allocMatrix(REALSXP,r,col));
   A = REAL(a);
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   m = omp_get_num_procs(); /* detected number of processors */
   if (nt > m || nt < 1) nt = m; /* no point in more threads than m */
   /*Rprintf("\n open mp %d cores, %d used\n",m,nt);*/
@@ -365,11 +365,11 @@ int mgcv_bchol(double *A,int *piv,int *n,int *nt,int *nb) {
       for (i=1;i <= m;i++) { /* don't allow zero width blocks */
           if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
       }     
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
 #pragma omp parallel private(b,i,l,Aj,Aend,Aq,Aj1,Ail,Aj0,Aq0) num_threads(m)
       #endif 
       { /* start parallel section */
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp for
         #endif
         for (b=0;b<m;b++)
@@ -469,11 +469,11 @@ int mgcv_pchol(double *A,int *piv,int *n,int *nt) {
       }    
       /* check load balance... */
       // for (i=0;i<m;i++) Rprintf("%d  ",(a[i+1]-a[i])*(*n-(a[i+1]-1+a[i])/2));Rprintf("\n");
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp parallel private(b,j,Aj,Aend,Ak,Ajk) num_threads(m)
       #endif 
       { /* begin parallel section */
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp for
         #endif
         for (b=0;b<m;b++)
@@ -498,11 +498,11 @@ int mgcv_pchol(double *A,int *piv,int *n,int *nt) {
   for (i=1;i <= *nt;i++) { /* don't allow zero width blocks */
     if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
   }
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(b,i,Ak,Aend,Aq) num_threads(*nt)
   #endif 
   { /* start parallel */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (b=0;b < *nt;b++)
@@ -614,11 +614,11 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         kb[0] = k; /* starting row */
         for (i=0;i<nth-1;i++) { mb[i] = rt;kb[i+1]=kb[i]+rt;}
         mb[nth-1]=q-(nth-1)*rt;
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp parallel private(i) num_threads(nth)
         #endif 
         { /* start of parallel section */
-          #ifdef SUPPORT_OPENMP
+          #ifdef OPENMP_ON
           #pragma omp for
           #endif
           for (i=0;i<nth;i++) {
@@ -645,11 +645,11 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         kb[0] = j+1;
         for (i=0;i<nth-1;i++) { mb[i] = rt;kb[i+1]=kb[i]+rt;}
         mb[nth-1]=q-(nth-1)*rt;
-	//  #ifdef SUPPORT_OPENMP
+	//  #ifdef OPENMP_ON
         //#pragma omp parallel private(i) num_threads(nth)
         //#endif 
         { /* start of parallel section */
-          #ifdef SUPPORT_OPENMP
+          #ifdef OPENMP_ON
           #pragma omp parallel for private(i) num_threads(nth)
           #endif
           for (i=0;i<nth;i++) {
@@ -668,11 +668,11 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         kb[0] = jb; /* starting row */
         for (i=0;i<nth-1;i++) { mb[i] = rt;kb[i+1]=kb[i]+rt;}
         mb[nth-1]=q-(nth-1)*rt;
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp parallel private(i) num_threads(nth)
         #endif 
         { /* start of parallel section */
-          #ifdef SUPPORT_OPENMP
+          #ifdef OPENMP_ON
           #pragma omp for
           #endif
           for (i=0;i<nth;i++) {
@@ -700,11 +700,11 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
         for (i=0;i<nth-1;i++) { mb[i] = rt;kb[i+1]=kb[i]+rt;}
         mb[nth-1]=q-(nth-1)*rt;
         q=j+1; 
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp parallel private(i) num_threads(nth)
         #endif 
         { /* start of parallel section */
-          #ifdef SUPPORT_OPENMP
+          #ifdef OPENMP_ON
           #pragma omp for
           #endif
           for (i=0;i<nth;i++) {
@@ -746,11 +746,11 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
       mb[nth-1]=m-(nth-1)*rt;
       rt = p - k - 1;  
       //Rprintf("nth = %d  nt = %d\n",nth,nt);   
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp parallel private(i,Ak,Aq) num_threads(nth)
       #endif 
       { /* start of parallel section */
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp for
         #endif
         for (i=0;i<nth;i++) {
@@ -801,7 +801,7 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
   double *c,*p0,*p1,*p2,xx,tau,*work,zz,*v,*z,*z1,br;
   /* const char side = 'L';*/
 
-  #ifndef SUPPORT_OPENMP
+  #ifndef OPENMP_ON
   nt = 1;
   #endif
   #ifdef OMP_REPORT
@@ -854,12 +854,12 @@ int mgcv_piqr(double *x,int n, int p, double *beta, int *piv, int nt) {
     } else nth=cpf=cpt=0;
 
     br = beta[r];
-    //#ifdef SUPPORT_OPENMP
+    //#ifdef OPENMP_ON
     //#pragma omp parallel private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
     //#endif
     { j = cpt;
       if (j) {        
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp parallel for private(i,j,p1,v,z,z1,zz,ii) num_threads(nt)
         #endif
         for (i=0;i<nth;i++) {
@@ -951,7 +951,7 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     if (*bt&&(!*ct)&&(*r==*c)) { getXtX(A,B,n,r);return;} 
     else if (*ct&&(!*bt)&&(*r==*c)) { getXXt(A,B,c,n);return;}
   }
-  #ifndef SUPPORT_OPENMP
+  #ifndef OPENMP_ON
   *nt = 1;
   #endif
   if (*nt == 1) {
@@ -977,12 +977,12 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
       nth = *r/cpt;
       if (nth * cpt < *r) nth++;
       cpf = *r - cpt * (nth-1); /* columns on final block */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
         //c1 = cpt;
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp for
         #endif
         for (i=0;i<nth;i++) {
@@ -1003,12 +1003,12 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
       cpf = *r - cpt * (nth-1); /* columns on final block */
       /* re-order cpt-row blocks of B into sequential cpt by n matrices (in B) */ 
       row_block_reorder(B,r,n,&cpt,bt); /* bt contains a zero - forward mode here */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp parallel private(i,c1) num_threads(nth)
       #endif
       { /* open parallel section */
         //c1 = cpt;
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         #pragma omp for
         #endif
         for (i=0;i<nth;i++) {
@@ -1027,12 +1027,12 @@ void mgcv_pmmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int
     nth = *c/cpt;
     if (nth * cpt < *c) nth++;
     cpf = *c - cpt * (nth-1); /* columns on final block */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(i,c1) num_threads(*nt)
     #endif
     { /* open parallel section */
       //c1 = cpt;
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (i=0;i< nth;i++) {
@@ -1065,7 +1065,7 @@ void pcrossprod(double *B, double *A,int *R, int *C,int *nt,int *nb) {
     nf = *C - (M-1) * *nb;  /* cols in last col block of A */
     nrf = *R - (N-1) * *nb;  /* rows in last row block of A */
     kmax = (M+1)*M/2; /* number of blocks in upper triangle */ 
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel for private(kk,i,r,c,bn,bs,k,as,an,beta,cs,cn) num_threads(*nt)
     #endif
     for (kk=0;kk<kmax;kk++) { /* work through blocks on upper triangle */
@@ -1596,11 +1596,11 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
     if (a[i]>=a[i+1]) a[i] = a[i+1]-1;
   }
   r1 = *r + 1;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(b,i,j,k,zz,z,z1,rr,Rjj,dk) num_threads(*nt)
   #endif
   { /* open parallel section */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (b=0;b< *nt;b++) { /* b is thread/block index */
@@ -1631,11 +1631,11 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
     if (a[i]>=a[i+1]) a[i] = a[i+1]-1;
   }
 
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
 #pragma omp parallel private(b,i,k,zz,rr,r2) num_threads(*nt)
   #endif 
   { /* open parallel section */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif 
     for (b=0;b<*nt;b++) {
@@ -1690,11 +1690,11 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
     if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
   }
 
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(b,i,ru,rl,r1) num_threads(*nt)
   #endif
   { /* open parallel section */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif 
     for (b=0;b<*nt;b++) {
@@ -1714,11 +1714,11 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
   for (i=1;i <= *nt;i++) { /* don't allow zero width blocks */
     if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
   }
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(x,b,i,j,ru,rl,r1,rj,ri,Aij,Aji) num_threads(*nt)
   #endif
   { /* start parallel block */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (b=0;b< *nt;b++) {
@@ -1743,11 +1743,11 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
   for (i=1;i <= *nt;i++) { /* don't allow zero width blocks */
     if (a[i]<=a[i-1]) a[i] = a[i-1]+1;
   }
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(b,i,rl,r1) num_threads(*nt)
   #endif
   { /* start parallel block */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif 
     for (b=0;b<*nt;b++) {
@@ -1830,7 +1830,7 @@ void mgcv_pforwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int
   cpf = *bc - cpt * (nth-1); /* columns on final block */ 
   for (pC=C,pR=pC+ *bc * (ptrdiff_t)*c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
   //Rprintf("r = %d, c= %d bc = %d, nth= %d, cpt = %d, cpf = %d",*r,*c,*bc,nth,cpt,cpf);
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel for private(i,cp) num_threads(nth)
   #endif
   for (i=0;i<nth;i++) {
@@ -1984,7 +1984,7 @@ int get_qpr_k(int *r,int *c,int *nt) {
 /* For a machine with nt available cores, computes k, the best number of threads to 
    use for a parallel QR.
 */
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   int k;double kd,fkd,x,ckd;
   kd = sqrt(*r/(double)*c); /* theoretical optimum */
   if (kd <= 1.0) k = 1; else
@@ -2080,11 +2080,11 @@ void mgcv_pqrqy0(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,i
     if (*cb > 1) { /* matrix case - repacking needed */
       row_block_reorder(b,r,cb,&nb,&FALSE);
     }
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(i,j,l,n,x1) num_threads(k)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (i=0;i<k;i++) {
@@ -2118,11 +2118,11 @@ void mgcv_pqrqy0(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,i
     /* now apply the combined Q factor */
     mgcv_qrqy(Qb,a + *r * *c,tau + k * *c,&nq,cb,c,&left,tp);
     /* the blocks of Qb now have to be copied into separate blocks in b */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(i,j,l,n,x0,x1) num_threads(k)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (i=0;i<k;i++) {
@@ -2186,11 +2186,11 @@ void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,in
     k = *cb/nth; 
     if (k*nth < *cb) k++; /* otherwise last thread is rate limiting */
     if (k*(nth-1) >= *cb) nth--; /* otherwise last thread has no work */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(i,j,ki) num_threads(nth)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (i=0;i<nth;i++) {
@@ -2261,11 +2261,11 @@ void mgcv_pqr0(double *x,int *r, int *c,int *pivot, double *tau, int *nt) {
     piv = (int *)CALLOC((size_t) (k * *c),sizeof(int));
     R = x + *r * *c ; /* pointer to combined unpivoted R matrix */
     nr = *c * k; /* number of rows in R */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(i,j,l,n,xi,R1) num_threads(k)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (i=0;i<k;i++) { /* QR the blocks */
@@ -2698,7 +2698,7 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
   #endif
 
 
-  #ifndef SUPPORT_OPENMP
+  #ifndef OPENMP_ON
   *nt = 1; /* reset number of threads to 1 if openMP not available  */ 
   #endif
   if (*nt > *n) *nt = *n; /* don't use more threads than columns! */
@@ -2753,11 +2753,11 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
 
     /*  BLAS versions y := alpha*A*x + beta*y, */
     if (*nt>1) { /* use parallel computation for the z = A q[j] */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp parallel private(i,ri) num_threads(*nt)
       #endif
       { 
-	#ifdef SUPPORT_OPENMP
+	#ifdef OPENMP_ON
 	#pragma omp for
 	#endif
         for (i=0;i<*nt;i++) {

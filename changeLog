@@ -5,6 +5,34 @@ Currently deprecated and liable to be removed:
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 
+1.8-17
+
+* Export gamlss.etamu, gamlss.gH and trind.generator to facilitate user 
+  addition of new location-scale families. 
+
+* Re-ordering of initialization in gam.fit4 to avoid possible failure of
+  dev.resids call before initialization. 
+
+* trap in fast.REML.fit for situation in which all smoothing parameters 
+  satisfy conditions for indefinite convergence on entry, with an 
+  immediate warning that this probably indicates iteration divergence (of bam).
+
+* "bs" basis modified to allow easier control of the interval over which the
+  spline penalty applies which in turn allows more sensible control of 
+  extrapolation behaviour, when this is unavoidable. 
+
+* Fix in uniquecombs - revised faster code (from 1.8-13) could occasionally 
+  generate false matches between different input combinations for integer 
+  variables or factors. Thanks to Rohan Sadler for reporting the issue that 
+  uncovered this. 
+
+* A very bad initial model for uninformative data could lead to a negative 
+  fletcher estimate of the scale parameter and optimizer failure - fixed. 
+
+* "fREML" allowed in sp.vcov so that it works with bam fitted models.
+
+* 2 occurances of 'return' replaced by (correct) return().	
+
 1.8-16
 
 * slightly improved intial value heuristics for overlapping penalties in 

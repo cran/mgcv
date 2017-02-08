@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-14\n"
-"POT-Creation-Date: 2016-08-19 13:28\n"
+"Project-Id-Version: mgcv 1.8-17\n"
+"POT-Creation-Date: 2017-02-06 09:59\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -106,6 +106,9 @@ msgstr ""
 msgid "Must supply theta or R to ocat"
 msgstr ""
 
+msgid "Response should be integer class labels"
+msgstr ""
+
 msgid "values out of range"
 msgstr ""
 
@@ -146,6 +149,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "Possible divergence detected in fast.REML.fit"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
@@ -649,6 +655,9 @@ msgstr ""
 msgid "incorrect number of linear predictors for family"
 msgstr ""
 
+msgid "edge.correct must be logical or a positive number"
+msgstr ""
+
 msgid "nthreads must be a positive integer"
 msgstr ""
 
@@ -892,6 +901,9 @@ msgstr ""
 msgid "x is null"
 msgstr ""
 
+msgid "uniquecombs has not worked properly"
+msgstr ""
+
 msgid "order too low"
 msgstr ""
 
@@ -1058,6 +1070,9 @@ msgid "Please put term with most levels last in 're' to avoid spoiling supplied 
 msgstr ""
 
 msgid "supplied S matrices are wrong diminsion"
+msgstr ""
+
+msgid "argument of mrf should be a factor variable"
 msgstr ""
 
 msgid "MRF basis dimension set too high"

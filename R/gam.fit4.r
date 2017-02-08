@@ -278,23 +278,34 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
   ## need an initial `null deviance' to test for initial divergence...
   ## if (!is.null(start)) null.coef <- start - can be on edge of feasible - not good
   null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
-  old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
 
-  if (!is.null(start)) { ## check it's at least better than null.coef
-    pdev <- sum(dev.resids(y, linkinv(x%*%start+as.numeric(offset)), weights,theta)) + t(start)%*%St%*%start
-    if (pdev>old.pdev) start <- mustart <- etastart <- NULL
-  }
+  #old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
+
+  #if (!is.null(start)) { ## check it's at least better than null.coef
+  #  pdev <- sum(dev.resids(y, linkinv(x%*%start+as.numeric(offset)), weights,theta)) + t(start)%*%St%*%start
+  #  if (pdev>old.pdev) start <- mustart <- etastart <- NULL
+  #}
 
   ## call the families initialization code...
 
   if (is.null(mustart)) {
     eval(family$initialize)
+    mukeep <- NULL
   } else {
     mukeep <- mustart
     eval(family$initialize)
-    mustart <- mukeep
+    #mustart <- mukeep
   }
-  
+
+  old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
+
+  if (!is.null(start)) { ## check it's at least better than null.coef
+    pdev <- sum(dev.resids(y, linkinv(x%*%start+as.numeric(offset)), weights,theta)) + t(start)%*%St%*%start
+    if (pdev>old.pdev) start <- mukeep <- etastart <- NULL
+  }
+
+  if (!is.null(mukeep)) mustart <- mukeep
+
   ## and now finalize initialization of mu and eta...
 
   eta <- if (!is.null(etastart)) etastart

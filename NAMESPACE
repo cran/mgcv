@@ -8,7 +8,9 @@ export(anova.gam, bam, bam.update,bandchol, betar, cox.ph,concurvity,
        fs.test,fs.boundary,gam, gam2derivative, 
        gam2objective,
        gamm, gam.check, gam.control,gam.fit3,
-       gam.fit, gam.outer,gam.vcomp, gamSim , 
+       gam.fit, 
+       gamlss.etamu,gamlss.gH,
+       gam.outer,gam.vcomp, gamSim , 
        gaulss,gam.side,get.var,gevlss,
        influence.gam, 
        in.out,inSide,interpret.gam,initial.sp,
@@ -68,7 +70,8 @@ export(anova.gam, bam, bam.update,bandchol, betar, cox.ph,concurvity,
        summary.gam,sp.vcov,
        spasm.construct,spasm.sp,spasm.smooth,
        t2,te,ti,tensor.prod.model.matrix,tensor.prod.penalties,
-       trichol,Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
+       trichol,trind.generator,
+       Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
 
 importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,heat.colors,terrain.colors,topo.colors)
 importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,

@@ -22,7 +22,7 @@ USA. */
 #include <R.h>
 #include "mgcv.h"
 
-#ifdef SUPPORT_OPENMP
+#ifdef OPENMP_ON
 #include <omp.h>
 #endif
 #define ANSI
@@ -933,15 +933,15 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   /* now loop through the smoothing parameters to create K'TkK */
   if (deriv2) {
     KtTK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(k,j,tid) num_threads(nthreads)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (k=0;k < *M;k++) {
-	#ifdef SUPPORT_OPENMP
+	#ifdef OPENMP_ON
         tid = omp_get_thread_num(); /* thread running this bit */
 	#endif    
         j = k * *r * *r;
@@ -969,15 +969,15 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   rSoff =  (int *)CALLOC((size_t)*M,sizeof(int));
   rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   tid = 0;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(m,bt,ct,tid) num_threads(nthreads)
   #endif
   { /* parallel section start */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (m=0;m < *M;m++) { /* loop through penalty matrices */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif    
       bt=1;ct=0;mgcv_mmult(PtrSm + tid * *r * max_col,P,rS+rSoff[m] * *q,&bt,&ct,r,rSncol+m,q);
@@ -994,17 +994,17 @@ void get_ddetXWXpS0(double *det1,double *det2,double *P,double *K,double *sp,
   FREE(rSoff);
   /* Now accumulate the second derivatives */
 
-  //  #ifdef SUPPORT_OPENMP
+  //  #ifdef OPENMP_ON
   //#pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
   //#endif
   if (deriv2) 
   { /* start of parallel section */ 
     // if (deriv2) 
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp  parallel for private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
     #endif
     for (m=0;m < *M;m++) {
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif
       if (m==0) pTkm = Tkm; else pTkm = Tkm + (m * *M - (m*(m-1))/2) * *n;        
@@ -1088,15 +1088,15 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   /* now loop through the smoothing parameters to create K'TkK */
   if (deriv2) {
     KtTK = (double *)CALLOC((size_t)(*r * *r * Mtot),sizeof(double));
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(k,j,tid) num_threads(nthreads)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (k=0;k < Mtot;k++) {
-	#ifdef SUPPORT_OPENMP
+	#ifdef OPENMP_ON
         tid = omp_get_thread_num(); /* thread running this bit */
 	#endif    
         j = k * *r * *r;
@@ -1126,15 +1126,15 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
     rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   }
   tid = 0;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(m,bt,ct,tid) num_threads(nthreads)
   #endif
   { /* parallel section start */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (m=0;m < *M;m++) { /* loop through penalty matrices */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif    
       bt=1;ct=0;mgcv_mmult(PtrSm + tid * *r * max_col,P,rS+rSoff[m] * *q,&bt,&ct,r,rSncol+m,q);
@@ -1151,17 +1151,17 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
   FREE(rSoff);
   /* Now accumulate the second derivatives */
 
-  //  #ifdef SUPPORT_OPENMP
+  //  #ifdef OPENMP_ON
   //#pragma omp parallel private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
   //#endif
   if (deriv2)
   { /* start of parallel section */ 
     //if (deriv2) 
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel for private(m,k,km,mk,xx,tid,pdKK,p1,pTkm) num_threads(nthreads)
     #endif
     for (m=0;m < Mtot;m++) {
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif
       if (m==0) pTkm = Tkm; else pTkm = Tkm + (m * Mtot - (m*(m-1))/2) * *n;        
@@ -1280,15 +1280,15 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   if (deriv2) {
     KtTK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
     KtTKKtK = (double *)CALLOC((size_t)(*r * *r * *M),sizeof(double));
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp parallel private(k,j,tid) num_threads(*nt)
     #endif
     { /* open parallel section */
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       #pragma omp for
       #endif
       for (k=0;k < *M;k++) {
-        #ifdef SUPPORT_OPENMP
+        #ifdef OPENMP_ON
         tid = omp_get_thread_num(); /* thread running this bit */
         #endif      
         j = k * *r * *r;
@@ -1343,15 +1343,15 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   rSoff =  (int *)CALLOC((size_t)*M,sizeof(int));
   rSoff[0] = 0;for (m=0;m < *M-1;m++) rSoff[m+1] = rSoff[m] + rSncol[m];
   tid = 0;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   #pragma omp parallel private(m,bt,ct,tid,xx,p0,p1,p2) num_threads(*nt)
   #endif
   { /* open parallel section */
-    #ifdef SUPPORT_OPENMP
+    #ifdef OPENMP_ON
     #pragma omp for
     #endif
     for (m=0;m < *M;m++) { 
-      #ifdef SUPPORT_OPENMP
+      #ifdef OPENMP_ON
       tid = omp_get_thread_num(); /* thread running this bit */
       #endif
       bt=1;ct=0;mgcv_mmult(PtrSm + *r * *q * tid,P,rS+rSoff[m] * *q,&bt,&ct,r,rSncol+m,q);
@@ -2308,7 +2308,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
     ntot,n_2dCols=0,n_drop,*drop,tp,
     n_work,deriv2,neg_w=0,*nind,nr,TRUE=1,FALSE=0,ML=0; 
   
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   int m;
   m = omp_get_num_procs(); /* detected number of processors */
   if (*nt > m || *nt < 1) *nt = m; /* no point in more threads than m */
@@ -2694,7 +2694,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     n_2dCols=0,n_b2,n_drop,*drop,nt1,
       n_eta1=0,n_eta2=0,n_work,deriv2,neg_w=0,*nind,nr,TRUE=1,FALSE=0; 
   
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   m = omp_get_num_procs(); /* detected number of processors */
   if (*nt > m || *nt < 1) *nt = m; /* no point in more threads than m */
   omp_set_num_threads(*nt); /* set number of threads to use */
@@ -3186,7 +3186,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 { int i,j,k,rank,one=1,*pivot,*pivot1,left,tp,neg_w=0,*nind,bt,ct,nr,n_drop=0,*drop,TRUE=1,FALSE=0,nz;
   double *z,*WX,*tau,Rcond,xx,zz,zz1,*work,*Q,*Q1,*IQ,*raw,*d,*Vt,*p0,*p1,
     *R1,*tau1,Rnorm,Enorm,*R,*Xp;
-  #ifdef SUPPORT_OPENMP
+  #ifdef OPENMP_ON
   int m;
   m = omp_get_num_procs(); /* detected number of processors */
   if (*nt > m || *nt < 1) *nt = m; /* no point in more threads than m */

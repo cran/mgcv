@@ -7,7 +7,7 @@ This routine returns a matrix or data frame containing all the unique rows of th
 matrix or data frame supplied as its argument. That is, all the duplicate rows are
 stripped out. Note that the ordering of the rows on exit need not be the same
 as on entry. It also returns an index attribute for relating the result back 
-to the original matrix.
+to the original matrix. 
 }
 \usage{
 uniquecombs(x,ordered=FALSE)
@@ -34,7 +34,7 @@ uniquecombs(x,ordered=FALSE)
  \code{\link{unique}} and \code{\link{duplicated}}, can be used 
  in place of this, if the full index is not needed. Relative performance is variable. 
 
- If \code{x} is not a matrix or data frame on entry then an attmept is made to coerce 
+ If \code{x} is not a matrix or data frame on entry then an attempt is made to coerce 
  it to a data frame. 
 }
 \value{
@@ -49,6 +49,13 @@ matrix that contains row i of the original matrix.
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with thanks to Jonathan Rougier}
 
+\section{WARNINGS }{
+If a dataframe contains variables of a type other than numeric, logical, factor or character, which
+either have no \code{as.character} method, or whose \code{as.character} method is a many to one mapping,
+then the routine is likely to fail.
+
+If the character representation of a dataframe variable (other than of class factor of character) contains \code{*} then in priniciple the method could fail (but with a warning).
+}
 
 \examples{
 require(mgcv)
@@ -70,7 +77,10 @@ Xu[ind[3],];X[3,]
 
 ## data frame example...
 df <- data.frame(f=factor(c("er",3,"b","er",3,3,1,2,"b")),
-      x=c(.5,1,1.4,.5,1,.6,4,3,1.7))
+      x=c(.5,1,1.4,.5,1,.6,4,3,1.7),
+      bb = c(rep(TRUE,5),rep(FALSE,4)),
+      fred = c("foo","a","b","foo","a","vf","er","r","g"),
+      stringsAsFactors=FALSE)
 uniquecombs(df)
 }
 \keyword{models} \keyword{regression}%-- one or more ..
