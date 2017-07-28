@@ -12,8 +12,7 @@ are designed for datasets containing upwards of several tens of thousands of dat
 of \code{bam} is much lower memory footprint than \code{\link{gam}}, but it can also be much faster, 
 for large datasets. \code{bam} can also compute on a cluster set up by the \link[parallel]{parallel} package.
 
-An alternative fitting approach is provided by the \code{discrete==TRUE} method. In this case a method based on discretization of 
-covariate values and C code level parallelization (controlled by the \code{nthreads} argument instead of the \code{cluster} argument) is used. This extends both the data set and model size usable.
+An alternative fitting approach (Wood et al. 2016) is provided by the \code{discrete==TRUE} method. In this case a method based on discretization of covariate values and C code level parallelization (controlled by the \code{nthreads} argument instead of the \code{cluster} argument) is used. This extends both the data set and model size usable.
 
 }
 \usage{
@@ -248,7 +247,7 @@ summary(b)
 plot(b,pages=1,rug=FALSE)  ## plot smooths, but not rug
 plot(b,pages=1,rug=FALSE,seWithMean=TRUE) ## `with intercept' CIs
 
-\dontrun{ 
+\donttest{ 
 ba <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)+
             s(x3,bs=bs,k=k),data=dat,method="GCV.Cp") ## use GCV
 summary(ba)}
@@ -262,14 +261,6 @@ system.time(b1 <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k),
             data=dat,family=poisson()))
 b1
 
-
-## Sparse smoother example (deprecated)...
-\dontrun{
-dat <- gamSim(1,n=10000,dist="poisson",scale=.1)
-system.time( b3 <- bam(y ~ te(x0,x1,bs="ps",k=10,np=FALSE)+
-             s(x2,bs="ps",k=30)+s(x3,bs="ps",k=30),data=dat,
-             method="REML",family=poisson(),sparse=TRUE))
-b3}
 
 }
 

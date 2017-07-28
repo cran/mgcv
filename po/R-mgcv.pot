@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-17\n"
-"POT-Creation-Date: 2017-02-06 09:59\n"
+"Project-Id-Version: mgcv 1.8-18\n"
+"POT-Creation-Date: 2017-07-24 10:46\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -62,6 +62,9 @@ msgid "discretization only available with fREML"
 msgstr ""
 
 msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
+
+msgid "openMP not available: single threaded computation only"
 msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
@@ -133,7 +136,7 @@ msgstr ""
 msgid "link not available for scaled t distribution; available links are \"identity\", \"log\",  and \"inverse\""
 msgstr ""
 
-msgid "scaled t df must be >2"
+msgid "scaled t df must be > min.df"
 msgstr ""
 
 msgid "NA values not allowed for the scaled t family"
@@ -155,9 +158,6 @@ msgid "Possible divergence detected in fast.REML.fit"
 msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
-msgstr ""
-
-msgid "Huber scale estiamte not converged"
 msgstr ""
 
 msgid "unsupported order of differentiation requested of gam.fit3"
@@ -443,6 +443,9 @@ msgid "gamm not converged, try increasing niterPQL"
 msgstr ""
 
 msgid "family are not designed for use with gamm!"
+msgstr ""
+
+msgid "gamm is not designed to use extended families"
 msgstr ""
 
 msgid "random argument must be a *named* list."
@@ -947,6 +950,9 @@ msgid "ord contains out of range orders (which will be ignored)"
 msgstr ""
 
 msgid "by=. not allowed"
+msgstr ""
+
+msgid "s(.) not supported."
 msgstr ""
 
 msgid "s(.) not yet supported."

@@ -455,7 +455,9 @@ print(b0);print(bp)
 b0 <- gam(y~s(x0,k=4,fx=TRUE,bs="tp")+s(x1,k=12)+s(x2,k=15),data=dat)
 plot(b0,pages=1)
 
+\donttest{
 ## now simulate poisson data...
+set.seed(6)
 dat <- gamSim(1,n=2000,dist="poisson",scale=.1)
 
 ## use "cr" basis to save time, with 2000 data...
@@ -537,7 +539,6 @@ vis.gam(b4)                     ## persp fit
 detach(eg)
 par(op)
 
-\dontrun{
 ##################################################
 ## largish dataset example with user defined knots
 ##################################################

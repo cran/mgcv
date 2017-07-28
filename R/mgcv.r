@@ -181,15 +181,17 @@ all.vars1 <- function(form) {
   vn1
 } ## all.vars1
 
-interpret.gam0 <- function(gf,textra=NULL)
+interpret.gam0 <- function(gf,textra=NULL,extra.special=NULL)
 # interprets a gam formula of the generic form:
 #   y~x0+x1+x3*x4 + s(x5)+ s(x6,x7) ....
 # and returns:
 # 1. a model formula for the parametric part: pf (and pfok indicating whether it has terms)
 # 2. a list of descriptors for the smooths: smooth.spec
 # this is function does the work, and is called by in interpret.gam
+# 'textra' is optional text to add to term labels
+# 'extra.special' is label of extra smooth within formula.
 { p.env <- environment(gf) # environment of formula
-  tf <- terms.formula(gf,specials=c("s","te","ti","t2")) # specials attribute indicates which terms are smooth
+  tf <- terms.formula(gf,specials=c("s","te","ti","t2",extra.special)) # specials attribute indicates which terms are smooth
  
   terms <- attr(tf,"term.labels") # labels of the model terms 
   nt <- length(terms) # how many terms?
@@ -203,9 +205,10 @@ interpret.gam0 <- function(gf,textra=NULL)
   tp <- attr(tf,"specials")$te    # indices of tensor product terms
   tip <- attr(tf,"specials")$ti   # indices of tensor product pure interaction terms
   t2p <- attr(tf,"specials")$t2   # indices of type 2 tensor product terms
+  zp <- if (is.null(extra.special)) NULL else attr(tf,"specials")[[extra.special]]
   off <- attr(tf,"offset") # location of offset in formula
 
-  ## have to translate sp, tp, tip, t2p so that they relate to terms,
+  ## have to translate sp, tp, tip, t2p (zp) so that they relate to terms,
   ## rather than elements of the formula...
   vtab <- attr(tf,"factors") # cross tabulation of vars to terms
   if (length(sp)>0) for (i in 1:length(sp)) {
@@ -220,22 +223,27 @@ interpret.gam0 <- function(gf,textra=NULL)
     ind <- (1:nt)[as.logical(vtab[tip[i],])]
     tip[i] <- ind # the term that smooth relates to
   } 
-   if (length(t2p)>0) for (i in 1:length(t2p)) {
+  if (length(t2p)>0) for (i in 1:length(t2p)) {
     ind <- (1:nt)[as.logical(vtab[t2p[i],])]
     t2p[i] <- ind # the term that smooth relates to
+  }
+  if (length(zp)>0) for (i in 1:length(zp)) {
+    ind <- (1:nt)[as.logical(vtab[zp[i],])]
+    zp[i] <- ind # the term that smooth relates to
   } ## re-referencing is complete
 
-  k <- kt <- kti <- kt2 <- ks <- kp <- 1 # counters for terms in the 2 formulae
+  k <- kt <- kti <- kt2 <- ks <- kz <- kp <- 1 # counters for terms in the 2 formulae
   len.sp <- length(sp)
   len.tp <- length(tp)
   len.tip <- length(tip)
   len.t2p <- length(t2p)
-  ns <- len.sp + len.tp + len.tip + len.t2p # number of smooths
+  len.zp <- length(zp)
+  ns <- len.sp + len.tp + len.tip + len.t2p + len.zp# number of smooths
   pav <- av <- rep("",0)
   smooth.spec <- list()
   mgcvat <- "package:mgcv" %in% search() ## is mgcv in search path?
   if (nt) for (i in 1:nt) { # work through all terms
-    if (k <= ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||
+    if (k <= ns&&((ks<=len.sp&&sp[ks]==i)||(kt<=len.tp&&tp[kt]==i)||(kz<=len.zp&&zp[kz]==i)||
                   (kti<=len.tip&&tip[kti]==i)||(kt2<=len.t2p&&t2p[kt2]==i))) { # it's a smooth
       ## have to evaluate in the environment of the formula or you can't find variables 
       ## supplied as smooth arguments, e.g. k <- 5;gam(y~s(x,k=k)), fails,
@@ -257,7 +265,8 @@ interpret.gam0 <- function(gf,textra=NULL)
       if (ks<=len.sp&&sp[ks]==i) ks <- ks + 1 else # counts s() terms
       if (kt<=len.tp&&tp[kt]==i) kt <- kt + 1 else # counts te() terms
       if (kti<=len.tip&&tip[kti]==i) kti <- kti + 1 else # counts ti() terms
-      kt2 <- kt2 + 1                           # counts t2() terms
+      if (kt2<=len.t2p&&t2p[kt2]==i) kt2 <- kt2 + 1 # counts t2() terms
+      else kz <- kz + 1
       k <- k + 1      # counts smooth terms 
     } else {          # parametric
       av[kp] <- terms[i] ## element kp on rhs of parametric
@@ -304,7 +313,7 @@ interpret.gam0 <- function(gf,textra=NULL)
   ret
 } ## interpret.gam0
 
-interpret.gam <- function(gf) {
+interpret.gam <- function(gf,extra.special=NULL) {
 ## wrapper to allow gf to be a list of formulae or 
 ## a single formula. This facilitates general penalized 
 ## likelihood models in which several linear predictors 
@@ -343,7 +352,7 @@ interpret.gam <- function(gf) {
       if (length(lpi)>0) gf[[i]][[2]] <- NULL else { ## delete l.p. labels from formula response 
         nlp <- nlp + 1;lpi <- nlp ## this is base formula for l.p. number nlp       
       }
-      ret[[i]] <- interpret.gam0(gf[[i]],textra)
+      ret[[i]] <- interpret.gam0(gf[[i]],textra,extra.special=extra.special)
       ret[[i]]$lpi <- lpi ## record of the linear predictors to which this applies
       
       ## make sure all parametric formulae have a response, to avoid
@@ -366,7 +375,7 @@ interpret.gam <- function(gf) {
     for (i in 1:d) if (max(ret[[i]]$lpi)>nlp||min(ret[[i]]$lpi)<1) stop("linear predictor labels out of range")
     class(ret) <- "split.gam.formula"
     return(ret)
-  } else interpret.gam0(gf)  
+  } else interpret.gam0(gf,extra.special=extra.special)  
 } ## interpret.gam
 
 
@@ -1709,8 +1718,11 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
     ## and an estimate of the function scale, suitable for optimizers that need this.
     ## Doesn't make sense for general families that have to initialize coefs directly.
   
-    null.stuff  <- if(inherits(G$family,"general.family")) list() else get.null.coef(G,...)  
-    
+    ## null.stuff  <- if(inherits(G$family,"general.family")) list() else get.null.coef(G,...)
+    ## Matteo modification to facilitate qgam...
+    null.stuff  <- if (inherits(G$family,"general.family")) list() else { 
+      if (is.null(G$family$get.null.coef)) get.null.coef(G,...) else G$family$get.null.coef(G,...)
+    }
     if (fixedSteps>0&&is.null(in.out)) mgcv.conv <- object$mgcv.conv else mgcv.conv <- NULL
     
     if (criterion%in%c("REML","ML")&&scale<=0) { ## log(scale) to be estimated as a smoothing parameter
@@ -3504,7 +3516,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     res
   } ## end of pinv
   
-  if (is.null(object$R)) { 
+  if (is.null(object$R)) { ## Factor from QR decomp of sqrt(W)X
     warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
     useR <- FALSE
   } else useR <- TRUE

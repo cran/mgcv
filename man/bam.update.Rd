@@ -85,10 +85,9 @@ dat$y <- dat$f + e*3
 dat[c(50,13,3000,3005,3100),]<- NA
 dat1 <- dat[(n-999):n,]
 dat0 <- dat[1:(n-1000),]
-method <- "ML"
 
 b <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)+
-           s(x3,bs=bs,k=k),data=dat0,method=method,rho=0.7)
+           s(x3,bs=bs,k=k),data=dat0,rho=0.7)
 
 b1 <- bam.update(b,dat1)
 

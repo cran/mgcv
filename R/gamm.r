@@ -1205,6 +1205,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
   ## which will break the standard handling of the control list. Following line fixes.
   ## but actually Martin M has now fixed lmeControl...
   ##if (!is.null(control$sigma)&&control$sigma==0) control$sigma <- NULL
+  if (inherits(family,"extended.family")) warning("gamm is not designed to use extended families")
   control <- do.call("lmeControl",control) 
     # check that random is a named list
     if (!is.null(random))

@@ -134,8 +134,9 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
     }
   } else {
     ## ix <- sort.int(D,index.return=TRUE)$ix ## messes up under multiple ties!
-    ix <- rank(D)
-    U <- (ix-.5)/length(D)
+    #ix <- rank(D)
+    #U <- (ix-.5)/length(D) ## code used pre-randomization - not needed
+    U <- (1:n-.5)/n
     if (!is.null(fam$qf)) { 
       dm <- matrix(0,n,s.rep)
       for (i in 1:s.rep) { 
@@ -145,13 +146,6 @@ qq.gam <- function(object, rep=0, level=.9,s.rep=10,
         dm[,i] <- sort(residuals(object,type=type)) ## original proposal
       }
       Dq <- sort(rowMeans(dm))
-     # Dq <- quantile(as.numeric(dm),(1:n - .5)/n)
-
-     # nd <- length(Dq)
-     # q1 <- fam$qf(1-U,object$fitted.values,object$prior.weights,object$sig2)
-     # object$y <- q1
-     # Dq <- sort(c(Dq,residuals(object,type=type)))
-     # Dq <- (Dq[(1:nd)*2]+Dq[(1:nd)*2-1])*.5 ## more powerful alternative 
     }
   }
  
@@ -279,45 +273,51 @@ gam.check <- function(b, old.style=FALSE,
     if (is.matrix(fv)&&!is.matrix(b$y)) fv <- fv[,1]
     plot(fv, napredict(b$na.action, b$y),
          xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values",...)
-    if (!(b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","fREML"))) { ## gamm `gam' object
-       par(old.par)
-       return(invisible())
-    }
-    ## now summarize convergence information 
-    cat("\nMethod:",b$method,"  Optimizer:",b$optimizer)
-    if (!is.null(b$outer.info)) { ## summarize convergence information
-      if (b$optimizer[2]%in%c("newton","bfgs"))
-      { boi <- b$outer.info
-        cat("\n",boi$conv," after ",boi$iter," iteration",sep="")
-        if (boi$iter==1) cat(".") else cat("s.")
-        cat("\nGradient range [",min(boi$grad),",",max(boi$grad),"]",sep="")
-        cat("\n(score ",b$gcv.ubre," & scale ",b$sig2,").",sep="")
-        ev <- eigen(boi$hess)$values
-        if (min(ev)>0) cat("\nHessian positive definite, ") else cat("\n")
-        cat("eigenvalue range [",min(ev),",",max(ev),"].\n",sep="")
-      } else { ## just default print of information ..
-        cat("\n");print(b$outer.info)
-      }
-    } else { ## no sp, perf iter or AM case
-      if (length(b$sp)==0) ## no sp's estimated  
-        cat("\nModel required no smoothing parameter selection")
-      else { 
-        cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")       
-        if (b$mgcv.conv$iter>1) cat("s")
-         
-        if (!b$mgcv.conv$fully.converged)
-        cat(" by steepest\ndescent step failure.\n") else cat(".\n")
-        cat("The RMS",b$method,"score gradient at convergence was",b$mgcv.conv$rms.grad,".\n")
-        if (b$mgcv.conv$hess.pos.def)
-        cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
-        #cat("The estimated model rank was ",b$mgcv.conv$rank,
-        #           " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
-      }
-    }
-    if (!is.null(b$rank)) {
-      cat("Model rank = ",b$rank,"/",length(b$coefficients),"\n")
-    }
 
+    gamm <- !(b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","fREML")) ## gamm `gam' object
+
+    #if (is.null(.Platform$GUI) || .Platform$GUI != "RStudio") par(old.par)
+    #   return(invisible())
+    #}
+    ## now summarize convergence information 
+    if (gamm) {
+      cat("\n\'gamm\' based fit - care required with interpretation.")
+      cat("\nChecks based on working residuals may be misleading.")
+    } else { 
+      cat("\nMethod:",b$method,"  Optimizer:",b$optimizer)
+      if (!is.null(b$outer.info)) { ## summarize convergence information
+        if (b$optimizer[2]%in%c("newton","bfgs"))
+        { boi <- b$outer.info
+          cat("\n",boi$conv," after ",boi$iter," iteration",sep="")
+          if (boi$iter==1) cat(".") else cat("s.")
+          cat("\nGradient range [",min(boi$grad),",",max(boi$grad),"]",sep="")
+          cat("\n(score ",b$gcv.ubre," & scale ",b$sig2,").",sep="")
+          ev <- eigen(boi$hess)$values
+          if (min(ev)>0) cat("\nHessian positive definite, ") else cat("\n")
+          cat("eigenvalue range [",min(ev),",",max(ev),"].\n",sep="")
+        } else { ## just default print of information ..
+          cat("\n");print(b$outer.info)
+        }
+      } else { ## no sp, perf iter or AM case
+        if (length(b$sp)==0) ## no sp's estimated  
+          cat("\nModel required no smoothing parameter selection")
+        else { 
+          cat("\nSmoothing parameter selection converged after",b$mgcv.conv$iter,"iteration")       
+          if (b$mgcv.conv$iter>1) cat("s")
+         
+          if (!b$mgcv.conv$fully.converged)
+          cat(" by steepest\ndescent step failure.\n") else cat(".\n")
+          cat("The RMS",b$method,"score gradient at convergence was",b$mgcv.conv$rms.grad,".\n")
+          if (b$mgcv.conv$hess.pos.def)
+          cat("The Hessian was positive definite.\n") else cat("The Hessian was not positive definite.\n")
+          #cat("The estimated model rank was ",b$mgcv.conv$rank,
+          #           " (maximum possible: ",b$mgcv.conv$full.rank,")\n",sep="")
+        }
+      }
+      if (!is.null(b$rank)) {
+        cat("Model rank = ",b$rank,"/",length(b$coefficients),"\n")
+      }
+    } ## if gamm
     cat("\n")
     ## now check k
     kchck <- k.check(b,subsample=k.sample,n.rep=k.rep)
@@ -354,8 +354,9 @@ plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2
 
     } ## end of basic plot data production 
   } else { ## produce plot
-    qqnorm(P$fit,main=P$main,xlab=P$xlab,ylab=P$ylab,...)
-    qqline(P$fit)
+    b <- as.numeric(trans(P$fit+shift))
+    qqnorm(b,main=P$main,xlab=P$xlab,ylab=P$ylab,...)
+    qqline(b)
   } ## end of plot production
 } ## end of plot.random.effect
 
@@ -505,7 +506,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     m <- length(P$xm); zz <- rep(NA,m*m)
     if (scheme == 0) {
       col <- 1# "lightgrey 
-      zz[P$ind] <- P$fit
+      zz[P$ind] <- trans(P$fit+shift)
       image(P$xm,P$ym,matrix(zz,m,m),col=hcolors,axes=FALSE,xlab="",ylab="",...)
       if (rug) { 
         if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
@@ -519,7 +520,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       contour(P$xm,P$ym,matrix(zz,m,m),add=TRUE,col=contour.col,...)
     } else if (scheme == 1) {
       col <- 1 
-      zz[P$ind] <- P$fit
+      zz[P$ind] <- trans(P$fit+shift)
       contour(P$xm,P$ym,matrix(zz,m,m),col=1,axes=FALSE,xlab="",ylab="",...) 
       if (rug) { 
         if (is.null(list(...)[["pch"]])) points(P$raw$x,P$raw$y,pch=".",...) else
@@ -554,7 +555,7 @@ poly2 <- function(x,col) {
     if (!is.na(col)) polygon(xf,col=col,border=NA,fillOddEven=TRUE)
     polygon(x,border="black")
   }
-}
+} ## poly2
 
 polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) { 
 ## pc is a list of polygons defining area boundaries
@@ -635,7 +636,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
     polygon(poly,border="black")
   }
   par(oldpar)
-}
+} ## polys.plot
 
 plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
@@ -649,6 +650,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
     raw <- data[x$term][[1]]
     dat <- data.frame(x=factor(names(x$xt$polys),levels=levels(x$knots)))
     names(dat) <- x$term
+    x$by <- "NA"
     X <- PredictMat(x,dat)   # prediction matrix for this term
     if (is.null(xlab)) xlabel<- "" else xlabel <- xlab
     if (is.null(ylab)) ylabel <- "" else ylabel <- ylab
@@ -656,7 +658,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
              main=label))
     } else { ## do plot
       if (scheme==0) scheme <- "heat" else scheme <- "grey"
-      polys.plot(x$xt$polys,P$fit,scheme=scheme,lab=P$main,...)
+      polys.plot(x$xt$polys,trans(P$fit+shift),scheme=scheme,lab=P$main,...)
     }
 
 } ## end plot.mrf.smooth
@@ -682,12 +684,12 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
              main="",x=xx,n=n,nf=nf))
   } else { ## produce the plot
     ind <- 1:P$n
-    if(is.null(ylim)) ylim <- range(P$fit) 
-    plot(P$x[ind],P$fit[ind],ylim=ylim,xlab=P$xlab,ylab=P$ylab,type="l",...)
+    if(is.null(ylim)) ylim <- trans(range(P$fit)+shift) 
+    plot(P$x[ind],trans(P$fit[ind]+shift),ylim=ylim,xlab=P$xlab,ylab=P$ylab,type="l",...)
     if (P$nf>1) for (i in 2:P$nf) {
       ind <- ind + P$n
-      if (scheme==0) lines(P$x,P$fit[ind],lty=i,col=i) else 
-      lines(P$x,P$fit[ind],lty=i)
+      if (scheme==0) lines(P$x,trans(P$fit[ind]+shift),lty=i,col=i) else 
+      lines(P$x,trans(P$fit[ind]+shift),lty=i)
     }
   }
 } ## end plot.fs.interaction
@@ -700,7 +702,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      contour.col=3,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
 ## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
-##     'coefficients' containg the coefs for the smooth, but usually these
+##     'coefficients' containing the coefs for the smooth, but usually these
 ##     are not needed.
 ## `P' is a list of plot data. 
 ##     If `P' is NULL then the routine should compute some of this plot data
@@ -727,6 +729,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 ## `data' is a data frame containing the raw data for the smooth, usually the 
 ##        model.frame of the fitted gam. Can be NULL if P is not NULL.
 ## `label' is the term label, usually something like e.g. `s(x,12.34)'.
+## Note that if ylim is supplied it should not be transformed using trans and shift.
 #############################
 
   sp.contour <- function(x,y,z,zse,xlab="",ylab="",zlab="",titleOnly=FALSE,
@@ -867,17 +870,17 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
             if (min.r < ylimit[1]) ylimit[1] <- min.r
           }
         }
-        ylimit <- if (is.null(ylim)) ylimit <- ylimit + shift else ylim
+        ylimit <- if (is.null(ylim)) ylimit <- trans(ylimit + shift) else ylim
          
         ## plot the smooth... 
         if (shade) { 
-          plot(P$x,trans(P$fit+shift),type="n",xlab=P$xlab,ylim=trans(ylimit),
+          plot(P$x,trans(P$fit+shift),type="n",xlab=P$xlab,ylim=ylimit,
                  xlim=P$xlim,ylab=P$ylab,main=P$main,...)
           polygon(c(P$x,P$x[n:1],P$x[1]),
                     trans(c(ul,ll[n:1],ul[1])+shift),col = shade.col,border = NA)
           lines(P$x,trans(P$fit+shift),...)
         } else { ## ordinary plot 
-          plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,ylim=trans(ylimit),xlim=P$xlim,
+          plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,ylim=ylimit,xlim=P$xlim,
                  ylab=P$ylab,main=P$main,...)
           if (is.null(list(...)[["lty"]])) { 
             lines(P$x,trans(ul+shift),lty=2,...)
@@ -936,10 +939,10 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
         if (scale==0&&is.null(ylim)) { 
           if (partial.resids) ylimit <- range(P$p.resid,na.rm=TRUE) else ylimit <-range(P$fit)
         }
-        ylimit <- if (is.null(ylim)) ylimit <- ylimit + shift else ylim
+        ylimit <- if (is.null(ylim)) ylimit <- trans(ylimit + shift) else ylim
         
         plot(P$x,trans(P$fit+shift),type="l",xlab=P$xlab,
-             ylab=P$ylab,ylim=trans(ylimit),xlim=P$xlim,main=P$main,...)
+             ylab=P$ylab,ylim=ylimit,xlim=P$xlim,main=P$main,...)
         if (rug) { 
           if (jit) rug(jitter(as.numeric(P$raw)),...)
           else rug(as.numeric(P$raw),...) 
@@ -978,11 +981,11 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       }
     } ## end of no CI code
   } ## end of plot production
-}
+} ## plot.mgcv.smooth
 
 
 
-plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
+plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,scheme=0,...)
@@ -1023,14 +1026,16 @@ plot.gam <- function(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scal
   ## start of main function
   #########################
 
+  if (is.null(rug)) rug <- if (nrow(x$model)>10000) FALSE else TRUE
+
   if (unconditional) {
     if (is.null(x$Vc)) warning("Smoothness uncertainty corrected covariance not available") else 
     x$Vp <- x$Vc ## cov matrix reset to full Bayesian
   }
 
-  w.resid<-NULL
-  if (length(residuals)>1) # residuals supplied 
-  { if (length(residuals)==length(x$residuals)) 
+  w.resid <- NULL
+  if (length(residuals)>1) { # residuals supplied 
+    if (length(residuals)==length(x$residuals)) 
     w.resid <- residuals else
     warning("residuals argument to plot.gam is wrong length: ignored")
     partial.resids <- TRUE

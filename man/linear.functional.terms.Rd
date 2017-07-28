@@ -31,9 +31,11 @@ variable then the smooth will automatically be centred in order to ensure identi
 will not be. Note also that for centred smooths it can be worth replacing the constant term in the model with \code{rowSums(L)} 
 in order to ensure that predictions are automatically on the right scale.
 
-When predicting from the model it is not necessary to provide matrix covariate and \code{by} variable values. 
+Note that \code{\link{predict.gam}} can accept matrix predictors for prediction with such terms, in which case its
+\code{newdata} argument will need to be a list. However when predicting from the model it is not necessary to provide matrix covariate and \code{by} variable values. 
 For example to simply examine the underlying smooth function one would use vectors of covariate values and vector 
 \code{by} variables, with the \code{by} variable and equivalent of \code{L1}, above, set to vectors of ones. 
+
 
 }
 
@@ -64,6 +66,12 @@ b <- gam(y~s(X))
 
 plot(b)  ## reconstruction of f
 plot(f,fitted(b))
+
+## example of prediction with summation convention...
+predict(b,list(X=X[1:3,]))
+
+## example of prediction that simply evaluates smooth (no summation)...
+predict(b,data.frame(X=c(.2,.3,.7))) 
 
 ######################################################################
 ## multivariate integral example. Function `test1' will be integrated# 

@@ -130,7 +130,7 @@ The bases used to represent smooth terms are the same as those used in \code{\li
 smoothing bases are not available. Prediction from the returned \code{gam} object is straightforward using \code{\link{predict.gam}}, but this will set the random effects to zero. If you want to predict with random effects set to their predicted values then you can adapt the prediction code given in the examples below. 
 
 In the event of \code{lme} convergence failures, consider
-modifying \code{option(mgcv.vc.logrange)}: reducing it helps to remove
+modifying \code{options(mgcv.vc.logrange)}: reducing it helps to remove
 indefiniteness in the likelihood, if that is the problem, but too large a
 reduction can force over or undersmoothing. See \code{\link{notExp2}} for more
 information on this option. Failing that, you can try increasing the
@@ -145,7 +145,8 @@ since these use an improved optimizer.
 \item{gam}{an object of class \code{gam}, less information relating to
 GCV/UBRE model selection. At present this contains enough information to use
 \code{predict}, \code{summary} and \code{print} methods and \code{vis.gam},
-but not to use e.g. the \code{anova} method function to compare models.}
+but not to use e.g. the \code{anova} method function to compare models. This is based
+on the working model when using \code{gammPQL}.}
 \item{lme}{the fitted model object returned by \code{lme} or \code{gammPQL}. Note that the model formulae and grouping 
 structures may appear to be rather bizarre, because of the manner in which the GAMM is split up and the calls to 
 \code{lme} and \code{gammPQL} are constructed.}
@@ -230,6 +231,7 @@ those used by the PQL iteration: this makes partial residual plots look odd.
 Note that the \code{gam} object part of the returned object is not complete in
 the sense of having all the elements defined in \code{\link{gamObject}} and
 does not inherit from \code{glm}: hence e.g. multi-model \code{anova} calls will not work.
+It is also based on the working model when PQL is used.
 
 The parameterization used for the smoothing parameters in \code{gamm}, bounds
 them above and below by an effective infinity and effective zero. See
@@ -264,15 +266,30 @@ plot(b$gam)
 par(op)
 rm(dat)
 
+
 ## Add a factor to the linear predictor, to be modelled as random
 dat <- gamSim(6,n=200,scale=.2,dist="poisson")
-b2<-gamm(y~s(x0)+s(x1)+s(x2),family=poisson,
-         data=dat,random=list(fac=~1))
+b2 <- gamm(y~s(x0)+s(x1)+s(x2),family=poisson,
+           data=dat,random=list(fac=~1))
 plot(b2$gam,pages=1)
 fac <- dat$fac
 rm(dat)
 vis.gam(b2$gam)
 
+## In the generalized case the 'gam' object is based on the working
+## model used in the PQL fitting. Residuals for this are not
+## that useful on their own as the following illustrates...
+
+gam.check(b2$gam) 
+
+## But more useful residuals are easy to produce on a model
+## by model basis. For example...
+
+fv <- exp(fitted(b2$lme)) ## predicted values (including re)
+rsd <- (b2$gam$y - fv)/sqrt(fv) ## Pearson residuals (Poisson case)
+op <- par(mfrow=c(1,2))
+qqnorm(rsd);plot(fv^.5,rsd)
+par(op)
 
 ## now an example with autocorrelated errors....
 n <- 200;sig <- 2

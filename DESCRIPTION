@@ -1,13 +1,15 @@
 Package: mgcv
-Version: 1.8-17
+Version: 1.8-18
 Author: Simon Wood <simon.wood@r-project.org>
 Maintainer: Simon Wood <simon.wood@r-project.org>
-Title: Mixed GAM Computation Vehicle with GCV/AIC/REML Smoothness
+Title: Mixed GAM Computation Vehicle with Automatic Smoothness
         Estimation
-Description: GAMs, GAMMs and other generalized ridge regression with 
-             multiple smoothing parameter estimation by GCV, REML or UBRE/AIC. 
-             Includes a gam() function, a wide variety of smoothers, JAGS 
-             support and distributions beyond the exponential family.
+Description: Generalized additive (mixed) models, some of their extensions and 
+             other generalized ridge regression with multiple smoothing 
+             parameter estimation by (REstricted) Marginal Likelihood, 
+             Generalized Cross Validation and similar. Includes a gam() 
+             function, a wide variety of smoothers, JAGS support and 
+             distributions beyond the exponential family.
 Priority: recommended
 Depends: R (>= 2.14.0), nlme (>= 3.1-64)
 Imports: methods, stats, graphics, Matrix
@@ -16,6 +18,6 @@ LazyLoad: yes
 ByteCompile: yes
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2017-02-06 11:03:57 UTC; sw283
+Packaged: 2017-07-26 15:00:29 UTC; sw283
 Repository: CRAN
-Date/Publication: 2017-02-08 21:30:16
+Date/Publication: 2017-08-02 13:32:11 UTC

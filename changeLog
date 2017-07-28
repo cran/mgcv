@@ -5,6 +5,60 @@ Currently deprecated and liable to be removed:
 - single penalty tensor product smooths.
 - p.type!=0 in summary.gam.
 
+1.8-18
+
+* Tweak to 'newton' to further reduce chance of false convergence at 
+  indefinite point.
+
+* Fix to bam.update to deal with NAs in response.
+
+* 'scat' family now takes a 'min.df' argument which defaults to 3. Could 
+  otherwise occasionally have indefinite LAML problems as df headed towards 2.
+
+* Fix to `gam.fit4' where in rare circumstances the PIRLS iteration could 
+  finish at an indefinite point, spoiling implicit differentiation. 
+
+* `gam.check' modified to fix a couple of issues with `gamm' fitted models, and 
+  to warn that interpretability is reduced for such models. 
+
+* `qq.gam' default method slight modification to default generation of reference
+  quantiles. In theory previous method could cause a problem if enough 
+  residuals were exactly equal.
+
+* Fix to `plot.mrf.smooth' to deal with models with by variables.  
+
+* `plot.gam' fix to handling of plot limits when using 'trans' (from 1.8-16 
+  'trans' could be applied twice). 
+
+* `plot.gam' argument 'rug' now defaults to 'NULL' corresponding to 'rug=TRUE'
+  if the number of data is <= 10000 and 'rug=FALSE' otherwise.
+
+* bam(...,discrete=TRUE) could fail if NAs in the smooth terms caused data rows
+  to be dropped which led to parametric term factors having unused levels 
+  (which were then not being dropped). Fixed (in discrete.mf). 
+
+* bam(...,discrete=TRUE,nthreads=n) now warns if n>1 and openMP is not 
+  available on the platform being used. 
+
+* Sl.addS modified to use C code for some otherwise very slow matrix 
+  subset and addition ops which could become rate limiting for 
+  bam(...,discrete=TRUE). 
+
+* Parallel solves in Sl.iftChol can speed up bam(...,discrete=TRUE) with 
+  large numbers of smoothing/variance parameters.
+   
+* 'gamm' now warns if called with extended families.
+
+* disasterous 'te' in place of 'ti' typo in ?smooth.terms fixed thanks to 
+  John McKinlay.
+
+* Some `internal' functions exported to facilitate quantile gam methods 
+  in separate package.
+
+* Minor fix in gam.fit5 - 1 by 1 matrix coerced to scalar, to prevent failure 
+  in some circumstances. 
+
+
 1.8-17
 
 * Export gamlss.etamu, gamlss.gH and trind.generator to facilitate user 

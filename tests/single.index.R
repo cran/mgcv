@@ -1,18 +1,5 @@
-\name{single.index}
-\alias{single.index}
-%- Also NEED an `\alias' for EACH other topic documented here.
-\title{Single index models with mgcv}
-\description{ Single index models contain smooth terms with arguments that are linear combinations 
-of other covariates. e.g. \eqn{s(X\alpha)}{s(Xa)} where \eqn{\alpha}{a} has to be estimated. For identifiability, assume \eqn{\|\alpha\|=1}{||a||=1} with positive first element. One simple way to fit such models is to use \code{\link{gam}} to profile out the smooth model coefficients and smoothing parameters, leaving only the
-\eqn{\alpha}{a} to be estimated by a general purpose optimizer. 
+## donttest single.index.Rd examples
 
-Example code is provided below, which can be easily adapted to include multiple single index terms, parametric terms and further smooths. Note the initialization strategy. First estimate \eqn{\alpha}{a} without penalization to get starting values and then do the full fit. Otherwise it is easy to get trapped in a local optimum in which the smooth is linear. An alternative is to initialize using fixed penalization (via the \code{sp} argument to \code{\link{gam}}).
-}
-
-
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
-
-\examples{
 require(mgcv)
 
 si <- function(theta,y,x,z,opt=TRUE,k=10,fx=FALSE) {
@@ -22,7 +9,7 @@ si <- function(theta,y,x,z,opt=TRUE,k=10,fx=FALSE) {
   alpha <- c(1,theta) ## constrained alpha defined using free theta
   kk <- sqrt(sum(alpha^2))
   alpha <- alpha/kk  ## so now ||alpha||=1
-  a <- x\%*\%alpha     ## argument of smooth
+  a <- x%*%alpha     ## argument of smooth
   b <- gam(y~s(a,fx=fx,k=k)+s(z),family=poisson,method="ML") ## fit model
   if (opt) return(b$gcv.ubre) else {
     b$alpha <- alpha  ## add alpha
@@ -42,7 +29,7 @@ n <- 200;m <- 3
 x <- matrix(runif(n*m),n,m) ## the covariates for the single index part
 z <- runif(n) ## another covariate
 alpha <- c(1,-1,.5); alpha <- alpha/sqrt(sum(alpha^2))
-eta <- as.numeric(f2((x\%*\%alpha+.41)/1.4)+1+z^2*2)/4
+eta <- as.numeric(f2((x%*%alpha+.41)/1.4)+1+z^2*2)/4
 mu <- exp(eta)
 y <- rpois(n,mu) ## Poi response 
 
@@ -57,14 +44,14 @@ f1 <- nlm(si,f0$estimate,y=y,x=x,z=z,hessian=TRUE,k=10)
 theta.est <-f1$estimate 
 
 ## Alternative using 'optim'... 
-\donttest{
+
 th0 <- rep(0,m-1) 
 ## get initial theta, using no penalization...
 f0 <- optim(th0,si,y=y,x=x,z=z,fx=TRUE,k=5)
 ## now get theta/alpha with smoothing parameter selection...
 f1 <- optim(f0$par,si,y=y,x=x,z=z,hessian=TRUE,k=10)
 theta.est <-f1$par 
-}
+
 ## extract and examine fitted model...
 
 b <- si(theta.est,y,x,z,opt=FALSE) ## extract best fit model
@@ -72,10 +59,5 @@ plot(b,pages=1)
 b
 b$alpha 
 ## get sd for alpha...
-Vt <- b$J\%*\%solve(f1$hessian,t(b$J))
+Vt <- b$J%*%solve(f1$hessian,t(b$J))
 diag(Vt)^.5
-
-}
-\keyword{models} \keyword{regression}%-- one or more ..
-
-

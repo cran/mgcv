@@ -442,8 +442,32 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1) {
 } ## end ldetS
 
 
-
 Sl.addS <- function(Sl,A,rho) {
+## Routine to add total penalty to matrix A. Sl is smooth penalty
+## list from Sl.setup, so initial reparameterizations have taken place,
+## and should have already been applied to A using Sl.initial.repara
+  k <- 1
+  A <- A*1 ## force a copy to be made so that A not modified in calling env!!
+  for (b in 1:length(Sl)) {
+    ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
+    if (length(Sl[[b]]$S)==1) { ## singleton
+      B <- exp(rho[k]);diag <- -1
+      er <- .Call(C_mgcv_madi,A,B,ind,diag)
+      ## diag(A)[ind] <-  diag(A)[ind] + exp(rho[k]) ## penalty is identity times sp
+      k <- k + 1
+    } else {
+      for (j in 1:length(Sl[[b]]$S)) {
+        B <- exp(rho[k]) * Sl[[b]]$S[[j]]; diag <- 0
+        .Call(C_mgcv_madi,A,B,ind,diag)
+        ## A[ind,ind] <- A[ind,ind] + exp(rho[k]) * Sl[[b]]$S[[j]]
+        k <- k + 1
+      }
+    }
+  }
+  A
+} ## Sl.addS
+
+Sl.addS0 <- function(Sl,A,rho) {
 ## Routine to add total penalty to matrix A. Sl is smooth penalty
 ## list from Sl.setup, so initial reparameterizations have taken place,
 ## and should have already been applied to A using Sl.initial.repara
@@ -461,7 +485,7 @@ Sl.addS <- function(Sl,A,rho) {
     }
   }
   A
-} ## Sl.addS
+} ## Sl.addS0
 
 Sl.repara <- function(rp,X,inverse=FALSE,both.sides=TRUE) {
 ## Apply re-parameterization from ldetS to X, blockwise.
@@ -710,7 +734,7 @@ Sl.ift <- function(Sl,R,X,y,beta,piv,rp) {
   list(bSb=sum(beta*Sb),bSb1=bSb1,bSb2=bSb2,d1b=db,rss =sum(rsd^2),rss1=rss1,rss2=rss2)
 } ## end Sl.ift
 
-Sl.iftChol <- function(Sl,XX,R,d,beta,piv) {
+Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
 ## function to obtain derviatives of \hat \beta by implicit differentiation
 ## and to use these directly to evaluate derivs of b'Sb and the RSS.
 ## piv contains the pivots from the chol that produced R.
@@ -720,29 +744,48 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv) {
   nd <- length(Skb)
   np <- length(beta)
   db <- matrix(0,np,nd)
-  rss1 <- bSb1 <- rep(0,nd)  
+  rss1 <- bSb1 <- rep(0,nd)
+
+  ## alternative all in one code - matches loop results, but
+  ## timing close to identical - modified for parallel exec
+  D <- matrix(unlist(Skb),nrow(R),nd)
+  bSb1 <- colSums(beta*D)
+  #D <- D[piv,]/d[piv]
+  D1 <- .Call(C_mgcv_Rpforwardsolve,R,D[piv,]/d[piv],nt) ## note R transposed internally unlike forwardsolve
+  db[piv,] <- -.Call(C_mgcv_Rpbacksolve,R,D1,nt)/d[piv]
+  #db[piv,] <- -backsolve(R,forwardsolve(t(R),D))/d[piv]
+
+  ## original serial - a bit slow with very large numbers of smoothing
+  ## parameters.... 
+  #Rt <- t(R) ## essential to do this first, or t(R) dominates cost in loop
+  #for (i in 1:nd) { ## compute the first derivatives
+  #  db[piv,i] <- -backsolve(R,forwardsolve(Rt,Skb[[i]][piv]/d[piv]))/d[piv] ## d beta/ d rho_i
+  #  bSb1[i] <- sum(beta*Skb[[i]])  ## d b'Sb / d_rho_i
+  #}
   
-  for (i in 1:nd) { ## compute the first derivatives
-    db[piv,i] <- -backsolve(R,forwardsolve(t(R),Skb[[i]][piv]/d[piv]))/d[piv] ## d beta/ d rho_i
-    bSb1[i] <- sum(beta*Skb[[i]])  ## d b'Sb / d_rho_i
-  }
-  XX.db <- XX%*%db
+  ## XX.db <- XX%*%db
+  XX.db <- .Call(C_mgcv_pmmult2,XX,db,0,0,nt)
   #XX.db[piv,] <- d[piv]*(t(R)%*%(R%*%(d[piv]*db[piv,]))) ## X'Xdb
 
   S.db <- Sl.mult(Sl,db,k=0)
   ##Sk.db <- Sl.termMult(Sl,db,full=TRUE) ## Sk.db[[j]][,k] is S_j d beta / d rho_k
 
-  rss2 <- bSb2 <- matrix(0,nd,nd)
-  for (k in 1:nd) { ## second derivative loop 
-    for (j in k:nd) {
-      rss2[j,k] <- rss2[k,j] <- 2 * sum(db[,j]*XX.db[,k]) 
-      bSb2[j,k] <- bSb2[k,j] <-  (k==j)*sum(beta*Skb[[k]])  + 2*(sum(db[,k]*(Skb[[j]]+S.db[,j])) + 
-                                 sum(db[,j]*Skb[[k]]))                                  
-    }
-  }
+  ## following loop very slow if large numbers of smoothing parameters...
+  #rss2 <- bSb2 <- matrix(0,nd,nd)
+  #for (k in 1:nd) { ## second derivative loop 
+  #  for (j in k:nd) {
+  #    rss2[j,k] <- rss2[k,j] <- 2 * sum(db[,j]*XX.db[,k]) 
+  #    bSb2[j,k] <- bSb2[k,j] <-  (k==j)*sum(beta*Skb[[k]])  + 2*(sum(db[,k]*(Skb[[j]]+S.db[,j])) + 
+  #                               sum(db[,j]*Skb[[k]]))                                  
+  #  }
+  #}
+  ## rss2 <- 2 * t(db) %*% XX.db
+  rss2 <- 2 * .Call(C_mgcv_pmmult2,db,XX.db,1,0,nt)
+  bSb2 <- diag(x=colSums(beta*D),nrow=nd)
+  ## bSb2 <- bSb2 + 2*(t(db)%*%(D+S.db) + t(D)%*%db)
+  bSb2 <- bSb2 + 2 * (.Call(C_mgcv_pmmult2,db,D+S.db,1,0,nt) + .Call(C_mgcv_pmmult2,D,db,1,0,nt))
   list(bSb=sum(beta*Sb),bSb1=bSb1,bSb2=bSb2,
-       d1b=db ## BUG - this needs transforming as coef - here, or where used
-       ,rss1=rss1,rss2=rss2)
+       d1b=db ,rss1=rss1,rss2=rss2)
 } ## end Sl.iftChol
 
 
@@ -777,7 +820,7 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
   beta[piv] <- backsolve(R,(forwardsolve(t(R),f[piv]/d[piv])))/d[piv]
  
   ## get component derivatives based on IFT...
-  dift <- Sl.iftChol(ldS$Sl,XX,R,d,beta,piv)
+  dift <- Sl.iftChol(ldS$Sl,XX,R,d,beta,piv,nt=nt)
  
   ## now the derivatives of log|X'X+S|
   P <- pbsi(R,nt=nt,copy=TRUE) ## invert R 
@@ -1113,7 +1156,7 @@ Sl.Xprep <- function(Sl,X,nt=1) {
 } ## end Sl.Xprep
 
 
-Sl.postproc <- function(Sl,fit,undrop,X0,cov=FALSE,scale = -1,L,nt=nt) {
+Sl.postproc <- function(Sl,fit,undrop,X0,cov=FALSE,scale = -1,L,nt=1) {
 ## reverse the various fitting re-parameterizations.
 ## X0 is the orginal model matrix before any re-parameterization
 ## or parameter dropping. Sl is also the original *before parameter 

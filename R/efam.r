@@ -1190,7 +1190,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
   
 ## scaled t (Natalya Pya) ...
 
-scat <- function (theta = NULL, link = "identity") { 
+scat <- function (theta = NULL, link = "identity",min.df = 3) { 
 ## Extended family object for scaled t distribution
 ## length(theta)=2; log theta supplied. 
 ## Written by Natalya Pya.
@@ -1211,11 +1211,14 @@ scat <- function (theta = NULL, link = "identity") {
     ## Theta <-  NULL;
     n.theta <- 2
     if (!is.null(theta)&&sum(theta==0)==0) {
-      if (abs(theta[1]<2)) stop("scaled t df must be >2")
+      if (abs(theta[1]<=min.df)) {
+        min.df <- 0.9*abs(theta[1])
+        warning("Supplied df below min.df. min.df reset")
+      }	
       if (sum(theta<0)) { 
-        iniTheta <- c(log(abs(theta[1])-2),log(abs(theta[2]))) ## initial theta supplied
+        iniTheta <- c(log(abs(theta[1])-min.df),log(abs(theta[2]))) ## initial theta supplied
       } else { ## fixed theta supplied
-        iniTheta <- c(log(theta[1]-2),log(theta[2])) 
+        iniTheta <- c(log(theta[1]-min.df),log(theta[2])) 
         n.theta <- 0 ## no thetas to estimate
       }
     } else iniTheta <- c(-2,-1) ## inital log theta value
@@ -1224,15 +1227,17 @@ scat <- function (theta = NULL, link = "identity") {
     assign(".Theta", iniTheta, envir = env)
     getTheta <- function(trans=FALSE) { 
     ## trans transforms to the original scale...
-      th <- get(".Theta")
-      if (trans) { th <- exp(th); th[1] <- th[1] + 2  }
+      th <- get(".Theta");min.df <- get(".min.df")
+      if (trans) { th <- exp(th); th[1] <- th[1] + min.df  }
       th
     }
     putTheta <- function(theta) assign(".Theta", theta,envir=environment(sys.function()))
+    assign(".min.df", min.df, envir = env)
 
     variance <- function(mu) { 
         th <- get(".Theta")
-        nu <- exp(th[1])+2; sig <- exp(th[2])
+	min.df <- get(".min.df")
+        nu <- exp(th[1])+min.df; sig <- exp(th[2])
         sig^2*nu/(nu-2)
     }
 
@@ -1240,15 +1245,17 @@ scat <- function (theta = NULL, link = "identity") {
 
    dev.resids <- function(y, mu, wt,theta=NULL) {
       if (is.null(theta)) theta <- get(".Theta")
-      nu <- exp(theta[1])+2; sig <- exp(theta[2])
+      min.df <- get(".min.df")
+      nu <- exp(theta[1])+min.df; sig <- exp(theta[2])
       wt * (nu + 1)*log1p((1/nu)*((y-mu)/sig)^2)
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
     ## derivatives of the deviance...
       ## ltheta <- theta
-      nu <- exp(theta[1])+2; sig <- exp(theta[2])
-      nu1 <- nu + 1;  ym <- y - mu; nu2 <- nu - 2;
+      min.df <- get(".min.df")
+      nu <- exp(theta[1])+min.df; sig <- exp(theta[2])
+      nu1 <- nu + 1;  ym <- y - mu; nu2 <- nu - min.df;
       a <- 1 + (ym/sig)^2/nu
       oo <- list()
       ## get the quantities needed for IRLS. 
@@ -1315,8 +1322,9 @@ scat <- function (theta = NULL, link = "identity") {
 
  
     aic <- function(y, mu, theta=NULL, wt, dev) {
+        min.df <- get(".min.df")
         if (is.null(theta)) theta <- get(".Theta")
-        nu <- exp(theta[1])+2; sig <- exp(theta[2])
+        nu <- exp(theta[1])+min.df; sig <- exp(theta[2])
         term <- -lgamma((nu+1)/2)+ lgamma(nu/2) + log(sig*(pi*nu)^.5) +
            (nu+1)*log1p(((y-mu)/sig)^2/nu)/2  ## `-'log likelihood for each observation
         2 * sum(term * wt)
@@ -1324,7 +1332,9 @@ scat <- function (theta = NULL, link = "identity") {
     
     ls <- function(y,w,n,theta,scale) {
        ## the log saturated likelihood function.
-       nu <- exp(theta[1])+2; sig <- exp(theta[2]); nu2 <- nu-2;
+       ## (Note these are correct but do not correspond to NP notes)
+       min.df <- get(".min.df")
+       nu <- exp(theta[1])+min.df; sig <- exp(theta[2]); nu2 <- nu-min.df;
        nu2nu <- nu2/nu; nu12 <- (nu+1)/2
        term <- lgamma(nu12) - lgamma(nu/2) - log(sig*(pi*nu)^.5)
        ls <- sum(term*w) 
@@ -1358,20 +1368,22 @@ scat <- function (theta = NULL, link = "identity") {
         n <- rep(1, nobs)
         mustart <- y + (y == 0)*.1
     })
+    
     postproc <- expression({
       object$family$family <- 
       paste("Scaled t(",paste(round(object$family$getTheta(TRUE),3),collapse=","),")",sep="")
     })
+    
     rd <- function(mu,wt,scale) {
      ## simulate data given fitted latent variable in mu 
-      theta <- get(".Theta")
-      nu <- exp(theta[1])+2; sig <- exp(theta[2])
+      theta <- get(".Theta");min.df <- get(".min.df")
+      nu <- exp(theta[1])+min.df; sig <- exp(theta[2])
       n <- length(mu)
       stats::rt(n=n,df=nu)*sig + mu
     }
 
-    environment(dev.resids) <- environment(aic) <- environment(getTheta) <- 
-    environment(rd)<- environment(variance) <- environment(putTheta) <- env
+    environment(dev.resids) <- environment(aic) <- environment(getTheta) <- environment(Dd) <-
+    environment(ls) <- environment(rd)<- environment(variance) <- environment(putTheta) <- env
 
     structure(list(family = "scaled t", link = linktemp, linkfun = stats$linkfun,
         linkinv = stats$linkinv, dev.resids = dev.resids,Dd=Dd,variance=variance,postproc=postproc,

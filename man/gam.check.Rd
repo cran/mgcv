@@ -4,7 +4,7 @@
 \description{ Takes a fitted \code{gam} object produced by \code{gam()} and produces some diagnostic information
 about the fitting procedure and results. The default is to produce 4 residual
 plots, some information about the convergence of the smoothness selection optimization, and to run 
-diagnostic tests of whether the basis dimension choises are adequate. 
+diagnostic tests of whether the basis dimension choises are adequate. Care should be taken in interpreting the results when applied to \code{gam} objects returned by \code{\link{gamm}}.
 }
 \usage{
 gam.check(b, old.style=FALSE,
@@ -50,6 +50,7 @@ If this looks odd then investigate further using \code{\link{qq.gam}}. Note that
 information useful for model checking (it is necessary to find some way of aggregating them first), so the QQ plot is unlikely 
 to be useful in this case.
 
+Take care when interpreting results from applying this function to a model fitted using \code{\link{gamm}}. In this case the returned \code{gam} object is based on the working model used for estimation, and will treat all the random effects as part of the error. This means that the residuals extracted from the \code{gam} object are not standardized for the family used or for the random effects or correlation structure. Usually it is necessary to produce your own residual checks based on consideration of the model structure you have used.  
 }
 
 \references{

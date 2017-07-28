@@ -15,7 +15,9 @@ R_CallMethodDef CallMethods[] = {
   { "mgcv_RPPt",(DL_FUNC)&mgcv_RPPt,3},
   { "mgcv_Rpchol",(DL_FUNC)&mgcv_Rpchol,4},
   { "mgcv_Rpforwardsolve",(DL_FUNC)&mgcv_Rpforwardsolve,3},
+  { "mgcv_Rpbacksolve",(DL_FUNC)&mgcv_Rpbacksolve,3},
   { "mgcv_Rpcross",(DL_FUNC)&mgcv_Rpcross,3},
+  { "mgcv_madi",(DL_FUNC)&mgcv_madi,4},
   {NULL, NULL, 0}
 };
 
@@ -83,4 +85,7 @@ void R_init_mgcv(DllInfo *dll)
 {
     R_registerRoutines(dll, CEntries, CallMethods, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
+    R_RegisterCCallable("mgcv","mgcv_pmmult2", (DL_FUNC) &mgcv_pmmult2); 
+    R_RegisterCCallable("mgcv","pls_fit1", (DL_FUNC) &pls_fit1);
+    R_RegisterCCallable("mgcv","gdi2", (DL_FUNC) &gdi2); 
 }

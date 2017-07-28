@@ -205,10 +205,10 @@ bk <- gam(y~s(v,w,bs="so",xt=list(bnd=fsb,nmax=nmax)),knots=knots)
 plot(bk) ## default plot
 
 ##########################################
-## tensor product example (marked 
-## 'Not run' to reduce CRAN checking load)
+## tensor product example...
 ##########################################
 \dontrun{
+set.seed(9)
 n <- 10000
 v <- runif(n)*5-1;w<-runif(n)*2-1
 t <- runif(n)

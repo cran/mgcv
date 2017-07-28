@@ -1300,7 +1300,7 @@ void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
    in X. 
 
    Each row of n by d matrix X is a point. 
-   ni is a list indices of neighbours.
+   ni is a list of indices of neighbours.
    off (length n) indicates where, in ne, the neighbours of each point lie.
    i.e. ni[0:(off[i]-1)] contains indices neighbours of point 0.
         ni[off[i-1]:(off[i]-1)] contains indices of neighbours of i>1.
@@ -1316,7 +1316,9 @@ void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
    more/fewer points in neighbourhood than are required for FD approximation.
 
    Set up is general to allow for future extension of this routine, but currently 
-   only the d==2, m=3, k=6 TPS like case is dealt with here. 
+   only the d==2, m=3, k=6 TPS like case is dealt with herem where d is dimension
+   m is number of components in penalty and k is number of polynomial coefficients
+   in polynomial from which derivatives are estimated. 
 
 */
   int i,j,k,true=1,kk,l,i0,i1,max_nn=0,jj,di,doff;

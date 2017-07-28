@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.2.0 / mgcv 1.8-5\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2017-02-06 09:59\n"
+"POT-Creation-Date: 2017-07-24 10:46\n"
 "PO-Revision-Date: 2015-03-26 13:29+0100\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-Core <r-core@r-project.org>\n"
@@ -74,6 +74,9 @@ msgid "discretization only available with fREML"
 msgstr ""
 
 msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
+
+msgid "openMP not available: single threaded computation only"
 msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
@@ -164,7 +167,8 @@ msgstr ""
 "Link nicht verfügbar für die skalierte t-Verteilung; verfügbare Links sind "
 "\"identity\", \"log\" und \"inverse\""
 
-msgid "scaled t df must be >2"
+#, fuzzy
+msgid "scaled t df must be > min.df"
 msgstr "skalierte t df müssen >2 sein"
 
 msgid "NA values not allowed for the scaled t family"
@@ -196,9 +200,6 @@ msgstr ""
 
 msgid "fast REML optimizer reached iteration limit"
 msgstr "schneller REML Optimierer erreichte max. Iterationszahl"
-
-msgid "Huber scale estiamte not converged"
-msgstr ""
 
 msgid "unsupported order of differentiation requested of gam.fit3"
 msgstr "nicht unterstützte Ordnung der Ableitung für gam.fit3 gefordert"
@@ -523,6 +524,10 @@ msgstr "gamm ist nicht konvergiert, versuche niterPQL zu erhöhen"
 
 msgid "family are not designed for use with gamm!"
 msgstr ""
+
+#, fuzzy
+msgid "gamm is not designed to use extended families"
+msgstr "Link nicht implementiert für erweiterte Familien"
 
 # R/gamm.r
 msgid "random argument must be a *named* list."
@@ -1083,6 +1088,10 @@ msgstr ""
 
 msgid "by=. not allowed"
 msgstr "by=. nicht erlaubt"
+
+#, fuzzy
+msgid "s(.) not supported."
+msgstr "s(.) wird noch nicht unterstützt."
 
 msgid "s(.) not yet supported."
 msgstr "s(.) wird noch nicht unterstützt."
