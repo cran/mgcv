@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2017-02-06 09:59\n"
+"POT-Creation-Date: 2017-07-24 10:46\n"
 "PO-Revision-Date: 2014-03-25 17:39+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -126,6 +126,9 @@ msgid "discretization only available with fREML"
 msgstr ""
 
 msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
+
+msgid "openMP not available: single threaded computation only"
 msgstr ""
 
 # mgcv/R/bam.r: 1082
@@ -272,7 +275,7 @@ msgstr ""
 # mgcv/R/mgcv.r: 1678
 # stop("value of epsilon must be > 0")
 #, fuzzy
-msgid "scaled t df must be >2"
+msgid "scaled t df must be > min.df"
 msgstr "wartość 'epsilon' musi być > 0"
 
 # mgcv/R/gam.fit3.r: 2126
@@ -310,9 +313,6 @@ msgstr ""
 # warning("fast REML optimizer reached iteration limit")
 msgid "fast REML optimizer reached iteration limit"
 msgstr "szybki optymalizator REML osiągnął granicę iteracji"
-
-msgid "Huber scale estiamte not converged"
-msgstr ""
 
 # mgcv/R/gam.fit3.r: 125
 # stop("unsupported order of differentiation requested of 'gam.fit3()'")
@@ -894,6 +894,9 @@ msgstr ""
 "funkcja 'gamm()' nie uzbieżniła się, spróbuj zwiększyć parametr 'niterPQL'"
 
 msgid "family are not designed for use with gamm!"
+msgstr ""
+
+msgid "gamm is not designed to use extended families"
 msgstr ""
 
 # mgcv/R/gamm.r: 1366
@@ -1760,6 +1763,14 @@ msgstr "'ord' zawiera porządki poza zakresem (zostaną one zignorowane)"
 # stop("by=. not allowed")
 msgid "by=. not allowed"
 msgstr "'by=.' nie jest dozwolone"
+
+# mgcv/R/smooth.r: 470
+# stop("s(.) not yet supported.")
+# mgcv/R/smooth.r: 474
+# stop("s(.) not yet supported.")
+#, fuzzy
+msgid "s(.) not supported."
+msgstr "funkcja 's(.)' nie jest jeszcze wspierana"
 
 # mgcv/R/smooth.r: 470
 # stop("s(.) not yet supported.")

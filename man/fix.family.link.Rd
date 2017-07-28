@@ -43,7 +43,7 @@ If the family already has functions \code{dvar}, \code{d2var}, \code{d3var}, \co
 return the family unmodified: this allows non-standard links
 to be used with \code{\link{gam}} when using outer iteration (performance
 iteration operates with unmodified families). Note that if you only need Fisher scoring then 
-\code{d4link} and \code{d3var} can be dummy, as they are ignored. similalry \code{ls} is only needed for 
+\code{d4link} and \code{d3var} can be dummy, as they are ignored. Similalry \code{ls} is only needed for 
 RE/ML.
 
 The \code{dvar} function is a function of a mean vector, \code{mu}, and returns
@@ -65,7 +65,8 @@ neither type of function is available.
 }
 \value{A family object with extra component functions \code{dvar},
 \code{d2var}, \code{d2link}, \code{d3link}, \code{d4link}, \code{ls}, and possibly \code{qf} and \code{rd}, 
-depending on which functions are called.  
+depending on which functions are called. \code{fix.family.var} also adds a variable \code{scale} set to
+negative to indicate that family has a free scale parameter.
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}

@@ -66,6 +66,7 @@ b <- gam(travel~s(Rail,bs="re"),data=Rail,method="REML")
 intervals(b0)
 gam.vcomp(b)
 anova(b)
+plot(b)
 
 ## simulate example...
 dat <- gamSim(1,n=400,scale=2) ## simulate 4 term additive truth

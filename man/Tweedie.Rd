@@ -76,8 +76,9 @@ Tweedie, M. C. K. (1984). An index which distinguishes between
 
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
-Journal of the American Statistical Association.
-\url{http://arxiv.org/abs/1511.03864}
+Journal of the American Statistical Association 111, 1548-1575
+\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+
 }
 
 \seealso{\code{\link{ldTweedie}}, \code{\link{rTweedie}}}

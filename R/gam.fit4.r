@@ -59,7 +59,7 @@ dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
      d$Deta3th <-  ig13*r$Dmu3th - 3 *r$Dmu2th*g2g*ig12 + r$Dmuth*(3*g2g^2-g3g)*ig1
    }
    d
-} ## dDmu
+} ## dDeta
 
 fetad.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
 ## test family derivatives w.r.t. eta
@@ -325,17 +325,19 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
      
    coefold <- null.coef
    conv <-  boundary <- FALSE
- 
+   dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
+   w <- dd$Deta2 * .5;
+   wz <- w*(eta-offset) - .5*dd$Deta
+   z <- (eta-offset) - dd$Deta.Deta2
+   good <- is.finite(z)&is.finite(w)
+
    for (iter in 1:control$maxit) { ## start of main fitting iteration 
       if (control$trace) cat(iter," ")
-      dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
-
-      # good <- is.finite(dd$Deta.Deta2)
-  
-      w <- dd$Deta2 * .5;
-      wz <- w*(eta-offset) - .5*dd$Deta
-      z <- (eta-offset) - dd$Deta.Deta2
-      good <- is.finite(z)&is.finite(w)
+    #  dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
+    #  w <- dd$Deta2 * .5;
+    #  wz <- w*(eta-offset) - .5*dd$Deta
+    #  z <- (eta-offset) - dd$Deta.Deta2
+    #  good <- is.finite(z)&is.finite(w)
       if (control$trace&sum(!good)>0) cat("\n",sum(!good)," not good\n")
       if (sum(!good)) {
         use.wy <- TRUE
@@ -349,7 +351,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
                      q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
                      penalty=as.double(1),rank.tol=as.double(rank.tol),
                      nt=as.integer(control$nthreads),use.wy=as.integer(use.wy))
-      if (oo$n<0) { ## then problem is indefinite - switch to +ve weights for this step
+      posdef <- oo$n >= 0
+      if (!posdef) { ## then problem is indefinite - switch to +ve weights for this step
         if (control$trace) cat("**using positive weights\n")
         # problem is that Fisher can be very poor for zeroes  
 
@@ -464,12 +467,17 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
         }
      } ## end of pdev divergence
 
+     ## get new weights and pseudodata (needed now for grad testing)...
+     dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
+     w <- dd$Deta2 * .5;
+     wz <- w*(eta-offset) - .5*dd$Deta
+     z <- (eta-offset) - dd$Deta.Deta2
+     good <- is.finite(z)&is.finite(w) 
      ## convergence testing...
-
-     if (abs(pdev - old.pdev)/(0.1 + abs(pdev)) < control$epsilon) {
+     if (posdef && abs(pdev - old.pdev)/(0.1 + abs(pdev)) < control$epsilon) {
        ## Need to check coefs converged adequately, to ensure implicit differentiation
        ## ok. Testing coefs unchanged is problematic under rank deficiency (not guaranteed to
-       ## drop same parameter every iteration!)       
+       ## drop same parameter every iteration!)
        grad <- 2 * t(x[good,])%*%((w[good]*(x%*%start)[good]-wz[good]))+ 2*St%*%start 
        if (max(abs(grad)) > control$epsilon*max(abs(start+coefold))/2) {
          old.pdev <- pdev  ## not converged quite enough
@@ -888,7 +896,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
                   lpi[[i]] <- ij[lpi[[i]][!(lpi[[i]]%in%drop)]] # drop and shuffle up
                 }
               } ## lpi adjustment done
-              for (i in 1:length(xat)) attr(x,names(xat)[i]) <- xat[[i]]
+              if (length(xat)>0) for (i in 1:length(xat)) attr(x,names(xat)[i]) <- xat[[i]]
               attr(x,"lpi") <- lpi
               attr(x,"drop") <- drop ## useful if family has precomputed something from x
               ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1) 
@@ -1034,7 +1042,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   }
 
   ## get grad and Hessian of REML score...
-  REML <- -as.numeric(ll$l - t(coef)%*%St%*%coef/2 + rp$ldetS/2  - ldetHp/2  + Mp*log(2*pi)/2)
+  REML <- -as.numeric(ll$l - drop(t(coef)%*%St%*%coef)/2 + rp$ldetS/2  - ldetHp/2  + Mp*log(2*pi)/2)
  
   REML1 <- if (deriv<1) NULL else -as.numeric( # d1l # cancels
                                    - d1bSb/2 + rp$ldet1/2  - d1ldetH/2 ) 

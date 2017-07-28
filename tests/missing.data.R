@@ -1,19 +1,4 @@
-\name{missing.data}
-\alias{missing.data}
-\title{Missing data in GAMs}
-\description{If there are missing values in the reponse or covariates of a GAM then the default is simply to use only the `complete cases'. If there are many missing covariates, this can get rather wasteful. One possibility is then to use imputation. Another is to substitute a simple random effects model in which the \code{by} variable mechanism is used to set \code{s(x)} to zero for any missing \code{x}, while a Gaussian random effect is then substituted for the `missing' s(x). See the example for details of how this works, and \code{\link{gam.models}}for the necessary background on \code{by} variables. 
-}
-
-\seealso{\code{\link{gam.vcomp}}, \code{\link{gam.models}}, \code{\link{s}}, 
-\code{\link{smooth.construct.re.smooth.spec}},\code{\link{gam}}}
-
-\author{
-Simon Wood <simon.wood@r-project.org>
-}
-
-\examples{
-## The example takes a couple of minutes to run...
-\donttest{
+## donttest examples from missing.data.Rd
 require(mgcv)
 par(mfrow=c(4,4),mar=c(4,4,1,1))
 for (sim in c(1,7)) { ## cycle over uncorrelated and correlated covariates
@@ -68,6 +53,3 @@ for (sim in c(1,7)) { ## cycle over uncorrelated and correlated covariates
   b2 <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="REML")
   plot(b2) ## plot the complete case results
 }
-}
-}
-\keyword{regression}

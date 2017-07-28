@@ -27,7 +27,7 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
   are required. If this is not provided then predictions corresponding to the
                 original data are returned. If \code{newdata} is provided then
                 it should contain all the variables needed for prediction: a
-                warning is generated if not. } 
+                warning is generated if not. See details for use with \code{link{linear.functional.terms}}. } 
  
 \item{type}{ When this has the value \code{"link"} (default) the linear predictor (possibly with
 associated standard errors) is returned. When \code{type="terms"} each component of the 
@@ -98,7 +98,9 @@ then all variables must be supplied.
 
 \details{The standard errors produced by \code{predict.gam} are based on the
 Bayesian posterior covariance matrix of the parameters \code{Vp} in the fitted
-gam object. 
+gam object.
+
+When predicting from models with \code{link{linear.functional.terms}} then there are two possibilities. If the summation convention is to be used in prediction, as it was in fitting, then \code{newdata} should be a list, with named matrix arguments corresponding to any variables that were matrices in fitting. Alternatively one might choose to simply evaluate the constitutent smooths at particular values in which case arguments that were matrices can be replaced by vectors (and \code{newdata} can be a dataframe). See \code{link{linear.functional.terms}} for example code.
 
 To facilitate plotting with \code{\link{termplot}}, if \code{object} possesses
 an attribute \code{"para.only"} and \code{type=="terms"} then only parametric

@@ -9,6 +9,7 @@ the censoring information (0 for censoring, 1 for event). Deals with the case in
 one event/censoring time and one row of covariate values. When each subject has several time dependent
 covariates see \code{\link{cox.pht}}.
 
+See example below for conditional logistic regression.
 }
 
 \usage{
@@ -51,8 +52,8 @@ Klein, J.P and Moeschberger, M.L. (2003) Survival Analysis: Techniques for
 
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
-Journal of the American Statistical Association.
-\url{http://arxiv.org/abs/1511.03864}
+Journal of the American Statistical Association 111, 1548-1575
+\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
 }
 
 
@@ -118,6 +119,14 @@ b <- gam(t~s(x0)+s(x1)+s(x2,k=15)+s(x3),family=cox.ph,weights=d,data=surv)
 
 plot(b,pages=1)
 
+## conditional logistic regression models are often estimated using the 
+## cox.ph partial likelihood. Following compares to 'clogit'...
+library(survival);library(mgcv)
+infert$dumt <- rep(1,nrow(infert))
+mg <- gam(dumt ~ spontaneous + induced + factor(stratum), data=infert,
+          family=cox.ph,weights=case)
+ms <- clogit(case ~ spontaneous + induced + strata(stratum), data=infert)
+summary(mg)$p.table[1:2,]; ms
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

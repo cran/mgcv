@@ -240,7 +240,43 @@ void mgcv_mmult(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int 
 		B, &lda,C, &ldb,&beta, A, &ldc);
 } /* end mgcv_mmult */
 
-
+SEXP mgcv_madi(SEXP a, SEXP b,SEXP ind,SEXP diag) {
+/* Performs 
+     a[ind,ind] <- a[ind,ind] + b
+   or, if diag != 0,
+     diag(a)[ind] <- diag(a)[ind] + b
+*/
+  int dia,*ii,ij,n,i,j,k;
+  double *A,*B;
+  SEXP kr;
+  dia = asInteger(diag);n = nrows(a); k = length(ind);
+  ind = PROTECT(coerceVector(ind,INTSXP));
+  b = PROTECT(coerceVector(b,REALSXP));
+  a = PROTECT(coerceVector(a,REALSXP));
+  ii = INTEGER(ind);
+  A = REAL(a);
+  B = REAL(b);
+   if (dia==0) {
+    for (j=0;j<k;j++) { /* B is a matrix */
+      ij = (ii[j]-1)*n-1;
+      for (i=0;i<k;i++,B++) A[ii[i] + ij] += *B;
+    }  
+  } else if (dia > 0) { /* B is a vector */
+    for (i=0;i<k;i++,B++) {
+      ij = (ii[i]-1)*(n+1); A[ij] += *B;
+    }
+  } else { /* B is a scalar */
+    for (i=0;i<k;i++) {
+      ij = (ii[i]-1)*(n+1);
+        A[ij] += *B;
+     }
+  }
+  
+  PROTECT(kr=allocVector(REALSXP,1));
+  REAL(kr)[0] = 1.0; 
+  UNPROTECT(4);
+  return(kr); /* dummy so that mtrace doesn't cause a crash on return! */
+} /* mgcv_madi */
 
 SEXP mgcv_pmmult2(SEXP b, SEXP c,SEXP bt,SEXP ct, SEXP nthreads) {
 /* parallel matrix multiplication using .Call interface */
@@ -1327,6 +1363,7 @@ void dchol(double *dA, double *R, double *dR,int *p) {
   }
 } /* dchol */
 
+
 void mgcv_chol(double *a,int *pivot,int *n,int *rank)
 /* a stored in column order, this routine finds the pivoted choleski decomposition of matrix a 
    library(mgcv)
@@ -1519,43 +1556,6 @@ void mgcv_tri_diag(double *S,int *n,double *tau)
 }
 
 
-void mgcv_backsolve0(double *R,int *r,int *c,double *B,double *C, int *bc) 
-/* BLAS free version
-   Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
-   of r by c argument R. B is c by bc. (Possibility of non square argument
-   R facilitates use with output from mgcv_qr). This is just a standard back 
-   substitution loop.
-*/  
-{ int i,j,k;
-  double x,*pR,*pC;
-  for (j=0;j<*bc;j++) { /* work across columns of B & C */
-    for (i = *c-1;i>=0;i--) { /* work up each column of B & C */
-      x = 0.0;
-      /* for (k=i+1;k<*c;k++) x += R[i + *r * k] * C[k + j * *c]; ...following replaces...*/
-      pR = R + i + (i+1) * (ptrdiff_t)*r;pC = C + j * (ptrdiff_t)*c + i + 1;
-      for (k=i+1;k<*c;k++,pR+= *r,pC++) x += *pR * *pC;      
-      C[i + (ptrdiff_t)j * *c] = (B[i + (ptrdiff_t)j * *c] - x)/R[i + (ptrdiff_t)*r * i];
-    }
-  }
-}
-
-void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *right) 
-/* BLAS version
-   If *right==0:
-   Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
-   of r by c argument R. B is c by bc. (Possibility of non square argument
-   R facilitates use with output from mgcv_qr). This is just a standard back 
-   substitution loop.
-   Otherwise:
-   Finds C=BR^{-1} where B is bc by c
-*/  
-{ double *pR,*pC,alpha=1.0;
-  int n,m;
-  char side='L',uplo='U',transa='N',diag='N';
-  if (*right) { side = 'R';m = *bc,n= *c;} else {m = *c;n= *bc;}
-  for (pC=C,pR=pC+ *bc * (ptrdiff_t)*c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
-  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,&m, &n, &alpha,R, r,C,&m);
-} /* mgcv_backsolve */
 
 
 void mgcv_pbsi(double *R,int *r,int *nt) {
@@ -1777,6 +1777,26 @@ void mgcv_RPPt(SEXP a,SEXP r, SEXP NT) {
   mgcv_PPt(A,R,&n,&nt);
 } /* mgcv_Rpbsi */
 
+
+void mgcv_backsolve0(double *R,int *r,int *c,double *B,double *C, int *bc) 
+/* BLAS free version
+   Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). This is just a standard back 
+   substitution loop.
+*/  
+{ int i,j,k;
+  double x,*pR,*pC;
+  for (j=0;j<*bc;j++) { /* work across columns of B & C */
+    for (i = *c-1;i>=0;i--) { /* work up each column of B & C */
+      x = 0.0;
+      /* for (k=i+1;k<*c;k++) x += R[i + *r * k] * C[k + j * *c]; ...following replaces...*/
+      pR = R + i + (i+1) * (ptrdiff_t)*r;pC = C + j * (ptrdiff_t)*c + i + 1;
+      for (k=i+1;k<*c;k++,pR+= *r,pC++) x += *pR * *pC;      
+      C[i + (ptrdiff_t)j * *c] = (B[i + (ptrdiff_t)j * *c] - x)/R[i + (ptrdiff_t)*r * i];
+    }
+  }
+}
 void mgcv_forwardsolve0(double *R,int *r,int *c,double *B,double *C, int *bc) 
 /* BLAS free version
    Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
@@ -1794,6 +1814,25 @@ void mgcv_forwardsolve0(double *R,int *r,int *c,double *B,double *C, int *bc)
     }
   }
 }
+
+void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *right) 
+/* BLAS version
+   If *right==0:
+   Finds C = R^{-1} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). This is just a standard back 
+   substitution loop.
+   Otherwise:
+   Finds C=BR^{-1} where B is bc by c
+*/  
+{ double *pR,*pC,alpha=1.0;
+  int n,m;
+  char side='L',uplo='U',transa='N',diag='N';
+  if (*right) { side = 'R';m = *bc,n= *c;} else {m = *c;n= *bc;}
+  for (pC=C,pR=pC+ *bc * (ptrdiff_t)*c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
+  F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,&m, &n, &alpha,R, r,C,&m);
+} /* mgcv_backsolve */
+
 
  void mgcv_forwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *right) 
 /* BLAS version
@@ -1815,10 +1854,10 @@ void mgcv_forwardsolve0(double *R,int *r,int *c,double *B,double *C, int *bc)
 
 void mgcv_pforwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *nt) 
 /* parallel forward solve, using nt threads.
-   Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
+   Finds C = R^{-T} B where R is the c by c matrix stored in the **upper** triangle 
    of r by c argument R. B is c by bc. (Possibility of non square argument
    R facilitates use with output from mgcv_qr). This is just a standard forward 
-   substitution loop.
+   substitution loop. NOTE: R stored in UPPER not lower triangle.  
 */  
 { double *pR,*pC,alpha=1.0;
   int cpt,cpf,nth,i,cp;
@@ -1838,6 +1877,31 @@ void mgcv_pforwardsolve(double *R,int *r,int *c,double *B,double *C, int *bc,int
     F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, &cp, &alpha,R, r,C + i * (ptrdiff_t) cpt * *c,c);
   }
 } /* mgcv_pforwardsolve */
+
+void mgcv_pbacksolve(double *R,int *r,int *c,double *B,double *C, int *bc,int *nt) 
+/* parallel back solve, using nt threads.
+   Finds C = R^{-T} B where R is the c by c matrix stored in the upper triangle 
+   of r by c argument R. B is c by bc. (Possibility of non square argument
+   R facilitates use with output from mgcv_qr). 
+*/  
+{ double *pR,*pC,alpha=1.0;
+  int cpt,cpf,nth,i,cp;
+  char side='L',uplo='U',transa='N',diag='N';
+  cpt = *bc / *nt; /* cols per thread */
+  if (cpt * *nt < *bc) cpt++;
+  nth = *bc/cpt;
+  if (nth * cpt < *bc) nth++;
+  cpf = *bc - cpt * (nth-1); /* columns on final block */ 
+  for (pC=C,pR=pC+ *bc * (ptrdiff_t)*c;pC<pR;pC++,B++) *pC = *B; /* copy B to C */
+  //Rprintf("r = %d, c= %d bc = %d, nth= %d, cpt = %d, cpf = %d",*r,*c,*bc,nth,cpt,cpf);
+  #ifdef OPENMP_ON
+  #pragma omp parallel for private(i,cp) num_threads(nth)
+  #endif
+  for (i=0;i<nth;i++) {
+    if (i==nth-1) cp = cpf; else cp = cpt;
+    F77_CALL(dtrsm)(&side,&uplo,&transa, &diag,c, &cp, &alpha,R, r,C + i * (ptrdiff_t) cpt * *c,c);
+  }
+} /* mgcv_pbacksolve */
 
 SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT) {
 /* .Call wrapper for mgcv_pforwardsolve.
@@ -1860,6 +1924,29 @@ SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT) {
   UNPROTECT(1);
   return(C);
 } /* mgcv_Rpforwardsolve */
+
+SEXP mgcv_Rpbacksolve(SEXP R, SEXP B,SEXP NT) {
+/* .Call wrapper for mgcv_pbacksolve.
+   Return object a matrix.
+
+*/
+  int c,r,nt,bc;
+  double *R0,*b,*C0;
+  SEXP C;
+  nt = asInteger(NT);
+  r = nrows(R);c = ncols(R);
+  R0 = REAL(R);
+  bc = ncols(B);
+  b = REAL(B);  
+  C = PROTECT(allocMatrix(REALSXP,c,bc));
+  C0 = REAL(C);
+
+  mgcv_pbacksolve(R0,&r,&c,b,C0,&bc,&nt);
+   
+  UNPROTECT(1);
+  return(C);
+} /* mgcv_Rpbacksolve */
+
 
 
 void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse) {

@@ -17,6 +17,7 @@ gam.reparam <- function(rS,lsp,deriv)
 ## Ouputs:
 ## S -- the total penalty matrix similarity transformed for stability
 ## rS -- the component square roots, transformed in the same way
+##       - tcrossprod(rS[[i]]) = rS[[i]] %*% t(rS[[i]]) gives the matrix penalty component.
 ## Qs -- the orthogonal transformation matrix S = t(Qs)%*%S0%*%Qs, where S0 is the 
 ##       untransformed total penalty implied by sp and rS on input
 ## E -- the square root of the transformed S (obtained in a stable way by pre-conditioning)
@@ -61,66 +62,6 @@ gam.reparam <- function(rS,lsp,deriv)
   list(S=S,E=E,Qs=Qs,rS=rS,det=oo$det,det1=det1,det2=det2,fixed.penalty = fixed.penalty)
 } ## gam.reparam
 
-
-get.Eb <- function(rS,rank) 
-## temporary routine to get balanced sqrt of total penalty
-## should eventually be moved to estimate.gam, or gam.setup,
-## as it's sp independent, but that means re doing gam.fit3 call list,
-## which should only be done after method is tested
-{ q <- nrow(rS[[1]])
-  S <- matrix(0,q,q)
-  for (i in 1:length(rS)) { 
-    Si <- tcrossprod(rS[[i]]) ## rS[[i]]%*%t(rS[[i]])
-    S <- S + Si/sqrt(sum(Si^2)) 
-  }
-  t(mroot(S,rank=rank)) ## E such that E'E = S
-} ## get.Eb
-
-huberp <- function(wp,dof,k=1.5,tol=.Machine$double.eps^.5) {
-## function to obtain huber estimate of scale from Pearson residuals, simplified 
-## from 'hubers' from MASS package
-  s0 <- mad(wp) ## initial scale estimate
-  th <- 2*pnorm(k) - 1
-  beta <- th + k^2 * (1 - th) - 2 * k * dnorm(k)
-  for (i in 1:50) {
-    r <- pmin(pmax(wp,-k*s0),k*s0)
-    ss <- sum(r^2)/dof
-    s1 <- sqrt(ss/beta)
-    if (abs(s1-s0)<tol*s0) break
-    s0 <- s1
-  }
-  if (i==50) warning("Huber scale estiamte not converged")
-  s1^2
-} ## huberp
-
-gam.scale <- function(wp,wd,dof,extra=0) {
-## obtain estimates of the scale parameter, using the weighted Pearson and 
-## deviance residuals and the residual effective degrees of freedom.
-## Problem is that Pearson is unbiased, but potentially unstable (e.g. 
-## when count is 1 but mean is tiny, so that pearson residual is enormous,
-## although deviance residual is much less extreme). 
-  pearson <- (sum(wp^2)+extra)/dof
-  deviance <- (sum(wd^2)+extra)/dof
-  if (extra==0) robust <- huberp(wp,dof) else {
-    ## now scale deviance residuals to have magnitude similar
-    ## to pearson and compute new estimator. 
-    kd <- wd
-    ind <- wd > 0
-    kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
-    ind <- wd < 0
-    kd[ind] <- wd[ind]*median(wp[ind]/wd[ind])
-    robust <- (sum(kd^2)+extra)/dof
-    ## force estimate to lie between deviance and pearson estimators
-    if (pearson > deviance) {
-      if (robust < deviance) robust <- deviance
-      if (robust > pearson) robust <- pearson
-    } else {
-      if (robust > deviance) robust <- deviance
-      if (robust < pearson) robust <- pearson
-    }
-  }
-  list(pearson=pearson,deviance=deviance,robust=robust)
-}
 
 
 gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
@@ -651,14 +592,6 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
          }
          trA <- oo$trA;
                   
-#         wpr <- (y-mu) *sqrt(weights/family$variance(mu)) ## weighted pearson residuals
-#         se <- gam.scale(wpr,wdr,n.true-trA,dev.extra) ## get scale estimates
-#         pearson.warning <- NULL
-#         if (control$scale.est=="pearson") { 
-#           scale.est <- se$pearson
-#           if (scale.est > 4 * se$robust) pearson.warning <- TRUE
-#         } else scale.est <- if (control$scale.est=="deviance") se$deviance else se$robust
-
          if (control$scale.est%in%c("pearson","fletcher","Pearson","Fletcher")) {
             pearson <- sum(weights*(y-mu)^2/family$variance(mu))
             scale.est <- (pearson+dev.extra)/(n.true-trA)
@@ -940,9 +873,6 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object) {
   F <- .Call(C_mgcv_pmmult2,PKt,sqrt(object$weights)*X,0,0,object$control$nthreads)
   edf <- diag(F) ## effective degrees of freedom
   edf1 <- 2*edf - rowSums(t(F)*F) ## alternative
-
-  ## check on plausibility of scale (estimate)
-  ##if (object$scale.estimated&&!is.null(object$pearson.warning)) warning("Pearson scale estimate maybe unstable. See ?gam.scale.")
 
   ## edf <- rowSums(PKt*t(sqrt(object$weights)*X))
   ## Ve <- PKt%*%t(PKt)*object$scale  ## frequentist cov
@@ -1371,6 +1301,14 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
      okc <- FALSE
      eps <- 1e-4
      deriv <- 2
+     if (okc) { ## optional call to fitting to facilitate debugging 
+       trial.der <- 2 ## can reset if derivs not wanted
+       b <- gam.fit3(x=X, y=y, sp=L%*%lsp+lsp0,Eb=Eb,UrS=UrS,
+         offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=trial.der,
+         control=control,gamma=gamma,scale=scale,printWarn=FALSE,start=start,
+         mustart=mustart,scoreType=scoreType,null.coef=null.coef,
+         pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,...)  
+     }
      deriv.check(x=X, y=y, sp=L%*%lsp+lsp0, Eb=Eb,UrS=UrS,
          offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=deriv,
          control=control,gamma=gamma,scale=scale,
@@ -1407,6 +1345,8 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     ## get the trial step ...
     eh <- eigen(hess1,symmetric=TRUE)
     d <- eh$values;U <- eh$vectors
+    indef <- (sum(-d > abs(d[1])*.Machine$double.eps^.5)>0) ## indefinite problem
+    
     ## set eigen-values to their absolute value - heuristically appealing
     ## as it avoids very long steps being proposed for indefinte components,
     ## unlike setting -ve e.v.s to very small +ve constant...
@@ -1427,12 +1367,10 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 
     ms <- max(abs(Nstep)) ## note smaller permitted step if !pdef
     mns <- maxNstep
-#    mns <- if (pdef) maxNstep else maxNstep/3 ## more cautious if not pdef
-#    if (!all(Nstep*Sstep >= 0)) mns <- mns/2   ## bit more cautious if directions differ 
+
     if (ms>maxNstep) Nstep <- mns * Nstep/ms
     
     sd.unused <- TRUE ## steepest descent direction not yet tried
-
 
     ## try the step ...
     if (sp.trace) cat(lsp,"\n")
@@ -1644,7 +1582,7 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     score.hist[i] <- score 
    
     ## test for convergence
-    converged <- TRUE
+    converged <- !indef ## not converged if indefinite
     if (reml) score.scale <- abs(log(b$scale.est)) + abs(score) else
     score.scale <- abs(b$scale.est) + abs(score)
     grad2 <- diag(hess)    
@@ -2481,6 +2419,7 @@ fix.family.var <- function(fam)
   if (!inherits(fam,"family")) stop("fam not a family object")
   if (!is.null(fam$dvar)&&!is.null(fam$d2var)&&!is.null(fam$d3var)) return(fam) 
   family <- fam$family
+  fam$scale <- -1
   if (family=="gaussian") {
     fam$d3var <- fam$d2var <- fam$dvar <- function(mu) rep.int(0,length(mu))
     return(fam)
@@ -2488,12 +2427,14 @@ fix.family.var <- function(fam)
   if (family=="poisson"||family=="quasipoisson") {
     fam$dvar <- function(mu) rep.int(1,length(mu))
     fam$d3var <- fam$d2var <- function(mu) rep.int(0,length(mu))
+    if (family=="poisson") fam$scale <- 1
     return(fam)
   } 
   if (family=="binomial"||family=="quasibinomial") {
     fam$dvar <- function(mu) 1-2*mu
     fam$d2var <- function(mu) rep.int(-2,length(mu))
     fam$d3var <- function(mu) rep.int(0,length(mu))
+    if (family=="binomial") fam$scale <- 1
     return(fam)
   }
   if (family=="Gamma") {

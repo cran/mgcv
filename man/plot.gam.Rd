@@ -7,7 +7,7 @@
    predictor. Optionally produces term plots for parametric model components
    as well.}
 \usage{
-\method{plot}{gam}(x,residuals=FALSE,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,
+\method{plot}{gam}(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,
          n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade=FALSE,shade.col="gray80",shift=0,
@@ -27,10 +27,11 @@ IRLS weights. Partial residuals for a smooth term are the
 residuals that would be obtained by dropping the term concerned from the model, while leaving all other 
 estimates fixed (i.e. the estimates for the term plus the residuals).}
 
-\item{rug}{ when TRUE (default) then the covariate to which the plot applies is displayed as a rug plot
+\item{rug}{When \code{TRUE} the covariate to which the plot applies is displayed as a rug plot
  at the foot of each plot of a 1-d smooth, and the locations of the
  covariates are plotted as points on the contour plot representing a 2-d
- smooth. Setting to \code{FALSE} will speed up plotting for large datasets.} 
+ smooth. The default of \code{NULL} sets \code{rug} to \code{TRUE} when the dataset size
+ is <= 10000 and \code{FALSE} otherwise.} 
   
 \item{se}{ when TRUE (default) upper and lower lines are added to the
   1-d plots at 2 standard errors
@@ -93,9 +94,11 @@ for smooths (not avaliable for parametric terms, which are plotted using \code{t
 \item{shift}{constant to add to each smooth (on the scale of the linear
 predictor) before plotting. Can be useful for some diagnostics, or with \code{trans}.}
 
-\item{trans}{function to apply to each smooth  (after any shift), before
-plotting. \code{shift} and \code{trans} are occasionally useful as a means for
-getting plots on the response scale, when the model consists only of a single smooth.}
+\item{trans}{monotonic function to apply to each smooth  (after any shift), before
+plotting. Monotonicity is not checked, but default plot limits assume it.
+\code{shift} and \code{trans} are occasionally
+useful as a means for getting plots on the response scale, when the model consists only
+of a single smooth. }
 
 \item{seWithMean}{if \code{TRUE} the component smooths are shown with confidence 
 intervals that include the uncertainty about the overall mean. If \code{FALSE} then the 
@@ -155,7 +158,7 @@ although each smooth is shown centred, the confidence bands are obtained as if e
 constrained to have average 0, (average taken over the covariate values), except for the smooth concerned. This seems to correspond more closely to how most users interpret componentwise intervals in practice, and also results in intervals with
 close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results presented in Marra and Wood (2012).
 
-Several smooth plots methods using \code{\link{image}} will accept a \code{colors} argument, which can be anything documented in \code{\link{heat.colors}} (in which case something like \code{colors=rainbow(50)} is appropriate), or the \code{\link{grey}} function (in which case somthing like \code{colors=grey(0:50/50)} is needed). Another option is \code{contour.col} which will set the contour colour for some plots. These options are useful for producing grey scale pictures instead of colour.
+Several smooth plots methods using \code{\link{image}} will accept an \code{hcolors} argument, which can be anything documented in \code{\link{heat.colors}} (in which case something like \code{hcolors=rainbow(50)} is appropriate), or the \code{\link{grey}} function (in which case somthing like \code{hcolors=grey(0:50/50)} is needed). Another option is \code{contour.col} which will set the contour colour for some plots. These options are useful for producing grey scale pictures instead of colour.
 
 Sometimes you may want a small change to a default plot, and the arguments to \code{plot.gam} just won't let you do it. 
 In this case, the quickest option is sometimes to clone the \code{smooth.construct} and \code{Predict.matrix} methods for 

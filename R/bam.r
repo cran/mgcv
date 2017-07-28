@@ -184,9 +184,10 @@ check.term <- function(term,rec) {
   } else return(0) ## no match
 } ## check.term
 
-discrete.mf <- function(gp,mf,pmf,m=NULL,full=TRUE) {
+discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
 ## discretize the covariates for the terms specified in smooth.spec
-## id not allowed. pmf is a model frame for just the 
+## id not allowed. names.pmf gives the names of the parametric part
+## of mf, and is used to create a model frame for just the 
 ## parametric terms --- mini.mf is applied to this.
 ## if full is FALSE then parametric and response terms are ignored
 ## and what is returned is a list where columns can be of 
@@ -282,8 +283,17 @@ discrete.mf <- function(gp,mf,pmf,m=NULL,full=TRUE) {
   ## padding is necessary if gam.setup is to be used for setup
 
   if (full) {
-    maxr <- max(nr) 
-    pmf0 <- mini.mf(pmf,maxr) ## deal with parametric components
+    maxr <- max(nr)
+    ## If NA's caused rows to be dropped in mf, then they should
+    ## also be dropped in pmf, otherwise we can end up with factors
+    ## with more levels than unique observations, for example.
+    ## The next couple of lines achieve this.
+    ## find indices of terms in mf but not pmf...
+    di <- sort(which(!names(mf) %in% names.pmf),decreasing=TRUE)
+    ## create copy of mf with only pmf variables...
+    mfp <- mf; for (i in di) mfp[[i]] <- NULL 
+    #pmf0 <- mini.mf(pmf,maxr) ## deal with parametric components
+    pmf0 <- mini.mf(mfp,maxr) ## deal with parametric components
     if (nrow(pmf0)>maxr) maxr <- nrow(pmf0)
     mf0 <- c(mf0,pmf0) ## add parametric terms to end of mf0
 
@@ -1450,7 +1460,7 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
 
   ## now discretize covariates...
   if (convert2mf) newdata <- model.frame(object$dinfo$gp$fake.formula[-2],newdata)
-  dk <- discrete.mf(object$dinfo$gp,mf=newdata,pmf=NULL,full=FALSE)
+  dk <- discrete.mf(object$dinfo$gp,mf=newdata,names.pmf=NULL,full=FALSE)
     
   Xd <- list() ### list of discrete model matrices...
   if (object$nsdf>0) {
@@ -1645,6 +1655,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         warning("discretization only available with fREML")
       } else {
         if (!is.null(cluster)) warning("discrete method does not use parallel cluster - use nthreads instead")
+	if (nthreads>1 && !mgcv.omp()) warning("openMP not available: single threaded computation only")
       }
     }
     if (method%in%c("fREML")&&!is.null(min.sp)) {
@@ -1728,7 +1739,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
       ## and indices giving the discretized value for each element of model frame.
       ## 'discrete' can be null, or contain a discretization size, or
       ## a discretization size per smooth term.   
-      dk <- discrete.mf(gp,mf,pmf,m=discrete)
+      dk <- discrete.mf(gp,mf,names(pmf),m=discrete)
       mf0 <- dk$mf ## padded discretized model frame
       sparse.cons <- 0 ## default constraints required for tensor terms
 
@@ -2050,9 +2061,10 @@ bam.update <- function(b,data,chunk.size=10000) {
     stop("Model can not be updated")
   }
   gp<-interpret.gam(b$formula) # interpret the formula 
-  
-  X <- predict(b,newdata=data,type="lpmatrix",na.action=b$NA.action) ## extra part of model matrix
-  rownames(X) <- NULL
+
+  ## next 2 lines problematic if there are missings in the response, so now constructed from mf below...
+  ## X <- predict(b,newdata=data,type="lpmatrix",na.action=b$NA.action) ## extra part of model matrix
+  ## rownames(X) <- NULL
   cnames <- names(b$coefficients)
 
   AR.start <- NULL ## keep R checks happy
@@ -2074,7 +2086,10 @@ bam.update <- function(b,data,chunk.size=10000) {
     mf <- model.frame(gp$fake.formula,data,xlev=b$xlev,na.action=b$NA.action)
     w <- rep(1,nrow(mf))
   }
-  
+
+  X <- predict(b,newdata=mf,type="lpmatrix",na.action=b$NA.action) ## extra part of model matrix
+  rownames(X) <- NULL
+
   b$model <- rbind(b$model,mf) ## complete model frame --- old + new
 
   ## get response and offset...
@@ -2157,7 +2172,7 @@ bam.update <- function(b,data,chunk.size=10000) {
      object <- list(coefficients=res$beta,edf=res$edf,edf1=res$edf1,edf2=res$edf2,##F=res$F,
                     gcv.ubre=fit$reml,hat=res$hat,outer.info=list(iter=fit$iter,
                     message=fit$conv),optimizer="fast-REML",rank=ncol(um$X),
-                    Ve=NULL,Vp=res$V,Vc=res$Vc,db.drho=fit$d1b,scale.estimated = scale<=0)
+                    Ve=res$Ve,Vp=res$Vp,Vc=res$Vc,db.drho=fit$d1b,scale.estimated = scale<=0)
      if (scale<=0) { ## get sp's and scale estimate
        nsp <- length(fit$rho)
        object$sig2 <- object$scale <- exp(fit$rho[nsp])
