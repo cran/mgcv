@@ -83,7 +83,7 @@ of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likel
 exponential family \code{"REML"} is the default, and the only other option is \code{"ML"}.}
 
 \item{optimizer}{An array specifying the numerical optimization method to use to optimize the smoothing 
-parameter estimation criterion (given by \code{method}). \code{"perf"} for performance iteration. \code{"outer"} 
+parameter estimation criterion (given by \code{method}). \code{"perf"} (deprecated) for performance iteration. \code{"outer"} 
 for the more stable direct approach. \code{"outer"} can use several alternative optimizers, specified in the 
 second element of \code{optimizer}: \code{"newton"} (default), \code{"bfgs"}, \code{"optim"}, \code{"nlm"} 
 and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). \code{"efs"}
@@ -208,8 +208,7 @@ just AIC rescaled, but is only used when \eqn{s}{s} is known.
 Alternatives are GACV, or a Laplace approximation to REML. There
 is some evidence that the latter may actually be the most effective choice. 
 The main computational challenge solved 
-by the \code{mgcv} package is to optimize the smoothness selection criteria efficiently and reliably. Various
-alternative numerical methods are provided which can be set by argument \code{optimizer}.
+by the \code{mgcv} package is to optimize the smoothness selection criteria efficiently and reliably. 
 
 
 Broadly \code{gam} works by first constructing basis functions and one or more quadratic penalty 
@@ -221,16 +220,17 @@ fit using \code{\link{gam.fit}}, \code{\link{gam.fit3}} or varaints, which are m
 of \code{\link{glm.fit}}. The GAM 
 penalized likelihood maximization problem is solved by Penalized Iteratively 
 Reweighted  Least Squares (P-IRLS) (see e.g. Wood 2000). 
-Smoothing parameter selection is integrated in one of two ways. (i)
-`Performance iteration' uses the fact that at each P-IRLS iteration a penalized 
-weighted least squares problem is solved, and the smoothing parameters of that problem can 
-estimated by GCV or UBRE. Eventually, in most cases, both model parameter estimates and smoothing 
-parameter estimates converge. (ii) Alternatively the P-IRLS scheme is iterated to
+Smoothing parameter selection is possible in one of two ways. (i)
+`Performance iteration' uses the fact that at each P-IRLS step a working penalized linear model
+is estimated, and the smoothing parameter estimation can be performed for each such working model.
+Eventually, in most cases, both model parameter estimates and smoothing 
+parameter estimates converge. This option is available in \code{\link{bam}} and \code{\link{gamm}} but
+is deprecated for \code{gam} (ii) Alternatively the P-IRLS scheme is iterated to
 convergence for each trial set of smoothing parameters, and GCV, UBRE or REML scores
 are only evaluated on convergence - optimization is then `outer' to the P-IRLS
 loop: in this case the P-IRLS iteration has to be differentiated, to
 facilitate optimization, and \code{\link{gam.fit3}} or one of its variants is used in place of
-\code{gam.fit}. The default is the second method, outer iteration.
+\code{gam.fit}. \code{gam} uses the second method, outer iteration.
 
 
 Several alternative basis-penalty types  are built in for representing model
@@ -279,6 +279,11 @@ See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie an
 
 Key References on this implementation:
 
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models (with discussion).
+Journal of the American Statistical Association 111, 1548-1575
+\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+
 Wood, S.N. (2011) Fast stable restricted maximum likelihood 
 and marginal likelihood estimation of semiparametric generalized linear 
 models. Journal of the Royal Statistical Society (B) 73(1):3-36
@@ -292,7 +297,7 @@ Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
 Wood, S.N. (2006a) Low rank scale invariant tensor product smooths for
 generalized additive mixed models. Biometrics 62(4):1025-1036
 
-Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 
 Wood S.N., F. Scheipl and J.J. Faraway (2012) Straightforward intermediate rank tensor product smoothing
@@ -475,14 +480,9 @@ par(mfrow=c(2,2))
 plot(b2a)
 
 par(mfrow=c(1,1))
-## similar example using performance iteration
+## similar example using GACV...
+
 dat <- gamSim(1,n=400,dist="poisson",scale=.25)
-
-b3<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
-        data=dat,optimizer="perf")
-plot(b3,pages=1)
-
-## repeat using GACV as in Wood 2008...
 
 b4<-gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=poisson,
         data=dat,method="GACV.Cp",scale=-1)

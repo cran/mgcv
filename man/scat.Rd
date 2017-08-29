@@ -3,7 +3,7 @@
 \alias{t.scaled}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM scaled t family for heavy tailed data}
-\description{Family for use with \code{\link{gam}}, implementing regression for the heavy tailed response
+\description{Family for use with \code{\link{gam}} or \code{\link{bam}}, implementing regression for the heavy tailed response
 variables, y, using a scaled t model. The idea is that \eqn{(y-\mu)/\sigma \sim t_\nu }{(y - mu)/sig ~ t_nu} where 
 \eqn{mu}{mu} is determined by a linear predictor, while \eqn{\sigma}{sig} and \eqn{\nu}{nu} are parameters 
 to be estimated alongside the smoothing parameters.

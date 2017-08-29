@@ -357,7 +357,7 @@ ti <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NUL
   object
 } ## ti
 
-te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NULL,id=NULL,sp=NULL,pc=NULL)
+te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,np=TRUE,xt=NULL,id=NULL,sp=NULL,pc=NULL)
 # function for use in gam formulae to specify a tensor product smooth term.
 # e.g. te(x0,x1,x2,k=c(5,4,4),bs=c("tp","cr","cr"),m=c(1,1,2),by=x3) specifies a rank 80 tensor  
 # product spline. The first basis is rank 5, t.p.r.s. basis penalty order 1, and the next 2 bases
@@ -371,7 +371,6 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
 # * by     - the by variable name
 # * fx     - array indicating which margins should be treated as fixed (i.e unpenalized).
 # * label  - label for this term
-# * mp - TRUE to use a penalty per dimension, FALSE to use a single penalty
 { vars <- as.list(substitute(list(...)))[-1] # gets terms to be smoothed without evaluation
   dim <- length(vars) # dimension of smoother
   by.var <- deparse(substitute(by),backtick=TRUE) #getting the name of the by variable
@@ -449,7 +448,7 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
     j<-j1+1
   }
   # assemble term.label 
-  if (mp) mp <- TRUE else mp <- FALSE
+  #if (mp) mp <- TRUE else mp <- FALSE
   if (np) np <- TRUE else np <- FALSE
   full.call<-paste("te(",term[1],sep="")
   if (dim>1) for (i in 2:dim) full.call<-paste(full.call,",",term[i],sep="")
@@ -461,8 +460,8 @@ te <- function(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,mp=TRUE,np=TRUE,xt=NUL
     } 
     id <- as.character(id)
   }
-  ret<-list(margin=margin,term=term,by=by.var,fx=fx,label=label,dim=dim,mp=mp,np=np,
-            id=id,sp=sp,inter=FALSE)
+  ret<-list(margin=margin,term=term,by=by.var,fx=fx,label=label,dim=dim,#mp=mp,
+            np=np,id=id,sp=sp,inter=FALSE)
   if (!is.null(pc)) {
     if (length(pc)<d) stop("supply a value for each variable for a point constraint")
     if (!is.list(pc)) pc <- as.list(pc)
@@ -799,25 +798,25 @@ smooth.construct.tensor.smooth.spec <- function(object,data,knots) {
   max.rank <- prod(d)
   r <- max.rank*r/d # penalty ranks
   X <- tensor.prod.model.matrix(Xm)
-  if (object$mp) { # multiple penalties
-    S <- tensor.prod.penalties(Sm)
-    for (i in m:1) if (object$fx[i]) { 
+#  if (object$mp) { # multiple penalties
+  S <- tensor.prod.penalties(Sm)
+  for (i in m:1) if (object$fx[i]) { 
       S[[i]] <- NULL # remove penalties for un-penalized margins
       r <- r[-i]   # remove corresponding rank from list
-    }
-  } else { # single penalty
-    warning("single penalty tensor product smooths are deprecated and likely to be removed soon")
-    S <- Sm[[1]];r <- object$margin[[i]]$rank
-    if (m>1) for (i in 2:m) 
-    { S <- S%x%Sm[[i]]
-      r <- r*object$margin[[i]]$rank
-    } 
-    if (sum(object$fx)==m) 
-    { S <- list();object$fixed=TRUE } else
-    { S <-list(S);object$fixed=FALSE }
-    nr <- max.rank-r
-    object$bs.dim <- max.rank
   }
+#  } else { # single penalty
+#    warning("single penalty tensor product smooths are deprecated and likely to be removed soon")
+#    S <- Sm[[1]];r <- object$margin[[i]]$rank
+#    if (m>1) for (i in 2:m) 
+#    { S <- S%x%Sm[[i]]
+#      r <- r*object$margin[[i]]$rank
+#    } 
+#    if (sum(object$fx)==m) 
+#    { S <- list();object$fixed=TRUE } else
+#    { S <-list(S);object$fixed=FALSE }
+#    nr <- max.rank-r
+#    object$bs.dim <- max.rank
+#  }
   
   if (!is.null(object$margin[[1]]$xt$dropu)&&object$margin[[1]]$xt$dropu) {
     ind <- which(colSums(abs(X))!=0)

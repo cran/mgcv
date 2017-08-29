@@ -193,7 +193,7 @@ matrix \code{Vp} for smoothing parameter uncertainty. This is the corrected vers
 
 A Key Reference on this implementation:
 
-Wood, S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood, S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 & Hall/ CRC, Boca Raton, Florida
 
 Key Reference on GAMs generally:

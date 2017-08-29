@@ -76,7 +76,7 @@ Its row and column names should correspond to the levels of the covariate.}
 
 If no basis dimension is supplied then the constructor produces a full rank MRF, with a coefficient for each 
 geographic area. Otherwise a low rank approximation is obtained based on truncation of the parameterization given in
-Wood (2006) Section 4.10.4. 
+Wood (2017) Section 5.4.2. See Wood (2017, section 5.8.1). 
 
 Note that smooths of this class have a built in plot method, and that the utility function \code{\link{in.out}} 
 can be useful for working with discrete area data. The plot method has two schemes, \code{scheme==0} is colour, 
@@ -90,7 +90,7 @@ coefficients is less than the number of observations.
 }
 
 \references{
-Wood S.N. (2006) Generalized additive models: an introduction with R. CRC.
+Wood S.N. (2017) Generalized additive models: an introduction with R (2nd edition). CRC.
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} and Thomas Kneib

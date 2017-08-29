@@ -91,6 +91,11 @@ Part funded by EPSRC: EP/K005251/1
 These provide details for the underlying mgcv methods, and fuller 
 references to the large literature on which the methods are based. 
 
+Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
+model selection for general smooth models (with discussion).
+Journal of the American Statistical Association 111, 1548-1575
+\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+
 Wood, S.N. (2011) Fast stable restricted maximum likelihood 
 and marginal likelihood estimation of semiparametric generalized linear 
 models. Journal of the Royal Statistical Society (B) 73(1):3-36
@@ -105,7 +110,7 @@ Wood, S.N. (2013a) A simple test for random effects in regression models. Biomet
 
 Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
-Wood, S.N. (2006) \emph{Generalized Additive Models: an introduction with R},
+Wood, S.N. (2017) \emph{Generalized Additive Models: an introduction with R (2nd edition)},
 CRC
 
 Development of mgcv version 1.8 was part funded by EPSRC grants EP/K005251/1 and EP/I000917/1.

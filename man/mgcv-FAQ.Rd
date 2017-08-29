@@ -16,7 +16,7 @@ Package \code{gamm4} is an alternative, which allows AIC type model selection fo
 of semi-parametric modelling: the idea is that we estimate the form of the function from data
 without assuming that it has a particular simple functional form. Of course for practical computation
 the functions do have underlying mathematical representations, but they are not very helpful, when written 
-down. If you do need the functional forms then see chapter 4 of Wood (2006). However for most purposes it 
+down. If you do need the functional forms then see chapter 5 of Wood (2017). However for most purposes it 
 is better to use \code{\link{predict.gam}} to evaluate the function for whatever argument values you need. 
 If derivatives are required then the simplest approach is to use finite differencing (which also allows 
 SEs etc to be calculated).
@@ -75,6 +75,9 @@ guaranteed for small noisy datasets with large numbers of predictors.
 \references{
 
 Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.
+
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 }
 

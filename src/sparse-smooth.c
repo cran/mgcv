@@ -537,27 +537,6 @@ int closest(kdtree_type *kd, double *X,double *x,int n,int *ex,int nex) {
 
 
 
-void star(kdtree_type *kd, double *X,int n,int i0,int *ni,double dist) {
- /* REDUNDANT
-
-   find indices of 5 points near points of a star centred on point i0
-    and return these in ni. points are unique and do not include i0.
-    start points are at dist from i0.
-    kd is kd tree, relating to points stored in n rows of X.
- */
-  double pi25,dx,dy,x0[2],x[2];
-  int i,ex[6];
-  if (kd->d!=2) Rprintf("\n star only useful in 2D\n");
-  pi25 = asin(1)*4/5;
-  x0[0] = X[i0];x0[1] = X[i0 + n];
-  ex[0] = i0;
-  for (i=0;i<5;i++) {
-    dx = dist*sin(pi25*i);dy = dist*cos(pi25*i);
-    x[0] = x0[0] + dx;x[1] = x0[1] + dy; /* current star point */
-    /* find closest point in X/kd, not in exclusion list */
-    ex[i+1] = ni[i] = closest(kd,X,x,n,ex,i+1);
-  }
-}
 
 void p_area(double *a,double *X,kdtree_type kd,int n,int d) {
 /* Associates the volume of its kd box with each point. If the point 
@@ -1007,196 +986,6 @@ void k_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,int *get
 }
 
 
-void kba_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,
-            int *get_a,double *cut_off) {
-/* REDUNDANT
-   Obtains a roughly balanced set of 2d + k nearish neighbours. Idea is to take nearest neighbour 
-   from kd box immediately above or below each point's box, in each dimension, and to add 
-   k further points from the nearest neigbours not already included.  
-   For each point:
-   1. get 2d+k nearest neighbours.
-   2. get 2d balanced neighbours.
-   3. find k nearest neighbours in set 1 that are not in set 2.
-   Step 3 can go through nearest looking for self and largest.  
-*/
-  int ii,i,j,nn,d2k,bi,bj,max_i,q,n1,n2,*count,method=1;
-  double dx,*x,max_dist,d1,d2,maxnd,xj,*db,*p,*p1,d0;
-  kdtree_type kd; 
-  kd_tree(X,n,d,&kd); /* set up the tree */ 
-  kd_sanity(kd); /* DEBUG only */
-  if (*get_a) p_area(a,X,kd,*n,*d);
-  d2k = 2 * *d + *k;
-  nn = *n; /* following modifies n!!*/
-  k_nn_work(kd,X,dist,ni,&nn,d,&d2k); /* get 2d+k nearest neighbours */
-  
-  /* d0 = average of distance to 2d+k nearest neighbours - a useful basic length scale */
-  for (d0=0.0,p=dist,p1=dist+ *n * d2k;p<p1;p++) d0 += *p;
-  d0 /= *n * d2k;
-
-  x = (double *)CALLOC((size_t) *d,sizeof(double));
-  /* need to get typical box scale */ 
-  db = (double *)CALLOC((size_t)*d,sizeof(double));
-  count = (int *)CALLOC((size_t)*d,sizeof(int));
-  for (bi=0;bi<kd.n_box;bi++) {
-    for (j=0;j<*d;j++) 
-    if (kd.box[bi].lo[j] > -kd.huge&&kd.box[bi].hi[j] < kd.huge) {
-      db[j] += kd.box[bi].hi[j] - kd.box[bi].lo[j];
-      count[j] ++;
-    }
-  }
-  for (j=0;j<*d;j++) { 
-    db[j] /= (count[j]+1);
-    if (db[j]==0.0) db[j]=1.0;
-  }
-
-  for (i=0;i<*n;i++) { /* work through points */
-    if (i==112) {
-      Rprintf("hello\n");
-    }
-
-    bi = which_box(&kd,i);
-    /* get centre of box containing i, if possible. This leads to fewer occasions on
-       which same box turns up twice as a balanced neighbour. */
-   if (method==0) {
-     for (j=0;j<*d;j++) {
-        if (kd.box[bi].hi[j] < kd.huge && kd.box[bi].lo[j] > -kd.huge) 
-       	x[j] = (kd.box[bi].hi[j] + kd.huge && kd.box[bi].lo[j])*0.5; else
-        x[j] = X[i + j * *n];
-      }
-   } else {
-     for (j=0;j<*d;j++) x[j] = X[i + j * *n];
-   }
- 
-    for (j=0;j<*d;j++) { /* get the balanced neighbours, j indexes dimension */
-      xj = x[j]; 
-      /* upper neighbour ... */
-      if (kd.box[bi].hi[j]!=kd.huge) { /* then there is a neighbour in this direction */
-        if (method==0) {
-          if (kd.box[bi].lo[j] > -kd.huge) 
-            dx = (kd.box[bi].hi[j] - kd.box[bi].lo[j])*1e-6;
-          else dx = db[j]*1e-6;
-          if (dx <=0) dx = db[j]*1e-6;
-          x[j] = kd.box[bi].hi[j]+dx;
-        } else { /* idea here is to avoid e.g. neighbours that have same co-ord in this direction */
-          x[j] += d0;
-          if (x[j] <= kd.box[bi].hi[j]) x[j] = kd.box[bi].hi[j] + d0;
-        }
-        bj = xbox(&kd,x); /* box above bi on axis j*/
-        if (bj==bi) { 
-          Rprintf("%d upper neighbour claimed to be self d=%d!\n",i,j);
-          for (q=0;q<*d;q++) {
-            Rprintf("%g  %g  %g\n",kd.box[bi].lo[q],x[q],kd.box[bi].hi[q]);
-          }
-          Rprintf("\n");
-        }
-        x[j] = xj;
-        /* now get nearest point to i from box bj */
-        n1 = kd.ind[kd.box[bj].p0];
-        d1 = ijdist(i,n1,X,*n,*d);
-        if (kd.box[bj].p1>kd.box[bj].p0) { 
-          n2 = kd.ind[kd.box[bj].p1];
-          d2 = ijdist(i,n2,X,*n,*d);
-          if (d2<d1) { d1=d2;n1=n2;}
-        }
-        /* now put n1 into neighbour list in place of furthest neighbour not 
-           itself an already computed balanced box point (later computed points 
-           are no problem) */
-      
-        max_dist=0.0;
-        max_i=0;
-        maxnd=0.0; /* largest distance to neighbour */
-        for (q=0;q < d2k;q++) {
-          ii = i + *n * q; /* index of distance from i to qth neighbour */
-          if (dist[ii] > maxnd) maxnd = dist[ii];
-          if (ni[ii] == n1) { /* point is already in neighbour set */
-            ni[ii] = -(n1+1);    /* signal to ignore for replacement */
-            max_i = -1; /* signal that no replacement needed */
-            break; 
-          }
-          /* it is not impossible for the same point to turn up twice as an upper
-             and lower neighbour. This can happen when a point is right on the 
-             box boundary, so that an upper neighbour is also detected as a side neighbour */
-          if (n1== -ni[ii]-1) { /* point already in set and marked no replace*/
-            max_i = -1;  /* signal that no replacement needed */
-            break;
-          } 
-          /* find furthest point among replaceables */
-          if (ni[ii]>=0&&dist[ii]>max_dist) { 
-            max_dist = dist[ii];max_i=ii;
-          }
-        }
-        if (max_i >= 0 && d1 < *cut_off * maxnd) { /* replace furthest replacable item with n1 */
-          ni[max_i] = -(n1+1); /* signal not to replace later */
-          dist[max_i] = d1;
-        }
-      } /* upper neighbour done */
-
-     /* lower neighbour... */ 
-     if (kd.box[bi].lo[j]!=-kd.huge) { /* then there is a neigbour in this direction */
-        if (method==0) {       
-          if (kd.box[bi].hi[j] < kd.huge) 
-            dx = (kd.box[bi].hi[j] - kd.box[bi].lo[j])*1e-6;
-          else dx = db[j]*1e-6;
-          if (dx <=0) dx = db[j]*1e-6;
-      
-          x[j] = kd.box[bi].lo[j] - dx; 
-        } else {
-          x[j] -= d0;
-          if (x[j] >= kd.box[bi].lo[j]) x[j] = kd.box[bi].lo[j] - d0;
-        }
-        bj = xbox(&kd,x); /* box below bi on axis j*/
-        if (bj==bi) {
-          Rprintf("lower neighbour claimed to be self!\n");
-        }
-        x[j] = xj;
-        /* now find point closest to point i in box bj */
-     
-        n1 = kd.ind[kd.box[bj].p0];
-    
-        d1 = ijdist(i,n1,X,*n,*d);
-        if (kd.box[bj].p1>kd.box[bj].p0) { 
-          n2 = kd.ind[kd.box[bj].p1];
-          d2 = ijdist(i,n2,X,*n,*d);
-          if (d2<d1) { d1=d2;n1=n2;}
-        }
-        /* now put n1 into neighbour list in place of furthest neighbour not 
-           itself an already computed balanced box point (later computed points 
-            are no problem) */
-       
-        max_dist=0.0;
-        max_i=0;
-        maxnd=0.0;
-        for (q=0;q < d2k;q++) {
-          ii = i + *n * q;
-          if (dist[ii]>maxnd) maxnd = dist[ii];
-          if (ni[ii] == n1) { /* point is already in neighbour set */
-            ni[ii] = -(n1+1);    /* signal to ignore for replacement */
-            max_i = -1; /* signal that no replacement needed */
-            break; 
-          } 
-          if (n1== -ni[ii]-1) { /* point already in set and marked no replace*/
-            max_i = -1;  /* signal that no replacement needed */
-            break;
-          }  
-          if (ni[ii]>=0&&dist[ii]>max_dist) { 
-            max_dist = dist[ii];max_i=ii;
-          }
-        }
-        if (max_i>=0 && d1 < *cut_off * maxnd) { /* replace furthest replacable item with n1 */
-          ni[max_i] = -(n1+1); /* signal not to replace later */
-          dist[max_i] = d1;
-        }
-      } /* lower neighbour done */
-
-    } /* collected balanced neighbours */
-    /* finally reset the negative indices to positive */    
-    for (q=0;q < d2k;q++) {
-       ii = i + *n * q;
-       if (ni[ii]<0) ni[ii] = -ni[ii] - 1; 
-    }
-  }
-  FREE(x); free_kdtree(kd);FREE(db);FREE(count);
-}
 
 
 void tri2nei(int *t,int *nt,int *n,int *d,int *off) {
@@ -1316,7 +1105,7 @@ void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
    more/fewer points in neighbourhood than are required for FD approximation.
 
    Set up is general to allow for future extension of this routine, but currently 
-   only the d==2, m=3, k=6 TPS like case is dealt with herem where d is dimension
+   only the d==2, m=3, k=6 TPS like case is dealt with here where d is dimension
    m is number of components in penalty and k is number of polynomial coefficients
    in polynomial from which derivatives are estimated. 
 
@@ -1777,7 +1566,7 @@ void sspl_mapply(double *y,double *x,double *w,double *U,double *V,int *n,int *n
 
 void ss_coeffs(double *lb,double *a,double *b,double *c,double *d,double *x, int *n) { 
 /* given smoothed values in a (as computed in ss_apply) and corresponding unique values in
-   x, computes coefficients of piecewise cubics making up spline. Note that ubder duplication
+   x, computes coefficients of piecewise cubics making up spline. Note that under duplication
    what is returned by ss_apply will contain duplicates, this routine requires the unduplicated 
    version of the smoothed values.
    if x[i] <= x <= x[i+1] then 

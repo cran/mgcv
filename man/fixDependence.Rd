@@ -23,7 +23,7 @@ fixDependence(X1,X2,tol=.Machine$double.eps^.5,rank.def=0,strict=FALSE)
                 independent of \code{X1} are detected.}
 }
 \details{ The algorithm uses a simple approach based on QR decomposition: see
-Wood (2006, section 4.10.2) for details.
+Wood (2017, section 5.6.3) for details.
 
 }
 \value{ A vector of the columns of \code{X2} which are linearly dependent on
@@ -34,7 +34,7 @@ if \code{strict==FALSE}). \code{NULL} if the two matrices are independent.
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \references{
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 }
 

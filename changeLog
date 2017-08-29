@@ -1,9 +1,47 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
-Currently deprecated and liable to be removed: 
-- single penalty tensor product smooths.
-- p.type!=0 in summary.gam.
+Currently deprecated and liable to be removed:
+- gam performance iteration (1.8-19, Sept 2017)
+
+1.8-19
+
+** bam() now accepts extended families (i.e. nb, tw, ocat etc)
+
+* cox.ph now allows stratification (i.e. baseline hazard can differ between 
+  groups). 
+
+* Example code for matched case control in ?cox.ph was just plain wrong. Now
+  fixed. Thanks to Patrick Farrell.  
+
+* bam(...,discrete=TRUE) tolerance for judging whether smoothing parameters 
+  are on boundary was far too low, so that sps could become so large that 
+  numerical instability set in. Fixed. Thanks to Paul Rosenfield.
+
+* p.type!=0 removed in summary.gam (previously deprecated)
+
+* single penalty tensor product smooths removed (previously deprecated).
+
+* gam(...,optimizer="perf") deprecated.
+
+* extra divergence check added to bam gam default gam fitting (similar to
+  discrete method). 
+
+* preinitialize and postproc components of extended families are now functions,
+  not expressions.
+
+* coefficient divergence check was missing in bam(...,discrete=TRUE) release
+  code - now fixed.
+
+* gaulss family link derivatives modified to avoid overflow. Thanks to 
+  Kristen Beck for reporting the problem.
+
+* redundant 'n' argument removed from extended family 'ls' functions.
+
+* Convergence checking can step fail earlier in fast.REML.fit. If trial step 
+  is no improvement and equal to previous best (to within a tolerance), then 
+  terminate with step failure after a few step halvings if situation persists. 
+  Thanks to Zheyuan Li for reporting problem. 
 
 1.8-18
 

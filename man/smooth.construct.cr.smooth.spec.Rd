@@ -12,7 +12,7 @@
 to shrink towards zero at high enough smoothing parameters (as the smoothing parameter goes to infinity a normal cubic spline tends to a 
 straight line.) \code{s(x,bs="cc")} specifies a cyclic penalized cubic regression spline smooth.
 
-`Cardinal' spline bases are used: Wood (2006) sections 4.1.2 and 4.1.3 gives full details. These bases have 
+`Cardinal' spline bases are used: Wood (2017) sections 5.3.1 and 5.3.2 gives full details. These bases have 
 very low setup costs. For a given basis dimension, \code{k}, they typically perform a little less well 
 then thin plate regression splines, but a little better than p-splines. See \code{\link{te}} to use these bases in tensor product smooths of several variables.
 
@@ -76,7 +76,7 @@ subject to the condition that second derivatives go to zero at the first and las
 }
 
 \references{
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 }
 
