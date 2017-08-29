@@ -46,7 +46,7 @@ order for this term. }
 
 \references{
 
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 
 }

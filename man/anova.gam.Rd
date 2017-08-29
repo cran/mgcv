@@ -12,7 +12,7 @@ to zero. Models to be compared should be fitted to the same data using the same 
 }
 \usage{
 \method{anova}{gam}(object, ..., dispersion = NULL, test = NULL,
-                    freq = FALSE,p.type=0)
+                    freq = FALSE)
 \method{print}{anova.gam}(x, digits = max(3, getOption("digits") - 3),...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -24,8 +24,6 @@ to zero. Models to be compared should be fitted to the same data using the same 
 \code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
 \item{freq}{whether to use frequentist or Bayesian approximations for parametric term 
 p-values. See \code{\link{summary.gam}} for details.}
-\item{p.type}{selects exact test statistic to use for single smooth term p-values. See
- \code{\link{summary.gam}} for details.}
 \item{digits}{number of digits to use when printing output.}
 }
 \details{ If more than one fitted model is provided than \code{anova.glm} is

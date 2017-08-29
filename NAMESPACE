@@ -97,6 +97,7 @@ importMethodsFrom(Matrix,t,colMeans,colSums,chol,solve,lu,expand)
 importFrom(Matrix,Diagonal,sparseMatrix,Matrix)
 importFrom(methods,cbind2,as)
 importFrom(stats,weighted.mean)
+importFrom(stats,optimize)
 
 S3method(anova, gam)
 S3method(influence, gam)

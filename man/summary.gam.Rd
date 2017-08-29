@@ -7,7 +7,7 @@
 summaries from it. (See \code{\link{sink}} to divert output to a file.)
 }
 \usage{
-\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, p.type = 0, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, ...)
 
 \method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
@@ -24,11 +24,6 @@ summaries from it. (See \code{\link{sink}} to divert output to a file.)
 \item{freq}{By default p-values for parametric terms are calculated using the Bayesian estimated
 covariance matrix of the parameter estimators. If this is set to \code{TRUE} then
 the frequentist covariance matrix of the parameters is used instead. }
-
-\item{p.type}{determines how p-values are computed for smooth terms. 0 uses a test statistic with 
-distribution determined by the un-rounded edf of the term. 1 uses upwardly biased rounding of the edf and -1
-uses a version of the test statistic with a null distribution that has to be simulated. 5 is the approximation 
-in Wood (2006). Other options are poor, generate a warning, and are only of research interest. See details.}
 
 \item{digits}{controls number of digits printed in output.}
 
@@ -63,9 +58,6 @@ approach designed for random effects variance components, and this is done. See 
 All p-values are computed without considering uncertainty in the smoothing parameter estimates.
 
 In simulations the p-values have best behaviour under ML smoothness selection, with REML coming second. In general the p-values behave well, but neglecting smoothing parameter uncertainty means that they may be somewhat too low when smoothing parameters are highly uncertain. High uncertainty happens in particular when smoothing parameters are poorly identified, which can occur with nested smooths or highly correlated covariates (high concurvity).
-
-If \code{p.type=5} then the frequentist approximation for p-values of smooth terms described in section
-4.8.5 of Wood (2006) is used. The approximation is not as good as the default, and is no longer recommended.
 
 By default the p-values for parametric model terms are also based on Wald tests using the Bayesian 
 covariance matrix for the coefficients. This is appropriate when there are "re" terms present, and is 
@@ -166,9 +158,8 @@ Wood, S.N. (2013a) A simple test for random effects in regression models. Biomet
 
 Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
 
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
-
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}

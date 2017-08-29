@@ -523,11 +523,11 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     stats[[2]]$mu.eta <- eval(parse(text=
                          paste("function(eta) { ee <- exp(eta); -ee/(ee +",b,")^2 }")))
     stats[[2]]$d2link <-  eval(parse(text=
-    paste("function(mu) { mub <- 1 - mu *",b,";(2*mub-1)/(mub*mu)^2}" )))
+    paste("function(mu) { mub <- pmax(1 - mu *",b,",.Machine$double.eps);(2*mub-1)/(mub*mu)^2}" )))
     stats[[2]]$d3link <-  eval(parse(text=
-    paste("function(mu) { mub <- 1 - mu *",b,";((1-mub)*mub*6-2)/(mub*mu)^3}" )))
+    paste("function(mu) { mub <-  pmax(1 - mu *",b,",.Machine$double.eps);((1-mub)*mub*6-2)/(mub*mu)^3}" )))
     stats[[2]]$d4link <-  eval(parse(text=
-    paste("function(mu) { mub <- 1 - mu *",b,";(((24*mub-36)*mub+24)*mub-6)/(mub*mu)^4}")))
+    paste("function(mu) { mub <- pmax(1 - mu *",b,",.Machine$double.eps);(((24*mub-36)*mub+24)*mub-6)/(mub*mu)^4}")))
   } else stop(link[[2]]," link not available for precision parameter of gaulss")
   
   residuals <- function(object,type=c("deviance","pearson","response")) {

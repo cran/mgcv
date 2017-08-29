@@ -1434,7 +1434,7 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
 { if (is.na(optimizer[2])) optimizer[2] <- "newton"
   if (!optimizer[2]%in%c("newton","bfgs","nlm","optim","nlm.fd")) stop("unknown outer optimization method.")
 
-  # if (!optimizer[2]%in%c("nlm","optim","nlm.fd")) .Deprecated(msg=paste("optimizer",optimizer[2],"is deprecated, please use newton or bfgs"))
+  if (optimizer[2]%in%c("nlm.fd")) .Deprecated(msg=paste("optimizer",optimizer[2],"is deprecated, please use newton or bfgs"))
 
   if (optimizer[1]=="efs" && !inherits(family,"general.family")) {
     warning("Extended Fellner Schall only implemented for general families")
@@ -1579,10 +1579,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
     if (!(method%in%c("REML","ML"))) method <- "REML"
     if (optimizer[1]=="perf") optimizer <- c("outer","newton") 
     if (inherits(G$family,"general.family")) {
-       #if (!is.null(G$offset)) if (is.list(G$offset)) { for (i in 1:length(G$offset)) 
-       #  if (!is.null(G$offset[[i]])) warning("sorry, general families currently ignore offsets")
-       #} else if (sum(G$offset!=0)>0) warning("sorry, general families currently ignore offsets")
-
+    
        method <- "REML" ## any method you like as long as it's REML
        G$Sl <- Sl.setup(G) ## prepare penalty sequence
        ## Xorig <- G$X ## store original X incase it is needed by family - poor option pre=proc can manipulate G$X
@@ -1590,13 +1587,6 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
  
        if (!is.null(start)) start <- Sl.initial.repara(G$Sl,start,inverse=FALSE,both.sides=FALSE)
 
-       #if (!is.null(G$offset)) {
-       #  ok <- FALSE
-       #  if (is.list(G$offset)) {
-       #    for (i in 1:length(G$offset)) if (!is.null(G$offset[[i]]) && sum(G$offset[[i]]!=0)) ok <- TRUE
-       #  } else if (sum(G$offset!=0)) ok <- TRUE
-       #  if (ok) attr(G$X,"offset") <- G$offset ## pass offsets on to family if they are not all null
-       #}
        ## make sure optimizer appropriate for available derivatives
        if (!is.null(G$family$available.derivs)) {
          if (G$family$available.deriv==1 && optimizer[1]!="efs")  optimizer <- c("outer","bfgs")
@@ -1684,7 +1674,14 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
   
   ## extended family may need to manipulate G...
     
-  if (!is.null(G$family$preinitialize)) eval(G$family$preinitialize)
+  if (!is.null(G$family$preinitialize)) {
+    if (inherits(G$family,"general.family")) eval(G$family$preinitialize) else {
+      ## extended family - just initializes theta and possibly y
+      pini <- G$family$preinitialize(G$y,G$family)
+      if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
+      if (!is.null(pini$y)) G$y <- pini$y
+    }
+  }
 
   if (length(G$sp)>0) lsp2 <- log(initial.spg(G$X,G$y,G$w,G$family,G$S,G$rank,G$off,
                                   offset=G$offset,L=G$L,lsp0=G$lsp0,E=G$Eb,...))
@@ -1697,7 +1694,8 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
     if (!ok) stop("in.out incorrect: see documentation")
     lsp <- log(in.out$sp) 
   } else {## do performance iteration.... 
-    if (fixedSteps>0) { 
+    if (fixedSteps>0) {
+    
       object <- gam.fit(G,family=G$family,control=control,gamma=gamma,fixedSteps=fixedSteps,...)
       lsp <- log(object$sp) 
     } else {
@@ -1797,7 +1795,16 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
   ## extended family may need to manipulate fit object. Code
   ## will need to include the following line if G$X used...
   ## G$X <- Sl.initial.repara(G$Sl,G$X,inverse=TRUE,cov=FALSE,both.sides=FALSE)
-  if (!is.null(G$family$postproc)) eval(G$family$postproc) 
+  if (!is.null(G$family$postproc)) {
+    if (inherits(G$family,"general.family")) eval(G$family$postproc) else {
+      posr <- G$family$postproc(family=object$family,y=G$y,prior.weights=object$prior.weights,
+              fitted=object$fitted.values,linear.predictors=object$linear.predictors,offset=G$offset,
+	      intercept=G$intercept)
+      if (!is.null(posr$family)) object$family$family <- posr$family
+      if (!is.null(posr$deviance)) object$deviance <- posr$deviance
+      if (!is.null(posr$null.deviance)) object$null.deviance <- posr$null.deviance	      
+    }
+  } 
 
   if (!is.null(G$P)) { ## matrix transforming from fit to prediction parameterization
     object$coefficients <- as.numeric(G$P %*% object$coefficients)
@@ -2223,7 +2230,8 @@ gam.fit <- function (G, start = NULL, etastart = NULL,
     y<-G$y # original data
     X<-G$X # original design matrix
     if (nvars == 0) stop("Model seems to contain no terms")
-    olm <- G$am   # only need 1 iteration as it's a pure additive model. 
+    olm <- G$am   # only need 1 iteration as it's a pure additive model.
+    if (!olm)  .Deprecated(msg="performance iteration with gam is deprecated, use bam instead")
     find.theta<-FALSE # any supplied -ve binomial theta treated as known, G$sig2 is scale parameter
     if (substr(family$family[1],1,17)=="Negative Binomial")
     { Theta <- family$getTheta()
@@ -2570,13 +2578,14 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
   # get data from which to predict.....  
   nd.is.mf <- FALSE # need to flag if supplied newdata is already a model frame 
   ## get name of response...
-  yname <- all.vars(object$terms)[attr(object$terms,"response")]
+  # yname <- all.vars(object$terms)[attr(object$terms,"response")]
+  yname <- attr(attr(object$terms,"dataClasses"),"names")[attr(object$terms,"response")]
   if (newdata.guaranteed==FALSE) {
     if (missing(newdata)) { # then "fake" an object suitable for prediction 
       newdata <- object$model
       new.data.ok <- FALSE
       nd.is.mf <- TRUE
-      response <- newdata[[yname]]
+      response <- newdata[[yname]] ## ok even with "cbind(foo,bar)" as yname 
     } else {  # do an R ``standard'' evaluation to pick up data
       new.data.ok <- TRUE
       if (is.data.frame(newdata)&&!is.null(attr(newdata,"terms"))) { # it's a model frame
@@ -2589,22 +2598,28 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 
         ## get names of required variables, less response, but including offset variable
         ## see ?terms.object and ?terms for more information on terms objects
-        yname <- all.vars(object$terms)[attr(object$terms,"response")]
+        # yname <- all.vars(object$terms)[attr(object$terms,"response")] ## redundant
+        resp <- get.var(yname,newdata,FALSE)
         naresp <- FALSE
-        if (!is.null(object$family$predict)&&!is.null(newdata[[yname]])) { 
+        #if (!is.null(object$family$predict)&&!is.null(newdata[[yname]])) {
+	if (!is.null(object$family$predict)&&!is.null(resp)) {
           ## response provided, and potentially needed for prediction (e.g. Cox PH family)
           if (!is.null(object$pred.formula)) object$pred.formula <- attr(object$pred.formula,"full")
           response <- TRUE
           Terms <- terms(object)
-          resp <- newdata[[yname]]
-          if (sum(is.na(resp))>0) {
-            naresp <- TRUE ## there are NAs in supplied response
-            ## replace them with a numeric code, so that rows are not dropped below
-            rar <- range(resp,na.rm=TRUE)
-            thresh <- rar[1]*1.01-rar[2]*.01
-            resp[is.na(resp)] <- thresh
-            newdata[[yname]] <- thresh 
-          } 
+          #resp <- newdata[[yname]]
+	  if (is.matrix(resp)) {
+            if (sum(is.na(rowSums(resp)))>0) stop("no NAs allowed in response data for this model")
+          } else { ## vector response
+            if (sum(is.na(resp))>0) {
+              naresp <- TRUE ## there are NAs in supplied response
+              ## replace them with a numeric code, so that rows are not dropped below
+              rar <- range(resp,na.rm=TRUE)
+              thresh <- rar[1]*1.01-rar[2]*.01
+              resp[is.na(resp)] <- thresh
+              newdata[[yname]] <- thresh 
+            }
+	  }  
         } else { ## response not provided
           response <- FALSE 
           Terms <- delete.response(terms(object))
@@ -2621,14 +2636,16 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
           if (naresp) newdata[[yname]][newdata[[yname]]<=thresh] <- NA ## reinstate as NA  
         } ## otherwise it's intercept only and newdata can be left alone
         na.act <- attr(newdata,"na.action")
-        response <- if (response) newdata[[yname]] else NULL
+        #response <- if (response) newdata[[yname]] else NULL
+	response <- if (response) get.var(yname,newdata,FALSE) else NULL
       }
     }
   } else { ## newdata.guaranteed == TRUE
     na.act <- NULL
     new.data.ok=TRUE ## it's guaranteed!
     if (!is.null(attr(newdata,"terms"))) nd.is.mf <- TRUE
-    response <- newdata[[yname]]
+    #response <- newdata[[yname]]
+    response <- get.var(yname,newdata,FALSE)
   }
 
 
@@ -3137,27 +3154,6 @@ residuals.gam <-function(object, type = "deviance",...)
 ## Start of anova and summary (with contributions from Henric Nilsson) ....
 
 
-smoothTest <- function(b,X,V,eps=.Machine$double.eps^.5) {
-## Forms Cox, Koh, etc type test statistic, and
-## obtains null distribution by simulation...
-## if b are coefs f=Xb, cov(b) = V. z is a vector of 
-## i.i.d. N(0,1) deviates
-
-  qrx <- qr(X)
-  R <- qr.R(qrx)
-  V <- R%*%V[qrx$pivot,qrx$pivot]%*%t(R)
-  V <- (V + t(V))/2
-  ed <- eigen(V,symmetric=TRUE)
-  k <- length(ed$values)
-  ## could truncate, but it doesn't improve power in correlated case!
-  f <- t(ed$vectors[,1:k])%*%R%*%b
-  t <- sum(f^2)
-  k <- ncol(X)
-  lambda <- as.numeric(ed$values[1:k])
-  pval <- liu2(t,lambda) ## should really use Davies
-  list(stat=t,pval=pval)  
-} 
-
 
 liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
 # Evaluate Pr[sum_i \lambda_i \chi^2_h_i < x] approximately.
@@ -3377,9 +3373,6 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 ## on entry `rank' should be an edf estimate
 ## 0. Default using the fractionally truncated pinv.
 ## 1. Round down to k if k<= rank < k+0.05, otherwise up.
-## 2. Naive rounding.
-## 3. Round up.
-## 4. Numerical rank estimation, tol=1e-3
 ## res.df is residual dof used to estimate scale. <=0 implies
 ## fixed scale.
 
@@ -3394,23 +3387,9 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 
   k <- max(0,floor(rank)) 
   nu <- abs(rank - k)     ## fractional part of supplied edf
-  if (type < -.5) { ## Crude modification of Cox and Koh
-    res <- smoothTest(p,X,V)
-    res$rank <- rank
-    return(res)
-  } else  if (type==1) { ## round up is more than .05 above lower
+  if (type==1) { ## round up is more than .05 above lower
     if (rank > k + .05||k==0) k <- k + 1
     nu <- 0;rank <- k
-  } else if (type==2) { ## naive round
-    nu <- 0;rank <- k <- max(1,round(rank))
-    warning("p-values may give low power in some circumstances")
-  } else if (type==3) { ## round up
-    nu <- 0; rank <- k <- max(1,ceiling(rank))
-    warning("p-values un-reliable")
-  } else if (type==4) { ## rank estimation
-    rank <- k <- max(sum(ed$values>1e-3*max(ed$values)),1) 
-    nu <- 0
-    warning("p-values may give very low power")
   }
 
   if (nu>0) k1 <- k+1 else k1 <- k
@@ -3482,22 +3461,13 @@ testStat <- function(p,X,V,rank=NULL,type=0,res.df= -1) {
 
 
 
-summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...) {
+summary.gam <- function (object, dispersion = NULL, freq = FALSE, ...) {
 ## summary method for gam object - provides approximate p values 
 ## for terms + other diagnostics
 ## Improved by Henric Nilsson
 ## * freq determines whether a frequentist or Bayesian cov matrix is 
 ##   used for parametric terms. Usually the default TRUE will result
 ##   in reasonable results with paraPen.
-## * p.type determines the type of smooth p-value
-##   0 Bayesian default, unless smooth opts out
-##   1 Bayesian biased rounding
-##   2 Bayesian rounding
-##   3 Bayesian round up
-##   4 Bayesian numerical rank
-##   5 Wood (2006) frequentist
-##   -1 Modified Cox et al.
-##   -2 old style p-values based on X not R
 ## If a smooth has a field 'random' and it is set to TRUE then 
 ## it is treated as a random effect for some p-value dist calcs 
 
@@ -3520,10 +3490,6 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
     warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
     useR <- FALSE
   } else useR <- TRUE
-
-  if (p.type < -1) useR <- FALSE
-
-  if (p.type!=0) warning("p.type!=0 is deprecated, and liable to be removed in future")
 
   p.table <- pTerms.table <- s.table <- NULL
 
@@ -3574,7 +3540,6 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
   term.labels <- rep("",0)
   k <- 0 ## total term counter
   for (j in 1:length(pterms)) {
-    ##term.labels <- attr(object$pterms,"term.labels")
     tlj <- attr(pterms[[j]],"term.labels") 
     nt <- length(tlj)
     if (j>1 && nt>0) tlj <- paste(tlj,j-1,sep=".")
@@ -3584,9 +3549,7 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       ind <- pstart[j] - 1 + 1:np 
       Vb <- covmat[ind,ind,drop=FALSE]
       bp <- array(object$coefficients[ind],np)
-      #pTerms.pv <- if (j==1) array(0,nt) else c(pTerms.pv,array(0,nt))
-      #attr(pTerms.pv,"names") <- term.labels
-      #pTerms.df <- pTerms.chi.sq <- pTerms.pv
+    
       for (i in 1:nt) { 
         k <- k + 1
         ind <- object$assign[[j]]==i
@@ -3624,48 +3587,35 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
 
   m <- length(object$smooth) # number of smooth terms
   
-  if (p.type < 0 ) {
-    kmax <- 0  
-    for (i in 1:m) { 
-      start <- object$smooth[[i]]$first.para
-      stop <- object$smooth[[i]]$last.para
-      k <- stop-start+1
-      if (k>kmax) kmax <- k 
-    }
-  }
-
   df <- edf1 <- edf <- s.pv <- chi.sq <- array(0, m)
-  if (m>0) # form test statistics for each smooth
-  { if (p.type < 5) { ## Bayesian p-values required 
-      if (useR)  X <- object$R else {
-        sub.samp <- max(1000,2*length(object$coefficients)) 
-        if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
-          seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-          if (inherits(seed,"try-error")) {
-            runif(1)
-            seed <- get(".Random.seed",envir=.GlobalEnv)
-          }
-          kind <- RNGkind(NULL)
-          RNGkind("default","default")
-          set.seed(11) ## ensure repeatability
-          ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
-          X <- predict(object,object$model[ind,],type="lpmatrix")
-          RNGkind(kind[1],kind[2])
-          assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
-        } else { ## don't need to subsample 
-          X <- model.matrix(object)
+  if (m>0) { # form test statistics for each smooth
+    ## Bayesian p-values required 
+    if (useR)  X <- object$R else {
+      sub.samp <- max(1000,2*length(object$coefficients)) 
+      if (nrow(object$model)>sub.samp) { ## subsample to get X for p-values calc.
+        seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+        if (inherits(seed,"try-error")) {
+          runif(1)
+          seed <- get(".Random.seed",envir=.GlobalEnv)
         }
-        X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)
-      }    
-    } ## end if (p.type<5)
+        kind <- RNGkind(NULL)
+        RNGkind("default","default")
+        set.seed(11) ## ensure repeatability
+        ind <- sample(1:nrow(object$model),sub.samp,replace=FALSE)  ## sample these rows from X
+        X <- predict(object,object$model[ind,],type="lpmatrix")
+        RNGkind(kind[1],kind[2])
+        assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+      } else { ## don't need to subsample 
+        X <- model.matrix(object)
+      }
+      X <- X[!is.na(rowSums(X)),] ## exclude NA's (possible under na.exclude)    
+    } ## end if (m>0)
 
     for (i in 1:m) { ## loop through smooths
 
       start <- object$smooth[[i]]$first.para;stop <- object$smooth[[i]]$last.para
 
-      if (p.type==5) { ## use frequentist cov matrix 
-        V <- object$Ve[start:stop,start:stop,drop=FALSE] 
-      } else V <- object$Vp[start:stop,start:stop,drop=FALSE] ## Bayesian
+      V <- object$Vp[start:stop,start:stop,drop=FALSE] ## Bayesian
       
       p <- object$coefficients[start:stop]  # params for smooth
 
@@ -3673,54 +3623,29 @@ summary.gam <- function (object, dispersion = NULL, freq = FALSE, p.type=0, ...)
       ## extract alternative edf estimate for this smooth, if possible...
       if (!is.null(object$edf1)) edf1[i] <-  sum(object$edf1[start:stop]) 
  
-      if (p.type==5) { ## old style frequentist
-        M1 <- object$smooth[[i]]$df
-        M <- min(M1,ceiling(2*sum(object$edf[start:stop]))) ## upper limit of 2*edf on rank
-        V <- pinv(V,M) # get rank M pseudoinverse of V
-        chi.sq[i] <- t(p)%*%V%*%p
-        df[i] <- attr(V, "rank")
-      } else { ## Better founded alternatives...
-        Xt <- X[,start:stop,drop=FALSE]  
-        fx <- if (inherits(object$smooth[[i]],"tensor.smooth")&&
-                  !is.null(object$smooth[[i]]$fx)) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
-        if (!fx&&object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
-          res <- reTest(object,i)
-        } else { ## Inverted Nychka interval statistics
-          df[i] <- min(ncol(Xt),edf1[i])
-          if (est.disp) rdf <- residual.df else rdf <- -1
-          res <- testStat(p,Xt,V,df[i],type=p.type,res.df = rdf)
-        }
-        df[i] <- res$rank
-        chi.sq[i] <- res$stat
-        s.pv[i] <- res$pval 
+      Xt <- X[,start:stop,drop=FALSE]  
+      fx <- if (inherits(object$smooth[[i]],"tensor.smooth")&&
+                !is.null(object$smooth[[i]]$fx)) all(object$smooth[[i]]$fx) else object$smooth[[i]]$fixed
+      if (!fx&&object$smooth[[i]]$null.space.dim==0&&!is.null(object$R)) { ## random effect or fully penalized term
+        res <- reTest(object,i)
+      } else { ## Inverted Nychka interval statistics
+        df[i] <- min(ncol(Xt),edf1[i])
+        if (est.disp) rdf <- residual.df else rdf <- -1
+        res <- testStat(p,Xt,V,df[i],type=0,res.df = rdf)
       }
+      df[i] <- res$rank
+      chi.sq[i] <- res$stat
+      s.pv[i] <- res$pval 
+      
       names(chi.sq)[i]<- object$smooth[[i]]$label
       
-      if (p.type == 5) {
-        if (!est.disp)
-         s.pv[i] <- pchisq(chi.sq[i], df = df[i], lower.tail = FALSE)
-        else
-         s.pv[i] <- pf(chi.sq[i]/df[i], df1 = df[i], df2 = residual.df, lower.tail = FALSE)
-         ## p-values are meaningless for very small edf. Need to set to NA
-        if (df[i] < 0.1) s.pv[i] <- NA
-      }
     }
     if (!est.disp) {
-      if (p.type==5) {
-        s.table <- cbind(edf, df, chi.sq, s.pv)      
-        dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "Chi.sq", "p-value"))
-      } else {
-        s.table <- cbind(edf, df, chi.sq, s.pv)      
-        dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "Chi.sq", "p-value"))
-      }
+      s.table <- cbind(edf, df, chi.sq, s.pv)      
+      dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "Chi.sq", "p-value"))
     } else {
-      if (p.type==5) {
-        s.table <- cbind(edf, df, chi.sq/df, s.pv)      
-        dimnames(s.table) <- list(names(chi.sq), c("edf", "Est.rank", "F", "p-value"))
-      } else {
-        s.table <- cbind(edf, df, chi.sq/df, s.pv)      
-        dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "F", "p-value"))
-      }
+      s.table <- cbind(edf, df, chi.sq/df, s.pv)      
+      dimnames(s.table) <- list(names(chi.sq), c("edf", "Ref.df", "F", "p-value"))
     }
   }
   w <- as.numeric(object$prior.weights)
@@ -3773,7 +3698,7 @@ print.summary.gam <- function(x, digits = max(3, getOption("digits") - 3),
 } ## print.summary.gam
 
 
-anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE,p.type=0)
+anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE)
 # improved by Henric Nilsson
 {   # adapted from anova.glm: R stats package
     dotargs <- list(...)
@@ -3814,7 +3739,7 @@ anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE,
     } 
     if (!is.null(test)) warning("test argument ignored")
     if (!inherits(object,"gam")) stop("anova.gam called with non gam object")
-    sg <- summary(object, dispersion = dispersion, freq = freq,p.type=p.type)
+    sg <- summary(object, dispersion = dispersion, freq = freq)
     class(sg) <- "anova.gam"
     sg
 } ## anova.gam

@@ -9,7 +9,7 @@ full likelihood is desirable. \code{Tweedie} is for use with fixed \code{p}. \co
 is to be estimated during fitting. For fixed \code{p} between 1 and 2 the Tweedie is an exponential family 
 distribution with variance given by the mean to the power \code{p}.
 
-\code{tw} is only useable with \code{\link{gam}}, not \code{bam} or \code{gamm}. \code{Tweedie} works with all three.
+\code{tw} is only useable with \code{\link{gam}} and \code{\link{bam}} but not \code{gamm}. \code{Tweedie} works with all three.
 }
 
 \usage{

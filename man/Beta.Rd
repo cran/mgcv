@@ -2,7 +2,7 @@
 \alias{betar}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM beta regression family}
-\description{Family for use with \code{\link{gam}}, implementing regression for beta distributed data on (0,1).
+\description{Family for use with \code{\link{gam}} or \code{\link{bam}}, implementing regression for beta distributed data on (0,1).
 A linear predictor controls the mean, \eqn{\mu}{mu} of the beta distribution, while the variance is then
 \eqn{\mu(1-\mu)/(1+\phi)}{mu(1-mu)/(1+phi)}, with parameter \eqn{\phi}{phi} being estimated during 
 fitting, alongside the smoothing parameters.
@@ -31,7 +31,7 @@ keep the log likelihood bounded for all parameter values. Any data exactly at 0 
 
 %- maybe also `usage' for other objects documented here.
 
-\author{ Natalya Pya (nyp20@bath.ac.uk) and Simon Wood (s.wood@r-project.org)
+\author{ Natalya Pya (nat.pya@gmail.com) and Simon Wood (s.wood@r-project.org)
 }
 
 \section{WARNINGS}{

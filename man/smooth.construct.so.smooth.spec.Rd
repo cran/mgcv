@@ -207,7 +207,7 @@ plot(bk) ## default plot
 ##########################################
 ## tensor product example...
 ##########################################
-\dontrun{
+\donttest{
 set.seed(9)
 n <- 10000
 v <- runif(n)*5-1;w<-runif(n)*2-1

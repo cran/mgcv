@@ -602,7 +602,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    D2 <- matrix(oo$D2,ntot,ntot); ldet2 <- matrix(oo$ldet2,ntot,ntot)
    bSb2 <- matrix(oo$P2,ntot,ntot)
    ## compute the REML score...
-   ls <- family$ls(y,weights,n,theta,scale)
+   ls <- family$ls(y,weights,theta,scale)
    nt <- length(theta)
    lsth1 <- ls$lsth1[1:nt];
    lsth2 <- as.matrix(ls$lsth2)[1:nt,1:nt] ## exclude any derivs w.r.t log scale here
@@ -771,6 +771,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     grad <- ll$lb - St%*%coef 
     Hp <- -ll$lbb+St
     D <- diag(Hp)
+    if (sum(!is.finite(D))>0) stop("non finite values in Hessian")
     indefinite <- FALSE
     if (sum(D <= 0)) { ## Hessian indefinite, for sure
       D <- rep(1,ncol(Hp))

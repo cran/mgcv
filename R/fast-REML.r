@@ -1,7 +1,7 @@
 ## code for fast REML computation. key feature is that first and 
 ## second derivatives come at no increase in leading order 
 ## computational cost, relative to evaluation! 
-## (c) Simon N. Wood, 2010-2016
+## (c) Simon N. Wood, 2010-2017
 
 Sl.setup <- function(G) {
 ## Sets up a list representing a block diagonal penalty matrix.
@@ -226,6 +226,28 @@ Sl.setup <- function(G) {
   attr(Sl,"lambda") <- lambda ## smoothing parameters corresponding to E
   Sl ## the penalty list
 } ## end of Sl.setup
+
+Sl.Sb <- function(Sl,rho,beta) {
+## computes S %*% beta where S is total penalty matrix defined by Sl and rho,
+## the log smoothing parameters. Assumes initial re-parameterization has taken
+## place, so single penalties are multiples of identity and uses S for
+## multi-S blocks. Logic is identical to Sl.addS.
+  k <- 1
+  a <- beta * 0
+  for (b in 1:length(Sl)) {
+    ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
+    if (length(Sl[[b]]$S)==1) { ## singleton - multiple of identity
+      a[ind] <- a[ind] + beta[ind] * exp(rho[k])
+      k <- k + 1
+    } else { ## mulit-S block
+      for (j in 1:length(Sl[[b]]$S)) {
+        a[ind] <- a[ind] + exp(rho[k]) * (Sl[[b]]$S[[j]] %*% beta[ind])
+        k <- k + 1
+      }
+    }
+  }
+  a
+} ## Sl.Sb
 
 Sl.initial.repara <- function(Sl,X,inverse=FALSE,both.sides=TRUE,cov=TRUE,nt=1) {
 ## Routine to apply initial Sl re-parameterization to model matrix X,
@@ -748,7 +770,7 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
 
   ## alternative all in one code - matches loop results, but
   ## timing close to identical - modified for parallel exec
-  D <- matrix(unlist(Skb),nrow(R),nd)
+  D <- matrix(unlist(Skb),nrow(XX),nd)
   bSb1 <- colSums(beta*D)
   #D <- D[piv,]/d[piv]
   D1 <- .Call(C_mgcv_Rpforwardsolve,R,D[piv,]/d[piv],nt) ## note R transposed internally unlike forwardsolve
@@ -794,14 +816,14 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
 ## with penalty defined by Sl and rho, and evaluates a REML Newton step, the REML 
 ## gradiant and the the estimated coefs bhat. If phi.fixed=FALSE then we need 
 ## yy = y'Wy in order to get derivsatives w.r.t. phi. 
-  
+  tol <- as.numeric(tol)
   rho <- if (is.null(L)) rho + rho0 else L%*%rho + rho0
   if (length(rho)<length(rho0)) rho <- rho0 ## ncol(L)==0 or length(rho)==0
   ## get log|S|_+ without stability transform... 
   fixed <- rep(FALSE,length(rho))
   ldS <- ldetS(Sl,rho,fixed,np=ncol(XX),root=FALSE,repara=FALSE,nt=nt)
   
-  ## now the Choleki factor of the penalized Hessian... 
+  ## now the Cholesky factor of the penalized Hessian... 
   #XXp <- XX+crossprod(ldS$E) ## penalized Hessian
   XXp <- Sl.addS(Sl,XX,rho)
 
@@ -819,7 +841,7 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
   beta <- rep(0,p)
   beta[piv] <- backsolve(R,(forwardsolve(t(R),f[piv]/d[piv])))/d[piv]
  
-  ## get component derivatives based on IFT...
+  ## get component derivatives based on IFT (noting that ldS$Sl has s.p.s updated to current)
   dift <- Sl.iftChol(ldS$Sl,XX,R,d,beta,piv,nt=nt)
  
   ## now the derivatives of log|X'X+S|
@@ -1018,15 +1040,25 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
     rho1 <- L%*%(rho + step)+rho.0; if (!phi.fixed) log.phi <- rho1[nr+1]
     trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt)
     k <- 0
-    while (trial$reml>best$reml && k<35) { ## step half until improvement
+    not.moved <- 0 ## count number of consecutive steps of essentially no change from best
+    while (trial$reml>best$reml) { ## step half until improvement or failure
+      ## idea with the following is to count the number of consecutive step halvings
+      ## without a numerically significant change from best$reml, since
+      ## this is an early indicator of step failure.
+      if (trial$reml-best$reml < conv.tol*reml.scale) not.moved <- not.moved + 1 else not.moved <- 0
+      if (k==25||sum(rho != rho + step)==0||not.moved>3) {
+        step.failed <-  TRUE
+	break
+      }	
       step <- step/2;k <- k + 1
       rho1 <- L%*%(rho + step)+rho.0; if (!phi.fixed) log.phi <- rho1[nr+1]
       trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt)
     }
-    if ((k==35 && trial$reml>best$reml)||(sum(rho != rho + step)==0)) { ## step has failed
-      step.failed <- TRUE
-      break ## can get no further
-    }
+    if (step.failed) break ## can get no further
+    #if ((k==35 && trial$reml>best$reml)||(sum(rho != rho + step)==0)) { ## step has failed
+    #  step.failed <- TRUE
+    #  break ## can get no further
+    #}
     ## At this stage the step has been successful. 
     ## Need to test for convergence...
     converged <- TRUE

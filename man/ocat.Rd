@@ -3,7 +3,7 @@
 \alias{ordered.categorical}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM ordered categorical family}
-\description{Family for use with \code{\link{gam}}, implementing regression for ordered categorical data.
+\description{Family for use with \code{\link{gam}} or \code{\link{bam}}, implementing regression for ordered categorical data.
 A linear predictor provides the expected value of a latent variable following a logistic distribution. The 
 probability of this latent variable lying between certain cut-points provides the probability of the ordered 
 categorical variable being of the corresponding category. The cut-points are estimated along side the model 

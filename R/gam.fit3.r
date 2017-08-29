@@ -1346,7 +1346,9 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     eh <- eigen(hess1,symmetric=TRUE)
     d <- eh$values;U <- eh$vectors
     indef <- (sum(-d > abs(d[1])*.Machine$double.eps^.5)>0) ## indefinite problem
-    
+    ## need a different test if there is only one smoothing parameter,
+    ## otherwise infinite sp can count as always indefinite...
+    if (indef && length(d)==1) indef <- d < -score.scale * .Machine$double.eps^.5
     ## set eigen-values to their absolute value - heuristically appealing
     ## as it avoids very long steps being proposed for indefinte components,
     ## unlike setting -ve e.v.s to very small +ve constant...

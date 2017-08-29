@@ -239,7 +239,7 @@ but not for terms with a rank defficient penalty (or penalties with a wide eigen
 \references{
 Wahba (1990) Spline Models of Observational Data SIAM.
 
-Wood S.N. (2006) Generalized Additive Models: An Introduction with R. Chapman
+Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
 }
 

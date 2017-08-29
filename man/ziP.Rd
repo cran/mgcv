@@ -2,7 +2,7 @@
 \alias{ziP}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM zero-inflated Poisson regression family}
-\description{Family for use with \code{\link{gam}}, implementing regression for zero inflated Poisson data
+\description{Family for use with \code{\link{gam}} or \code{\link{bam}}, implementing regression for zero inflated Poisson data
 when the complimentary log log of the zero probability is linearly dependent on the log of the Poisson parameter. Use with great care, noting that simply having many zero response observations is not an indication of zero inflation: the question is whether you have too many zeroes given the specified model.
 
 This sort of model is really only appropriate when none of your covariates help to explain the zeroes in your data. If your covariates predict which observations are likely to have zero mean then adding a zero inflated model on top of this is likely to lead to identifiability problems. Identifiability problems may lead to fit failures, or absurd values for the linear predictor or predicted values. 
