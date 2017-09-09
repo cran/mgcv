@@ -348,7 +348,7 @@ void kd_tree(double *X,int *n, int *d,kdtree_type *kd) {
 } /* end of kd_tree */
 
 
-void Rkdtree(double *X,int *n, int *d,int *idat,double *ddat) { 
+void Rkdtree0(double *X,int *n, int *d,int *idat,double *ddat) { 
 /* Routine to export kdtree data to R 
      m <- 2;
      while (m<n) m <- m*2
@@ -360,7 +360,8 @@ void Rkdtree(double *X,int *n, int *d,int *idat,double *ddat) {
        ddat is an nb*2*d vector
        idat is a 2 + 7*nb vector
        - together they encode the kd tree 
-
+   OLD routine based on .C calls and copying kd tree to 
+   R vectors.
 */
   kdtree_type kd;
   kd_tree(X,n,d,&kd); /* create kd tree */
@@ -368,6 +369,57 @@ void Rkdtree(double *X,int *n, int *d,int *idat,double *ddat) {
   free_kdtree(kd); /* free structure */
 }
 
+static void kdFinalizer(SEXP ptr) {
+  kdtree_type *kd;
+  kd = (kdtree_type *) R_ExternalPtrAddr(ptr);
+  //Rprintf("%p  %p\n",kd,ptr);
+  free_kdtree(*kd); /* free tree structure */
+  //Rprintf("*!");
+  FREE(kd); /* free kd itself */
+}  
+
+SEXP Rkdtree(SEXP x) {
+/* Create a kd tree and return a handle for it to R as attribute 
+   of (dummy) integer returned here. Idea is that further routines 
+   requiring the tree then don't need to waste time copying it.
+
+  
+   library(mgcv)
+
+   X <- matrix(runif(3000000),1000000,3)
+   kd <- mgcv:::kd.tree(X)   
+   x <- matrix(runif(300),100,3)
+   nei <- mgcv:::kd.nearest(kd,X,x,1)
+   bb <- mgcv:::kd.radius(kd,X,x,.01) 
+   where X is a matrix each row of which is a d-point. 
+*/
+  kdtree_type *kd;
+  double *X;
+  int *dim,n,d;
+  SEXP DIM, ans, ptr;
+  static SEXP kd_symb = NULL;
+  if (!kd_symb) kd_symb = install("kd_ptr"); /* register symbol for attribute */
+  X = REAL(x);
+  DIM = getAttrib(x, install("dim"));
+  dim=INTEGER(DIM);
+  n=dim[0];d=dim[1];
+  kd = (kdtree_type *) CALLOC((size_t)1,sizeof(kdtree_type));
+  kd_tree(X,&n,&d,kd); /* create kd tree */
+  /* something to attach the pointer to as an attribute.... */
+  ans = PROTECT(allocVector(INTSXP, 1));
+  INTEGER(ans)[0] =0;
+  /* make pointer to kd (i.e. a pointer to a pointer - a handle) ...*/
+  ptr = R_MakeExternalPtr(kd,R_NilValue, R_NilValue);
+  PROTECT(ptr);
+  /* Register the routine to call when R object to
+     which ptr belongs is destroyed... */
+  R_RegisterCFinalizerEx(ptr, kdFinalizer, TRUE); 
+  /* attach ptr as attibute to 'ans' ... */
+  setAttrib(ans, kd_symb, ptr);
+  //Rprintf("%p  %p\n",kd,ptr);
+  UNPROTECT(2);
+  return ans;
+} /* Rkdtree */
 
 void update_heap(double *h,int *ind,int n) {
 /* h contains n numbers, such that h[i] > h[2*i+1] and
@@ -677,9 +729,59 @@ void k_radius(double r, kdtree_type kd, double *X,double *x,int *list,int *nlist
   }
 } /* k_radius */
 
+SEXP Rkradius(SEXP Xr,SEXP xr,SEXP rr,SEXP offr) {
+/* Xr is matrix of points with attribute "kd_ptr" which is a handle to a kd tree.
+xr is a matrix of m rows. The routine finds all elements of Xr within r of each
+row of xr. off is an m+1 vector. Returns a vector ni such that ni[off[i]:(off[i+1]-1)] 
+contains the indices (rows) in Xr of the neighbours of the ith row of xr.  
 
-void Rkradius(double *r,int *idat,double *ddat,double *X,double *x,int *m,int *off,int *ni,int *op) {
-/* Given kd tree defined by idat, ddat and X, from R, this routine finds all points in  
+ */
+  double *X,*x,*dis,*r,*xx;
+  kdtree_type *kd;
+  int *dim,m,d,*off,*nei,*list,nn,i,j,n_buff=0,nlist,*ni;
+  SEXP DIM,ptr,neir;
+  static SEXP kd_symb = NULL, dim_sym = NULL;
+  if (!dim_sym) dim_sym = install("dim");
+  if (!kd_symb) kd_symb = install("kd_ptr"); /* register symbol for attribute */
+  //DIM = getAttrib(Xr, dim_sym);
+  //dim = INTEGER(DIM); n = dim[0];
+  DIM = getAttrib(xr, dim_sym);
+  dim = INTEGER(DIM); m = dim[0];
+  Rprintf("0 ");
+  X = REAL(Xr);x = REAL(xr);
+  r = REAL(rr);
+  ptr = getAttrib(Xr, kd_symb);
+  kd = (kdtree_type *) R_ExternalPtrAddr(ptr);
+  d = kd->d; /* dimension */
+  off = INTEGER(offr);
+  Rprintf("1 ");
+  /* get the r-radius neighbour information... */
+  list = (int *)CALLOC((size_t)kd->n,sizeof(int)); /* list of neighbours of ith point */
+  n_buff = kd->n*10;
+  nei = (int *)CALLOC((size_t)n_buff,sizeof(int)); /* global list of neighbours */
+  xx=x;nn=0;off[0]=0;
+  for (i=0;i<m;i++) { /* work through points in x */
+    k_radius(*r, *kd, X,xx,list,&nlist);
+    if (nn+nlist>n_buff) { /* expand nei */
+      n_buff *= 2;
+      nei = (int *)R_chk_realloc(nei,(size_t)n_buff*sizeof(int));
+    }
+    for (j=nn;j<nn+nlist;j++) nei[j] = list[j-nn];
+    nn += nlist;
+    off[i+1] = nn;
+    xx += d; /* next point */
+  }
+  neir = PROTECT(allocVector(INTSXP, nn));
+  ni = INTEGER(neir);Rprintf("2 ");
+  for (dim=nei;dim<nei+nn;dim++,ni++) *ni = *dim;
+  FREE(list);FREE(nei);
+  UNPROTECT(1);
+  return neir;
+} /* Rkradius */
+
+void Rkradius0(double *r,int *idat,double *ddat,double *X,double *x,int *m,int *off,int *ni,int *op) {
+/* This is old version based on copying tree to R structures, rather than retunring tree as external pointer.
+Given kd tree defined by idat, ddat and X, from R, this routine finds all points in  
    the tree less than distance r from each point in x. x contains the points stored end-to-end.
    Routine must be called twice. First with op==0, which does the work, but only returns the 
    length required for ni, in off[m+1].
@@ -818,7 +920,7 @@ void k_newn_work(double *Xm,kdtree_type kd,double *X,double *dist,int *ni,int*m,
   *n = pcount;
 } /* k_newn_work */
 
-void Rkdnearest(double *X,int *idat,double *ddat,int *n,double *x, int *m, int *ni, double *dist,int *k) {
+void Rkdnearest0(double *X,int *idat,double *ddat,int *n,double *x, int *m, int *ni, double *dist,int *k) {
 /* given points in n rows of X and a kd tree stored in idat, ddat in R, find the 
    k neares neighbours to each row of x m by d matrix x.
    * outputs 
@@ -834,6 +936,36 @@ void Rkdnearest(double *X,int *idat,double *ddat,int *n,double *x, int *m, int *
   FREE(kd.box); /* free storage created by kd_read */
 }
 
+SEXP Rkdnearest(SEXP Xr,SEXP xr,SEXP kr) {
+/* Takes n by d point matrix Xr, with kd_ptr attribute pointing to the corresponding 
+   kd tree and m by p point matrix xr. Finds the k nearest neighbours in Xr to each 
+   point in xr returning the matrix of nearest neighbours to each point, with the 
+   corresponding distances as an attribute */ 
+  double *X,*x,*dis;
+  kdtree_type *kd;
+  int *dim,n,m,d,*k,*nei;
+  SEXP DIM,ptr,neir,dir;
+  static SEXP kd_symb = NULL, dim_sym = NULL,dist_sym = NULL;
+  if (!dim_sym) dim_sym = install("dim");if (!dist_sym) dist_sym = install("dist");
+  if (!kd_symb) kd_symb = install("kd_ptr"); /* register symbol for attribute */
+  DIM = getAttrib(Xr, dim_sym);
+  dim = INTEGER(DIM); n = dim[0];
+  DIM = getAttrib(xr, dim_sym);
+  dim = INTEGER(DIM); m = dim[0];
+  X = REAL(Xr);x = REAL(xr);
+  k = INTEGER(kr);
+  ptr = getAttrib(Xr, kd_symb);
+  kd = (kdtree_type *) R_ExternalPtrAddr(ptr);
+  d = kd->d; /* dimension */
+  neir = PROTECT(allocMatrix(INTSXP,m,*k));
+  nei = INTEGER(neir);
+  dir = PROTECT(allocMatrix(REALSXP,m,*k));
+  dis = REAL(dir);
+  k_newn_work(x,*kd,X,dis,nei,&m,&n,&d,k);
+  setAttrib(neir, dist_sym,dir);
+  UNPROTECT(2);
+  return neir;
+}  
 
 void k_nn_work(kdtree_type kd,double *X,double *dist,int *ni,int *n,int *d,int *k) {
 /* Given a kd tree, this routine does the actual work of finding the nearest neighbours.

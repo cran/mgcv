@@ -94,7 +94,7 @@ qr.up <- function(arg) {
        dd <- dDeta(y,mu,weights,theta=arg$theta,arg$family,0)
        ## note: no handling of infinities and wz case yet
        w <- dd$EDeta2 * .5 
-       w <- w
+       #w <- w
        z <- (eta1-arg$offset[ind]) - dd$Deta.EDeta2
        good <- is.finite(z)&is.finite(w)
        w[!good] <- 0 ## drop if !good
@@ -530,7 +530,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 
         if (iter>1) {
           ## form eta = X%*%beta
-          eta <- Xbd(G$Xd,coef,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,G$drop)
+          eta <- Xbd(G$Xd,coef,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,G$drop) + offset
 	  lsp.full <- G$lsp0
 	  if (n.sp>0) lsp.full <- lsp.full + if (is.null(G$L)) lsp[1:n.sp] else G$L %*% lsp[1:n.sp]
 	  Sb <- Sl.Sb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
@@ -580,10 +580,22 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	  
           dd <- dDeta(y,mu,G$w,theta=theta,family,0)
 	  ## note: no handling of infinities and wz case yet
-	  w <- dd$Deta2 * .5 
-	  w <- w
-          z <- (eta-offset) - dd$Deta.Deta2
-	  good <- is.finite(z)&is.finite(w)
+
+          if (rho==0) {
+	    w <- dd$Deta2 * .5 
+            z <- (eta-offset) - dd$Deta.Deta2
+          } else { ## use fisher weights
+	    w <- dd$EDeta2 * .5 
+            z <- (eta-offset) - dd$Deta.EDeta2
+	  }
+          #if (rho!=0) { 
+          #  ind <- which(w<0)
+	  #  if (length(ind)>0) { ## substitute Fisher weights
+	  #    w[ind] <- dd$EDeta2[ind] * .5
+	  #    z[ind] <- (eta[ind]-offset[ind]) - dd$Deta.EDeta2[ind]
+	  #  }  
+          #}
+          good <- is.finite(z)&is.finite(w)
 	  w[!good] <- 0 ## drop if !good
 	  z[!good] <- 0 ## irrelevant
 	  #dev <- sum(family$dev.resids(G$y,mu,G$w,theta))
@@ -926,7 +938,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 	        ## note: no handling of infinities and wz case yet
                
 	        w <- dd$EDeta2 * .5 
-	        w <- w
+	        #w <- w
                 z <- (eta1-offset[ind]) - dd$Deta.EDeta2
 	        good <- is.finite(z)&is.finite(w)
 	        w[!good] <- 0 ## drop if !good
@@ -1061,7 +1073,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 
       if (efam && iter>1) { ## estimate theta
 	scale1 <- if (!is.null(family$scale)) family$scale else scale
-        if (family$n.theta>0||scale<0) theta <- estimate.theta(theta,family,y,linkinv(eta),scale=scale1,wt=G$w,tol=1e-7)
+        if (family$n.theta>0||scale<0) theta <- estimate.theta(theta,family,G$y,linkinv(eta),scale=scale1,wt=G$w,tol=1e-7)
         if (!is.null(family$scale) && family$scale<0) {
 	   scale <- exp(theta[family$n.theta+1])
 	   theta <- theta[1:family$n.theta]
@@ -1177,7 +1189,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
          if (!is.null(posr$deviance)) object$deviance <- posr$deviance
          if (!is.null(posr$null.deviance)) object$null.deviance <- posr$null.deviance
        }
-      if (is.null(object$null.deviance)) object$null.deviance <- sum(family$dev.resids(y,weighted.mean(y,G$w),G$w,theta))   
+      if (is.null(object$null.deviance)) object$null.deviance <- sum(family$dev.resids(G$y,weighted.mean(G$y,G$w),G$w,theta))   
     }
 
     if (!conv)
@@ -1647,9 +1659,16 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
   
   if (!is.null(exclude)) warning("exclude ignored by discrete prediction at present")
 
+  ## newdata has to be processed first to avoid, e.g. dropping different subsets of data
+  ## for parametric and smooth components....
+
   newdata <- predict.gam(object,newdata=newdata,type="newdata",se.fit=se.fit,terms=terms,exclude=exclude,
             block.size=block.size,newdata.guaranteed=newdata.guaranteed,
             na.action=na.action,...) 
+
+  ## Next line needed to avoid treating newdata as a model frame and then
+  ## having incorrect labels for offset, for example....
+  attr(newdata,"terms") <- NULL 
 
   ## Parametric terms have to be dealt with safely, but without forming all terms 
   ## or a full model matrix. Strategy here is to use predict.gam, having removed
@@ -1793,8 +1812,6 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
 
 
 
-
-
 tero <- function(sm) {
 ## te smooth spec re-order so that largest marginal is last.
   maxd <- 0
@@ -1806,6 +1823,7 @@ tero <- function(sm) {
     ind <- 1:ns;ind[maxi] <- ns;ind[ns] <- maxi
     sm$margin <- sm$margin[ind]
     sm$fix <- sm$fix[ind]
+    if (!is.null(sm$mc)) sm$mc <- sm$mc[ind]
     sm$term <- rep("",0)
     for (i in 1:ns) sm$term <- c(sm$term,sm$margin[[i]]$term)
     sm$label <- paste0(substr(sm$label,1,3),paste0(sm$term,collapse=","),")",collapse="")

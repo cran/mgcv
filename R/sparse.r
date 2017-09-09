@@ -100,6 +100,10 @@ apply.spline <- function(spl,y) {
 kd.vis <- function(kd,X,cex=.5) {
 ## code visualizes a kd tree for points in rows of X
 ## kd <- kd.tree(X) produces correct tree.
+## this worked with the structures used when
+## kd tree was written out to R vecotrs and the read
+## back in. Does not work with revised approach (would
+## need an explicit helper function to do the write out)
   if (ncol(X)!=2) stop("only deals with 2D case")
   ##n <- nrow(X)
   d <- ncol(X)
@@ -156,53 +160,82 @@ nearest <- function(k,X,gt.zero = FALSE,get.a=FALSE) {
   list(ni=ni,dist=dist,a=a)
 } # nearest
 
+#kd.tree <- function(X) {
+## function to obtain kd tree for points in rows of X
+## old version based on writing out tree to R
+#  n <- nrow(X) ## number of points
+#  d <- ncol(X) ## dimension of points
+#  ## compute the number of boxes in the kd tree, nb
+#  m <- 2;while (m < n) m <- m* 2;
+#  nb = n * 2 - m %/% 2 - 1;
+#  if (nb > m-1) nb = m - 1; 
+#  ## compute the storage requirements for the tree
+#  nd = 1 + d * nb * 2 ## number of doubles
+#  ni = 3 + 5 * nb  + 2*n   ## number of integers
+#  oo <- .C(C_Rkdtree,as.double(X),as.integer(n),as.integer(d),idat = as.integer(rep(0,ni)),
+#                     ddat = as.double(rep(0,nd)))
+#  list(idat=oo$idat,ddat=oo$ddat)
+#}
+
+
 kd.tree <- function(X) {
 ## function to obtain kd tree for points in rows of X
-  n <- nrow(X) ## number of points
-  d <- ncol(X) ## dimension of points
-  ## compute the number of boxes in the kd tree, nb
-  m <- 2;while (m < n) m <- m* 2;
-  nb = n * 2 - m %/% 2 - 1;
-  if (nb > m-1) nb = m - 1; 
-  ## compute the storage requirements for the tree
-  nd = 1 + d * nb * 2 ## number of doubles
-  ni = 3 + 5 * nb  + 2*n   ## number of integers
-  oo <- .C(C_Rkdtree,as.double(X),as.integer(n),as.integer(d),idat = as.integer(rep(0,ni)),
-                     ddat = as.double(rep(0,nd)))
-  list(idat=oo$idat,ddat=oo$ddat)
+  kd <- .Call(C_Rkdtree,X)
+  kd
 }
 
 kd.nearest <- function(kd,X,x,k) {
+## Finds k nearest neigbours of each row of x within X. X has
+## corresponding kd tree kd, stored as an external pointer:
+## attribute "kd_ptr" of kd. Returns array of indices to rows in
+## X, along with corresponding distances.
+  attr(X,"kd_ptr") <- attr(kd,"kd_ptr")
+  nei <- .Call(C_Rkdnearest,X,x,as.integer(k)) + 1 ## C to R
+}
+
+kd.radius <- function(kd,X,x,r){
+## find all points in kd tree (kd,X) in radius r of points in x.
+## kd should come from kd.tree(X).
+## neighbours of x[i,] in X are the rows given by ni[off[i]:(off[i+1]-1)]
+#   m <- nrow(x);
+#   off <- rep(0,m+1)
+  attr(X,"kd_ptr") <- attr(kd,"kd_ptr")
+  off <- rep(as.integer(0),nrow(x)+1) 
+  ni <- .Call(C_Rkradius,X,x,as.double(r),off) + 1
+  list(ni=ni,off=off+1)
+}
+
+#kd.nearest <- function(kd,X,x,k) {
 ## given a set of points in rows of X, and corresponding kd tree, kd 
 ## (produced by a call to kd.tree(X)), then this routine finds the 
 ## k nearest neighbours in X, to the points in the rows of x.
 ## outputs: ni[i,] lists k nearest neighbours of X[i,].
 ##          dost[i,] is distance to those neighbours.
 ## note R indexing of output
-  n <- nrow(X)
-  m <- nrow(x)
-  ni <- matrix(0,m,k)
-  oo <- .C(C_Rkdnearest,as.double(X),as.integer(kd$idat),as.double(kd$ddat),as.integer(n),as.double(x), 
-           as.integer(m), ni=as.integer(ni), dist=as.double(ni),as.integer(k))
-  list(ni=matrix(oo$ni+1,m,k),dist=matrix(oo$dist,m,k))
-}
+#  n <- nrow(X)
+#  m <- nrow(x)
+#  ni <- matrix(0,m,k)
+#  oo <- .C(C_Rkdnearest,as.double(X),as.integer(kd$idat),as.double(kd$ddat),as.integer(n),as.double(x), 
+#           as.integer(m), ni=as.integer(ni), dist=as.double(ni),as.integer(k))
+#  list(ni=matrix(oo$ni+1,m,k),dist=matrix(oo$dist,m,k))
+#}
 
-kd.radius <- function(kd,X,x,r) {
+#kd.radius <- function(kd,X,x,r) {
 ## find all points in kd tree (kd,X) in radius r of points in x.
 ## kd should come from kd.tree(X).
 ## neighbours of x[i,] in X are the rows given by ni[off[i]:(off[i+1]-1)]
-   m <- nrow(x);
-   off <- rep(0,m+1)
+#   m <- nrow(x);
+#   off <- rep(0,m+1)
    ## do the work...
-   oo <- .C(C_Rkradius,as.double(r),as.integer(kd$idat),as.double(kd$ddat),as.double(X),as.double(t(x)),
-         as.integer(m),off=as.integer(off),ni=as.integer(0),op=as.integer(0))
-   off <- oo$off
-   ni <- rep(0,off[m+1])
+#   oo <- .C(C_Rkradius,as.double(r),as.integer(kd$idat),as.double(kd$ddat),as.double(X),as.double(t(x)),
+#         as.integer(m),off=as.integer(off),ni=as.integer(0),op=as.integer(0))
+#   off <- oo$off
+#   ni <- rep(0,off[m+1])
    ## extract to R and clean up...
-   oo <- .C(C_Rkradius,as.double(r),as.integer(kd$idat),as.double(kd$ddat),as.double(X),as.double(t(x)),
-         as.integer(m),off=as.integer(off),ni=as.integer(ni),op=as.integer(1))
-   list(off=off+1,ni=oo$ni+1) ## note R indexing here.
-} ## kd.radius
+#   oo <- .C(C_Rkradius,as.double(r),as.integer(kd$idat),as.double(kd$ddat),as.double(X),as.double(t(x)),
+#         as.integer(m),off=as.integer(off),ni=as.integer(ni),op=as.integer(1))
+#   list(off=off+1,ni=oo$ni+1) ## note R indexing here.
+#} ## kd.radius
 
 tieMatrix <- function(x) {
 ## takes matrix x, and produces sparse matrix P that maps list of unique 
