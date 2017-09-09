@@ -4,6 +4,25 @@
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
 
+1.8-20
+
+* bam(,discrete=TRUE) could produce garbage with ti(x,z,k=c(6,5),mc=c(T,F))
+  because tensor re-ordering for efficiency failed to re-order mc (this is 
+  a *very* specialist bug!). Thanks to Fabian Scheipl.  
+
+* plot(...,residuals=TRUE) weighted the working residuals by the sqrt working 
+  weights divided by the mean sqrt working weight. The standardization by the 
+  mean sqrt weight was non standard and has been removed.
+
+* Fix to bad bug in bam(...,discrete=TRUE) offset handling, and predict.bamd 
+  modified to avoid failure predicting with offset. Thanks to Paul Shearer.
+
+* fix of typo in bgam.fit, which caused failure of extended families
+  when dataset larger than chunk size. Thanks Martijn Wieling.
+
+* bam(...,discrete=TRUE)/bgam.fitd modified to use fisher weights with 
+  extended families if rho!=0.
+
 1.8-19
 
 ** bam() now accepts extended families (i.e. nb, tw, ocat etc)

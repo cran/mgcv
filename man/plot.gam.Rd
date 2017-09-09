@@ -22,8 +22,8 @@
 \item{residuals}{If \code{TRUE} then partial residuals are added to plots of 1-D smooths. If \code{FALSE} 
 then no residuals are added. If this is an array of the correct length then it is used as the array of 
 residuals to be used for producing partial residuals. If \code{TRUE} then the
-residuals are the working residuals from the IRLS iteration weighted by the
-IRLS weights. Partial residuals for a smooth term are the
+residuals are the working residuals from the IRLS iteration weighted by the (square root)
+IRLS weights, in order that they have constant variance if the model is correct. Partial residuals for a smooth term are the
 residuals that would be obtained by dropping the term concerned from the model, while leaving all other 
 estimates fixed (i.e. the estimates for the term plus the residuals).}
 

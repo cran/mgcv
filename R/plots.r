@@ -1071,7 +1071,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
     if (is.null(w.resid)) { ## produce working resids if info available
       if (is.null(x$residuals)||is.null(x$weights)) partial.resids <- FALSE else {
         wr <- sqrt(x$weights)
-        w.resid <- x$residuals*wr/mean(wr) # weighted working residuals
+        w.resid <- x$residuals*wr#/mean(wr) # weighted working residuals
       }
     }
     if (partial.resids) fv.terms <- predict(x,type="terms") ## get individual smooth effects
