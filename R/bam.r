@@ -109,8 +109,8 @@ qr.up <- function(arg) {
     wt <- c(wt,w)
     w <- sqrt(w)
     ## note assumption that nt=1 in following qr.update - i.e. each cluster node is strictly serial
-    if (b == 1) qrx <- qr.update(w*X[good,],w*z,use.chol=arg$use.chol) 
-    else qrx <- qr.update(w*X[good,],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
+    if (b == 1) qrx <- qr.update(w*X[good,,drop=FALSE],w*z,use.chol=arg$use.chol) 
+    else qrx <- qr.update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
     rm(X);if(arg$gc.level>1) gc() ## X can be large: remove and reclaim
   }
   qrx$dev <- dev;qrx$wt <- wt;qrx$eta <- eta
@@ -191,8 +191,8 @@ check.term <- function(term,rec) {
   ii <- which(rec$vnames%in%term)
   if (length(ii)) { ## at least one variable already discretized
     if (length(term)==rec$d[min(ii)]) { ## dimensions match previous discretization
-      if (sum(!(term%in%rec$vnames[ii]))) ("bam can not discretize with this nesting structure")
-      else return(rec$ki[min(ii)]) ## all names match previous - retun index of previous
+      if (sum(!(term%in%rec$vnames[ii]))) stop("bam can not discretize with this nesting structure")
+      else return(rec$ki[min(ii)]) ## all names match previous - return index of previous
     } else stop("bam can not discretize with this nesting structure")
   } else return(0) ## no match
 } ## check.term
@@ -953,8 +953,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
              wt[ind] <- w ## wt <- c(wt,w)
              w <- sqrt(w)
              ## note that QR may be parallel using npt>1, even under serial accumulation...
-             if (b == 1) qrx <- qr.update(w*X[good,],w*z,use.chol=use.chol,nt=npt) 
-             else qrx <- qr.update(w*X[good,],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
+             if (b == 1) qrx <- qr.update(w*X[good,,drop=FALSE],w*z,use.chol=use.chol,nt=npt) 
+             else qrx <- qr.update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
              rm(X);if(gc.level>1) gc() ## X can be large: remove and reclaim
           }
           if (use.chol) { ## post proc to get R and f...

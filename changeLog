@@ -4,6 +4,23 @@
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
 
+1.8-21
+
+* When functions were added to families within mgcv some very large 
+  environments could end up attached to those functions, for no good reason.
+  The problem originated from the dispatch of the generic 'fix.family.link' 
+  and then propagated via fix.family.var and fix.family.ls. This is now avoided,
+  resulting in smaller gam objects on disk and lower R memory usage. 
+  Thanks to Niels Richard Hansen for uncovering this. 
+
+* Another bug fix for prediction from discrete fit bam models with an offset, 
+  this time when there were more than 50000 data. Also fix to bam fitting when 
+  the number of data was an integer multiple of the chunk size + 1. 
+
+* check.term was missing a 'stop' so that some unhandled nesting structures
+  in bam(...,discrete=TRUE) failed with an unhelpful error, instead of a 
+  helpful one. Fixed.
+
 1.8-20
 
 * bam(,discrete=TRUE) could produce garbage with ti(x,z,k=c(6,5),mc=c(T,F))

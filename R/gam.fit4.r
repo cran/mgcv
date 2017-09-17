@@ -570,27 +570,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
             rSncol=as.integer(rSncol),deriv=as.integer(deriv),
 	    fixed.penalty = as.integer(rp$fixed.penalty),nt=as.integer(control$nthreads),
             type=as.integer(gdi.type),dVkk=as.double(rep(0,nSp^2)))
-## test code used to ensure type 0 and type 1 produce identical results, when both should work. 
-#   oot <- .C(C_gdi2,
-#            X=as.double(x[good,]),E=as.double(Sr),Es=as.double(Eb),rS=as.double(unlist(rS)),
-#            U1 = as.double(U1),sp=as.double(exp(sp)),theta=as.double(theta),
-#            z=as.double(z),w=as.double(w),wz=as.double(wz),wf=as.double(wf),Dth=as.double(dd$Dth),
-#            Det=as.double(dd$Deta),
-#            Det2=as.double(dd$Deta2),Dth2=as.double(dd$Dth2),Det.th=as.double(dd$Detath),
-#            Det2.th=as.double(dd$Deta2th),Det3=as.double(dd$Deta3),Det.th2 = as.double(dd$Detath2),
-#            Det4 = as.double(dd$Deta4),Det3.th=as.double(dd$Deta3th), Deta2.th2=as.double(dd$Deta2th2),
-#            beta=as.double(coef),b1=as.double(rep(0,ntot*ncol(x))),w1=rep(0,ntot*length(z)),
-#            D1=as.double(rep(0,ntot)),D2=as.double(rep(0,ntot^2)),
-#            P=as.double(0),P1=as.double(rep(0,ntot)),P2 = as.double(rep(0,ntot^2)),
-#            ldet=as.double(1-2*(scoreType=="ML")),ldet1 = as.double(rep(0,ntot)), 
-#            ldet2 = as.double(rep(0,ntot^2)),
-#            rV=as.double(rep(0,ncol(x)^2)),
-#            rank.tol=as.double(.Machine$double.eps^.75),rank.est=as.integer(0),
-#	    n=as.integer(sum(good)),q=as.integer(ncol(x)),M=as.integer(nSp),
-#            n.theta=as.integer(length(theta)), Mp=as.integer(Mp),Enrow=as.integer(rows.E),
-#            rSncol=as.integer(rSncol),deriv=as.integer(deriv),
-#	    fixed.penalty = as.integer(rp$fixed.penalty),nt=as.integer(control$nthreads),
-#            type=as.integer(1))
+
    rV <- matrix(oo$rV,ncol(x),ncol(x)) ## rV%*%t(rV)*scale gives covariance matrix 
    rV <- T %*% rV   
    ## derivatives of coefs w.r.t. sps etc...

@@ -474,7 +474,7 @@ Sl.addS <- function(Sl,A,rho) {
     ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
     if (length(Sl[[b]]$S)==1) { ## singleton
       B <- exp(rho[k]);diag <- -1
-      er <- .Call(C_mgcv_madi,A,B,ind,diag)
+      dummy <- .Call(C_mgcv_madi,A,B,ind,diag)
       ## diag(A)[ind] <-  diag(A)[ind] + exp(rho[k]) ## penalty is identity times sp
       k <- k + 1
     } else {

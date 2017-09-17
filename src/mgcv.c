@@ -410,7 +410,7 @@ void RMonoCon(double *Ad,double *bd,double *xd,int *control,double *lower,double
 
 
 void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd,
-            double *Afd,double *Hd,double *Sd,
+            double *Afd,double *Sd,
             int *off,int *dim,double *theta, int *m,int *nar)
 
 /* Interface routine for PCLS the constrained penalized weighted least squares solver.
@@ -419,7 +419,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
    np=nar[1] - number of parameters
    nai=nar[2] - number of inequality constraints
    naf=nar[3] - number of fixed constraints
-   getH=nar[4] - 0 for no hat matrix, 1 to produce one. 
+  
    
    Problem to be solved is:
 
@@ -438,7 +438,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
    on exit p contains the best fit parameter vector. 
 
 */
-{ matrix y,X,p,w,Ain,Af,b,H,*S;
+{ matrix y,X,p,w,Ain,Af,b,*S;
   int n,np,i,*active;
  
   np=nar[1];n=nar[0];
@@ -452,20 +452,20 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   if (nar[2]>0) b=Rmatrix(bd,(long)nar[2],1L);else b.r=0L;
  
   if (*m) S=(matrix *)CALLOC((size_t) *m,sizeof(matrix));
-  else S=&H; /* avoid spurious compiler warning */
+  else S=NULL; /* avoid spurious compiler warning */
   for (i=0;i< *m;i++) S[i]=initmat((long)dim[i],(long)dim[i]);
   RUnpackSarray(*m,S,Sd);
   
-  if (nar[4]) H=initmat(y.r,y.r); else H.r=H.c=0L;
+  //if (nar[4]) H=initmat(y.r,y.r); else H.r=H.c=0L;
   active=(int *)CALLOC((size_t)(p.r+1),sizeof(int)); /* array for active constraints at best fit active[0] will be  number of them */
   /* call routine that actually does the work */
  
-  PCLS(&X,&p,&y,&w,&Ain,&b,&Af,&H,S,off,theta,*m,active);
+  PCLS(&X,&p,&y,&w,&Ain,&b,&Af,S,off,theta,*m,active);
 
   /* copy results back into R arrays */ 
   for (i=0;i<p.r;i++) pd[i]=p.V[i];
  
-  if (H.r) RArrayFromMatrix(Hd,H.r,&H);
+  //if (H.r) RArrayFromMatrix(Hd,H.r,&H);
   /* clear up .... */
   FREE(active);
  
@@ -473,7 +473,7 @@ void  RPCLS(double *Xd,double *pd,double *yd, double *wd,double *Aind,double *bd
   if (*m) FREE(S);
  
   freemat(X);freemat(p);freemat(y);freemat(w);
-  if (H.r) freemat(H);
+  //if (H.r) freemat(H);
   if (Ain.r) freemat(Ain);
   if (Af.r) freemat(Af);
   if (b.r) freemat(b);

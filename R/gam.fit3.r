@@ -2195,79 +2195,71 @@ fix.family.link.extended.family <- function(fam) {
   if (link=="identity") {
     fam$g2g <- fam$g3g <- fam$g4g <- 
     function(mu) rep.int(0,length(mu))
-    return(fam)
-  } 
-  if (link == "log") {
+  } else if (link == "log") {
     fam$g2g <- function(mu) rep(-1,length(mu))
     fam$g3g <- function(mu) rep(2,length(mu))
     fam$g4g <- function(mu) rep(-6,length(mu))
-    return(fam)
-  }
-  if (link == "inverse") {
+  } else if (link == "inverse") {
     ## g'(mu) = -1/mu^2
     fam$g2g <- function(mu) 2*mu     ## g'' = 2/mu^3
     fam$g3g <- function(mu) 6*mu^2   ## g''' = -6/mu^4
     fam$g4g <- function(mu) 24*mu^3     ## g'''' = 24/mu^5
-    return(fam)
-  }  
-  if (link == "logit") {
+  } else if (link == "logit") {
     ## g = log(mu/(1-mu)) g' = 1/(1-mu) + 1/mu = 1/(mu*(1-mu))
     fam$g2g <- function(mu) mu^2 - (1-mu)^2      ## g'' = 1/(1 - mu)^2 - 1/mu^2
     fam$g3g <- function(mu) 2*mu^3 + 2*(1-mu)^3  ## g''' = 2/(1 - mu)^3 + 2/mu^3
     fam$g4g <- function(mu) 6*mu^4 - 6*(1-mu)^4  ## g'''' = 6/(1-mu)^4 - 6/mu^4
-    return(fam)
-  }
-  if (link == "sqrt") {
+  } else if (link == "sqrt") {
   ## g = sqrt(mu); g' = .5*mu^-.5
     fam$g2g <- function(mu) - mu^-.5  ## g'' = -.25 * mu^-1.5
     fam$g3g <- function(mu) 3 * mu^-1 ## g''' = .375 * mu^-2.5
     fam$g4g <- function(mu) -15 * mu^-1.5 ## -0.9375 * mu^-3.5
-    return(fam)
-  }
-  if (link == "probit") {
+  } else if (link == "probit") {
   ## g(mu) = qnorm(mu); 1/g' = dmu/deta = 1/dnorm(eta)
     fam$g2g <- function(mu) { 
-      eta <- fam$linkfun(mu)
+      #eta <- fam$linkfun(mu)
+      eta <- qnorm(mu)
       ## g'' = eta/fam$mu.eta(eta)^2
       eta
     }
     fam$g3g <- function(mu) {
-      eta <-  fam$linkfun(mu)
+      #eta <-  fam$linkfun(mu)
+      eta <- qnorm(mu)
       ## g''' = (1 + 2*eta^2)/fam$mu.eta(eta)^3
       (1 + 2*eta^2)
     }
     fam$g4g <- function(mu) {
-       eta <-  fam$linkfun(mu)
+       #eta <-  fam$linkfun(mu)
+       eta <- qnorm(mu)
        ## g'''' = (7*eta + 6*eta^3)/fam$mu.eta(eta)^4
        (7*eta + 6*eta^3)
     }
-    return(fam)
-  } ## probit
-  if (link == "cauchit") {
+  } else if (link == "cauchit") {
   ## uses general result that if link is a quantile function then 
   ## d mu / d eta = f(eta) where f is the density. Link derivative
   ## is one over this... repeated differentiation w.r.t. mu using chain
   ## rule gives results...
     fam$g2g <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      ## g'' = 2*pi*pi*eta*(1+eta*eta)
      eta/(1+eta*eta)
     }
     fam$g3g <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      eta2 <- eta*eta
      ## g''' = 2*pi*pi*pi*(1+3*eta2)*(1+eta2)
      (1+3*eta2)/(1+eta2)^2
     }
     fam$g4g <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      eta2 <- eta*eta
      ## g'''' = 2*pi^4*(8*eta+12*eta2*eta)*(1+eta2)
      ((8+ 12*eta2)/(1+eta2)^2)*(eta/(1+eta2))
     }
-    return(fam)
-  } ## cauchit  
-  if (link == "cloglog") {
+  } else if (link == "cloglog") {
     ## g = log(-log(1-mu)), g' = -1/(log(1-mu)*(1-mu))
     fam$g2g <- function(mu) { l1m <- log1p(-mu)
       -l1m - 1
@@ -2279,9 +2271,10 @@ fix.family.link.extended.family <- function(fam) {
       l1m <- log1p(-mu)
       -l1m*(l1m*(6*l1m+11)+12)-6
     }
-    return(fam)
-  }
-  stop("link not implemented for extended families")
+  } else stop("link not implemented for extended families")
+  ## avoid storing the calling environment of fix.family.link... 
+  environment(fam$g2g) <-  environment(fam$g3g) <-  environment(fam$g4g) <- environment(fam$linkfun)
+  return(fam)
 } ## fix.family.link.extended.family
 
 fix.family.link.family <- function(fam)
@@ -2300,58 +2293,52 @@ fix.family.link.family <- function(fam)
   }
   if (!is.null(fam$d2link)&&!is.null(fam$d3link)&&!is.null(fam$d4link)) return(fam) 
   link <- fam$link
-  if (length(link)>1) if (fam$family=="quasi") # then it's a power link
-  { lambda <- log(fam$linkfun(exp(1))) ## the power, if > 0
-    if (lambda<=0) { fam$d2link <- function(mu) -1/mu^2
-      fam$d3link <- function(mu) 2/mu^3
-      fam$d4link <- function(mu) -6/mu^4
-    }
-    else { fam$d2link <- function(mu) lambda*(lambda-1)*mu^(lambda-2)
-      fam$d3link <- function(mu) (lambda-2)*(lambda-1)*lambda*mu^(lambda-3)
-      fam$d4link <- function(mu) (lambda-3)*(lambda-2)*(lambda-1)*lambda*mu^(lambda-4)
-    }
-    return(fam)
-  } else stop("unrecognized (vector?) link")
-
-  if (link=="identity") {
+  if (length(link)>1) {
+    if (fam$family=="quasi") # then it's a power link
+    { lambda <- log(fam$linkfun(exp(1))) ## the power, if > 0
+      if (lambda<=0) { fam$d2link <- function(mu) -1/mu^2
+        fam$d3link <- function(mu) 2/mu^3
+        fam$d4link <- function(mu) -6/mu^4
+      } else { fam$d2link <- function(mu) lambda*(lambda-1)*mu^(lambda-2)
+        fam$d3link <- function(mu) (lambda-2)*(lambda-1)*lambda*mu^(lambda-3)
+        fam$d4link <- function(mu) (lambda-3)*(lambda-2)*(lambda-1)*lambda*mu^(lambda-4)
+      }
+    } else stop("unrecognized (vector?) link")
+  } else if (link=="identity") {
     fam$d4link <- fam$d3link <- fam$d2link <- 
     function(mu) rep.int(0,length(mu))
-    return(fam)
-  } 
-  if (link == "log") {
+  } else if (link == "log") {
     fam$d2link <- function(mu) -1/mu^2
     fam$d3link <- function(mu) 2/mu^3
     fam$d4link <- function(mu) -6/mu^4
-    return(fam)
-  }
-  if (link == "inverse") {
+  } else if (link == "inverse") {
     fam$d2link <- function(mu) 2/mu^3
     fam$d3link <- function(mu) { mu <- mu*mu;-6/(mu*mu)}
     fam$d4link <- function(mu) { mu2 <- mu*mu;24/(mu2*mu2*mu)}
-    return(fam)
-  }
-  if (link == "logit") {
+  } else if (link == "logit") {
     fam$d2link <- function(mu) 1/(1 - mu)^2 - 1/mu^2
     fam$d3link <- function(mu) 2/(1 - mu)^3 + 2/mu^3
     fam$d4link <- function(mu) 6/(1-mu)^4 - 6/mu^4
-    return(fam)
-  }
-  if (link == "probit") {
+  } else if (link == "probit") {
     fam$d2link <- function(mu) { 
-      eta <- fam$linkfun(mu)
-      eta/fam$mu.eta(eta)^2
+      #eta <- fam$linkfun(mu)
+      eta <- qnorm(mu)
+      #eta/fam$mu.eta(eta)^2
+      eta/pmax(dnorm(eta), .Machine$double.eps)^2
     }
     fam$d3link <- function(mu) {
-      eta <-  fam$linkfun(mu)
-      (1 + 2*eta^2)/fam$mu.eta(eta)^3
+      #eta <-  fam$linkfun(mu)
+      eta <- qnorm(mu)
+      #(1 + 2*eta^2)/fam$mu.eta(eta)^3
+      (1 + 2*eta^2)/pmax(dnorm(eta), .Machine$double.eps)^3
     }
     fam$d4link <- function(mu) {
-       eta <-  fam$linkfun(mu)
-       (7*eta + 6*eta^3)/fam$mu.eta(eta)^4
+       #eta <-  fam$linkfun(mu)
+       eta <- qnorm(mu)
+       #(7*eta + 6*eta^3)/fam$mu.eta(eta)^4
+       (7*eta + 6*eta^3)/pmax(dnorm(eta), .Machine$double.eps)^4
     }
-    return(fam)
-  }
-  if (link == "cloglog") {
+  } else if (link == "cloglog") {
   ## g = log(-log(1-mu)), g' = -1/(log(1-mu)*(1-mu))
     fam$d2link <- function(mu) { l1m <- log1p(-mu)
       -1/((1 - mu)^2*l1m) *(1+ 1/l1m)
@@ -2365,51 +2352,58 @@ fix.family.link.family <- function(fam)
       mu4 <- (1-mu)^4
       ( - 12 - 11 * l1m - 6 * l1m^2 - 6/l1m )/mu4  /l1m^3
     }
-    return(fam)
-  }
-  if (link == "sqrt") {
+  } else if (link == "sqrt") {
     fam$d2link <- function(mu) -.25 * mu^-1.5
     fam$d3link <- function(mu) .375 * mu^-2.5
     fam$d4link <- function(mu) -0.9375 * mu^-3.5
-    return(fam)
-  }
-  if (link == "cauchit") {
+  } else if (link == "cauchit") {
   ## uses general result that if link is a quantile function then 
   ## d mu / d eta = f(eta) where f is the density. Link derivative
   ## is one over this... repeated differentiation w.r.t. mu using chain
   ## rule gives results...
     fam$d2link <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      2*pi*pi*eta*(1+eta*eta)
     }
     fam$d3link <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      eta2 <- eta*eta
      2*pi*pi*pi*(1+3*eta2)*(1+eta2)
     }
     fam$d4link <- function(mu) { 
-     eta <- fam$linkfun(mu)
+     #eta <- fam$linkfun(mu)
+     eta <- qcauchy(mu)
      eta2 <- eta*eta
      2*pi^4*(8*eta+12*eta2*eta)*(1+eta2)
     }
-    return(fam)
-  }
-  if (link == "1/mu^2") {
+  } else if (link == "1/mu^2") {
     fam$d2link <- function(mu) 6 * mu^-4
     fam$d3link <- function(mu) -24 * mu^-5
     fam$d4link <- function(mu) 120 * mu^-6
-    return(fam)
-  }
-  if (substr(link,1,3)=="mu^") { ## it's a power link
+  } else if (substr(link,1,3)=="mu^") { ## it's a power link
     ## note that lambda <=0 gives log link so don't end up here
     lambda <- get("lambda",environment(fam$linkfun))
     fam$d2link <- function(mu) (lambda*(lambda-1)) * mu^{lambda-2}
     fam$d3link <- function(mu) (lambda*(lambda-1)*(lambda-2)) * mu^{lambda-3}
     fam$d4link <- function(mu) (lambda*(lambda-1)*(lambda-2)*(lambda-3)) * mu^{lambda-4}
-    return(fam)
-  }
-  stop("link not recognised")
+  } else stop("link not recognised")
+  ## avoid giant environments being stored....
+  environment(fam$d2link) <-  environment(fam$d3link) <-  environment(fam$d4link) <- environment(fam$linkfun)
+  return(fam)
 } ## fix.family.link.family
+
+
+## NOTE: something horrible can happen here. The way method dispatch works, the
+## environment attached to functions created in fix.family.link is the environment
+## from which fix.family.link was called - and this whole environment is stored
+## with the created function - in the gam context that means the model matrix is
+## stored invisibly away for no useful purpose at all. pryr:::object_size will
+## show the true stored size of an object with hidden environments. But environments
+## of functions created in method functions should be set explicitly to something
+## harmless (see ?environment for some possibilities, empty is rarely a good idea)
+## 9/2017
 
 fix.family.link <- function(fam) UseMethod("fix.family.link")
 
@@ -2424,28 +2418,20 @@ fix.family.var <- function(fam)
   fam$scale <- -1
   if (family=="gaussian") {
     fam$d3var <- fam$d2var <- fam$dvar <- function(mu) rep.int(0,length(mu))
-    return(fam)
-  } 
-  if (family=="poisson"||family=="quasipoisson") {
+  } else if (family=="poisson"||family=="quasipoisson") {
     fam$dvar <- function(mu) rep.int(1,length(mu))
     fam$d3var <- fam$d2var <- function(mu) rep.int(0,length(mu))
     if (family=="poisson") fam$scale <- 1
-    return(fam)
-  } 
-  if (family=="binomial"||family=="quasibinomial") {
+  } else if (family=="binomial"||family=="quasibinomial") {
     fam$dvar <- function(mu) 1-2*mu
     fam$d2var <- function(mu) rep.int(-2,length(mu))
     fam$d3var <- function(mu) rep.int(0,length(mu))
     if (family=="binomial") fam$scale <- 1
-    return(fam)
-  }
-  if (family=="Gamma") {
+  } else if (family=="Gamma") {
     fam$dvar <- function(mu) 2*mu
     fam$d2var <- function(mu) rep.int(2,length(mu))
     fam$d3var <- function(mu) rep.int(0,length(mu))
-    return(fam)
-  }
-  if (family=="quasi") {
+  } else if (family=="quasi") {
     fam$dvar <- switch(fam$varfun,
        constant = function(mu) rep.int(0,length(mu)),
        "mu(1-mu)" = function(mu) 1-2*mu,
@@ -2468,15 +2454,13 @@ fix.family.var <- function(fam)
        "mu^2" = function(mu) rep.int(0,length(mu)),
        "mu^3" = function(mu) rep.int(6,length(mu))           
     )
-    return(fam)
-  }
-  if (family=="inverse.gaussian") {
+  } else if (family=="inverse.gaussian") {
     fam$dvar <- function(mu) 3*mu^2
     fam$d2var <- function(mu) 6*mu
     fam$d3var <- function(mu) rep.int(6,length(mu)) 
-    return(fam)
-  }
-  stop("family not recognised")
+  } else stop("family not recognised")
+  environment(fam$dvar) <-  environment(fam$d2var) <-  environment(fam$d3var) <- environment(fam$linkfun)
+  return(fam)
 } ## fix.family.var
 
 
@@ -2491,23 +2475,17 @@ fix.family.ls<-function(fam)
       nobs <- sum(w>0)
       c(-nobs*log(2*pi*scale)/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
     }
-    return(fam)
-  } 
-  if (family=="poisson") {
+  } else if (family=="poisson") {
     fam$ls <- function(y,w,n,scale) {
       res <- rep(0,3)
       res[1] <- sum(dpois(y,y,log=TRUE)*w)
       res
     }
-    return(fam)
-  } 
-  if (family=="binomial") {
+  } else if (family=="binomial") {
     fam$ls <- function(y,w,n,scale) { 
       c(-binomial()$aic(y,n,y,w,0)/2,0,0)
     }
-    return(fam)
-  }
-  if (family=="Gamma") {
+  } else if (family=="Gamma") {
     fam$ls <- function(y,w,n,scale) {
       res <- rep(0,3)
       y <- y[w>0];w <- w[w>0]
@@ -2520,26 +2498,22 @@ fix.family.ls<-function(fam)
       res[3] <- sum(k/w^2) 
       res
     }
-    return(fam)
-  }
-  if (family=="quasi"||family=="quasipoisson"||family=="quasibinomial") {
+  } else if (family=="quasi"||family=="quasipoisson"||family=="quasibinomial") {
     ## fam$ls <- function(y,w,n,scale) rep(0,3)
     ## Uses extended quasi-likelihood form...
     fam$ls <- function(y,w,n,scale) { 
       nobs <- sum(w>0)
       c(-nobs*log(scale)/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
     }
-    return(fam)
-  }
-  if (family=="inverse.gaussian") {
+  } else if (family=="inverse.gaussian") {
     fam$ls <- function(y,w,n,scale) {
       nobs <- sum(w>0)
       c(-sum(log(2*pi*scale*y^3))/2 + sum(log(w[w>0]))/2,-nobs/(2*scale),nobs/(2*scale*scale))
       ## c(-sum(w*log(2*pi*scale*y^3))/2,-sum(w)/(2*scale),sum(w)/(2*scale*scale))
     }
-    return(fam)
-  }
-  stop("family not recognised")
+  } else stop("family not recognised")
+  environment(fam$ls) <- environment(fam$linkfun)
+  return(fam)
 } ## fix.family.ls
 
 fix.family <- function(fam) {

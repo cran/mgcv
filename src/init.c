@@ -40,7 +40,7 @@ R_CMethodDef CEntries[] = {
     {"mvn_ll", (DL_FUNC) &mvn_ll,15},
     {"RMonoCon", (DL_FUNC) &RMonoCon, 7},
     {"RuniqueCombs", (DL_FUNC) &RuniqueCombs, 4},
-    {"RPCLS", (DL_FUNC) &RPCLS, 14},
+    {"RPCLS", (DL_FUNC) &RPCLS, 13},
     {"construct_tprs", (DL_FUNC) &construct_tprs, 13},
     {"crspl", (DL_FUNC) &crspl,8},
     {"predict_tprs", (DL_FUNC) &predict_tprs, 12},
