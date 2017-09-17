@@ -97,8 +97,7 @@ pcls <- function(M)
 # M$sp - array of theta_i's 
 # Ain, bin and p are not in the object needed to call mgcv....
 #
-{ nar<-c(length(M$y),length(M$p),dim(M$Ain)[1],dim(M$C)[1],0)
-  H<-0
+{ nar<-c(length(M$y),length(M$p),dim(M$Ain)[1],dim(M$C)[1])
   ## sanity checking ...
   if (nrow(M$X)!=nar[1]) stop("nrow(M$X) != length(M$y)") 
   if (ncol(M$X)!=nar[2]) stop("ncol(M$X) != length(M$p)")
@@ -140,13 +139,12 @@ pcls <- function(M)
       M$C <- matrix(0,0,0)
       M$p <- rep(0,ncol(M$X)) 
       nar[2] <- length(M$p)
-      nar[4] <- 0
       qra.exist <- TRUE
       if  (ncol(M$X)>nrow(M$X)) stop("Model matrix not full column rank")
     }
   }
   o<-.C(C_RPCLS,as.double(M$X),as.double(M$p),as.double(M$y),as.double(M$w),as.double(M$Ain),as.double(M$bin)
-        ,as.double(M$C),as.double(H),as.double(Sa),as.integer(M$off),as.integer(df),as.double(M$sp),
+        ,as.double(M$C),as.double(Sa),as.integer(M$off),as.integer(df),as.double(M$sp),
         as.integer(length(M$off)),as.integer(nar))
   p <- array(o[[2]],length(M$p))
   if (qra.exist) p <- qr.qy(qra,c(rep(0,j),p))
@@ -2679,6 +2677,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
     nb <- length(object$coefficients)
   }
   
+  if (type=="lpmatrix") block.size <- NULL ## nothing gained by blocking in this case - and offset handling easier this way
+
   ## split prediction into blocks, to avoid running out of memory
   if (is.null(block.size)) { 
     ## use one block as predicting using model frame
