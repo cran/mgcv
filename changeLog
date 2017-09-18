@@ -4,6 +4,11 @@
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
 
+1.8-22
+
+* Fix of bug whereby testing for OpenMP and nthreads>1 in bam, would fail if 
+  OpenMP was missing. 
+
 1.8-21
 
 * When functions were added to families within mgcv some very large 

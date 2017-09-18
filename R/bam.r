@@ -1855,7 +1855,7 @@ AR.resid <- function(rsd,rho=0,AR.start=NULL) {
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,
                 min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-                cluster=NULL,nthreads=NA,gc.level=1,use.chol=FALSE,samfrac=1,coef=NULL,
+                cluster=NULL,nthreads=1,gc.level=1,use.chol=FALSE,samfrac=1,coef=NULL,
                 drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
@@ -1894,7 +1894,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         warning("discretization only available with fREML")
       } else {
         if (!is.null(cluster)) warning("discrete method does not use parallel cluster - use nthreads instead")
-	if (nthreads>1 && !mgcv.omp()) warning("openMP not available: single threaded computation only")
+	if (is.finite(nthreads) && nthreads>1 && !mgcv.omp()) warning("openMP not available: single threaded computation only")
       }
     }  
     if (inherits(family,"extended.family")) {

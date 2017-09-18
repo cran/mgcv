@@ -1,8 +1,8 @@
-d2e550a4fc7d0141a6ba96400cc76ab8 *ChangeLog
-cecd2e1e20565bb275902be2ece15b62 *DESCRIPTION
+bc8bc8be9cec065f0c7ec0cf670516f2 *ChangeLog
+61563afa209f2b618f33097136c35bb2 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 9fa89dc9361930dca536d4e011e4e605 *NAMESPACE
-eaf241e6d0bd26d3f4031988884a47a4 *R/bam.r
+b051474f30e8e779f2440e8ecd5bbd51 *R/bam.r
 7b419683b0948cf6da009f614078fe90 *R/coxph.r
 777a0d67a1f7fa14bf87bc312064061b *R/efam.r
 dfdb821247da3e780de0d4599b88735d *R/fast-REML.r
@@ -42,7 +42,7 @@ fd0cfd64be579f9fbecdbb7f2b8ec1eb *man/Sl.initial.repara.Rd
 60670020425f8749b81a8d8c3f168880 *man/Sl.setup.Rd
 69ae63833438a3af2963e39482f1d72f *man/Tweedie.Rd
 8087ab00d10b44c99c37f49bf90e19cd *man/anova.gam.Rd
-a7e0ce83164f1e34d0a9d99d0f9853f3 *man/bam.Rd
+6180a4e9ea206e1a350b993dade0a869 *man/bam.Rd
 ab5e37c3bf8803de63b63c3bdc5909cd *man/bam.update.Rd
 cf5f1ee0aab639c7c4b9b357434f15b2 *man/bandchol.Rd
 745cbf31eb14fc1c5916fc634c74d998 *man/bug.reports.mgcv.Rd
