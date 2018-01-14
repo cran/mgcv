@@ -51,11 +51,13 @@ Sl.setup <- function(G) {
         Sl[[b]]$start <- off[ind[1]]
         Sl[[b]]$stop <- Sl[[b]]$start + nr - 1
 	Sl[[b]]$lambda <- rep(1,length(ind)) ## dummy at this stage
+	Sl[[b]]$repara <- FALSE
       } else { ## singleton
         Sl[[b]] <- list(start=off[ind], stop=off[ind]+nrow(G$S[[ind]])-1,
                         rank=G$rank[ind],S=list(G$S[[ind]]))
         Sl[[b]]$S <- list(G$S[[ind]])
 	Sl[[b]]$lambda <- 1 ## dummy at this stage
+	Sl[[b]]$repara <- TRUE
       } ## finished singleton
       b <- b + 1 
     } ## finished this block
@@ -211,7 +213,7 @@ Sl.setup <- function(G) {
       St <- Sl[[b]]$S[[1]]/S.norm
       lambda <- c(lambda,1/S.norm)
       for (j in 2:length(Sl[[b]]$S)) { 
-        S.norm <- norm(Sl[[b]]$S[[1]])
+        S.norm <- norm(Sl[[b]]$S[[j]])
         St <- St + Sl[[b]]$S[[j]]/S.norm
         lambda <- c(lambda,1/S.norm)
       } 
@@ -234,7 +236,7 @@ Sl.Sb <- function(Sl,rho,beta) {
 ## multi-S blocks. Logic is identical to Sl.addS.
   k <- 1
   a <- beta * 0
-  for (b in 1:length(Sl)) {
+  if (length(Sl)>0) for (b in 1:length(Sl)) {
     ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
     if (length(Sl[[b]]$S)==1) { ## singleton - multiple of identity
       a[ind] <- a[ind] + beta[ind] * exp(rho[k])
@@ -385,7 +387,7 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1) {
   d2.ldS <- matrix(0,n.deriv,n.deriv)
   rp <- list() ## reparameterization list
   if (root) E <- matrix(0,np,np) else E <- NULL
-  for (b in 1:length(Sl)) { ## work through blocks
+  if (length(Sl)>0) for (b in 1:length(Sl)) { ## work through blocks
     if (length(Sl[[b]]$S)==1) { ## singleton
       ldS <- ldS + rho[k.sp] * Sl[[b]]$rank
       if (!fixed[k.sp]) {
@@ -470,7 +472,7 @@ Sl.addS <- function(Sl,A,rho) {
 ## and should have already been applied to A using Sl.initial.repara
   k <- 1
   A <- A*1 ## force a copy to be made so that A not modified in calling env!!
-  for (b in 1:length(Sl)) {
+  if (length(Sl)>0) for (b in 1:length(Sl)) {
     ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
     if (length(Sl[[b]]$S)==1) { ## singleton
       B <- exp(rho[k]);diag <- -1
@@ -543,7 +545,7 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
 ## If k>0 then the routine forms S_k%*%A, zero padded 
 ## if full==TRUE, but in smallest number of rows form otherwise.
   nb <- length(Sl) ## number of blocks
- 
+  if (nb==0) return(A*0)
   Amat <- is.matrix(A) 
   if (k<=0) { ## apply whole penalty
     B <- A*0
@@ -635,7 +637,7 @@ Sl.termMult <- function(Sl,A,full=FALSE,nt=1) {
   SA <- list()
   k <- 0 ## component counter
   nb <- length(Sl) ## number of blocks
-  for (b in 1:nb) { ## block loop
+  if (nb>0) for (b in 1:nb) { ## block loop
     if (length(Sl[[b]]$S)==1) { ## singleton
       k <- k + 1
       ind <- Sl[[b]]$start:Sl[[b]]$stop
@@ -811,7 +813,8 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
 } ## end Sl.iftChol
 
 
-Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,nobs=0,Mp=0,nt=1,tol=0) {
+Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,
+                       nobs=0,Mp=0,nt=1,tol=0,gamma=1) {
 ## given X'WX in XX and f=X'Wy solves the penalized least squares problem
 ## with penalty defined by Sl and rho, and evaluates a REML Newton step, the REML 
 ## gradiant and the the estimated coefs bhat. If phi.fixed=FALSE then we need 
@@ -855,16 +858,16 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
   phi <- exp(log.phi)  
 
   reml1 <-  (dXXS$d1[!fixed] - ldS$ldet1 + 
-            (dift$rss1[!fixed] + dift$bSb1[!fixed])/phi)/2
+            (dift$rss1[!fixed] + dift$bSb1[!fixed])/(phi*gamma))/2
 
   reml2 <- (dXXS$d2[!fixed,!fixed] - ldS$ldet2 +  
-           (dift$rss2[!fixed,!fixed] + dift$bSb2[!fixed,!fixed])/phi)/2 
+           (dift$rss2[!fixed,!fixed] + dift$bSb2[!fixed,!fixed])/(phi*gamma))/2 
  
   if (!phi.fixed) {
     n <- length(reml1)
     rss.bSb <- yy - sum(beta*f) ## use identity ||y-Xb|| + b'Sb = y'y - b'X'y (b is minimizer)
-    reml1[n+1] <- (-rss.bSb/phi + nobs - Mp)/2
-    d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi)
+    reml1[n+1] <- (-rss.bSb/(phi*gamma) + nobs/gamma - Mp)/2
+    d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi*gamma)
     reml2 <- rbind(cbind(reml2,d[1:n]),d) 
     if (!is.null(L)) L <- rbind(cbind(L,rep(0,nrow(L))),c(rep(0,ncol(L)),1))
   }
@@ -898,7 +901,7 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,n
        hess=hess,ldetS=ldS$ldetS,ldetXXS=ldetXXS)
 } ## Sl.fitChol
 
-Sl.fit <- function(Sl,X,y,rho,fixed,log.phi=0,phi.fixed=TRUE,rss.extra=0,nobs=NULL,Mp=0,nt=1) {
+Sl.fit <- function(Sl,X,y,rho,fixed,log.phi=0,phi.fixed=TRUE,rss.extra=0,nobs=NULL,Mp=0,nt=1,gamma=1) {
 ## fits penalized regression model with model matrix X and 
 ## initialised block diagonal penalty Sl to data in y, given 
 ## log smoothing parameters rho. 
@@ -930,19 +933,19 @@ Sl.fit <- function(Sl,X,y,rho,fixed,log.phi=0,phi.fixed=TRUE,rss.extra=0,nobs=NU
   dXXS <- d.detXXS(ldS$Sl,PP,nt=nt) ## derivs of log|X'X+S|
   ## all ingredients are now in place to form REML score and 
   ## its derivatives....
-  reml <- (rss.bSb/phi + (nobs-Mp)*log(2*pi*phi) +
+  reml <- (rss.bSb/(phi*gamma) + (nobs/gamma-Mp)*log(2*pi*phi) + Mp*log(gamma) +
            ldetXXS - ldS$ldetS)/2
   reml1 <-  (dXXS$d1[!fixed] - ldS$ldet1 + # dift$bSb1[!fixed]/phi)/2 
-            (dift$rss1[!fixed] + dift$bSb1[!fixed])/phi)/2
+            (dift$rss1[!fixed] + dift$bSb1[!fixed])/(phi*gamma))/2
 
   reml2 <- (dXXS$d2[!fixed,!fixed] - ldS$ldet2 + #dift$bSb2[!fixed,!fixed]/phi)/2 
-           (dift$rss2[!fixed,!fixed] + dift$bSb2[!fixed,!fixed])/phi)/2 
+           (dift$rss2[!fixed,!fixed] + dift$bSb2[!fixed,!fixed])/(phi*gamma))/2 
   ## finally add in derivatives w.r.t. log.phi
   if (!phi.fixed) {
     n <- length(reml1)
-    reml1[n+1] <- (-rss.bSb/phi + nobs - Mp)/2
+    reml1[n+1] <- (-rss.bSb/(phi*gamma) + nobs/gamma - Mp)/2
     #d <- c(-(dift$bSb1[!fixed]),rss.bSb)/(2*phi)
-    d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi)
+    d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi*gamma)
     reml2 <- rbind(cbind(reml2,d[1:n]),d)
   } 
   ## following are de-bugging lines for testing derivatives of components...
@@ -955,7 +958,7 @@ Sl.fit <- function(Sl,X,y,rho,fixed,log.phi=0,phi.fixed=TRUE,rss.extra=0,nobs=NU
 } ## Sl.fit
 
 fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
-                 rss.extra=0,nobs=NULL,Mp=0,conv.tol=.Machine$double.eps^.5,nt=1) {
+                 rss.extra=0,nobs=NULL,Mp=0,conv.tol=.Machine$double.eps^.5,nt=1,gamma=gamma) {
 ## estimates log smoothing parameters rho, by optimizing fast REML 
 ## using Newton's method. On input Sl is a block diagonal penalty 
 ## structure produced by Sl.setup, while X is a model matrix 
@@ -988,7 +991,7 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
   fixed <- rep(FALSE,nrow(L))
  
   
-  best <- Sl.fit(Sl,X,y,L%*%rho+rho.0,fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt)
+  best <- Sl.fit(Sl,X,y,L%*%rho+rho.0,fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt,gamma=gamma)
   ## get a typical scale for the reml score... 
   reml.scale <- abs(best$reml) + best$rss/best$nobs
  
@@ -1038,7 +1041,7 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
     step[uconv.ind] <- uc.step ## step includes converged
     ## try out the step...
     rho1 <- L%*%(rho + step)+rho.0; if (!phi.fixed) log.phi <- rho1[nr+1]
-    trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt)
+    trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt,gamma=gamma)
     k <- 0
     not.moved <- 0 ## count number of consecutive steps of essentially no change from best
     while (trial$reml>best$reml) { ## step half until improvement or failure
@@ -1052,7 +1055,7 @@ fast.REML.fit <- function(Sl,X,y,rho,L=NULL,rho.0=NULL,log.phi=0,phi.fixed=TRUE,
       }	
       step <- step/2;k <- k + 1
       rho1 <- L%*%(rho + step)+rho.0; if (!phi.fixed) log.phi <- rho1[nr+1]
-      trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt)
+      trial <- Sl.fit(Sl,X,y,rho1[1:nr],fixed,log.phi,phi.fixed,rss.extra,nobs,Mp,nt=nt,gamma=gamma)
     }
     if (step.failed) break ## can get no further
     #if ((k==35 && trial$reml>best$reml)||(sum(rho != rho + step)==0)) { ## step has failed

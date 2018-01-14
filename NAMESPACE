@@ -73,7 +73,8 @@ export(anova.gam, bam, bam.update,bandchol, betar, cox.ph,concurvity,
        totalPenaltySpace,trichol,trind.generator,
        Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
 
-importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,heat.colors,terrain.colors,topo.colors)
+importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,
+           heat.colors,terrain.colors,topo.colors,axisTicks)
 importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,
            mtext, par, persp,plot,points,
            polygon,rect,strheight,strwidth,text,title)

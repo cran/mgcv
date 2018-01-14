@@ -22,7 +22,7 @@ rmvn(n,mu,V)
 }
 
 
-\details{Uses a `square root' of \code{V} to transform stadard normal deviates to multivariate normal with the correct covariance matrix. 
+\details{Uses a `square root' of \code{V} to transform standard normal deviates to multivariate normal with the correct covariance matrix. 
 }
 
 %- maybe also `usage' for other objects documented here.

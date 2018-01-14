@@ -29,6 +29,8 @@ trind.generator <- function(K=2) {
 ## but for access we want no restriction on the indices.
 ## i4[i,j,k,l] produces the appropriate m for unrestricted 
 ## indices. i3 and i2 do the same for 3d and 2d arrays.
+## ixr will extract the unique elements from an x dimensional
+## upper triangular array in the correct order.
   i4 <- array(0,dim=c(K,K,K,K))
   m.start <- 1
   m <- m.start
@@ -58,8 +60,26 @@ trind.generator <- function(K=2) {
     i2[k,l] <- i2[l,k] <- m
     m <- m + 1
   }
-  
-  list(i2=i2,i3=i3,i4=i4)
+  ## now create the reverse indices...
+  m <- m.start
+  i4r <- rep(0,max(i4)) ## extracts the unique elements from a symmetric array in packing order.
+  for (i in 1:K) for (j in i:K) for (k in j:K) for (l in k:K) {
+    i4r[m] <- l + (k-1)*K + (j-1)*K^2 + (i-1)*K^3
+    m <- m + 1
+  }
+  m <- m.start
+  i3r <- rep(0,max(i3)) ## extracts the unique elements from a symmetric array in packing order.
+  for (j in 1:K) for (k in j:K) for (l in k:K) {
+    i3r[m] <- l + (k-1)*K + (j-1)*K^2
+    m <- m + 1
+  }
+  m <- m.start
+  i2r <- rep(0,max(i2)) ## extracts the unique elements from a symmetric array in packing order.
+  for (k in 1:K) for (l in k:K) {
+    i2r[m] <- l + (k-1)*K
+    m <- m + 1
+  }
+  list(i2=i2,i3=i3,i4=i4,i2r=i2r,i3r=i3r,i4r=i4r)
 } ## trind.generator
 
 gamlss.etamu <- function(l1,l2,l3=NULL,l4=NULL,ig1,g2,g3=NULL,g4=NULL,i2,i3=NULL,i4=NULL,deriv=0) {
@@ -667,10 +687,16 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
       }
   }) ## initialize gaulss
 
+  rd <- function(mu,wt,scale) {
+  ## simulate responses 
+    return( rnorm(nrow(mu), mu[ , 1], sqrt(scale/wt)/mu[ , 2]) )
+  } ## rd
+
+
   structure(list(family="gaulss",ll=ll,link=paste(link),nlp=2,
     tri = trind.generator(2), ## symmetric indices for accessing derivative arrays
     initialize=initialize,postproc=postproc,residuals=residuals,
-    linfo = stats, ## link information list
+    linfo = stats,rd=rd, ## link information list
     d2link=1,d3link=1,d4link=1, ## signals to fix.family.link that all done    
     ls=1, ## signals that ls not needed here
     available.derivs = 2 ## can use full Newton here

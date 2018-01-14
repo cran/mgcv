@@ -6,7 +6,7 @@
 \title{Penalized B-splines in GAMs}
 
 \description{\code{\link{gam}} can use smoothing splines based on univariate B-spline bases
-with derivative based penalties, specified via terms like \code{s(x,bs="bs",m=c(3,2))}. \code{m[1]} controls the spline order, with \code{m[1]=3} being a cubic spline, \code{m[1]=2} being quadratic, and so on. The integrated square of the \code{m[2]}th derivative is used as the penalty. So \code{m=c(3,2)} is a convetional cubic spline. If \code{m} is supplied as a single number, then it is taken to be \code{m[1]} and \code{m[2]=m[1]-1}, which is only a conventional smoothing spline in the \code{m=3}, cubic spline case. Notice that the definition of the spline order in terms of \code{m[1]} is intuitive, but differs to that used with the \code{\link{tprs}} and \code{\link{p.spline}} bases. See details for options for controlling the interval over which the penalty is evaluated (which can matter if it is necessary to extrapolate).
+with derivative based penalties, specified via terms like \code{s(x,bs="bs",m=c(3,2))}. \code{m[1]} controls the spline order, with \code{m[1]=3} being a cubic spline, \code{m[1]=2} being quadratic, and so on. The integrated square of the \code{m[2]}th derivative is used as the penalty. So \code{m=c(3,2)} is a conventional cubic spline. Any further elements of \code{m}, after the first 2, define the order of derivative in further penalties. If \code{m} is supplied as a single number, then it is taken to be \code{m[1]} and \code{m[2]=m[1]-1}, which is only a conventional smoothing spline in the \code{m=3}, cubic spline case. Notice that the definition of the spline order in terms of \code{m[1]} is intuitive, but differs to that used with the \code{\link{tprs}} and \code{\link{p.spline}} bases. See details for options for controlling the interval over which the penalty is evaluated (which can matter if it is necessary to extrapolate).
 
 }
 
@@ -31,9 +31,9 @@ with derivative based penalties, specified via terms like \code{s(x,bs="bs",m=c(
 for the elements that this object will contain.
 }
 
-\details{ The basis and penalty are sparse (although sparse matrices are not used to represent them). \code{m[2]>m[1]} will generate an error, since in that case the penalty would be based on an undefined derivative of the basis, which makes no sense.
+\details{ The basis and penalty are sparse (although sparse matrices are not used to represent them). \code{m[2]>m[1]} will generate an error, since in that case the penalty would be based on an undefined derivative of the basis, which makes no sense. The terms can have multiple penalties of different orders, for example \code{s(x,bs="bs",m=c(3,2,1,0))} specifies a cubic basis with 3 penalties: a conventional cubic spline penalty, an integrated square of first derivative penalty, and an integrated square of function value penalty.  
 
-The default basis dimension, \code{k}, is the larger of 10 and \code{m}. \code{m[1]} is the lower limit on basis dimension. If knots are supplied, then  the number of supplied knots should be \code{k + m[1] + 1}, and the range of the middle \code{k-m[1]+1} knots should include all the covariate values. Alternatively, 2 knots can be supplied, denoting the  lower and upper limits between which the spline can be evaluated (making this range too wide mean that there is no information about some basis coefficients, because the corresponding basis functions have a span that includes no data). Unlike P-splines, splines with derivative based penalties can have uneven knot spacing, without a problem.
+The default basis dimension, \code{k}, is the larger of 10 and \code{m[1]}. \code{m[1]} is the lower limit on basis dimension. If knots are supplied, then  the number of supplied knots should be \code{k + m[1] + 1}, and the range of the middle \code{k-m[1]+1} knots should include all the covariate values. Alternatively, 2 knots can be supplied, denoting the  lower and upper limits between which the spline can be evaluated (making this range too wide mean that there is no information about some basis coefficients, because the corresponding basis functions have a span that includes no data). Unlike P-splines, splines with derivative based penalties can have uneven knot spacing, without a problem.
 
 Another option is to supply 4 knots. Then the outer 2 define the interval over which the penalty is to be evaluated, while the inner 2 define an interval within which all but the outermost 2 knots should lie. Normally the outer 2 knots would be the interval over which predictions might be required, while the inner 2 knots define the interval within which the data lie. This option allows the penalty to apply over a wider interval than the data, while still placing most of the basis functions where the data are. This is useful in situations in which it is necessary to extrapolate slightly with a smooth. Only applying the penalty over the interval containing the data amounts to a model in which the function could be less smooth outside the interval than within it, and leads to very wide extrapolation confidence intervals. However the alternative of evaluating the penalty over the whole real line amounts to asserting certainty that the function has some derivative zeroed away from the data, which is equally unreasonable. It is prefereable to build a model in which the same smoothness assumtions apply over both data and extrapolation intervals, but not over the whole real line. See example code for practical illustration.
 
@@ -44,14 +44,14 @@ allowed in basis construction, but is when predicting.
 It is possible to set a \code{deriv} flag in a smooth specification or smooth object, so that a model or prediction matrix produces the requested derivative of the spline, rather than evaluating it. 
 }
 
-\section{WARNING}{\code{m} directly controls the spline order here, which is intuitively sensible, but different to other bases.}
+\section{WARNING}{\code{m[1]} directly controls the spline order here, which is intuitively sensible, but different to other bases.}
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}. Extrapolation ideas joint with David Miller.}
 
 \seealso{\code{\link{p.spline}}}
 
 \references{
-Wood, S.N. (2016) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. \url{http://arxiv.org/abs/1605.02446}
+Wood, S.N. (2017) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. 27(4) 985-989 \url{http://arxiv.org/abs/1605.02446}
 }
 
 
@@ -60,7 +60,8 @@ Wood, S.N. (2016) P-splines with derivative based penalties and tensor product s
   set.seed(5)
   dat <- gamSim(1,n=400,dist="normal",scale=2)
   bs <- "bs"
-  b <- gam(y~s(x0,bs=bs,m=c(4,2))+s(x1,bs=bs)+s(x2,k=15,bs=bs,m=c(4,3))+
+  ## note the double penalty on the s(x2) term...
+  b <- gam(y~s(x0,bs=bs,m=c(4,2))+s(x1,bs=bs)+s(x2,k=15,bs=bs,m=c(4,3,0))+
            s(x3,bs=bs,m=c(1,0)),data=dat,method="REML")
   plot(b,pages=1)
 

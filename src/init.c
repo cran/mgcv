@@ -19,8 +19,8 @@ R_CallMethodDef CallMethods[] = {
   { "mgcv_Rpcross",(DL_FUNC)&mgcv_Rpcross,3},
   { "mgcv_madi",(DL_FUNC)&mgcv_madi,4},
   { "Rkdtree",(DL_FUNC)&Rkdtree,1},
-  {"Rkdnearest",(DL_FUNC)&Rkdnearest,3},
-  {"Rkradius",(DL_FUNC)&Rkradius,4},
+  {"Rkdnearest",(DL_FUNC)&Rkdnearest,4},
+  {"Rkradius",(DL_FUNC)&Rkradius,5},
   {NULL, NULL, 0}
 };
 

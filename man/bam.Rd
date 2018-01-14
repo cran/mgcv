@@ -74,8 +74,7 @@ of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likel
 \code{\link{gam.control}}. Any control parameters not supplied stay at their default values.}
 
 \item{select}{Should selection penalties be added to the smooth effects, so that they can in principle be 
-penalized out of the model? Has the side effect that smooths no longer have a fixed effect component (improper prior
-from a Bayesian perspective) allowing REML comparison of models with the same fixed effect structure. 
+penalized out of the model? See \code{gamma} to increase penalization.  Has the side effect that smooths no longer have a fixed effect component (improper prior from a Bayesian perspective) allowing REML comparison of models with the same fixed effect structure. 
 }
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
@@ -83,9 +82,7 @@ scale paraemter is unknown. 0 signals that the scale parameter is 1  for Poisson
 Note that (RE)ML methods can only work with scale parameter 1 for the Poisson and binomial cases.    
 } 
 
-\item{gamma}{It is sometimes useful to inflate the model degrees of 
-freedom in the GCV or UBRE/AIC score by a constant multiplier. This allows 
-such a multiplier to be supplied. } 
+\item{gamma}{Increase above 1 to force smoother fits. \code{gamma} is used to multiply the effective degrees of freedom in the GCV/UBRE/AIC score (so \code{log(n)/2} is BIC like). \code{n/gamma} can be viewed as an effective sample size, which allows it to play a similar role for RE/ML smoothing parameter estimation.} 
 
 
 \item{knots}{this is an optional list containing user specified knot values to be used for basis construction. 
@@ -191,6 +188,8 @@ can be used in the 1D case, and tensor product smooths (\code{te}) are typically
 If \code{cluster} is provided as a cluster set up using \code{\link[parallel]{makeCluster}} (or \code{\link[parallel]{makeForkCluster}}) from the \code{parallel} package, then the rate limiting QR decomposition of the model matrix is performed in parallel using this cluster. Note that the speed ups are often not that great. On a multi-core machine it is usually best to set the cluster size to the number of physical cores, which is often less than what is reported by \code{\link[parallel]{detectCores}}. Using more than the number of physical cores can result in no speed up at all (or even a slow down). Note that a highly parallel BLAS may negate all advantage from using a cluster of cores. Computing in parallel of course requires more memory than computing in series. See examples.
 
 When \code{discrete=TRUE} the covariate data are first discretized. Discretization takes place on a smooth by smooth basis, or in the case of tensor product smooths (or any smooth that can be represented as such, such as random effects), separately for each marginal smooth. The required spline bases are then evaluated at the discrete values, and stored, along with index vectors indicating which original observation they relate to. Fitting is by a version of performance oriented iteration/PQL using REML smoothing parameter selection on each iterative working model (as for the default method). The iteration is based on the derivatives of the REML score, without computing the score itself, allowing the expensive computations to be reduced to one parallel block Cholesky decomposition per iteration (plus two basic operations of equal cost, but easily parallelized). Unlike standard POI/PQL, only one step of the smoothing parameter update for the working model is taken at each step (rather than iterating to the optimal set of smoothing parameters for each working model). At each step a weighted model matrix crossproduct of the model matrix is required - this is efficiently computed from the pre-computed basis functions evaluated at the discretized covariate values. Efficient computation with tensor product terms means that some terms within a tensor product may be re-ordered for maximum efficiency. Parallel computation is controlled using the \code{nthreads} argument. For this method no cluster computation is used, and the \code{parallel} package is not required.
+
+\code{discrete=TRUE} will often produce identical results to the methods without discretization, since covariates often only take a modest number of discrete values anyway, so no approximation at all is involved in the discretization process. Even when some approximation is involved, the differences are often very small as the algorithms discretize marginally whenever possible. For example each margin of a tensor product smooth is discretized separately, rather than discretizing onto a grid of covariate values (for an equivalent isotropic smooth we would have to discretize onto a grid). The marginal approach allows quite fine scale discretization and hence very low approximation error. Note that when using the smooth \code{id} mechanism to link smoothing parameters, the discrete method cannot force the linked bases to be identical, so some differences to the none discrete methods will be noticable.   
 
 The extended families given in \code{\link{family.mgcv}} can also be used. The extra parameters of these are estimated by maximizing the penalized likelihood, rather than the restricted marginal likelihood as in \code{\link{gam}}. So estimates may differ slightly from those returned by \code{\link{gam}}. Estimation is accomplished by a Newton iteration to find the extra parameters (e.g. the theta parameter of the negative binomial or the degrees of freedom and scale of the scaled t) maximizing the log likelihood given the model coefficients at each iteration of the fitting procedure. 
 

@@ -46,7 +46,7 @@ out duplicate locations).}
 \item \eqn{\exp(-d/\rho)(1+d/\rho + (d/\rho)^2/3)}{exp(-d/r)(1+d/r + (d/r)^2/3)}.
 \item \eqn{\exp(-d/\rho)(1+d/\rho+2(d/\rho)^2/5 + (d/\rho)^3/15)}{exp(-d/r)(1+d/r+2(d/r)^2/4+(d/r)^3/15)}.
 }
-See Fahrmeir et al. (2013) section 8.1.6, for example.  
+See Fahrmeir et al. (2013) section 8.1.6, for example. Note that setting \code{r} to too small a value will lead to unpleasant results, as most points become all but independent (especially for the spherical model. Note: Wood 2017, Figure 5.20 right is based on a buggy implementation). 
 
 The default basis dimension for this class is \code{k=M+k.def} where \code{M} is the null space dimension (dimension of unpenalized function space) and \code{k.def} is 10 for dimension 1, 30 for dimension 2 and 100 for higher dimensions. 
 This is essentially arbitrary, and should be checked, but as with all penalized regression smoothers, results are statistically 
@@ -88,7 +88,7 @@ Handcock, M. S., K. Meier and D. Nychka (1994) Journal of the American Statistic
 
 Kammann, E. E. and M.P. Wand (2003) Geoadditive Models. Applied Statistics 52(1):1-18.
 
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+Wood, S.N. (2017) Generalized Additive Models: an introduction with R (2nd ed). CRC/Taylor and Francis
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
