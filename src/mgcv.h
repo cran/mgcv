@@ -193,9 +193,9 @@ void k_nn(double *X,double *dist,double *a,int *ni,int *n,int *d,int *k,int *get
 //void Rkdtree(double *X,int *n, int *d,int *idat,double *ddat);
 SEXP Rkdtree(SEXP x);
 //void Rkdnearest(double *X,int *idat,double *ddat,int *n,double *x, int *m, int *ni, double *dist,int *k);
-SEXP Rkdnearest(SEXP Xr, SEXP xr,SEXP k);
+SEXP Rkdnearest(SEXP kdr,SEXP Xr, SEXP xr,SEXP k);
 //void Rkradius(double *r,int *idat,double *ddat,double *X,double *x,int *m,int *off,int *ni,int *op);
-SEXP Rkradius(SEXP Xr, SEXP xr,SEXP rr,SEXP offr);
+SEXP Rkradius(SEXP kdr,SEXP Xr, SEXP xr,SEXP rr,SEXP offr);
 double xidist(double *x,double *X,int i,int d, int n);
 int closest(kdtree_type *kd, double *X,double *x,int n,int *ex,int nex);
 void kd_tree(double *X,int *n, int *d,kdtree_type *kd);

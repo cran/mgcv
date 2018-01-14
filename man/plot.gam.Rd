@@ -8,7 +8,7 @@
    as well.}
 \usage{
 \method{plot}{gam}(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,
-         n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
+         n=100,n2=40,n3=3,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade=FALSE,shade.col="gray80",shift=0,
          trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,
@@ -56,7 +56,7 @@ Set to 0 to have the routine leave all graphics settings as they are. }
 
 \item{n2}{Square root of number of points used to grid estimates of 2-d
   functions for contouring.}
-
+\item{n3}{Square root of number of panels to use when displaying 3 or 4 dimensional functions.}
 \item{pers}{Set to \code{TRUE} if you want perspective plots for 2-d
   terms.}
 
@@ -146,9 +146,10 @@ separation of the contours of the different plots, but this is not
 always easy to achieve. Note that these plots can not be modified to the same extent as the other plot. 
    
 For 2-d smooths \code{scheme==1} produces a perspective plot, while \code{scheme==2} produces a heatmap, 
-with overlaid contours. 
+with overlaid contours and \code{scheme==3} a greyscale heatmap.
 
-Smooths of more than 2 variables are not plotted, but see \code{\link{vis.gam}}.
+Smooths of 3 and 4 variables are displayed as tiled heatmaps with overlaid contours. In the 3 variable case the third variable is discretized and a contour plot of the first 2 variables is produced for each discrete value. The panels in the lower and upper rows are labelled with the corresponding third variable value. The lowest value is bottom left, and highest at top right. For 4 variables, two of the variables are coarsely discretized and a square array of image plots is produced for each combination of the discrete values. The first two arguments of the smooth are the ones used for the image/contour plots, unless a tensor product term has 2D marginals, in which case the first 2D marginal is image/contour plotted. \code{n3} controls the number of panels.
+See also \code{\link{vis.gam}}. 
 
 Fine control of plots for parametric terms can be obtained by calling
 \code{\link{termplot}} directly, taking care to use its \code{terms} argument.
@@ -262,6 +263,16 @@ par(op)
 op <- par(mfrow=c(2,2))
 plot(b1,all.terms=TRUE,scheme=c(2,1))
 par(op)
+
+## 3 and 4 D smooths can also be plotted
+dat <- gamSim(1,n=400)
+b1 <- gam(y~te(x0,x1,x2,d=c(1,2),k=c(5,15))+s(x3),data=dat)
+
+## Now plot. Use cex.lab and cex.axis to control axis label size,
+## n3 to control number of panels, n2 to control panel grid size,
+## scheme=1 to get greyscale...
+
+plot(b1,pages=1) 
 
 }
 \keyword{models} \keyword{smooth} \keyword{regression} \keyword{hplot}%-- one or more ...

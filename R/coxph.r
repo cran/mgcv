@@ -155,7 +155,7 @@ cox.ph <- function (link = "identity") {
         strat <- NULL
       }
       if (sum(is.na(y))>0) stop("NA times supplied for cox.ph prediction")
-      X <- X[ii,];y <- y[ii];
+      X <- X[ii,,drop=FALSE];y <- y[ii];
       if (is.null(strat)) {
         n <- nrow(X)
         oo <- .C("coxpred",as.double(X),t=as.double(y),as.double(beta),as.double(Vb),

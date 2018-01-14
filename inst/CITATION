@@ -38,7 +38,7 @@ bibentry(
  year="2004",
  author="S. N. Wood",
  textVersion="Wood, S.N. (2004) Stable and efficient multiple smoothing 
- parameter estimation for generalized additive models.Journal of the 
+ parameter estimation for generalized additive models. Journal of the 
  American Statistical Association. 99:673-686."
 )
 
@@ -52,7 +52,7 @@ author="S.N Wood",
 edition="2",
 publisher="Chapman and Hall/CRC",
 textVersion="Wood, S.N. (2017) Generalized Additive Models: An 
-Introduction with R (wnd edition). Chapman and Hall/CRC. "
+Introduction with R (2nd edition). Chapman and Hall/CRC. "
 )
 
 bibentry(

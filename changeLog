@@ -3,6 +3,58 @@
 
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
+- argument 'pers' in plot.gam (1.8-23, Nov 2018)
+
+1.8-23
+
+* default plot methods added for smooths of 3 and 4 variables. 
+
+* The `gamma' control parameter for gam and bam can now be used with RE/ML
+  smoothness selection, not just GCV/AIC. Essentially smoothing parameters
+  are chosen as if the sample size was n/gamma instead of n.
+
+* The "bs" basis now allows multiple penalties of different orders on the same
+  spline. e.g. s(x,bs="bs",m=c(3,2,0)). See ?b.spline.  
+
+* bam(...,discrete=TRUE) can now use the smooth 'id' mechanism to link 
+  smoothing parameters, but note the method constraint that the linked bases 
+  are not forced to be identical in this case (unlike other fitting methods).
+
+* summary.gam now allows random effects tests to be skipped (in some large
+  models the test is costly and uninteresting).
+
+* 'interpret.gam0' modified so that masked 's', 'te', etc from other packages 
+  does not cause failure.
+
+* coxph fix of prediction bug introduced with stratified model (thanks
+  Giampiero Marra)
+	
+* bam(...,discrete=TRUE) fix to handle nested matrix arguments to smooths.
+
+* bam(...,discrete=TRUE) fix to by variable handling with fs and re smooths
+  which could fail during re-representation as tensor smooths (for 
+  discretization purposes).
+
+* bam extended family extension had introduced a bug in null deviance 
+  computation for Gaussian additive case when using methods other than fREML 
+  or GCV.Cp. Fixed.
+
+* bam(...,discrete=TRUE) now defaults to discrete=FALSE if there are no 
+  smooths, rather than failing.
+
+* bam was reporting wrong family under some smoothing parameter selection 
+  methods (not default).
+
+* null deviance computation improved for extended families. Previous version 
+  used an approximation valid for most families, and corrected the rest - now 
+  replaced with exact computations for all cases.
+
+* scat initialization tweaked to avoid -ve def problems at start.
+
+* paraPen handling in bam was broken - fixed.
+
+* slight adjustment to sp  initialization for extended families - use observed 
+  information in weights if possible.
 
 1.8-22
 

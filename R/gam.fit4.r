@@ -21,6 +21,7 @@ dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
       if (deriv>0) {
         d$Dth <- r$Dth; d$Detath <- r$Dmuth
         d$Deta3 <- r$Dmu3; d$Deta2th <- r$Dmu2th
+	d$EDeta2th <- r$EDmu2th;d$EDeta3 <- r$EDmu3
       }
       if (deriv>1) {
         d$Deta4 <- r$Dmu4; d$Dth2 <- r$Dth2; d$Detath2 <- r$Dmuth2
@@ -47,7 +48,9 @@ dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
       d$Detath <- r$Dmuth * ig1
       g3g <- fam$g3g(mu)
       d$Deta3 <- r$Dmu3*ig13 - 3*r$Dmu2 * g2g * ig12 + r$Dmu * (3*g2g^2 - g3g)*ig1
+      if (!is.null(r$EDmu3)) d$EDeta3 <- r$EDmu3*ig13 - 3*r$EDmu2 * g2g * ig12 ## EDmu=0
       d$Deta2th <- r$Dmu2th*ig12 - r$Dmuth*g2g*ig1
+      if (!is.null(r$EDmu2th)) d$EDeta2th <- r$EDmu2th*ig12 ##- r$EDmuth*g2g*ig1
    }
    if (deriv>1) {
      g4g <- fam$g4g(mu)
@@ -195,7 +198,7 @@ fmud.test <- function(y,mu,wt,theta,fam,eps = 1e-7) {
 gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
             weights = rep(1, nobs), start = NULL, etastart = NULL, 
             mustart = NULL, offset = rep(0, nobs),U1=diag(ncol(x)), Mp=-1, family = gaussian(), 
-            control = gam.control(), deriv=2,
+            control = gam.control(), deriv=2,gamma=1,
             scale=1,scoreType="REML",null.coef=rep(0,ncol(x)),...) {
 ## Routine for fitting GAMs beyond exponential family.
 ## Inputs as gam.fit3 except that family is of class "extended.family", while
@@ -586,8 +589,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    nt <- length(theta)
    lsth1 <- ls$lsth1[1:nt];
    lsth2 <- as.matrix(ls$lsth2)[1:nt,1:nt] ## exclude any derivs w.r.t log scale here
-   REML <- (dev+oo$P)/(2*scale) - ls$ls + (oo$ldet - rp$det)/2 - 
-           as.numeric(scoreType=="REML") * Mp * log(2*pi*scale)/2
+   REML <- ((dev+oo$P)/(2*scale) - ls$ls)/gamma + (oo$ldet - rp$det)/2 - 
+           as.numeric(scoreType=="REML") * Mp * (log(2*pi*scale)/2-log(gamma)/2)
    REML1 <- REML2 <- NULL
    if (deriv) {
      det1 <- oo$ldet1
@@ -595,20 +598,20 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
        ind <- 1:nSp + length(theta)
        det1[ind] <- det1[ind] - rp$det1
      }
-     REML1 <- (oo$D1+oo$P1)/(2*scale) - c(lsth1,rep(0,length(sp))) + (det1)/2
+     REML1 <- ((oo$D1+oo$P1)/(2*scale) - c(lsth1,rep(0,length(sp))))/gamma + (det1)/2
      if (deriv>1) {
        ls2 <- D2*0;ls2[1:nt,1:nt] <- lsth2 
        if (nSp) ldet2[ind,ind] <- ldet2[ind,ind] - rp$det2
-       REML2 <- (D2+bSb2)/(2*scale) - ls2 + ldet2/2
+       REML2 <- ((D2+bSb2)/(2*scale) - ls2)/gamma + ldet2/2
      }
    } 
 
    if (!scale.known&&deriv) { ## need derivatives wrt log scale, too 
       Dp <- dev + oo$P
-      dlr.dlphi <- -Dp/(2 *scale) - ls$lsth1[nt+1] - Mp/2
-      d2lr.d2lphi <- Dp/(2*scale) - ls$lsth2[nt+1,nt+1] 
-      d2lr.dspphi <- -(oo$D1+oo$P1)/(2*scale) 
-      d2lr.dspphi[1:nt] <- d2lr.dspphi[1:nt] - ls$lsth2[nt+1,1:nt]
+      dlr.dlphi <- (-Dp/(2 *scale) - ls$lsth1[nt+1])/gamma - Mp/2
+      d2lr.d2lphi <- (Dp/(2*scale) - ls$lsth2[nt+1,nt+1])/gamma 
+      d2lr.dspphi <- -(oo$D1+oo$P1)/(2*scale*gamma) 
+      d2lr.dspphi[1:nt] <- d2lr.dspphi[1:nt] - ls$lsth2[nt+1,1:nt]/gamma
       REML1 <- c(REML1,dlr.dlphi)
       if (deriv==2) {
               REML2 <- rbind(REML2,as.numeric(d2lr.dspphi))
@@ -625,7 +628,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
 
    names(coef) <- xnames
    names(residuals) <- ynames
-   wtdmu <- sum(weights * mu)/sum(weights) ## changed from y
+   wtdmu <- sum(weights * y)/sum(weights) ## has to then be corrected when this is incorrect
+   ## wtdmu <- sum(weights * mu)/sum(weights) ## changed from y
    nulldev <- sum(dev.resids(y, rep(wtdmu,length(y)), weights))
    n.ok <- nobs - sum(weights == 0)
    nulldf <- n.ok
@@ -666,7 +670,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
 
 
 gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
-                     control=gam.control(),Mp=-1,start=NULL){
+                     control=gam.control(),Mp=-1,start=NULL,gamma=1){
 ## NOTE: offset handling - needs to be passed to ll code
 ## fit models by general penalized likelihood method, 
 ## given doubly extended family in family. lsp is log smoothing parameters
@@ -1023,17 +1027,18 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   }
 
   ## get grad and Hessian of REML score...
-  REML <- -as.numeric(ll$l - drop(t(coef)%*%St%*%coef)/2 + rp$ldetS/2  - ldetHp/2  + Mp*log(2*pi)/2)
+  REML <- -as.numeric((ll$l - drop(t(coef)%*%St%*%coef)/2)/gamma + rp$ldetS/2  - ldetHp/2  +
+           Mp*(log(2*pi)/2)-log(gamma)/2)
  
   REML1 <- if (deriv<1) NULL else -as.numeric( # d1l # cancels
-                                   - d1bSb/2 + rp$ldet1/2  - d1ldetH/2 ) 
+                                   - d1bSb/(2*gamma) + rp$ldet1/2  - d1ldetH/2 ) 
 
   if (control$trace) {
     cat("\niter =",iter,"  ll =",ll$l,"  REML =",REML,"  bSb =",t(coef)%*%St%*%coef/2,"\n")
     cat("log|S| =",rp$ldetS,"  log|H+S| =",ldetHp,"  n.drop =",length(drop),"\n")
     if (!is.null(REML1)) cat("REML1 =",REML1,"\n")
   }
-  REML2 <- if (deriv<2) NULL else -( d2l - d2bSb/2 + rp$ldet2/2  - d2ldetH/2 ) 
+  REML2 <- if (deriv<2) NULL else -( (d2l - d2bSb/2)/gamma + rp$ldet2/2  - d2ldetH/2 ) 
  ## bSb <- t(coef)%*%St%*%coef
   lpi <- attr(x,"lpi")
   if (is.null(lpi)) { 
@@ -1095,7 +1100,7 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
   lsp <- lsp + 2.5
   mult <- 1
   fit <- gam.fit5(x=x,y=y,lsp=lsp,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
-                     control=control,Mp=Mp,start=start)
+                     control=control,Mp=Mp,start=start,gamma=1)
   score.hist <- rep(0,200)
   for (iter in 1:200) {
     start <- fit$coefficients
@@ -1129,14 +1134,14 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
     lsp1 <- pmin(lsp + log(r)*mult,12)
     old.reml <- fit$REML
     fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,
-                    family=family,control=control,Mp=Mp,start=start)
+                    family=family,control=control,Mp=Mp,start=start,gamma=1)
     ## some step length control...
    
     if (fit$REML<=old.reml) { ## improvement
       if (max(abs(log(r))<.05)) { ## consider step extension
         lsp2 <- pmin(lsp + log(r)*mult*2,12) ## try extending step...
         fit2 <- gam.fit5(x=x,y=y,lsp=lsp2,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
-                     control=control,Mp=Mp,start=start)
+                     control=control,Mp=Mp,start=start,gamma=1)
      
         if (fit2$REML < fit$REML) { ## improvement - accept extension
           fit <- fit2;lsp <- lsp2
@@ -1150,7 +1155,7 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
           mult <- mult/2 ## contract step
           lsp1 <- pmin(lsp + log(r)*mult,12)
 	  fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
-                        control=control,Mp=Mp,start=start)
+                        control=control,Mp=Mp,start=start,gamma=1)
       }
       lsp <- lsp1
       if (mult<1) mult <- 1
@@ -1312,13 +1317,13 @@ deriv.check5 <- function(x, y, sp,
             weights = rep(1, length(y)), start = NULL,
             offset = rep(0, length(y)),Mp,family = gaussian(), 
             control = gam.control(),deriv=2,eps=1e-7,spe=1e-3,
-            Sl,...)
+            Sl,gamma=1,...)
 ## FD checking of derivatives for gam.fit5: a debugging routine
 {  if (!deriv%in%c(1,2)) stop("deriv should be 1 or 2")
    if (control$epsilon>1e-9) control$epsilon <- 1e-9 
    ## first obtain the fit corresponding to sp...
    b <- gam.fit5(x=x,y=y,lsp=sp,Sl=Sl,weights=weights,offset=offset,deriv=deriv,
-        family=family,control=control,Mp=Mp,start=start)
+        family=family,control=control,Mp=Mp,start=start,gamma=gamma)
    ## now get the derivatives of the likelihood w.r.t. coefs...
    ll <- family$ll(y=y,X=x,coef=b$coefficients,wt=weights,family=family,
                    deriv=1,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL)
@@ -1348,9 +1353,9 @@ deriv.check5 <- function(x, y, sp,
    for (i in 1:M) { ## the smoothing parameter loop
      sp0 <- sp1 <- sp;sp1[i] <- sp[i] + spe/2;sp0[i] <- sp[i] - spe/2
      b0 <- gam.fit5(x=x,y=y,lsp=sp0,Sl=Sl,weights=weights,offset=offset,deriv=0,
-          family=family,control=control,Mp=Mp,start=start)
+          family=family,control=control,Mp=Mp,start=start,gamma=gamma)
      b1 <- gam.fit5(x=x,y=y,lsp=sp1,Sl=Sl,weights=weights,offset=offset,deriv=0,
-          family=family,control=control,Mp=Mp,start=start)
+          family=family,control=control,Mp=Mp,start=start,gamma=gamma)
      fd.br[,i] <- (b1$coefficients - b0$coefficients)/spe
      REML1[i] <- (b1$REML-b0$REML)/spe
      fd.dH[[i]] <- (b1$lbb - b0$lbb)/spe

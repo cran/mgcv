@@ -1,4 +1,4 @@
-##  R plotting routines for the package mgcv (c) Simon Wood 2000-2010
+##  R plotting routines for the package mgcv (c) Simon Wood 2000-2017
 ##  With contributions from Henric Nilsson
 
 
@@ -335,7 +335,7 @@ gam.check <- function(b, old.style=FALSE,
 #############################################
 
 plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
-                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
@@ -436,7 +436,7 @@ lolaxy <- function(lo,la,theta,phi) {
 } ## end of lolaxy
 
 plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
-                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(100),
@@ -639,7 +639,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
 } ## polys.plot
 
 plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
-                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
@@ -664,7 +664,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 } ## end plot.mrf.smooth
 
 plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
-                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
@@ -676,7 +676,10 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
     nf <- length(x$flev)
     fac <- rep(x$flev,rep(n,nf))
     dat <- data.frame(fac,xx)
-    names(dat) <- c(x$fterm,x$base$term)
+    names(dat) <- c(x$fterm,x$base$term)  
+    if (x$by!="NA") {        # deal with any by variables
+      dat[[x$by]] <- rep(1,n)
+    }
     X <- PredictMat(x,dat)
     if (is.null(xlab)) xlabel <- x$base$term else xlabel <- xlab
     if (is.null(ylab)) ylabel <- label else ylabel <- ylab
@@ -695,7 +698,7 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
 } ## end plot.fs.interaction
 
 plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
-                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(50),
@@ -806,7 +809,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
   }  ## end of sp.contour
 
   if (is.null(P)) { ## get plotting information...
-    if (!x$plot.me||x$dim>2) return(NULL) ## shouldn't or can't plot
+    if (!x$plot.me||x$dim>4) return(NULL) ## shouldn't or can't plot
     if (x$dim==1) { ## get basic plotting data for 1D terms 
       raw <- data[x$term][[1]]
       if (is.null(xlim)) xx <- seq(min(raw),max(raw),length=n) else # generate x sequence for prediction
@@ -823,7 +826,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       if (is.null(xlim)) xlim <- range(xx)
       return(list(X=X,x=xx,scale=TRUE,se=TRUE,raw=raw,xlab=xlabel,ylab=ylabel,
              main=main,se.mult=se1.mult,xlim=xlim))
-    } else { ## basic plot data for 2D terms
+    } else if (x$dim==2) { ## basic plot data for 2D terms
       xterm <- x$term[1]
       if (is.null(xlab)) xlabel <- xterm else xlabel <- xlab
       yterm <- x$term[2]
@@ -840,8 +843,8 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       if (too.far>0)
       exclude <- exclude.too.far(xx,yy,raw$x,raw$y,dist=too.far) else
       exclude <- rep(FALSE,n2*n2)
-      if (x$by!="NA")         # deal with any by variables
-      { by <- rep(1,n2^2);dat <- data.frame(x=xx,y=yy,by=by)
+      if (x$by!="NA") {        # deal with any by variables
+        by <- rep(1,n2^2);dat <- data.frame(x=xx,y=yy,by=by)
         names(dat) <- c(xterm,yterm,x$by)
       } else { 
         dat<-data.frame(x=xx,y=yy);names(dat)<-c(xterm,yterm)
@@ -854,7 +857,58 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
       if (is.null(xlim)) xlim <- range(xm) 
       return(list(X=X,x=xm,y=ym,scale=FALSE,se=TRUE,raw=raw,xlab=xlabel,ylab=ylabel,
              main=main,se.mult=se2.mult,ylim=ylim,xlim=xlim,exclude=exclude))
-    } ## end of 2D basic plot data production 
+    } else { ## basic plot data for 3 or 4 d terms
+      vname <- x$term
+      ## if the smooth has margins and one is 2D then set that as the 
+      ## term for 2D plotting, rather than conditioning....
+      if (!is.null(x$margin)) {
+        for (i in 1:length(x$margin)) if (x$margin[[i]]$dim==2) {
+          vname <- x$margin[[i]]$term ## these are the variables to 2d plot
+          vname <- c(vname,x$term[!x$term%in%vname])
+          break;
+        }
+      }
+      ## ... so first 2 terms in vname are the vars to plot in 2D. 
+      ## Now get the limits for plotting...
+      nv <- length(vname)
+      lo <- hi <- rep(0,nv)
+      for (i in 1:length(vname)) {
+        xx <- data[vname[i]][[1]] 
+        lo[i] <- min(xx);hi[i] <- max(xx)
+      } 
+      nc <- nr <- n3 ## set number cols and rows of plot
+      m <- n2 ## 2d plotting grid side
+      x1 <- seq(lo[1],hi[1],length=m)
+      x2 <- seq(lo[2],hi[2],length=m)
+      if (nv==3) {
+        x3 <- seq(lo[3],hi[3],length=nr*nc)
+        dat <- cbind(rep(x1,m*nr*nc),
+           rep(rep(x2,each=m*nr),nc),
+           x3[rep(rep((1:nr-1)*nc,each=m),m*nc) + rep(1:nc,each=m*m*nr)])
+      } else {
+        x3 <- seq(lo[3],hi[3],length=nr)
+        x4 <- seq(lo[4],hi[4],length=nc)
+        dat <- cbind(rep(x1,m*nr*nc),
+             rep(rep(x2,each=m*nr),nc),
+             rep(rep(x3,each=m),m*nc),
+             rep(x4,each=m*m*nr))
+      } ## 4D term end
+      if (x$by!="NA") {
+        dat <- data.frame(cbind(dat,1))
+        names(dat) <- c(vname,x$by)
+      } else {
+        dat <- data.frame(dat)
+        names(dat) <- vname
+      }
+      X <- PredictMat(x,dat)   ## prediction matrix for this term
+      exclude <- if (too.far<=0) rep(FALSE,nrow(X)) else
+      exclude.too.far(dat[,1],dat[,2],data[vname[1]][[1]],data[vname[2]][[1]],dist=too.far)
+      if (is.null(main)) { 
+        main <- label
+      }
+      return(list(X=X,scale=FALSE,se=FALSE,m=m,nc=nc,nr=nr,lo=lo,hi=hi,vname=vname,
+             main=main,exclude=exclude))
+    } ## end of 3/4 D case
   } else { ## produce plot
     if (se) { ## produce CI's
       if (x$dim==1) { 
@@ -930,7 +984,10 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
             points(P$raw$x,P$raw$y,pch=".",...) else
             points(P$raw$x,P$raw$y,...) 
           }
-        } ## counter plot done 
+        } ## contour plot done 
+      } else if (x$dim<5) {
+        if (scheme==1) hcolors <- grey(0:50/50)
+        md.plot(P$fit,P$nr,P$nc,P$m,P$vname,P$lo,P$hi,hcolors=hcolors,scheme=scheme,P$main,...)
       } else { 
          warning("no automatic plotting for smooths of more than two variables")
       }
@@ -976,16 +1033,96 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
             points(P$raw$x,P$raw$y,...)
           }
         }  
+      } else if (x$dim<5) {
+        if (scheme==1) hcolors <- grey(0:50/50)
+        md.plot(P$fit,P$nr,P$nc,P$m,P$vname,P$lo,P$hi,hcolors=hcolors,scheme=scheme,P$main,...)
       } else { 
-        warning("no automatic plotting for smooths of more than one variable")
+        warning("no automatic plotting for smooths of more than four variables")
       }
     } ## end of no CI code
   } ## end of plot production
 } ## plot.mgcv.smooth
 
+md.plot <- function(f,nr,nc,m,vname,lo,hi,hcolors,scheme,main,...) {
+## multi-dimensional term plotter, called from plot.mgcv.smooth for
+## 3 and 4 dimensional terms. 
+## *f is the plot data. See `basic plot data for 3 or 4 d terms'
+##   in plot.mgcv.smooth for details of the packing conventions
+##   (f = X %*% coefs).
+## *nr and nc the number of rows and columns of plot panels
+## *m each panel is m by m
+## *vname contains the variable names
+## *lo and hi are the arrays of axis limits
+## *hcolors is the color palette for the image plot.
+## *scheme indicates b/w or color
+## *main is a title.
+  concol <- if (scheme==1) "white" else "black" 
+  nv <- length(vname) 
+  ## insert NA breaks to separate the panels within a plot...
+  f1 <- matrix(NA,nr*m+nr-1,nc*m)
+  ii <- rep(1:m,nr) + rep(0:(nr-1)*(m+1),each=m)
+  f1[ii,] <- f
+  f <- matrix(NA,nr*m+nr-1,nc*m+nc-1)
+  ii <- rep(1:m,nc) + rep(0:(nc-1)*(m+1),each=m)
+  f[,ii] <- f1
+  xx <- seq(0,1,length=ncol(f))
+  yy <- seq(0,1,length=nrow(f))
+  image(xx,yy,t(f),axes=FALSE,xlab="",ylab="",col=hcolors)
+  contour(xx,yy,t(f),add=TRUE,col=concol)
+  dl <- list(...)
+  c1 <- if (is.null(dl[["cex"]])) 1 else dl[["cex"]] 
+  c2 <- if (is.null(dl[["cex.axis"]])) .6 else dl[["cex.axis"]]
+  c3 <- if (is.null(dl[["cex.lab"]])) .9 else dl[["cex.lab"]]
+  if (nv==4) { 
+    x3 <- seq(lo[3],hi[3],length=nr)
+    x4 <- seq(lo[4],hi[4],length=nc)
+    mtext(vname[4],1,1.7,cex=c1*c3) ## x label
+    mtext(vname[3],2,1.7,cex=c1*c3) ## y label
+    at=(1:nc-.5)/nc
+    lab <- format(x4,digits=2)
+    for (i in 1:nc) mtext(lab[i],1,at=at[i],line=.5,cex=c1*c3)
+    at=(1:nr-.5)/nr
+    lab <- format(x4,digits=2)
+    for (i in 1:nr) mtext(lab[i],2,at=at[i],line=.5,cex=c1*c3)
+    ## now the 2d panel axes...
+    xr <- axisTicks(c(lo[2],hi[2]),log=FALSE,nint=4)
+    x0 <- ((nc-1)*(m+1)+1)/(nc*m+nc-1)
+    xt <- (xr-lo[2])/(hi[2]-lo[2])*(1-x0)+x0
+    axis(3,at=xt,labels=as.character(xr),cex.axis=c2,cex=c1)
+    xr <- axisTicks(c(lo[1],hi[1]),log=FALSE,nint=4)
+    x0 <- ((nr-1)*(m+1)+1)/(nr*m+nr-1)
+    xt <- (xr-lo[1])/(hi[1]-lo[1])*(1-x0)+x0
+    axis(4,at=xt,labels=as.character(xr),cex.axis=c2,cex=c1)
+    at <- (2*nc-3)/(2*nc) 
+    mtext(vname[2],3,at=at,line=.5,cex=c1*c2)
+    at <- (2*nr-3)/(2*nr) 
+    mtext(vname[1],4,at=at,line=.5,cex=c1*c2)
+    mtext(main,3,at=0,adj=0,line=1,cex=c1*c3)
+  } else {
+    x3 <- seq(lo[3],hi[3],length=nr*nc)
+    ## get pretty ticks
+    xr <- axisTicks(c(lo[2],hi[2]),log=FALSE,nint=4)
+    x0 <- (m-1)/(nc*m+nc-1)
+    xt <- (xr-lo[2])/(hi[2]-lo[2])*x0
+    axis(1,at=xt,labels=as.character(xr),cex.axis=c2,cex=c1)
+    mtext(vname[2],1,at=x0/2,line=2,cex=c1*c2)
+    xr <- axisTicks(c(lo[1],hi[1]),log=FALSE,nint=4)
+    x0 <- (m-1)/(nr*m+nr-1)
+    xt <- (xr-lo[1])/(hi[1]-lo[1])*x0
+    axis(2,at=xt,labels=as.character(xr),cex.axis=c2,cex=c1)
+    mtext(vname[1],2,at=x0/2,line=2,cex=c1*c2)
+    lab <- c("",format(x3[-1],digits=2))
+    at=(1:nc-.5)/nc
+    for (i in 2:nc) mtext(lab[i],1,at=at[i],line=.5,cex=c1*c3)
+    mtext(parse(text=paste(vname[3],"%->% \" \"")),1,at=mean(at[2:nc]),line=2,cex=c1*c3)
+    ii <- ((nr-1)*nr+1):(nc*nr)
+    for (i in 1:nc) mtext(lab[ii[i]],3,at=at[i],line=.5,cex=c1*c3)
+    mtext(parse(text=paste(vname[3],"%->% \" \"")),3,at=mean(at),line=2,cex=c1*c3)
+    mtext(main,2,at=1/nr+0.5*(nr-1)/nr,line=1,cex=c1*c3)
+  }
+} ## md.plot
 
-
-plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,
+plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,scheme=0,...)
@@ -1025,6 +1162,8 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
   #########################
   ## start of main function
   #########################
+
+  if (pers) warning("argument pers is deprecated, please use scheme instead")
 
   if (is.null(rug)) rug <- if (nrow(x$model)>10000) FALSE else TRUE
 
@@ -1092,7 +1231,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
     #P <- plot(x$smooth[[i]],P=NULL,data=x$model,n=n,n2=n2,xlab=xlab,ylab=ylab,too.far=too.far,label=term.lab,
     #          se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,scheme=scheme[i],...)
     attr(x$smooth[[i]],"coefficients") <- x$coefficients[first:last]   ## relevent coefficients
-    P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
+    P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,n3=n3,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,label=term.lab,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      se1.mult=se1.mult,se2.mult=se2.mult,shift=shift,trans=trans,
@@ -1209,7 +1348,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
   ##############################################################
 
   if (m>0) for (i in 1:m) if (pd[[i]]$plot.me&&(is.null(select)||i==select)) {
-    plot(x$smooth[[i]],P=pd[[i]],partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
+    plot(x$smooth[[i]],P=pd[[i]],partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,n3=n3,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
@@ -1245,7 +1384,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
 
 
 
-exclude.too.far<-function(g1,g2,d1,d2,dist)
+exclude.too.far <- function(g1,g2,d1,d2,dist)
 # if g1 and g2 are the co-ordinates of grid modes and d1,d2 are co-ordinates of data
 # then this routine returns a vector with TRUE if the grid node is too far from
 # any data and FALSE otherwise. Too far is judged using dist: a positive number indicating

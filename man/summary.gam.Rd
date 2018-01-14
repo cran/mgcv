@@ -7,7 +7,7 @@
 summaries from it. (See \code{\link{sink}} to divert output to a file.)
 }
 \usage{
-\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, ...)
+\method{summary}{gam}(object, dispersion=NULL, freq=FALSE, re.test=TRUE, ...)
 
 \method{print}{summary.gam}(x,digits = max(3, getOption("digits") - 3), 
                   signif.stars = getOption("show.signif.stars"),...)
@@ -24,6 +24,9 @@ summaries from it. (See \code{\link{sink}} to divert output to a file.)
 \item{freq}{By default p-values for parametric terms are calculated using the Bayesian estimated
 covariance matrix of the parameter estimators. If this is set to \code{TRUE} then
 the frequentist covariance matrix of the parameters is used instead. }
+
+\item{re.test}{Should tests be performed for random effect terms (including any term with a zero dimensional null space)?
+For large models these tests can be computationally expensive. }
 
 \item{digits}{controls number of digits printed in output.}
 

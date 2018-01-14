@@ -11,7 +11,7 @@ regression terms. This method can be used with \code{\link{gam}} by making use o
 \code{\link{smooth.construct.re.smooth.spec}}, for full details. The basic idea is that, e.g., \code{s(x,z,g,bs="re")} generates an i.i.d. Gaussian 
 random effect with model matrix given by \code{model.matrix(~x:z:g-1)} --- in principle such terms can take any number of arguments. This simple 
 approach is sufficient for implementing a wide range of commonly used random effect structures. For example if \code{g} is a factor then 
-\code{s(g,bs="re")} produces a random coefficient for each level of \code{g}, with the radndom coefficients all modelled as i.i.d. normal. If \code{g} is a factor and \code{x} is numeric, then \code{s(x,g,bs="re")} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then \code{s(h,g,bs="re")} produces the usual i.i.d. normal \code{g} - \code{h} interaction. Note that a rather useful approximate test for zero random effect is also implemented for tsuch terms based on Wood (2013). If the precision
+\code{s(g,bs="re")} produces a random coefficient for each level of \code{g}, with the random coefficients all modelled as i.i.d. normal. If \code{g} is a factor and \code{x} is numeric, then \code{s(x,g,bs="re")} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then \code{s(h,g,bs="re")} produces the usual i.i.d. normal \code{g} - \code{h} interaction. Note that a rather useful approximate test for zero random effect is also implemented for tsuch terms based on Wood (2013). If the precision
 matrix is known to within a multiplicative constant, then this can be supplied via the \code{xt} argument of \code{s}. See \link{smooth.construct.re.smooth.spec} for details and example. 
 
 Alternatively, but less straightforwardly, the \code{paraPen} argument to \code{\link{gam}} can be used: 
@@ -71,10 +71,10 @@ plot(b)
 ## simulate example...
 dat <- gamSim(1,n=400,scale=2) ## simulate 4 term additive truth
 
-fac <- as.factor(sample(1:20,400,replace=TRUE))
-dat$X <- model.matrix(~fac-1)
+fac <- sample(1:20,400,replace=TRUE)
 b <- rnorm(20)*.5
-dat$y <- dat$y + dat$X\%*\%b
+dat$y <- dat$y + b[fac]
+dat$fac <- as.factor(fac)
 
 rm1 <- gam(y ~ s(fac,bs="re")+s(x0)+s(x1)+s(x2)+s(x3),data=dat,method="ML")
 gam.vcomp(rm1)

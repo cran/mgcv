@@ -1583,7 +1583,8 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     ## set environments to global to avoid enormous saved object files
     environment(attr(object$model,"terms")) <- 
     environment(object$terms) <- environment(object$pterms) <- 
-    environment(object$formula) <-environment(object$pred.formula) <-  .GlobalEnv
+    environment(object$formula) <- .GlobalEnv
+    if (!is.null(object$pred.formula)) environment(object$pred.formula) <-  .GlobalEnv
     ret$gam <- object
     environment(attr(ret$lme$data,"terms")) <- environment(ret$lme$terms) <- .GlobalEnv
     if (!is.null(ret$lme$modelStruct$varStruct)) {

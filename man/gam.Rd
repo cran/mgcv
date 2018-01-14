@@ -97,7 +97,7 @@ Note that (RE)ML methods can only work with scale parameter 1 for the Poisson an
 \item{select}{ If this is \code{TRUE} then \code{gam} can add an extra penalty to each term so 
 that it can be penalized to zero.  This means that the smoothing parameter estimation that is 
 part of fitting can completely remove terms from the model. If the corresponding 
-smoothing parameter is estimated as zero then the extra penalty has no effect.
+smoothing parameter is estimated as zero then the extra penalty has no effect. Use \code{gamma} to increase level of penalization.
 }
 
 \item{knots}{this is an optional list containing user specified knot values to be used for basis construction. 
@@ -126,9 +126,7 @@ to add a ridge penalty to the parameters of the GAM in circumstances in which th
 is close to un-identifiable on the scale of the linear predictor, but perfectly well
 defined on the response scale.}
 
-\item{gamma}{It is sometimes useful to inflate the model degrees of 
-freedom in the GCV or UBRE/AIC score by a constant multiplier. This allows 
-such a multiplier to be supplied. } 
+\item{gamma}{Increase this beyond 1 to produce smoother models. \code{gamma} multiplies the effective degrees of freedom in the GCV or UBRE/AIC. code{n/gamma} can be viewed as an effective sample size in the GCV score, and this also enables it to be used with REML/ML. Ignored with P-RE/ML or the \code{efs} optimizer. } 
 
 \item{fit}{If this argument is \code{TRUE} then \code{gam} sets up the model and fits it, but if it is
 \code{FALSE} then the model is set up and an object \code{G} containing what
