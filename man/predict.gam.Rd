@@ -16,7 +16,7 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 \usage{
 \method{predict}{gam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         exclude=NULL,block.size=NULL,newdata.guaranteed=FALSE,
-        na.action=na.pass,unconditional=FALSE,...)
+        na.action=na.pass,unconditional=FALSE,iterms.type=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -75,6 +75,8 @@ determined from \code{object$na.action}.}
 \item{unconditional}{if \code{TRUE} then the smoothing parameter uncertainty corrected covariance
 matrix is used, when available, otherwise the covariance matrix conditional on the estimated 
 smoothing parameters is used. }
+
+\item{iterms.type}{if \code{type="iterms"} then standard errors can either include the uncertainty in the overall mean (default, withfixed and random effects included) or the uncertainty in the mean of the non-smooth fixed effects only (\code{iterms.type=2}).}
 
 \item{...}{ other arguments.}
 

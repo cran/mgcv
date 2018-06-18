@@ -39,6 +39,7 @@ cox.ph <- function (link = "identity") {
       G$X <- G$X[y.order,,drop=FALSE]
       attributes(G$X) <- attrX
       G$w <- G$w[y.order]
+      G$offset <- G$offset[y.order]
     })
     
     postproc <- expression({
@@ -46,7 +47,7 @@ cox.ph <- function (link = "identity") {
     ## baseline hazard estimation...
       ## first get the estimated hazard and prediction information...
       G$X <- Sl.initial.repara(G$Sl,G$X,inverse=TRUE,cov=FALSE,both.sides=FALSE)
-      object$family$data <- G$family$hazard(G$y,G$X,object$coefficients,G$w)
+      object$family$data <- G$family$hazard(G$y,G$X,object$coefficients,G$w,G$offset)
       rumblefish <- G$family$hazard(G$y,matrix(0,nrow(G$X),0),object$coefficients,G$w)
       s0.base <- exp(-rumblefish$h[rumblefish$r]) ## no model baseline survival 
       s0.base[s0.base >= 1] <- 1 - 2*.Machine$double.eps ## avoid NA later
@@ -69,7 +70,7 @@ cox.ph <- function (link = "identity") {
         if (is.null(start)) start <- rep(0,ncol(x))
     })
 
-    hazard <- function(y, X,beta,wt) {
+    hazard <- function(y, X,beta,wt,offset=0) {
     ## get the baseline hazard function information, given times in descending order in y
     ## model matrix (same ordering) in X, coefs in beta and censoring in wt (1 = death, 0
     ## = censoring)
@@ -96,7 +97,7 @@ cox.ph <- function (link = "identity") {
       }
       #tr <- unique(y);nt <- length(tr)
       p <- ncol(X)
-      eta <- as.double(X%*%beta)
+      eta <- as.double(X%*%beta) + offset
       if (ns==1) {
         r <- match(y,tr)
         oo <- .C("coxpp",eta,A=as.double(X),as.integer(r),d=as.integer(wt),
@@ -156,9 +157,10 @@ cox.ph <- function (link = "identity") {
       }
       if (sum(is.na(y))>0) stop("NA times supplied for cox.ph prediction")
       X <- X[ii,,drop=FALSE];y <- y[ii];
+      n <- nrow(X)
+      if (is.null(off)) off <- rep(0,n)
       if (is.null(strat)) {
-        n <- nrow(X)
-        oo <- .C("coxpred",as.double(X),t=as.double(y),as.double(beta),as.double(Vb),
+        oo <- .C("coxpred",as.double(X),t=as.double(y),as.double(beta),as.double(off),as.double(Vb),
                 a=as.double(family$data$a),h=as.double(family$data$h),q=as.double(family$data$q),
                 tr = as.double(family$data$tr),
                 n=as.integer(n),p=as.integer(ncol(X)),nt = as.integer(family$data$nt),
@@ -175,7 +177,7 @@ cox.ph <- function (link = "identity") {
           ind <- which(strat==pstrata[i]) ## prediction data index
 	  trind <- which(family$data$tr.strat == pstrata[i])
 	  n <- length(ind)
-	  oo <- .C("coxpred",as.double(X[ind,]),t=as.double(y[ind]),as.double(beta),as.double(Vb),
+	  oo <- .C("coxpred",as.double(X[ind,]),t=as.double(y[ind]),as.double(beta),as.double(off),as.double(Vb),
                 a=as.double(family$data$a[,trind]),h=as.double(family$data$h[trind]),q=as.double(family$data$q[trind]),
                 tr = as.double(family$data$tr[trind]),
                 n=as.integer(n),p=as.integer(p),nt = as.integer(length(trind)),
@@ -205,7 +207,8 @@ cox.ph <- function (link = "identity") {
     ##    or its Choleski factor
     ## D is the diagonal pre-conditioning matrix used to obtain Hp
     ##   if Hr is the raw Hp then Hp = D*t(D*Hr)
-      if (!is.null(offset)&&sum(offset!=0)) stop("cox.ph does not yet handle offsets")
+
+#!! if (!is.null(offset)&&sum(offset!=0)) stop("cox.ph does not yet handle offsets")
       
       if (is.matrix(y)) {
         ## first column is time, second is *numeric* code indicating strata
@@ -217,7 +220,7 @@ cox.ph <- function (link = "identity") {
      
       p <- ncol(X)
       deriv <- deriv - 1
-      mu <- X%*%coef
+      mu <- X%*%coef + offset
       g <- rep(0,p);H <- rep(0,p*p)
       if (deriv > 0) {
         M <- ncol(d1b)

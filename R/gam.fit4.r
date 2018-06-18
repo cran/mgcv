@@ -135,60 +135,89 @@ fetad.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
   }
 } ## fetad.test
 
-fmud.test <- function(y,mu,wt,theta,fam,eps = 1e-7) {
+corb <- function(x,z) {
+## alternative to cor for measuring similarity of x and z,
+## which is not scaling invariant. So 1 really means x and z
+## are very close, not just linearly related.
+  d <- x-z
+  1-mean(d^2)/(sd(x)*sd(z))
+}
+
+fmud.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
 ## test family deviance derivatives w.r.t. mu
-  dd <- fam$Dd(y, mu, theta, wt, level=2) 
-  dev <- fam$dev.resids(y, mu, wt,theta)
-  dev1 <- fam$dev.resids(y, mu+eps, wt,theta)
+  ## copy to make debugging easier...
+  Dd <- fam$Dd;dev.resids <- fam$dev.resids 
+  dd <- Dd(y, mu, theta, wt, level=2) 
+  dev <- dev.resids(y, mu, wt,theta)
+  dev1 <- dev.resids(y, mu+eps, wt,theta)
   Dmu.fd <- (dev1-dev)/eps
-  cat("Dmu: rdiff = ",range(dd$Dmu-Dmu.fd)," cor = ",cor(dd$Dmu,Dmu.fd),"\n")
+  cat("Dmu: rdiff = ",range(dd$Dmu-Dmu.fd)," cor = ",corb(dd$Dmu,Dmu.fd),"\n")
+  if (plot) {
+    pch <- 19;cex <- .4
+    plot(dd$Dmu,Dmu.fd,pch=pch,cex=cex);abline(0,1,col=2)
+    oask <- devAskNewPage(TRUE)
+    on.exit(devAskNewPage(oask))
+  }
   nt <- length(theta)
   for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
-    dev1 <- fam$dev.resids(y, mu, wt,th1)
+    dev1 <- dev.resids(y, mu, wt,th1)
     Dth.fd <- (dev1-dev)/eps
     um <- if (nt>1) dd$Dth[,i] else dd$Dth
-    cat("Dth[",i,"]: rdiff = ",range(um-Dth.fd)," cor = ",cor(um,Dth.fd),"\n")
+    cat("Dth[",i,"]: rdiff = ",range(um-Dth.fd)," cor = ",corb(um,Dth.fd),"\n")
+    if (plot) { plot(um,Dth.fd,pch=pch,cex=cex);abline(0,1,col=2)}
   }
   ## second order up...
-  dd1 <- fam$Dd(y, mu+eps, theta, wt, level=2)
+  dd1 <- Dd(y, mu+eps, theta, wt, level=2)
   Dmu2.fd <- (dd1$Dmu - dd$Dmu)/eps
-  cat("Dmu2: rdiff = ",range(dd$Dmu2-Dmu2.fd)," cor = ",cor(dd$Dmu2,Dmu2.fd),"\n")
+  cat("Dmu2: rdiff = ",range(dd$Dmu2-Dmu2.fd)," cor = ",corb(dd$Dmu2,Dmu2.fd),"\n")
+  if (plot) { plot(dd$Dmu2,Dmu2.fd,pch=pch,cex=cex);abline(0,1,col=2)}
   Dmu3.fd <- (dd1$Dmu2 - dd$Dmu2)/eps
-  cat("Dmu3: rdiff = ",range(dd$Dmu3-Dmu3.fd)," cor = ",cor(dd$Dmu3,Dmu3.fd),"\n")
+  cat("Dmu3: rdiff = ",range(dd$Dmu3-Dmu3.fd)," cor = ",corb(dd$Dmu3,Dmu3.fd),"\n")
+  if (plot) { plot(dd$Dmu3,Dmu3.fd,pch=pch,cex=cex);abline(0,1,col=2)}
   Dmu4.fd <- (dd1$Dmu3 - dd$Dmu3)/eps
-  cat("Dmu4: rdiff = ",range(dd$Dmu4-Dmu4.fd)," cor = ",cor(dd$Dmu4,Dmu4.fd),"\n")
+  cat("Dmu4: rdiff = ",range(dd$Dmu4-Dmu4.fd)," cor = ",corb(dd$Dmu4,Dmu4.fd),"\n")
+  if (plot) { plot(dd$Dmu4,Dmu4.fd,pch=pch,cex=cex);abline(0,1,col=2)}
   ## and now the higher derivs wrt theta 
   ind <- 1:nt
   for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
-    dd1 <- fam$Dd(y, mu, th1, wt, level=2)
+    dd1 <- Dd(y, mu, th1, wt, level=2)
     Dmuth.fd <- (dd1$Dmu - dd$Dmu)/eps
     um <- if (nt>1) dd$Dmuth[,i] else dd$Dmuth
-    cat("Dmuth[",i,"]: rdiff = ",range(um-Dmuth.fd)," cor = ",cor(um,Dmuth.fd),"\n")
+    cat("Dmuth[",i,"]: rdiff = ",range(um-Dmuth.fd)," cor = ",corb(um,Dmuth.fd),"\n")
+    if (plot) { plot(um,Dmuth.fd,pch=pch,cex=cex);abline(0,1,col=2)}
     Dmu2th.fd <- (dd1$Dmu2 - dd$Dmu2)/eps
     um <- if (nt>1) dd$Dmu2th[,i] else dd$Dmu2th
-    cat("Dmu2th[",i,"]: rdiff = ",range(um-Dmu2th.fd)," cor = ",cor(um,Dmu2th.fd),"\n")
+    cat("Dmu2th[",i,"]: rdiff = ",range(um-Dmu2th.fd)," cor = ",corb(um,Dmu2th.fd),"\n")
+    if (plot) { plot(um,Dmu2th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (!is.null(dd$EDmu2th)) {
+       EDmu2th.fd <- (dd1$EDmu2 - dd$EDmu2)/eps
+       um <- if (nt>1) dd$EDmu2th[,i] else dd$EDmu2th
+       cat("EDmu2th[",i,"]: rdiff = ",range(um-EDmu2th.fd)," cor = ",corb(um,EDmu2th.fd),"\n")
+       if (plot) { plot(um,EDmu2th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    }
     Dmu3th.fd <- (dd1$Dmu3 - dd$Dmu3)/eps
     um <- if (nt>1) dd$Dmu3th[,i] else dd$Dmu3th
-    cat("Dmu3th[",i,"]: rdiff = ",range(um-Dmu3th.fd)," cor = ",cor(um,Dmu3th.fd),"\n")
-
+    cat("Dmu3th[",i,"]: rdiff = ",range(um-Dmu3th.fd)," cor = ",corb(um,Dmu3th.fd),"\n")
+    if (plot) { plot(um,Dmu3th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
     ## now the 3 second derivative w.r.t. theta terms...
 
     Dth2.fd <- (dd1$Dth - dd$Dth)/eps
     um <- if (nt>1) dd$Dth2[,ind] else dd$Dth2
     er <- if (nt>1) Dth2.fd[,i:nt] else Dth2.fd
-    cat("Dth2[",i,",]: rdiff = ",range(um-er)," cor = ",cor(as.numeric(um),as.numeric(er)),"\n")
-
+    cat("Dth2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
+    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
     Dmuth2.fd <- (dd1$Dmuth - dd$Dmuth)/eps
     um <- if (nt>1) dd$Dmuth2[,ind] else dd$Dmuth2
     er <- if (nt>1) Dmuth2.fd[,i:nt] else Dmuth2.fd
-    cat("Dmuth2[",i,",]: rdiff = ",range(um-er)," cor = ",cor(as.numeric(um),as.numeric(er)),"\n")
- 
+    cat("Dmuth2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
+    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
     Dmu2th2.fd <- (dd1$Dmu2th - dd$Dmu2th)/eps
     um <- if (nt>1) dd$Dmu2th2[,ind] else dd$Dmu2th2
     er <- if (nt>1) Dmu2th2.fd[,i:nt] else Dmu2th2.fd
-    cat("Dmu2th2[",i,",]: rdiff = ",range(um-er)," cor = ",cor(as.numeric(um),as.numeric(er)),"\n")
+    cat("Dmu2th2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
+    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
     ind <- max(ind)+1:(nt-i)
   }
 }
@@ -239,7 +268,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
   ## Now a stable re-parameterization is needed....
 
   if (length(UrS)) {
-      rp <- gam.reparam(UrS,sp,deriv)
+      grderiv <- if (scoreType=="EFS") 1 else deriv 
+      rp <- gam.reparam(UrS,sp,grderiv)
       T <- diag(q)
       T[1:ncol(rp$Qs),1:ncol(rp$Qs)] <- rp$Qs
       T <- U1%*%T ## new params b'=T'b old params
@@ -258,7 +288,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
       rows.E <- q-Mp
       Sr <- cbind(rp$E,matrix(0,nrow(rp$E),Mp))
       St <- rbind(cbind(rp$S,matrix(0,nrow(rp$S),Mp)),matrix(0,Mp,q))
-  } else { 
+  } else {
+      grderiv <- 0
       T <- diag(q); 
       St <- matrix(0,q,q) 
       rSncol <- rows.E <- Eb <- Sr <- 0   
@@ -463,13 +494,23 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
            eta <- (eta + etaold)/2               
            mu <- linkinv(eta)
            dev <- sum(dev.resids(y, mu, weights,theta))
-       
-           pdev <- dev + t(start)%*%St%*%start ## the penalized deviance
+
+           penalty <-  t(start)%*%St%*%start
+           pdev <- dev + penalty ## the penalized deviance
            if (control$trace) 
                   cat("Step halved: new penalized deviance =", pdev, "\n")
         }
      } ## end of pdev divergence
 
+     if (scoreType=="EFS"&&family$n.theta>0) { ## there are theta parameters to estimate...
+       scale1 <- if (!is.null(family$scale)) family$scale else scale
+       if (family$n.theta>0||scale<0) theta <- estimate.theta(theta,family,y,mu,scale=scale1,wt=weights,tol=1e-7)
+       if (!is.null(family$scale) && family$scale<0) {
+	  scale <- exp(theta[family$n.theta+1])
+	  theta <- theta[1:family$n.theta]
+       }  
+       family$putTheta(theta)
+     }
      ## get new weights and pseudodata (needed now for grad testing)...
      dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
      w <- dd$Deta2 * .5;
@@ -496,6 +537,11 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
        old.pdev <- pdev
        coef <- coefold <- start
        etaold <- eta 
+     }
+     if (scoreType=="EFS"&&family$n.theta>0) { 
+       ## now recompute pdev with new theta, otherwise step control won't work at next iteration
+       dev <- sum(dev.resids(y, mu, weights,theta))
+       old.pdev <- pdev <- dev + penalty
      }
    } ## end of main loop
    
@@ -552,6 +598,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
        } 
      }
    }
+
+   if (scoreType=="EFS") scoreType <- "REML"
 
    oo <- .C(C_gdi2,
             X=as.double(x[good,]),E=as.double(Sr),Es=as.double(Eb),rS=as.double(unlist(rS)),
@@ -658,7 +706,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
         aic=aic.model,
         rank=oo$rank.est,
         K=Kmat,control=control,
-        dVkk = matrix(oo$dVkk,nSp,nSp)
+        dVkk = matrix(oo$dVkk,nSp,nSp),ldetS1 = if (grderiv) rp$det1 else 0
         #,D1=oo$D1,D2=D2,
         #ldet=oo$ldet,ldet1=oo$ldet1,ldet2=ldet2,
         #bSb=oo$P,bSb1=oo$P1,bSb2=bSb2,
@@ -667,6 +715,125 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
  
 } ## gam.fit4
 
+
+
+efsudr <- function(x,y,lsp,Eb,UrS,weights,family,offset=0,start=NULL,etastart=NULL,mustart=NULL,
+                   U1=diag(ncol(x)), intercept = TRUE,scale=1,Mp=-1,control=gam.control(),n.true=-1,...) {
+## Extended Fellner-Schall method for regular and extended families,
+## with PIRLS performed by gam.fit3/4.
+## tr(S^-S_j) is returned by ldetS1, rV %*% t(rV)*scale is 
+## cov matrix. I think b'S_jb will need to be  computed here.
+  nsp <- length(UrS)
+  if (inherits(family,"extended.family")) {
+    spind <- family$n.theta + 1:nsp
+    thind <- 1:family$n.theta
+  } else {
+    thind <- rep(0,0)
+    spind <- 1:nsp ## index of smoothing params in lsp
+  }
+  estimate.scale <- (length(lsp)>max(spind))
+  lsp[spind] <- lsp[spind] + 2.5 
+  mult <- 1
+  fit <- gam.fit3(x=x, y=y, sp=lsp, Eb=Eb,UrS=UrS,
+            weights = weights, start = start, offset = offset,U1=U1, Mp=Mp, family = family, 
+            control = control, intercept = intercept,deriv=0,
+            gamma=1,scale=scale,scoreType="EFS",
+            n.true=n.true,...)
+  if (length(thind)>0) lsp[thind] <- family$getTheta()
+  if (estimate.scale) lsp[length(lsp)] <- log(fit$scale)
+  ## Also need scale estimate. OK from gam.fit3, but gam.fit4 version probably needs correcting
+  ## for edf, as obtained via MLE.
+  p <- ncol(x)
+  n <- nrow(x)
+  score.hist <- rep(0,200)
+  
+  bSb <- trVS <- rep(0,nsp)
+  for (iter in 1:200) {
+    start <- fit$coefficients
+    Y <- U1[,1:(ncol(U1)-Mp)] ## penalty range space
+    ## project coefs and rV to Y, since this is space of UrS[[i]]
+    Yb <- drop(t(Y)%*%start) 
+    rV <- t(fit$rV) ## so t(rV)%*%rV*scale is cov matrix
+    rVY <- rV %*% Y
+    ## ith penalty is UrS[[i]]%*%t(UrS[[i]])...
+    for (i in 1:length(UrS)) {
+      xx <- Yb %*% UrS[[i]] 
+      bSb[i] <- sum(xx^2)
+      xx <- rVY %*% UrS[[i]]
+      trVS[i] <- sum(xx^2)
+    }
+    edf <- p - sum(trVS*exp(lsp[spind]))
+    if (inherits(family,"extended.family")&&estimate.scale) {
+      fit$scale <- fit$scale*n/(n-edf) ## correct for edf.
+    }
+
+    a <- pmax(0,fit$ldetS1*exp(-lsp[spind]) - trVS) ## NOTE: double check scaling here
+    phi <- if (estimate.scale) fit$scale else scale
+    r <- a/pmax(0,bSb)*phi
+    r[a==0&bSb==0] <- 1
+    r[!is.finite(r)] <- 1e6
+    lsp1 <- lsp
+    lsp1[spind] <- pmin(lsp[spind] + log(r)*mult,control$efs.lspmax)
+    max.step <- max(abs(lsp1-lsp))
+    old.reml <- fit$REML
+    fit <- gam.fit3(x=x, y=y, sp=lsp1, Eb=Eb,UrS=UrS,
+            weights = weights, start = start, offset = offset,U1=U1, Mp=Mp, family = family, 
+            control = control, intercept = intercept,deriv=0,mustart=mustart,
+            gamma=1,scale=scale,scoreType="EFS",
+            n.true=n.true,...)
+    if (length(thind)>0) lsp1[thind] <- family$getTheta()
+    if (estimate.scale) lsp1[length(lsp)] <- log(fit$scale)
+    ## some step length control...
+   
+    if (fit$REML<=old.reml) { ## improvement
+      if (max.step<.05) { ## consider step extension (near optimum)
+        lsp2 <- lsp
+        lsp2[spind] <- pmin(lsp[spind] + log(r)*mult*2,control$efs.lspmax) ## try extending step...
+        fit2 <- gam.fit3(x=x, y=y, sp=lsp2, Eb=Eb,UrS=UrS,
+            weights = weights, start = start, offset = offset,U1=U1, Mp=Mp, family = family, 
+            control = control, intercept = intercept,deriv=0,mustart=mustart,
+            gamma=1,scale=scale,scoreType="EFS",
+            n.true=n.true,...)
+        if (length(thind)>0) lsp2[thind] <- family$getTheta()
+        if (estimate.scale) lsp2[length(lsp)] <- log(fit$scale)
+        if (fit2$REML < fit$REML) { ## improvement - accept extension
+          fit <- fit2;lsp <- lsp2
+	  mult <- mult * 2
+        } else { ## accept old step
+          lsp <- lsp1
+        }
+      } else lsp <- lsp1
+    } else { ## no improvement 
+      while (fit$REML > old.reml&&mult>1) { ## don't contract below 1 as update doesn't have to improve REML 
+          mult <- mult/2 ## contract step
+	  lsp1 <- lsp
+          lsp1[spind] <- pmin(lsp[spind] + log(r)*mult,control$efs.lspmax)
+	  fit <- gam.fit3(x=x, y=y, sp=lsp1, Eb=Eb,UrS=UrS,
+            weights = weights, start = start, offset = offset,U1=U1, Mp=Mp, family = family, 
+            control = control, intercept = intercept,deriv=0,mustart=mustart,
+            gamma=1,scale=scale,scoreType="EFS",
+            n.true=n.true,...)
+	  if (length(thind)>0) lsp1[thind] <- family$getTheta()
+          if (estimate.scale) lsp1[length(lsp)] <- log(fit$scale)
+      }
+      lsp <- lsp1
+      if (mult<1) mult <- 1
+    }
+    score.hist[iter] <- fit$REML
+    ## break if EFS step small and REML change negligible over last 3 steps.
+    if (iter>3 && max.step<.05 && max(abs(diff(score.hist[(iter-3):iter])))<control$efs.tol) break
+    ## or break if deviance not changing...
+    if (iter==1) old.dev <- fit$dev else {
+      if (abs(old.dev-fit$dev) < 100*control$eps*abs(fit$dev)) break
+      old.dev <- fit$dev
+    }
+  }
+  fit$sp <- exp(lsp)
+  fit$niter <- iter
+  fit$outer.info <- list(iter = iter,score.hist=score.hist[1:iter])
+  fit$outer.info$conv <- if (iter==200) "iteration limit reached" else "full convergence"
+  fit
+} ## efsudr
 
 
 gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
@@ -810,7 +977,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       step <- step/fac;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
-      if (ll1>=ll0) {
+      if (is.finite(ll1)&&ll1>=ll0) {
         ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
@@ -828,7 +995,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       step <- step/10;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
-      if (ll1>=ll0) {
+      if (is.finite(ll1)&&ll1>=ll0) {
         ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
       } else { ## abort if step has made no difference
         if (max(abs(coef1-coef))==0) khalf <- 100
@@ -1091,7 +1258,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 
 efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
                      control=gam.control(),Mp=-1,start=NULL) {
-## Extended Fellner-Schall method
+## Extended Fellner-Schall method for general families
 ## tr(S^-S_j) is returned by ldetS as ldet1 - S1 from gam.fit5
 ## b'S_jb is computed as d1bSb in gam.fit5
 ## tr(V S_j) will need to be computed using Sl.termMult
@@ -1131,14 +1298,15 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
     r <- a/pmax(0,bSb)
     r[a==0&bSb==0] <- 1
     r[!is.finite(r)] <- 1e6
-    lsp1 <- pmin(lsp + log(r)*mult,12)
+    lsp1 <- pmin(lsp + log(r)*mult,control$efs.lspmax)
+    max.step <- max(abs(lsp1-lsp))
     old.reml <- fit$REML
     fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,
                     family=family,control=control,Mp=Mp,start=start,gamma=1)
     ## some step length control...
    
     if (fit$REML<=old.reml) { ## improvement
-      if (max(abs(log(r))<.05)) { ## consider step extension
+      if (max.step<.05) { ## consider step extension
         lsp2 <- pmin(lsp + log(r)*mult*2,12) ## try extending step...
         fit2 <- gam.fit5(x=x,y=y,lsp=lsp2,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
                      control=control,Mp=Mp,start=start,gamma=1)
@@ -1153,7 +1321,7 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
     } else { ## no improvement 
       while (fit$REML > old.reml&&mult>1) { ## don't contract below 1 as update doesn't have to improve REML 
           mult <- mult/2 ## contract step
-          lsp1 <- pmin(lsp + log(r)*mult,12)
+          lsp1 <- pmin(lsp + log(r)*mult,control$efs.lspmax)
 	  fit <- gam.fit5(x=x,y=y,lsp=lsp1,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
                         control=control,Mp=Mp,start=start,gamma=1)
       }
@@ -1161,8 +1329,11 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
       if (mult<1) mult <- 1
     }
     score.hist[iter] <- fit$REML
+    ## break if EFS step small and REML change negligible over last 3 steps.
+    if (iter>3 && max.step<.05 && max(abs(diff(score.hist[(iter-3):iter])))<control$efs.tol) break
+    ## or break if log lik not changing...
     if (iter==1) old.ll <- fit$l else {
-      if (abs(old.ll-fit$l)<tol*abs(fit$l)) break
+      if (abs(old.ll-fit$l)<100*control$eps*abs(fit$l)) break
       old.ll <- fit$l
     }
   }

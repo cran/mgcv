@@ -93,7 +93,7 @@ lines(x,mu-mean(mu),col=2)
 
 ## A 2D example (marked, 'Not run' purely to reduce
 ## checking load on CRAN).
-\dontrun{
+\donttest{
 par(mfrow=c(2,2),mar=c(1,1,1,1))
 x <- seq(-.5, 1.5, length= 60)
 z <- x

@@ -31,11 +31,12 @@ variable then the smooth will automatically be centred in order to ensure identi
 will not be. Note also that for centred smooths it can be worth replacing the constant term in the model with \code{rowSums(L)} 
 in order to ensure that predictions are automatically on the right scale.
 
-Note that \code{\link{predict.gam}} can accept matrix predictors for prediction with such terms, in which case its
+\code{\link{predict.gam}} can accept matrix predictors for prediction with such terms, in which case its
 \code{newdata} argument will need to be a list. However when predicting from the model it is not necessary to provide matrix covariate and \code{by} variable values. 
 For example to simply examine the underlying smooth function one would use vectors of covariate values and vector 
 \code{by} variables, with the \code{by} variable and equivalent of \code{L1}, above, set to vectors of ones. 
 
+The mechanism is usable with random effect smooths which take factor arguments, by using a trick to create a 2D array of factors. Simply create a factor vector containing the columns of the factor matrix stacked end to end (column major order). Then reset the dimensions of this vector to create the appropriate 2D array: the first dimension should be the number of response data and the second the number of columns of the required factor matrix. You can not use \code{matrix} or \code{data.matrix} to set up the required matrix of factor levels. See example below.
 
 }
 
@@ -72,6 +73,36 @@ predict(b,list(X=X[1:3,]))
 
 ## example of prediction that simply evaluates smooth (no summation)...
 predict(b,data.frame(X=c(.2,.3,.7))) 
+
+######################################################################
+## Simple random effect model example.
+## model: y[i] = f(x[i]) + b[k[i]] - b[j[i]] + e[i]
+## k[i] and j[i] index levels of i.i.d. random effects, b.
+######################################################################
+
+set.seed(7)
+n <- 200
+x <- runif(n) ## a continuous covariate
+
+## set up a `factor matrix'...
+fac <- factor(sample(letters,n*2,replace=TRUE))
+dim(fac) <- c(n,2)
+
+## simulate data from such a model...
+nb <- length(levels(fac))
+b <- rnorm(nb)
+y <- 20*(x-.3)^4 + b[fac[,1]] - b[fac[,2]] + rnorm(n)*.5
+
+L <- matrix(-1,n,2);L[,1] <- 1 ## the differencing 'by' variable 
+
+mod <- gam(y ~ s(x) + s(fac,by=L,bs="re"),method="REML")
+gam.vcomp(mod)
+plot(mod,page=1)
+
+## example of prediction using matrices...
+dat <- list(L=L[1:20,],fac=fac[1:20,],x=x[1:20],y=y[1:20])
+predict(mod,newdata=dat)
+
 
 ######################################################################
 ## multivariate integral example. Function `test1' will be integrated# 

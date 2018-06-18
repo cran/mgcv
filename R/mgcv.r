@@ -5,7 +5,8 @@ Rrank <- function(R,tol=.Machine$double.eps^.9) {
 ## Finds rank of upper triangular matrix R, by estimating condition
 ## number of upper rank by rank block, and reducing rank until this is 
 ## acceptably low... assumes R pivoted 
- rank <- m <- ncol(R) 
+ m <- nrow(R)
+ rank <- min(m,ncol(R))
  ok <- TRUE
   while (ok) {
     Rcond <- .C(C_R_cond,R=as.double(R),r=as.integer(m),c=as.integer(rank),
@@ -250,12 +251,13 @@ interpret.gam0 <- function(gf,textra=NULL,extra.special=NULL)
       ## loadNamespace('mgcv'); k <- 10; mgcv::interpret.gam(y~s(x,k=k)) fails (can't find s)
       ## eval(parse(text=terms[i]),envir=p.env,enclos=loadNamespace('mgcv')) fails??
       ## following may supply namespace of mgcv explicitly if not on search path...
-      ## If 's' etc are masked then we can fail even if mgcv on search path
-      #if (mgcvat) st <- eval(parse(text=terms[i]),envir=p.env) else {
-         st <- try(eval(parse(text=terms[i]),envir=p.env),silent=TRUE)
-         if (inherits(st,"try-error")) st <- 
+      ## If 's' etc are masked then we can fail even if mgcv on search path, hence paste
+      ## of explicit mgcv reference into first attempt...
+    
+      st <- try(eval(parse(text=paste("mgcv::",terms[i],sep="")),envir=p.env),silent=TRUE)
+      if (inherits(st,"try-error")) st <- 
             eval(parse(text=terms[i]),enclos=p.env,envir=mgcvns)
-      #}
+     
       if (!is.null(textra)) { ## modify the labels on smooths with textra
         pos <- regexpr("(",st$lab,fixed=TRUE)[1]
         st$label <- paste(substr(st$label,start=1,stop=pos-1),textra,
@@ -1206,8 +1208,13 @@ gam.setup <- function(formula,pterms,
     }
     G$P[qrx$pivot,] <- G$P
   }
-  if (G$nsdf>0) G$cmX[-(1:G$nsdf)] <- 0 ## zero the smooth parts here 
-  else G$cmX <- G$cmX * 0
+  ## cmX relates to computation of CIs incorportating uncertainty about the mean
+  ## It may make more sense to incorporate all uncertainty about the mean,
+  ## rather than just the uncertainty in the fixed effects mean. This means
+  ## incorporating the mean of random effects and unconstrained smooths. Hence
+  ## comment out the following.
+  #if (G$nsdf>0) G$cmX[-(1:G$nsdf)] <- 0 ## zero the smooth parts here 
+  #else G$cmX <- G$cmX * 0
   G$X <- X;rm(X)
   n.p <- ncol(G$X) 
   # deal with penalties
@@ -1436,10 +1443,10 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
 
   if (optimizer[2]%in%c("nlm.fd")) .Deprecated(msg=paste("optimizer",optimizer[2],"is deprecated, please use newton or bfgs"))
 
-  if (optimizer[1]=="efs" && !inherits(family,"general.family")) {
-    warning("Extended Fellner Schall only implemented for general families")
-    optimizer <- c("outer","newton")
-  }
+#  if (optimizer[1]=="efs" && !inherits(family,"general.family")) {
+#    warning("Extended Fellner Schall only implemented for general families")
+#    optimizer <- c("outer","newton")
+#  }
 
   if (length(lsp)==0) { ## no sp estimation to do -- run a fit instead
     optimizer[2] <- "no.sps" ## will cause gam2objective to be called, below
@@ -1469,8 +1476,15 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
   
   if (optimizer[1]=="efs"&& optimizer[2] != "no.sps" ) { ## experimental extended efs
     ##warning("efs is still experimental!")
-    object <- efsud(x=G$X,y=G$y,lsp=lsp,Sl=G$Sl,weights=G$w,offset=G$offxset,family=family,
+    if (inherits(family,"general.family")) {
+      object <- efsud(x=G$X,y=G$y,lsp=lsp,Sl=G$Sl,weights=G$w,offset=G$offxset,family=family,
                      control=control,Mp=G$Mp,start=start)
+    } else {
+      family <- fix.family.ls(family)
+      object <- efsudr(x=G$X,y=G$y,lsp=lsp,Eb=G$Eb,UrS=G$UrS,weights=G$w,family=family,offset=G$offset,
+                       start=start,
+                       U1=G$U1, intercept = TRUE,scale=scale,Mp=G$Mp,control=control,n.true=G$n.true,...)
+    }
     object$gcv.ubre <- object$REML
   } else if (optimizer[2]=="newton"||optimizer[2]=="bfgs"){ ## the gam.fit3 method 
     if (optimizer[2]=="bfgs") 
@@ -1596,6 +1610,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
   }
 
   if (!optimizer[1]%in%c("perf","outer","efs")) stop("unknown optimizer")
+  if (optimizer[1]=="efs") method <- "REML"
   if (!method%in%c("GCV.Cp","GACV.Cp","REML","P-REML","ML","P-ML")) stop("unknown smoothness selection criterion") 
   G$family <- fix.family(G$family)
   G$rS <- mini.roots(G$S,G$off,ncol(G$X),G$rank)
@@ -2085,7 +2100,7 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
                          mgcv.tol=1e-7,mgcv.half=15,trace =FALSE,
                          rank.tol=.Machine$double.eps^0.5,
                          nlm=list(),optim=list(),newton=list(),outerPIsteps=0,
-                         idLinksBases=TRUE,scalePenalty=TRUE,
+                         idLinksBases=TRUE,scalePenalty=TRUE,efs.lspmax=15,efs.tol=.1,
                          keepData=FALSE,scale.est="fletcher",edge.correct=FALSE) 
 # Control structure for a gam. 
 # irls.reg is the regularization parameter to use in the GAM fitting IRLS loop.
@@ -2138,12 +2153,13 @@ gam.control <- function (nthreads=1,irls.reg=0.0,epsilon = 1e-7, maxit = 200,
     # and optim defaults
     if (is.null(optim$factr)) optim$factr <- 1e7
     optim$factr <- abs(optim$factr)
+    if (efs.tol<=0) efs.tol <- .1
 
     list(nthreads=round(nthreads),irls.reg=irls.reg,epsilon = epsilon, maxit = maxit,
          trace = trace, mgcv.tol=mgcv.tol,mgcv.half=mgcv.half,
          rank.tol=rank.tol,nlm=nlm,
          optim=optim,newton=newton,outerPIsteps=outerPIsteps,
-         idLinksBases=idLinksBases,scalePenalty=scalePenalty,
+         idLinksBases=idLinksBases,scalePenalty=scalePenalty,efs.lspmax=efs.lspmax,efs.tol=efs.tol,
          keepData=as.logical(keepData[1]),scale.est=scale.est,edge.correct=edge.correct)
     
 }
@@ -2509,7 +2525,7 @@ get.na.action <- function(na.action) {
 
 predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
                        block.size=NULL,newdata.guaranteed=FALSE,na.action=na.pass,
-                       unconditional=FALSE,...) {
+                       unconditional=FALSE,iterms.type=NULL,...) {
 
 # This function is used for predicting from a GAM. 'object' is a gam object, newdata a dataframe to
 # be used in prediction......
@@ -2663,7 +2679,12 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
         msg <- paste(paste(levn[!levn%in%levm],collapse=", "),"not in original fit",collapse="")
         stop(msg)
       }
-      newdata[[i]] <- factor(newdata[[i]],levels=levm) # set prediction levels to fit levels
+      ## set prediction levels to fit levels...
+      if (is.matrix(newdata[[i]])) {
+        dum <- factor(newdata[[i]],levels=levm)
+	dim(dum) <- dim(newdata[[i]])
+	newdata[[i]] <- dum
+      } else newdata[[i]] <- factor(newdata[[i]],levels=levm)
     }
     if (type=="newdata") return(newdata)
 
@@ -2851,6 +2872,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
             if (type=="iterms"&& attr(object$smooth[[k]],"nCons")>0) { ## termwise se to "carry the intercept
               ## some general families, add parameters after cmX created, which are irrelevant to cmX... 
               if (length(object$cmX) < ncol(X)) object$cmX <- c(object$cmX,rep(0,ncol(X)-length(object$cmX)))
+              if (!is.null(iterms.type)&&iterms.type==2) object$cmX[-(1:object$nsdf)] <- 0 ## variability of fixed effects mean only
               X1 <- matrix(object$cmX,nrow(X),ncol(X),byrow=TRUE)
               meanL1 <- object$smooth[[k]]$meanL1
               if (!is.null(meanL1)) X1 <- X1 / meanL1              

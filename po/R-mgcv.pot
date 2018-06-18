@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-18\n"
-"POT-Creation-Date: 2017-07-24 10:46\n"
+"Project-Id-Version: mgcv 1.8-24\n"
+"POT-Creation-Date: 2018-06-06 15:48\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -13,10 +13,10 @@ msgstr ""
 msgid "bam can not discretize with this nesting structure"
 msgstr ""
 
-msgid "discretization can not handle smooth ids"
+msgid "'family' argument seems not to be a valid family object"
 msgstr ""
 
-msgid "'family' argument seems not to be a valid family object"
+msgid "This family should not have a matrix response"
 msgstr ""
 
 msgid "cannot find valid starting values: please specify some"
@@ -52,7 +52,7 @@ msgstr ""
 msgid "family not recognized"
 msgstr ""
 
-msgid "extended families not supported by bam"
+msgid "general families not supported by bam"
 msgstr ""
 
 msgid "un-supported smoothness selection method"
@@ -68,6 +68,9 @@ msgid "openMP not available: single threaded computation only"
 msgstr ""
 
 msgid "min.sp not supported with fast REML computation, and ignored."
+msgstr ""
+
+msgid "no smooths, ignoring `discrete=TRUE'"
 msgstr ""
 
 msgid "Not enough (non-NA) data to do anything meaningful"
@@ -97,10 +100,16 @@ msgstr ""
 msgid "link not available for coxph family; available link is \"identity\""
 msgstr ""
 
+msgid "something wrong with stratified prediction"
+msgstr ""
+
 msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
-msgid "cox.ph does not yet handle offsets"
+msgid "not an extended family"
+msgstr ""
+
+msgid "step failure in theta estimation"
 msgstr ""
 
 msgid "link not available for ordered categorical family; available links are \"identity\""
@@ -136,7 +145,7 @@ msgstr ""
 msgid "link not available for scaled t distribution; available links are \"identity\", \"log\",  and \"inverse\""
 msgstr ""
 
-msgid "scaled t df must be > min.df"
+msgid "Supplied df below min.df. min.df reset"
 msgstr ""
 
 msgid "NA values not allowed for the scaled t family"
@@ -320,6 +329,9 @@ msgid "and correspond to initial coefs for"
 msgstr ""
 
 msgid "Non-finite coefficients at iteration"
+msgstr ""
+
+msgid "non finite values in Hessian"
 msgstr ""
 
 msgid "indefinite penalized likelihood in gam.fit5"
@@ -634,9 +646,6 @@ msgstr ""
 msgid "unknown outer optimization method."
 msgstr ""
 
-msgid "Extended Fellner Schall only implemented for general families"
-msgstr ""
-
 msgid "Please provide a single value for theta or use nb to estimate it"
 msgstr ""
 
@@ -715,6 +724,9 @@ msgstr ""
 msgid "newdata is a model.frame: it should contain all required variables"
 msgstr ""
 
+msgid "no NAs allowed in response data for this model"
+msgstr ""
+
 msgid "not all required variables have been supplied in  newdata!"
 msgstr ""
 
@@ -745,19 +757,7 @@ msgstr ""
 msgid "m can't be in re"
 msgstr ""
 
-msgid "p-values may give low power in some circumstances"
-msgstr ""
-
-msgid "p-values un-reliable"
-msgstr ""
-
-msgid "p-values may give very low power"
-msgstr ""
-
 msgid "p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this."
-msgstr ""
-
-msgid "p.type!=0 is deprecated, and liable to be removed in future"
 msgstr ""
 
 msgid "The following arguments to anova.glm(..) are invalid and dropped:"
@@ -850,7 +850,10 @@ msgstr ""
 msgid "no automatic plotting for smooths of more than two variables"
 msgstr ""
 
-msgid "no automatic plotting for smooths of more than one variable"
+msgid "no automatic plotting for smooths of more than four variables"
+msgstr ""
+
+msgid "argument pers is deprecated, please use scheme instead"
 msgstr ""
 
 msgid "residuals argument to plot.gam is wrong length: ignored"
@@ -970,9 +973,6 @@ msgstr ""
 msgid "reparameterization unstable for margin: not done"
 msgstr ""
 
-msgid "single penalty tensor product smooths are deprecated and likely to be removed soon"
-msgstr ""
-
 msgid "basis not usable with reduced te"
 msgstr ""
 
@@ -1040,6 +1040,9 @@ msgid "there is *no* information about some basis coefficients"
 msgstr ""
 
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "multiple penalties of the same order is silly"
 msgstr ""
 
 msgid "requested non-existent derivative in B-spline penalty"

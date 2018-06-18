@@ -87,7 +87,7 @@ parameter estimation criterion (given by \code{method}). \code{"perf"} (deprecat
 for the more stable direct approach. \code{"outer"} can use several alternative optimizers, specified in the 
 second element of \code{optimizer}: \code{"newton"} (default), \code{"bfgs"}, \code{"optim"}, \code{"nlm"} 
 and \code{"nlm.fd"} (the latter is based entirely on finite differenced derivatives and is very slow). \code{"efs"}
-for the extended Fellner Schall method - only currently available for general families.}
+for the extended Fellner Schall method of Wood and Fasiolo (2017).}
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
 scale parameter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
@@ -297,6 +297,10 @@ generalized additive mixed models. Biometrics 62(4):1025-1036
 
 Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
 and Hall/CRC Press.
+
+Wood, S.N. and M. Fasiolo (2017) A generalized Fellner-Schall method for smoothing
+parameter optimization with application to Tweedie location, scale and shape models.
+Biometrics 73 (4), 1071-1081
 
 Wood S.N., F. Scheipl and J.J. Faraway (2012) Straightforward intermediate rank tensor product smoothing
 in mixed models. Statistical Computing.

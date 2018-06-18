@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2017-07-24 10:46\n"
+"POT-Creation-Date: 2018-06-06 15:48\n"
 "PO-Revision-Date: 2014-03-25 17:39+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -18,9 +18,6 @@ msgstr ""
 msgid "bam can not discretize with this nesting structure"
 msgstr ""
 
-msgid "discretization can not handle smooth ids"
-msgstr ""
-
 # mgcv/R/bam.r: 161
 # stop("'family' argument seems not to be a valid family object")
 # mgcv/R/bam.r: 480
@@ -28,6 +25,9 @@ msgstr ""
 msgid "'family' argument seems not to be a valid family object"
 msgstr ""
 "argument 'family' wydaje się nie być poprawnym obiektem klasy \"family\""
+
+msgid "This family should not have a matrix response"
+msgstr ""
 
 # mgcv/R/bam.r: 184
 # stop("cannot find valid starting values: please specify some")
@@ -114,8 +114,11 @@ msgstr ""
 msgid "family not recognized"
 msgstr "'family' nie został rozpoznany"
 
-msgid "extended families not supported by bam"
-msgstr ""
+# mgcv/R/mgcv.r: 3063
+# warning("'test' argument ignored")
+#, fuzzy
+msgid "general families not supported by bam"
+msgstr "argument 'test' został zignorowany"
 
 # mgcv/R/bam.r: 1079
 # stop("unsupported smoothness selection method")
@@ -137,6 +140,9 @@ msgid "min.sp not supported with fast REML computation, and ignored."
 msgstr ""
 "'min.sp' nie jest wspierane dla szybkich obliczeń REML, parametr został "
 "zignorowany."
+
+msgid "no smooths, ignoring `discrete=TRUE'"
+msgstr ""
 
 # mgcv/R/gamm.r: 1414
 # stop("Not enough (non-NA) data to do anything meaningful")
@@ -193,10 +199,21 @@ msgstr ""
 ": połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
 "połączenia to \"identity\", \"log\" oraz \"sqrt\""
 
+# mgcv/R/smooth.r: 265
+# warning("something wrong with argument 'd'.")
+# mgcv/R/smooth.r: 373
+# warning("something wrong with argument 'd'.")
+#, fuzzy
+msgid "something wrong with stratified prediction"
+msgstr "coś nie tak z argumentem 'd'"
+
 msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
-msgid "cox.ph does not yet handle offsets"
+msgid "not an extended family"
+msgstr ""
+
+msgid "step failure in theta estimation"
 msgstr ""
 
 # mgcv/R/gam.fit3.r: 2093
@@ -272,11 +289,8 @@ msgstr ""
 ": połączenie nie jest dostępne dla rodziny rozkładu Pascala; dostępne "
 "połączenia to \"identity\", \"log\" oraz \"sqrt\""
 
-# mgcv/R/mgcv.r: 1678
-# stop("value of epsilon must be > 0")
-#, fuzzy
-msgid "scaled t df must be > min.df"
-msgstr "wartość 'epsilon' musi być > 0"
+msgid "Supplied df below min.df. min.df reset"
+msgstr ""
 
 # mgcv/R/gam.fit3.r: 2126
 # stop("negative values not allowed for the negative binomial family")
@@ -664,6 +678,9 @@ msgstr "oraz odpowiadać początkowym współczynnikom dla"
 # warning(gettextf("Non-finite coefficients at iteration %d", iter))
 msgid "Non-finite coefficients at iteration"
 msgstr "Nieskończone współczynniki w iteracji"
+
+msgid "non finite values in Hessian"
+msgstr ""
 
 msgid "indefinite penalized likelihood in gam.fit5"
 msgstr ""
@@ -1207,9 +1224,6 @@ msgstr "elementy 'min.sp' muszą być nieujemne"
 msgid "unknown outer optimization method."
 msgstr "nieznana zewnętrzna metoda optymalizacji"
 
-msgid "Extended Fellner Schall only implemented for general families"
-msgstr ""
-
 msgid "Please provide a single value for theta or use nb to estimate it"
 msgstr ""
 
@@ -1350,6 +1364,12 @@ msgstr ""
 "\"newdata\" jest klasy \"model.frame\": powinien zawierać wszystkie wymagane "
 "zmienne"
 
+# mgcv/R/mgcv.r: 2352
+# stop("nothing to do for this model")
+#, fuzzy
+msgid "no NAs allowed in response data for this model"
+msgstr "nic do zrobienia dla tego modelu"
+
 # mgcv/R/mgcv.r: 2139
 # warning("not all required variables have been supplied in  newdata!\n")
 msgid "not all required variables have been supplied in  newdata!"
@@ -1395,21 +1415,6 @@ msgstr "argument nie jest obiektem klasy \"gam\""
 msgid "m can't be in re"
 msgstr "argument 'm' nie może być w argumencie 're'"
 
-# mgcv/R/mgcv.r: 2716
-# warning("p-values may give low power in some circumstances")
-msgid "p-values may give low power in some circumstances"
-msgstr "p-wartość może dać niską moc w pewnych okolicznościach"
-
-# mgcv/R/mgcv.r: 2719
-# warning("p-values un-reliable")
-msgid "p-values un-reliable"
-msgstr "p-wartość nie jest wiarygodna"
-
-# mgcv/R/mgcv.r: 2723
-# warning("p-values may give very low power")
-msgid "p-values may give very low power"
-msgstr "p-wartości mogą dać bardzo niską moc"
-
 # mgcv/R/mgcv.r: 2822
 # warning("p-values for any terms that can be penalized to zero will be unreliable: refit model to fix this.")
 msgid ""
@@ -1418,9 +1423,6 @@ msgid ""
 msgstr ""
 "p-wartości dla jakichkolwiek członów, które da się ukarać do zera, będą "
 "nierzetelne: ponownie dopasuj model aby to naprawić"
-
-msgid "p.type!=0 is deprecated, and liable to be removed in future"
-msgstr ""
 
 # mgcv/R/mgcv.r: 3053
 # warning(gettext("The following arguments to anova.glm(..) are invalid and dropped: ", domain = "R-mgcv"), paste(deparse(dotargs[named]), collapse = ", "), domain = NA)
@@ -1556,11 +1558,15 @@ msgid "no automatic plotting for smooths of more than two variables"
 msgstr ""
 "brak automatycznego rysowania dla wygładzeń o więcej niż dwóch zmiennych"
 
-# mgcv/R/plots.r: 959
-# warning("no automatic plotting for smooths of more than one variable")
-msgid "no automatic plotting for smooths of more than one variable"
+# mgcv/R/plots.r: 916
+# warning("no automatic plotting for smooths of more than two variables")
+#, fuzzy
+msgid "no automatic plotting for smooths of more than four variables"
 msgstr ""
-"brak automatycznego rysowania dla wygładzeń o więcej niż jednej zmiennej"
+"brak automatycznego rysowania dla wygładzeń o więcej niż dwóch zmiennych"
+
+msgid "argument pers is deprecated, please use scheme instead"
+msgstr ""
 
 # mgcv/R/plots.r: 1012
 # warning("residuals argument to plot.gam is wrong length: ignored")
@@ -1808,11 +1814,6 @@ msgstr ""
 msgid "reparameterization unstable for margin: not done"
 msgstr "ponowna parametryzacja nie jest stabilna dla marginesu: nie wykonano"
 
-msgid ""
-"single penalty tensor product smooths are deprecated and likely to be "
-"removed soon"
-msgstr ""
-
 msgid "basis not usable with reduced te"
 msgstr ""
 
@@ -1967,6 +1968,9 @@ msgstr ""
 "podstawowych współczynnikach"
 
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "multiple penalties of the same order is silly"
 msgstr ""
 
 msgid "requested non-existent derivative in B-spline penalty"
@@ -2343,6 +2347,33 @@ msgstr "sześcienny splajn radzi sobie jedynie z danymi jednowymiarowymi"
 # stop("object not fully initialized")
 msgid "object not fully initialized"
 msgstr "obiekt nie został w pełni zainicjalizowany"
+
+# mgcv/R/mgcv.r: 1678
+# stop("value of epsilon must be > 0")
+#, fuzzy
+#~ msgid "scaled t df must be > min.df"
+#~ msgstr "wartość 'epsilon' musi być > 0"
+
+# mgcv/R/mgcv.r: 2716
+# warning("p-values may give low power in some circumstances")
+#~ msgid "p-values may give low power in some circumstances"
+#~ msgstr "p-wartość może dać niską moc w pewnych okolicznościach"
+
+# mgcv/R/mgcv.r: 2719
+# warning("p-values un-reliable")
+#~ msgid "p-values un-reliable"
+#~ msgstr "p-wartość nie jest wiarygodna"
+
+# mgcv/R/mgcv.r: 2723
+# warning("p-values may give very low power")
+#~ msgid "p-values may give very low power"
+#~ msgstr "p-wartości mogą dać bardzo niską moc"
+
+# mgcv/R/plots.r: 959
+# warning("no automatic plotting for smooths of more than one variable")
+#~ msgid "no automatic plotting for smooths of more than one variable"
+#~ msgstr ""
+#~ "brak automatycznego rysowania dla wygładzeń o więcej niż jednej zmiennej"
 
 # mgcv/R/bam.r: 425
 # warning(gettextf("non-finite coefficients at iteration %d", iter))

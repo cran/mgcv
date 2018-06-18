@@ -102,7 +102,8 @@ of a single smooth. }
 
 \item{seWithMean}{if \code{TRUE} the component smooths are shown with confidence 
 intervals that include the uncertainty about the overall mean. If \code{FALSE} then the 
-uncertainty relates purely to the centred smooth itself. Marra and Wood (2012) suggests 
+uncertainty relates purely to the centred smooth itself. If \code{seWithMean=2} then the
+intervals include the uncertainty in the mean of the fixed effects (but not in the mean of any uncentred smooths or random effects).  Marra and Wood (2012) suggests 
 that \code{TRUE} results in better coverage performance,
 and this is also suggested by simulation.}
 
@@ -157,7 +158,7 @@ Fine control of plots for parametric terms can be obtained by calling
 Note that, if \code{seWithMean=TRUE}, the confidence bands include the uncertainty about the overall mean. In other words 
 although each smooth is shown centred, the confidence bands are obtained as if every other term in the model was 
 constrained to have average 0, (average taken over the covariate values), except for the smooth concerned. This seems to correspond more closely to how most users interpret componentwise intervals in practice, and also results in intervals with
-close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results presented in Marra and Wood (2012).
+close to nominal (frequentist) coverage probabilities by an extension of Nychka's (1988) results presented in Marra and Wood (2012). There are two possible variants of this approach. In the default variant the extra uncertainty is in the mean of all other terms in the model (fixed and random, including uncentred smooths). Alternatively, if \code{seWithMean=2} then only the uncertainty in parametric fixed effects is included in the extra uncertainty (this latter option actually tends to lead to wider intervals when the model contains random effects).
 
 Several smooth plots methods using \code{\link{image}} will accept an \code{hcolors} argument, which can be anything documented in \code{\link{heat.colors}} (in which case something like \code{hcolors=rainbow(50)} is appropriate), or the \code{\link{grey}} function (in which case somthing like \code{hcolors=grey(0:50/50)} is needed). Another option is \code{contour.col} which will set the contour colour for some plots. These options are useful for producing grey scale pictures instead of colour.
 

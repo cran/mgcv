@@ -147,10 +147,21 @@ dat <- gamSim(1,n=n,dist="normal",scale=2)
 ## regular gam fit for comparison...
 b0 <- gam(y~s(x0)+s(x1) + s(x2)+s(x3),data=dat,method="REML")
 
+## Set directory and file name for file containing jags code.
+## In real use you would *never* use tempdir() for this. It is
+## only done here to keep CRAN happy, and avoid any chance of
+## an accidental overwrite. Instead you would use
+## setwd() to set an appropriate working directory in which
+## to write the file, and just set the file name to what you
+## want to call it (e.g. "test.jags" here). 
+
+jags.file <- paste(tempdir(),"/test.jags",sep="") 
+
 ## Set up JAGS code and data. In this one might want to diagonalize
 ## to use conjugate samplers. Usually call 'setwd' first, to set
 ## directory in which model file ("test.jags") will be written.
-jd <- jagam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,file="test.jags",
+
+jd <- jagam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,file=jags.file,
             sp.prior="gamma",diagonalize=TRUE)
 
 ## In normal use the model in "test.jags" would now be edited to add 
@@ -159,7 +170,7 @@ jd <- jagam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat,file="test.jags",
 \dontrun{
 require(rjags)
 load.module("glm") ## improved samplers for GLMs often worth loading
-jm <-jags.model("test.jags",data=jd$jags.data,inits=jd$jags.ini,n.chains=1)
+jm <-jags.model(jags.file,data=jd$jags.data,inits=jd$jags.ini,n.chains=1)
 list.samplers(jm)
 sam <- jags.samples(jm,c("b","rho","scale"),n.iter=10000,thin=10)
 jam <- sim2jam(sam,jd$pregam)
@@ -178,7 +189,7 @@ dat <- gamSim(1,n=n,dist="normal",scale=2)
 scale <- .5; Ey <- exp(dat$f/2)
 dat$y <- rgamma(n,shape=1/scale,scale=Ey*scale)
 jd <- jagam(y~s(x0)+te(x1,x2)+s(x3),data=dat,family=Gamma(link=log),
-            file="test.jags",sp.prior="log.uniform")
+            file=jags.file,sp.prior="log.uniform")
 
 ## In normal use the model in "test.jags" would now be edited to add 
 ## the non-standard stochastic elements that require use of JAGS....
@@ -189,7 +200,7 @@ require(rjags)
 ## models are still not fully repeatable (JAGS 4 should fix this)
 jd$jags.ini$.RNG.name <- "base::Mersenne-Twister" ## setting RNG
 jd$jags.ini$.RNG.seed <- 6 ## how to set RNG seed
-jm <-jags.model("test.jags",data=jd$jags.data,inits=jd$jags.ini,n.chains=1)
+jm <-jags.model(jags.file,data=jd$jags.data,inits=jd$jags.ini,n.chains=1)
 list.samplers(jm)
 sam <- jags.samples(jm,c("b","rho","scale","mu"),n.iter=10000,thin=10)
 jam <- sim2jam(sam,jd$pregam)

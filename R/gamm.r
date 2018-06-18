@@ -987,7 +987,7 @@ extract.lme.cov2<-function(b,data,start.level=1)
     }
   }
   list(V=V,ind=Cind)
-}
+} ## extract.lme.cov2
 
 extract.lme.cov<-function(b,data,start.level=1)
 # function to extract the response data covariance matrix from an lme fitted
@@ -1071,7 +1071,7 @@ extract.lme.cov<-function(b,data,start.level=1)
     V <- V+Z%*%Vr%*%t(Z)
   }
   V
-}
+} ## extract.lme.cov
 
 formXtViX <- function(V,X)
 ## forms X'V^{-1}X as efficiently as possible given the structure of
@@ -1147,7 +1147,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
   zz <- eta + fit0$residuals - off
   wz <- fit0$weights
   fam <- family
-
+  
   ## find non clashing name for pseudodata and insert in formula
   zz.name <- new.name("zz",names(data))
   eval(parse(text=paste("fixed[[2]] <- quote(",zz.name,")")))
@@ -1188,6 +1188,13 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
   if (!converged) warning("gamm not converged, try increasing niterPQL")
   fit$y <- fit0$y
   fit$w <- w ## prior weights
+  ## would require full edf to be computable with re terms include!
+  #if (is.null(correlation)) { ## then a conditional AIC is possible
+  #  y <- fit$y;weights <- w; nobs <- length(y)
+  #  eval(fam$initialize)
+  #  dev <- sum(fam$dev.resids(y,mu,w))
+  #  fit$aic <- fam$aic(y,n,mu,w,dev)
+  #}
   fit
 }
 
@@ -1350,15 +1357,18 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     length(offset.name)==0) lme.used <- TRUE else lme.used <- FALSE
     if (lme.used&&!is.null(weights)&&!wisvf) lme.used <- FALSE   
 
-    if (lme.used)
-    { ## following construction is a work-around for problem in nlme 3-1.52 
+    if (lme.used) { ## following construction is a work-around for problem in nlme 3-1.52 
       eval(parse(text=paste("ret$lme<-lme(",deparse(fixed.formula),
           ",random=rand,data=strip.offset(mf),correlation=correlation,",
           "control=control,weights=weights,method=method)"
-            ,sep=""    ))) 
+            ,sep=""    )))
+      ## need to be able to work out full edf for following to work...	    
+      # if (is.null(correlation)) { ## compute conditional aic precursor
+      #  dev <- sum(family$dev.resids(G$y,fitted(ret$lme),weights))
+      #	ret$lme$aic <- family$aic(G$y,1,fitted(ret$lme),weights,dev)
+      # }
       ##ret$lme<-lme(fixed.formula,random=rand,data=mf,correlation=correlation,control=control)
-    } else
-    { ## Again, construction is a work around for nlme 3-1.52
+    } else { ## Again, construction is a work around for nlme 3-1.52
       if (wisvf) stop("weights must be like glm weights for generalized case")
       if (verbosePQL) cat("\n Maximum number of PQL iterations: ",niterPQL,"\n")
       eval(parse(text=paste("ret$lme<-gammPQL(",deparse(fixed.formula),
@@ -1366,8 +1376,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
           "correlation=correlation,control=control,",
             "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
       G$y <- ret$lme$y ## makes sure that binomial response is returned as a vector!
-      ##ret$lme<-glmmPQL(fixed.formula,random=rand,data=mf,family=family,correlation=correlation,
-      ##                 control=control,niter=niterPQL,verbose=verbosePQL)
+     
     }
 
     ### .... fitting finished
@@ -1531,6 +1540,11 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
 
     object$edf<-rowSums(Vb*t(XVX))   
     object$df.residual <- length(object$y) - sum(object$edf)    
+
+    #if (!is.null(ret$lme$aic)) { ## finish the conditional AIC (only happens if no correlation) 
+    #  object$aic <- ret$lme$aic + sum(object$edf) ## requires edf for r.e. as well!
+    #  ret$lme$aic<- NULL
+    #}
 
     object$sig2 <- ret$lme$sigma^2
     if (lme.used) { object$method <- paste("lme.",method,sep="")} 

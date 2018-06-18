@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.3-10\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-19 13:28+0100\n"
+"POT-Creation-Date: 2018-06-06 15:48+0100\n"
 "PO-Revision-Date: 2005-12-08 00:40+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -25,52 +25,39 @@ msgstr ""
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr "magic, l'optimisateur gcv/ubre, n'a pas convergé après 400 itérations."
 
-#: matrix.c:80
+#: matrix.c:82
 msgid "Failed to initialize memory for matrix."
 msgstr "L'initialisation de la mémoire pour une matrice a échoué."
 
-#: matrix.c:142 matrix.c:200
+#: matrix.c:144 matrix.c:202
 msgid "An out of bound write to matrix has occurred!"
 msgstr "Une écrite hors des limites de la matrice s'est produite !"
 
-#: matrix.c:148
+#: matrix.c:150
 msgid "INTEGRITY PROBLEM in the extant matrix list."
 msgstr "PROBLEME D'INTEGRITE dans la liste de la matrice étendue."
 
-#: matrix.c:180
+#: matrix.c:182
 msgid "You are trying to check matrix integrity without defining RANGECHECK."
 msgstr ""
 "Vous essayez de vérifier l'intégrité de la matrice sans avoir défini "
 "RANGECHECK."
 
-#: matrix.c:238
+#: matrix.c:240
 msgid "Target matrix too small in mcopy"
 msgstr "Matrice cible trop petite dans mcopy"
 
-#: matrix.c:258 matrix.c:266 matrix.c:279 matrix.c:287
+#: matrix.c:260 matrix.c:268 matrix.c:281 matrix.c:289
 msgid "Incompatible matrices in matmult."
 msgstr "Matrices incompatibles dans matmult."
 
-#: matrix.c:374
+#: matrix.c:313
 msgid "Attempt to invert() non-square matrix"
 msgstr "Tentative d'inversion d'une matrice non carrée"
 
-#: matrix.c:396
+#: matrix.c:335
 msgid "Singular Matrix passed to invert()"
 msgstr "Matrice singulière passée à invert()"
-
-#: matrix.c:1316
-msgid "svd() not converged"
-msgstr "svd() n'a pas convergé"
-
-#: matrix.c:1392
-#, c-format
-msgid "svdroot matrix not +ve semi def. %g"
-msgstr "la matrice svdroot n'est pas +ve semi def. %g"
-
-#: matrix.c:1420
-msgid "Sort failed"
-msgstr "Le tri a échoué"
 
 #: qp.c:59
 msgid "ERROR in addconQT."
@@ -91,3 +78,12 @@ msgid ""
 msgstr ""
 "Un terme a moins de combinaisons de covariables uniques que le degré de "
 "liberté maximum spécifié"
+
+#~ msgid "svd() not converged"
+#~ msgstr "svd() n'a pas convergé"
+
+#~ msgid "svdroot matrix not +ve semi def. %g"
+#~ msgstr "la matrice svdroot n'est pas +ve semi def. %g"
+
+#~ msgid "Sort failed"
+#~ msgstr "Le tri a échoué"

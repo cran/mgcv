@@ -218,9 +218,9 @@ terms less the number of spline terms).
 
 This routine is less stable than `gam' for the same dataset.
 
+With \code{discrete=TRUE}, \code{te} terms are efficiently computed, but \code{t2} are not.
+
 The negbin family is only supported for the *known theta* case.
-
-
 } 
 
 \seealso{\code{\link{mgcv.parallel}}, 
@@ -236,9 +236,7 @@ The negbin family is only supported for the *known theta* case.
 library(mgcv)
 ## See help("mgcv-parallel") for using bam in parallel
 
-## Some examples are marked 'Not run' purely to keep 
-## checking load on CRAN down. Sample sizes are small for 
-## the same reason.
+## Sample sizes are small for fast run times.
 
 set.seed(3)
 dat <- gamSim(1,n=25000,dist="normal",scale=20)
@@ -262,6 +260,14 @@ dat <- gamSim(1,n=21000,dist="poisson",scale=.1)
 system.time(b1 <- bam(y ~ s(x0,bs=bs)+s(x1,bs=bs)+s(x2,bs=bs,k=k),
             data=dat,family=poisson()))
 b1
+
+## Similar using faster discrete method...
+
+\donttest{ 
+system.time(b2 <- bam(y ~ s(x0,bs=bs,k=k)+s(x1,bs=bs,k=k)+s(x2,bs=bs,k=k)+
+            s(x3,bs=bs,k=k),data=dat,family=poisson(),discrete=TRUE))
+b2
+}
 
 
 }
