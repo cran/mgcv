@@ -34,7 +34,7 @@ R_CMethodDef CEntries[] = {
     {"vcorr", (DL_FUNC) &vcorr, 5},
     {"dchol", (DL_FUNC) &dchol, 4},
     {"mgcv_omp", (DL_FUNC) &mgcv_omp, 1},
-    {"coxpred", (DL_FUNC) &coxpred, 13},
+    {"coxpred", (DL_FUNC) &coxpred, 14},
     {"coxpp", (DL_FUNC) &coxpp, 10},
     {"coxlpl", (DL_FUNC) &coxlpl, 17},
     {"mvn_ll", (DL_FUNC) &mvn_ll,15},

@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2017-07-24 10:46\n"
+"POT-Creation-Date: 2018-06-06 15:48\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -27,11 +27,11 @@ msgstr ""
 msgid "bam can not discretize with this nesting structure"
 msgstr ""
 
-msgid "discretization can not handle smooth ids"
-msgstr ""
-
 msgid "'family' argument seems not to be a valid family object"
 msgstr "'family' 인자는 올바른 family 객체가 아닌 것 같이 보입니다."
+
+msgid "This family should not have a matrix response"
+msgstr ""
 
 msgid "cannot find valid starting values: please specify some"
 msgstr "사용가능한 초기값을 찾을 수 없습니다.  값을 지정해 주시길 바랍니다."
@@ -68,8 +68,10 @@ msgstr ""
 msgid "family not recognized"
 msgstr "family에 대한 정보를 찾을 수 없습니다."
 
-msgid "extended families not supported by bam"
+#, fuzzy
+msgid "general families not supported by bam"
 msgstr ""
+"plot.gam에 전달되는 인자 residuals의 길이가 올바르지 않아 무시되었습니다. "
 
 msgid "un-supported smoothness selection method"
 msgstr "지원되지 않는 평활화 선택법(smoothness selection method)입니다."
@@ -86,6 +88,9 @@ msgstr ""
 msgid "min.sp not supported with fast REML computation, and ignored."
 msgstr ""
 "fREML(fast REML 연산)을 method로 선택한 경우 min.sp는 사용되지 않습니다."
+
+msgid "no smooths, ignoring `discrete=TRUE'"
+msgstr ""
 
 msgid "Not enough (non-NA) data to do anything meaningful"
 msgstr ""
@@ -117,10 +122,18 @@ msgstr ""
 "coxph 페밀리(family)에 사용할 수 있는 링크(link)가 아닙니다.  사용가능한 링크"
 "(link)는 \"identity\"입니다."
 
+#, fuzzy
+msgid "something wrong with stratified prediction"
+msgstr "zlim이 올바르지 않습니다."
+
 msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
-msgid "cox.ph does not yet handle offsets"
+#, fuzzy
+msgid "not an extended family"
+msgstr "본 페밀리(family)에 사용가능한 링크(link)가 없습니다."
+
+msgid "step failure in theta estimation"
 msgstr ""
 
 msgid ""
@@ -177,9 +190,8 @@ msgstr ""
 "다.  사용가능한 링크(link)에는 \"identity\", \"log\", 그리고 \"inverse\"가 있"
 "습니다."
 
-#, fuzzy
-msgid "scaled t df must be > min.df"
-msgstr "스케일드 t 분포(scaled t)의 자유도(df)는 2보다 커야합니다."
+msgid "Supplied df below min.df. min.df reset"
+msgstr ""
 
 msgid "NA values not allowed for the scaled t family"
 msgstr "스케일드 t 페밀리(scaled t family)에는 NA 값을 사용할 수 없습니다."
@@ -387,6 +399,9 @@ msgstr ""
 msgid "Non-finite coefficients at iteration"
 msgstr ""
 "다음의 반복에서 얻어진 계수의 추정치가 유한(finite)한 값을 가지지 않습니다."
+
+msgid "non finite values in Hessian"
+msgstr ""
 
 msgid "indefinite penalized likelihood in gam.fit5"
 msgstr ""
@@ -731,10 +746,6 @@ msgstr "min.sp의 구성요소는 반드시 음수이어서는 안됩니다."
 msgid "unknown outer optimization method."
 msgstr "알 수 없는 최적화 방법(optimization method)입니다."
 
-#, fuzzy
-msgid "Extended Fellner Schall only implemented for general families"
-msgstr "본 페밀리(family)에 사용가능한 링크(link)가 없습니다."
-
 msgid "Please provide a single value for theta or use nb to estimate it"
 msgstr ""
 
@@ -820,6 +831,9 @@ msgid "newdata is a model.frame: it should contain all required variables"
 msgstr ""
 "newdata는 model.frame이므로 필요한 모든 변수들을 포함하고 있어야 합니다."
 
+msgid "no NAs allowed in response data for this model"
+msgstr ""
+
 msgid "not all required variables have been supplied in  newdata!"
 msgstr "필요한 모든 변수들을 newdata로부터 찾을 수 없습니다!"
 
@@ -854,21 +868,9 @@ msgstr "recov 함수는 오로지 적합된 gam 객체만을 사용합니다."
 msgid "m can't be in re"
 msgstr "m은 re 내에 있을 수 없습니다."
 
-msgid "p-values may give low power in some circumstances"
-msgstr ""
-
-msgid "p-values un-reliable"
-msgstr ""
-
-msgid "p-values may give very low power"
-msgstr ""
-
 msgid ""
 "p-values for any terms that can be penalized to zero will be unreliable: "
 "refit model to fix this."
-msgstr ""
-
-msgid "p.type!=0 is deprecated, and liable to be removed in future"
 msgstr ""
 
 msgid "The following arguments to anova.glm(..) are invalid and dropped:"
@@ -967,7 +969,10 @@ msgstr ""
 msgid "no automatic plotting for smooths of more than two variables"
 msgstr ""
 
-msgid "no automatic plotting for smooths of more than one variable"
+msgid "no automatic plotting for smooths of more than four variables"
+msgstr ""
+
+msgid "argument pers is deprecated, please use scheme instead"
 msgstr ""
 
 msgid "residuals argument to plot.gam is wrong length: ignored"
@@ -1094,11 +1099,6 @@ msgstr ""
 msgid "reparameterization unstable for margin: not done"
 msgstr ""
 
-msgid ""
-"single penalty tensor product smooths are deprecated and likely to be "
-"removed soon"
-msgstr ""
-
 msgid "basis not usable with reduced te"
 msgstr ""
 
@@ -1168,6 +1168,9 @@ msgid "there is *no* information about some basis coefficients"
 msgstr ""
 
 msgid "basis dimension is larger than number of unique covariates"
+msgstr ""
+
+msgid "multiple penalties of the same order is silly"
 msgstr ""
 
 msgid "requested non-existent derivative in B-spline penalty"
@@ -1367,6 +1370,14 @@ msgstr ""
 
 msgid "object not fully initialized"
 msgstr "완전히 초기화된 object가 아닙니다."
+
+#, fuzzy
+#~ msgid "scaled t df must be > min.df"
+#~ msgstr "스케일드 t 분포(scaled t)의 자유도(df)는 2보다 커야합니다."
+
+#, fuzzy
+#~ msgid "Extended Fellner Schall only implemented for general families"
+#~ msgstr "본 페밀리(family)에 사용가능한 링크(link)가 없습니다."
 
 #~ msgid "non-finite coefficients at iteration"
 #~ msgstr ""

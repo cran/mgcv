@@ -1,4 +1,4 @@
-##  R plotting routines for the package mgcv (c) Simon Wood 2000-2017
+#  R plotting routines for the package mgcv (c) Simon Wood 2000-2017
 ##  With contributions from Henric Nilsson
 
 
@@ -1247,6 +1247,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
         ## test whether mean variability to be added to variability (only for centred terms)
         if (seWithMean && attr(x$smooth[[i]],"nCons")>0) {
           if (length(x$cmX) < ncol(x$Vp)) x$cmX <- c(x$cmX,rep(0,ncol(x$Vp)-length(x$cmX)))
+          if (seWithMean==2) x$cmX[-(1:x$nsdf)] <- 0 ## variability of fixed effects mean only
           X1 <- matrix(x$cmX,nrow(P$X),ncol(x$Vp),byrow=TRUE)
           meanL1 <- x$smooth[[i]]$meanL1
           if (!is.null(meanL1)) X1 <- X1 / meanL1
@@ -1297,17 +1298,6 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
   } else
   { ppp<-1;oldpar<-par()}
   
-  if ((pages==0&&prod(par("mfcol"))<n.plots&&dev.interactive())||
-       pages>1&&dev.interactive()) ask <- TRUE else ask <- FALSE 
-  
-  if (!is.null(select)) {
-    ask <- FALSE
-  }
- 
-  if (ask) {
-    oask <- devAskNewPage(TRUE)
-    on.exit(devAskNewPage(oask))
-  }
 
   #####################################
   ## get a common scale, if required...
@@ -1347,11 +1337,28 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
   ## now plot smooths, by calling plot methods with plot data...
   ##############################################################
 
+  if ((pages==0&&prod(par("mfcol"))<n.plots&&dev.interactive())||
+       pages>1&&dev.interactive()) ask <- TRUE else ask <- FALSE 
+  
+  if (!is.null(select)) {
+    ask <- FALSE
+  }
+ 
+#  if (ask) { ## asks before plotting
+#    oask <- devAskNewPage(TRUE)
+#    on.exit(devAskNewPage(oask))
+#  }
+
   if (m>0) for (i in 1:m) if (pd[[i]]$plot.me&&(is.null(select)||i==select)) {
     plot(x$smooth[[i]],P=pd[[i]],partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,n3=n3,
                      pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
+   if (ask) { ## this is within loop so we don't get asked before it's necessary
+     oask <- devAskNewPage(TRUE)
+     on.exit(devAskNewPage(oask))
+     ask <- FALSE ## only need to do this once
+   }
 
   } ## end of smooth plotting loop
   

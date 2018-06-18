@@ -17,7 +17,7 @@
 #include "mgcv.h"
 
 
-void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,double *q,
+void coxpred(double *X,double *t,double *beta,double *off,double *Vb,double *a,double *h,double *q,
              double *tr,int *n,int *p, int *nt,double *s,double *se) {
 /* Function to predict the survivor function for the new data in 
    X (n by p), t, given fit results in a, h, q, Vb, and original event times 
@@ -43,7 +43,7 @@ void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,dou
         eta += *p1 * *p3; /* X beta */
         *pv = *pa - *p1 * hi; /* v = a - x * h */
       }
-      exp_eta = exp(eta);
+      exp_eta = exp(eta+off[i]);
       s[i] = exp(-hi*exp_eta); /* estimated survivor function */
       /* now get the s.e. for this... */
       p1 = Vb;pv = v;p2 = pv + *p;

@@ -63,7 +63,7 @@ void get_stableS(double *S,double *Qf,double *sp,double *sqrtS, int *rSncol, int
 
 /* cox model routines */
 
-void coxpred(double *X,double *t,double *beta,double *Vb,double *a,double *h,double *q,
+void coxpred(double *X,double *t,double *beta,double *off,double *Vb,double *a,double *h,double *q,
              double *tr,int *n,int *p, int *nt,double *s,double *se);
 void coxpp(double *eta,double *X,int *r, int *d,double *h,double *q,double *km,
 	   int *n,int *p, int *nt);

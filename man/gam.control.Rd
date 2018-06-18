@@ -12,10 +12,11 @@ choise of fitting method, see \code{\link{gam}} arguments \code{method} and \cod
 \usage{
 gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
             mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
-            rank.tol=.Machine$double.eps^0.5,
-            nlm=list(),optim=list(),newton=list(),
-            outerPIsteps=0,idLinksBases=TRUE,scalePenalty=TRUE,
-            keepData=FALSE,scale.est="fletcher",edge.correct=FALSE) 
+            rank.tol=.Machine$double.eps^0.5,nlm=list(),
+	    optim=list(),newton=list(),outerPIsteps=0,
+	    idLinksBases=TRUE,scalePenalty=TRUE,efs.lspmax=15,
+	    efs.tol=.1,keepData=FALSE,scale.est="fletcher",
+	    edge.correct=FALSE) 
 }
 \arguments{ 
 \item{nthreads}{Some parts of some smoothing parameter selection methods (e.g. REML) can use some
@@ -71,6 +72,12 @@ case).}
 of the penalty matrices of a smooth relative to its model matrix. This option rescales 
 the penalty matrices to accomodate this problem. Probably should be set to \code{FALSE} 
 if you are linking smoothing parameters but have set \code{idLinkBases} to \code{FALSE}.}
+
+\item{efs.lspmax}{maximum log smoothing parameters to allow under extended Fellner Schall
+smoothing parameter optimization.}
+
+\item{efs.tol}{change in REML to count as negligible when testing for EFS convergence. If the
+step is small and the last 3 steps led to a REML change smaller than this, then stop.}
 
 \item{keepData}{Should a copy of the original \code{data} argument be kept in the \code{gam} 
 object? Strict compatibility with class \code{glm} would keep it, but it wastes space to

@@ -6,10 +6,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: R 3.2.0 / mgcv 1.8-5\n"
+"Project-Id-Version: R 3.4.4 / mgcv 1.8-23\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2017-07-24 10:46\n"
-"PO-Revision-Date: 2015-03-26 13:29+0100\n"
+"POT-Creation-Date: 2018-06-06 15:48\n"
+"PO-Revision-Date: 2018-04-06 11:44+0200\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-Core <r-core@r-project.org>\n"
 "Language: de\n"
@@ -19,13 +19,13 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "bam can not discretize with this nesting structure"
-msgstr ""
-
-msgid "discretization can not handle smooth ids"
-msgstr ""
+msgstr "bam kann in dieser Schachtelungsstruktur nicht disketisieren"
 
 msgid "'family' argument seems not to be a valid family object"
 msgstr "'family' Argument scheint kein zulässiges family Objekt zu sein"
+
+msgid "This family should not have a matrix response"
+msgstr ""
 
 msgid "cannot find valid starting values: please specify some"
 msgstr "Kann keine gültigen Startwerte finden: Bitte geben Sie einige an"
@@ -52,36 +52,40 @@ msgstr ""
 "Es trat der Fall auf, dass die angepassten Quoten numerisch 0 oder 1 waren"
 
 msgid "Too many cluster nodes to use all efficiently"
-msgstr ""
+msgstr "Zu viele Cluster-Knoten, um alle effizient zu nutzen"
 
-#, fuzzy
 msgid "iterms reset to terms"
-msgstr "Unbekannter Typ, wird auf terms zurückgesetzt."
+msgstr "iterms auf terms zurückgesetzt."
 
 msgid "exclude ignored by discrete prediction at present"
-msgstr ""
+msgstr "zur Zeit wird bei diskreter Prädiktion exclude ignoriert"
 
 msgid "family not recognized"
 msgstr "family nicht erkannt"
 
-msgid "extended families not supported by bam"
-msgstr ""
+#, fuzzy
+msgid "general families not supported by bam"
+msgstr "erweiterte Familien nicht von bam unterstützt"
 
 msgid "un-supported smoothness selection method"
 msgstr "nicht unterstützte Methode zur Glattheitswahl"
 
 msgid "discretization only available with fREML"
-msgstr ""
+msgstr "Diskretisierung nur mit fREML verfügbar"
 
 msgid "discrete method does not use parallel cluster - use nthreads instead"
 msgstr ""
+"diskrete Methode nutzt keinen parallelen Cluster - nutze besser nthreads"
 
 msgid "openMP not available: single threaded computation only"
-msgstr ""
+msgstr "openMP nicht verfügbar: nur single thread Berechnungen"
 
 msgid "min.sp not supported with fast REML computation, and ignored."
 msgstr ""
 "min.sp wird bei schneller REML Berechnung nicht unterstützt und ignoriert."
+
+msgid "no smooths, ignoring `discrete=TRUE'"
+msgstr ""
 
 msgid "Not enough (non-NA) data to do anything meaningful"
 msgstr "Nicht genug (nicht-NA-) Daten, um etwas Sinnvolles zu tun"
@@ -92,9 +96,8 @@ msgstr "AR.start muss logisch sein"
 msgid "chunk.size < number of coefficients. Reset to %d"
 msgstr "chunk.size < number of coefficients. Zurückgesetzt auf %d"
 
-#, fuzzy
 msgid "unknown tensor constraint type"
-msgstr "nicht implementierter dünn besetzter Nebenbedingungstyp verlangt"
+msgstr "unbekannte Typ von Tensor-Einschränkungen"
 
 msgid "Model has more coefficients than data"
 msgstr "Modell hat mehr Koeffizienten als Daten"
@@ -112,10 +115,18 @@ msgid "link not available for coxph family; available link is \"identity\""
 msgstr ""
 "Link nicht verfügbar für die coxph Familie; \"identity\" Link ist verfügbar"
 
+#, fuzzy
+msgid "something wrong with stratified prediction"
+msgstr "etwas stimmt nicht mit Argument d."
+
 msgid "NA times supplied for cox.ph prediction"
 msgstr "NA Zeiten für die coxph Vorhersage angegeben"
 
-msgid "cox.ph does not yet handle offsets"
+#, fuzzy
+msgid "not an extended family"
+msgstr "Link nicht implementiert für erweiterte Familien"
+
+msgid "step failure in theta estimation"
 msgstr ""
 
 msgid ""
@@ -129,7 +140,7 @@ msgid "Must supply theta or R to ocat"
 msgstr "theta oder R müssen an ocat übergeben werden"
 
 msgid "Response should be integer class labels"
-msgstr ""
+msgstr "Antwort sollten ganzzahlige Klassenlabel sein"
 
 msgid "values out of range"
 msgstr "Werte außerhalb des zulässigen Bereichs"
@@ -167,9 +178,8 @@ msgstr ""
 "Link nicht verfügbar für die skalierte t-Verteilung; verfügbare Links sind "
 "\"identity\", \"log\" und \"inverse\""
 
-#, fuzzy
-msgid "scaled t df must be > min.df"
-msgstr "skalierte t df müssen >2 sein"
+msgid "Supplied df below min.df. min.df reset"
+msgstr ""
 
 msgid "NA values not allowed for the scaled t family"
 msgstr "NA Werte für die skalierte t-Verteilung nicht zulässig"
@@ -196,7 +206,7 @@ msgstr ""
 "keinen Sinn"
 
 msgid "Possible divergence detected in fast.REML.fit"
-msgstr ""
+msgstr "Mögliche Divergenz entdeckt in fast.REML.fit"
 
 msgid "fast REML optimizer reached iteration limit"
 msgstr "schneller REML Optimierer erreichte max. Iterationszahl"
@@ -302,9 +312,10 @@ msgstr "L hat inkonsistente Dimensionen."
 
 msgid "Fitting terminated with step failure - check results carefully"
 msgstr ""
+"Anpassung beendet mit Schrittweitenfehler - Ergebnisse sorgfältig prüfen"
 
 msgid "Iteration limit reached without full convergence - check carefully"
-msgstr ""
+msgstr "Iterationsgrenze erreicht ohne volle Konvergenz -- sorgfältig prüfen"
 
 msgid "link not implemented for extended families"
 msgstr "Link nicht implementiert für erweiterte Familien"
@@ -357,7 +368,7 @@ msgid "y must be an integer multiple of phi for Tweedie(p=1)"
 msgstr "y muss für Tweedie(p=1) ein ganzzahliges Vielfaches von phi sein"
 
 msgid "all.derivs only available in rho, theta parameterization"
-msgstr ""
+msgstr "all.derivs nur in der rho, theta Parametrisierung verfügbar"
 
 msgid "Only 1<p<=2 supported"
 msgstr "Nur 1<p<=2 unterstützt"
@@ -384,6 +395,9 @@ msgstr "und entsprechend den Anfangs-Koeffizienten für"
 msgid "Non-finite coefficients at iteration"
 msgstr "Nicht-endliche Koeffizienten bei der Iteration"
 
+msgid "non finite values in Hessian"
+msgstr ""
+
 msgid "indefinite penalized likelihood in gam.fit5"
 msgstr "unendliche penalisierte Likelihood in gam.fit5"
 
@@ -405,16 +419,14 @@ msgstr "Link nicht verfügbar für den Parameter mu von gaulss"
 msgid "link not available for precision parameter of gaulss"
 msgstr "Link nicht verfügbar für den Präzisonsparameter von gaulss"
 
-#, fuzzy
 msgid "number of categories must be at least 2"
-msgstr "maximale Anzahl der Iterationen muss > 0 sein"
+msgstr "Anzahl von Kategorien muss mindestens 2 sein"
 
-#, fuzzy
 msgid "number of linear predictors doesn't match"
-msgstr "falsche Anzahl linearer Prädiktoren für diese Familie"
+msgstr "Anzahl linearer Prädiktoren passt nicht"
 
 msgid "response not in 0 to number of predictors + 1"
-msgstr ""
+msgstr "Antwort ist nicht zwischen 0 und Zahl der Prädiktoren + 1"
 
 msgid "ziplss requires 2 links specified as character strings"
 msgstr "ziplss verlangt 2 Links, angegeben als Zeichenketten"
@@ -431,9 +443,8 @@ msgstr "Nicht-ganzzahlige Antwortvariablen bei ziplss nicht erlaubt"
 msgid "Using ziplss for binary data makes no sense"
 msgstr "Gebrauch von ziplss bei binären Daten ergibt keinen Sinn"
 
-#, fuzzy
 msgid "gevlss requires 3 links specified as character strings"
-msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
+msgstr "gevlss verlangt 3 Links, angegeben als Zeichenketten"
 
 msgid "An object of length %d does not match the required parameter size"
 msgstr ""
@@ -523,11 +534,10 @@ msgid "gamm not converged, try increasing niterPQL"
 msgstr "gamm ist nicht konvergiert, versuche niterPQL zu erhöhen"
 
 msgid "family are not designed for use with gamm!"
-msgstr ""
+msgstr "Familie nicht entworfen, um mit gamm genutzt zu werden"
 
-#, fuzzy
 msgid "gamm is not designed to use extended families"
-msgstr "Link nicht implementiert für erweiterte Familien"
+msgstr "gamm ist nicht entworfen, um erweiterte Familien zu nutzen"
 
 # R/gamm.r
 msgid "random argument must be a *named* list."
@@ -646,16 +656,14 @@ msgid "Model matrix not full column rank"
 msgstr "Modellmatrix hat keinen vollen Spaltenrang"
 
 msgid "can't handle [[ in formula"
-msgstr ""
+msgstr "kann mit [[ in Formel nicht umgehen"
 
 # http://de.wikipedia.org/wiki/Prädiktor
-#, fuzzy
 msgid "single linear predictor indices are ignored"
-msgstr "Ungültige Werte des linearen Prädiktors in leerem Modell"
+msgstr "einzelne Indizes linearer Prädiktoren werden ignoriert"
 
-#, fuzzy
 msgid "linear predictor labels out of range"
-msgstr "Werte außerhalb des zulässigen Bereichs"
+msgstr "Labels des linearen Prädiktors außerhalb des zulässigen Bereichs"
 
 msgid "model has repeated 1-d smooths of same variable."
 msgstr "Modell hat 1-d-Glättungen derselben Variable wiederholt."
@@ -688,13 +696,13 @@ msgid "absorb.cons must be TRUE for multi-formula models"
 msgstr "absorb.cons muss für multi-formel Modelle TRUE sein"
 
 msgid "length(drop.intercept) should be equal to number of model formulas"
-msgstr ""
+msgstr "length(drop.intercept) sollte gleich der Zahl der model.formulas sein"
 
 msgid "shared offsets not allowed"
-msgstr ""
+msgstr "gemeinsame Offsets nicht erlaubt"
 
 msgid "dropping unidentifiable parametric terms from model"
-msgstr ""
+msgstr "entferne unidentifizierbar parametrische Terme aus dem Modell"
 
 msgid "First argument is no sort of formula!"
 msgstr "Erstes Argument ist keine Art von Formel"
@@ -731,12 +739,8 @@ msgstr "Elemente von min.sp dürfen nicht negativ sein."
 msgid "unknown outer optimization method."
 msgstr "Unbekannte äußere Optimierungsmethode"
 
-#, fuzzy
-msgid "Extended Fellner Schall only implemented for general families"
-msgstr "Link nicht implementiert für erweiterte Familien"
-
 msgid "Please provide a single value for theta or use nb to estimate it"
-msgstr ""
+msgstr "Bitte einzelnen Wert für theta angeben oder nb nutzen, um zu schätzen"
 
 msgid "nlm.fd only available for GCV/UBRE"
 msgstr "nlm.fd nur verfügbar für GCV/UBRE"
@@ -757,7 +761,7 @@ msgid "incorrect number of linear predictors for family"
 msgstr "falsche Anzahl linearer Prädiktoren für diese Familie"
 
 msgid "edge.correct must be logical or a positive number"
-msgstr ""
+msgstr "edge.correct muss Wahrheitswert oder eine positive Zahl sein"
 
 msgid "nthreads must be a positive integer"
 msgstr "nthreads muss eine positive, ganze Zahl sein"
@@ -805,12 +809,11 @@ msgstr "Schrittgröße verkleinert: Außerhalb der Begrenzungen."
 msgid "`object' is not of class \"gam\""
 msgstr "'object' ist nicht aus der Klasse \"gam\""
 
-#, fuzzy
 msgid "unrecognised na.action"
-msgstr "unerkannter (Vektor?) Verweis"
+msgstr "unerkannter ba.action"
 
 msgid "na.action not character or function"
-msgstr ""
+msgstr "na.action ist weder Zeichenkette noch Funktion"
 
 msgid "Smoothness uncertainty corrected covariance not available"
 msgstr "Glattheitsunsicherheits-korrigierte Kovarianz ist nicht verfügbar"
@@ -827,6 +830,10 @@ msgid "newdata is a model.frame: it should contain all required variables"
 msgstr ""
 "newdata ist ein model.frame: Es soll alle benötigten Variablen enthalten"
 
+#, fuzzy
+msgid "no NAs allowed in response data for this model"
+msgstr "nichts zu tun für dieses Modell"
+
 msgid "not all required variables have been supplied in  newdata!"
 msgstr "nicht alle benötigten Variablen wurden in newdata angegeben!"
 
@@ -836,9 +843,8 @@ msgstr "Typ iterms ist für den Fall multipler Prädiktoren nicht verfügbar"
 msgid "non-existent terms requested - ignoring"
 msgstr "nicht existierende Terme angefordert - wird ignoriert"
 
-#, fuzzy
 msgid "non-existent exclude terms requested - ignoring"
-msgstr "nicht existierende Terme angefordert - wird ignoriert"
+msgstr "nicht existierende Ausschluss-Terme angefordert - wird ignoriert"
 
 msgid "requires an object of class gam"
 msgstr "verlangt ein Objekt der Klasse gam"
@@ -862,24 +868,12 @@ msgstr "recov funktioniert nur bei gefitteten gam Objekten"
 msgid "m can't be in re"
 msgstr "m kann nicht in re sein"
 
-msgid "p-values may give low power in some circumstances"
-msgstr "p-Werte können unter Umständen geringere Power geben"
-
-msgid "p-values un-reliable"
-msgstr "p-Werte unzuverlässig"
-
-msgid "p-values may give very low power"
-msgstr "p-Werte geben evtl. sehr geringe Power"
-
 msgid ""
 "p-values for any terms that can be penalized to zero will be unreliable: "
 "refit model to fix this."
 msgstr ""
 "Die p-Werte für einen Term, der auf Null bestraft werden kann, sind "
 "unzuverlässig: Modell wird neu angepasst, um dies zu korrigieren."
-
-msgid "p.type!=0 is deprecated, and liable to be removed in future"
-msgstr "p.type!=0 ist veraltet und wird in der Zukunft entfernt"
 
 msgid "The following arguments to anova.glm(..) are invalid and dropped:"
 msgstr "Die folgenden Argumente für anova.glm(..) sind ungültig und entfallen:"
@@ -888,7 +882,7 @@ msgid ","
 msgstr ","
 
 msgid "un-supported test"
-msgstr ""
+msgstr "nicht unterstützter Test"
 
 msgid "test argument ignored"
 msgstr "Argument test ignoriert"
@@ -904,6 +898,7 @@ msgstr "Argument ist kein gam Objekt"
 
 msgid "S.scale vector doesn't match S list - please report to maintainer"
 msgstr ""
+"S.scale Vektor passt nicht zu S Liste - bitte den Maintainer informieren!"
 
 msgid "Supplied matrix not symmetric"
 msgstr "Angegebene Matrix nicht symmetrisch"
@@ -929,25 +924,23 @@ msgstr "w hat eine von y verschiedene Länge!"
 msgid "X lost dimensions in magic!!"
 msgstr "X verlor Dimensionen in magic!!"
 
-#, fuzzy
 msgid "mu dimensions wrong"
-msgstr "Dimension von fx ist falsch"
+msgstr "mu Dimensionen falsch"
 
-#, fuzzy
 msgid "something wrong with inputs to LAPACK routine"
-msgstr "Etwas stimmt nicht mit der automatischen Straftermkonstruktion"
+msgstr "Etwas ist falsch mit den Eingaben für LAPACK routine"
 
 msgid "not positive definite"
-msgstr ""
+msgstr "nicht positiv definit"
 
 msgid "don't be silly"
-msgstr ""
+msgstr "sei nicht dumm"
 
 msgid "sd should have exactly one less entry than ld"
-msgstr ""
+msgstr "sd sollte genau eins kleiner sein als ld"
 
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
-msgstr ""
+msgstr "interner Fehler in vcorr, bitte an simon.wood@r-project.org melden"
 
 msgid "a has wrong number of rows"
 msgstr "a hat die falsche Zeilenzahl"
@@ -956,10 +949,10 @@ msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn benötigt zwei- oder höherdimensionale Daten"
 
 msgid "mvn does not yet handle offsets"
-msgstr ""
+msgstr "mvn kann noch nicht mit Offsets umgehen"
 
 msgid "mvn dimension error"
-msgstr ""
+msgstr "mvn Dimensionsfehler"
 
 msgid "object is not a glm or gam"
 msgstr "Obejekt ist weder glm noch gam"
@@ -978,9 +971,13 @@ msgid "no automatic plotting for smooths of more than two variables"
 msgstr ""
 "keine automatische Darstellung für Glättungen von mehr als zwei Variablen"
 
-msgid "no automatic plotting for smooths of more than one variable"
+#, fuzzy
+msgid "no automatic plotting for smooths of more than four variables"
 msgstr ""
-"keine automatische Darstellung für Glättungen von mehr als einer Variable"
+"keine automatische Darstellung für Glättungen von mehr als zwei Variablen"
+
+msgid "argument pers is deprecated, please use scheme instead"
+msgstr ""
 
 msgid "residuals argument to plot.gam is wrong length: ignored"
 msgstr "Residuen-Argument für plot.gam hat falsche Länge: Ignoriert"
@@ -1040,7 +1037,7 @@ msgid "x is null"
 msgstr "x ist Null"
 
 msgid "uniquecombs has not worked properly"
-msgstr ""
+msgstr "uniquecombs hat nicht richtig gearbeitet"
 
 msgid "order too low"
 msgstr "Ordnung zu klein"
@@ -1077,7 +1074,7 @@ msgid "only first element of `id' used"
 msgstr "nur das erste Element von 'id' wird genutzt"
 
 msgid "supply a value for each variable for a point constraint"
-msgstr ""
+msgstr "bitte für jede Variable einen Wert angeben bei Punktbeschränkungen"
 
 msgid "ord is wrong. reset to NULL."
 msgstr "ord ist falsch, wird auf NULL zurückgesetzt"
@@ -1089,9 +1086,8 @@ msgstr ""
 msgid "by=. not allowed"
 msgstr "by=. nicht erlaubt"
 
-#, fuzzy
 msgid "s(.) not supported."
-msgstr "s(.) wird noch nicht unterstützt."
+msgstr "s(.) wird nicht unterstützt."
 
 msgid "s(.) not yet supported."
 msgstr "s(.) wird noch nicht unterstützt."
@@ -1111,15 +1107,8 @@ msgstr ""
 msgid "reparameterization unstable for margin: not done"
 msgstr "Reparametrisierung für den Rand instabil: nicht durchgeführt"
 
-msgid ""
-"single penalty tensor product smooths are deprecated and likely to be "
-"removed soon"
-msgstr ""
-"Tensorprodukt-Glätter mit einfachem Strafterm sind veraltet und werden "
-"wahrscheinlich bald entfernt"
-
 msgid "basis not usable with reduced te"
-msgstr ""
+msgstr "Basis nicht nutzbar mit reduziertem te"
 
 msgid "fx length wrong from t2 term: ignored"
 msgstr "falsche Länge für fx aus dem t2 Ausdruck: wird ignoriert"
@@ -1187,18 +1176,18 @@ msgstr ""
 msgid "penalty order too high for basis dimension"
 msgstr "Straftermordnung zu groß für die Basisdimension"
 
-#, fuzzy
 msgid "there is *no* information about some basis coefficients"
-msgstr ""
-"Knotenbereich ist so weit, dass er *keine* Information über einige "
-"Basiskoeffizienten enthält. "
+msgstr "es gibt *keine* Information über einige Basiskoeffizienten enthält"
 
 msgid "basis dimension is larger than number of unique covariates"
 msgstr ""
 "Basisdimension ist größer als die Zahl der unterschiedlichen Kovariaten"
 
-msgid "requested non-existent derivative in B-spline penalty"
+msgid "multiple penalties of the same order is silly"
 msgstr ""
+
+msgid "requested non-existent derivative in B-spline penalty"
+msgstr "nicht exisitierened Ableitung im B-Spline Strafterm angefordert"
 
 msgid "fs smooths can only have one factor argument"
 msgstr "fs-Glätter können nur ein Faktorargument haben"
@@ -1208,9 +1197,8 @@ msgstr ""
 "\"fs\" Glätter kann keine mehrfach bestrafte Basis nutzen (falsche Basis\n"
 "in xt)"
 
-#, fuzzy
 msgid "no factor supplied to fs smooth"
-msgstr "Keine Daten für gam.setup bereitgestellt"
+msgstr "Kein Faktor angegeben für fs Glättung"
 
 msgid "\"fs\" terms can not be fixed here"
 msgstr "\"fs\" Ausdrücke können nicht hier festgelegt werden"
@@ -1218,6 +1206,8 @@ msgstr "\"fs\" Ausdrücke können nicht hier festgelegt werden"
 msgid ""
 "fs smooth not suitable for discretisation with more than one metric predictor"
 msgstr ""
+"fs Glättung passt nicht bei Diskretisierung mit mehr als einem metrischen "
+"Prädiktor"
 
 msgid "the adaptive smooth class is limited to 1 or 2 covariates."
 msgstr "Die adaptive Glätterklasse ist beschränkt auf 1 oder 2 Kovariaten."
@@ -1235,14 +1225,14 @@ msgid ""
 "Please put term with most levels last in 're' to avoid spoiling supplied "
 "penalties"
 msgstr ""
+"Bitte den Term mit den meisten Stufen auf die letzte Stellung in 're' "
+"setzen, um die angegebenen Strafterme nicht zu beschädigen"
 
-#, fuzzy
 msgid "supplied S matrices are wrong diminsion"
-msgstr "Angegebener Strafterm hat falsche Dimension!"
+msgstr "Angegebene S Matrix hat falsche Dimension!"
 
-#, fuzzy
 msgid "argument of mrf should be a factor variable"
-msgstr "Argument k von s() sollte ganzzahlig sein und wurde gerundet"
+msgstr "Argument von mrf sollte eine Faktorvariable sein"
 
 msgid "MRF basis dimension set too high"
 msgstr "MRF Basisdimension ist zu hoch gesetzt"
@@ -1308,11 +1298,10 @@ msgid "basis dimension reset to minimum possible"
 msgstr "Basisdimension auf mögliches Minimum zurückgesetzt"
 
 msgid "incorrect arguments to GP smoother"
-msgstr ""
+msgstr "Falsche Argumente für den GP Glätter"
 
-#, fuzzy
 msgid "more knots than data in an ms term: knots ignored."
-msgstr "mehr Knoten als Daten in einem sos Term: Knoten ignoriert."
+msgstr "mehr Knoten als Daten in einem ms Term: Knoten ignoriert."
 
 msgid "smooth objects should not have a qrc attribute."
 msgstr "Glättungsobjekte sollten kein qrc-Attribut haben"
@@ -1334,6 +1323,8 @@ msgid ""
 "sweep and drop constraints unlikely to work well with self handling of by "
 "vars"
 msgstr ""
+"\"sweep and drop\" Randbedingungen arbeiten wahrscheinlich nicht gut mit dem "
+"\"self handling\" durch vars"
 
 msgid "factor `by' variables can not be used with matrix arguments."
 msgstr ""
@@ -1406,6 +1397,42 @@ msgstr "kubische Splines behandeln nur 1D Daten"
 
 msgid "object not fully initialized"
 msgstr "Objekt nicht voll initialisiert"
+
+#~ msgid "discretization can not handle smooth ids"
+#~ msgstr "Diskretisierung kann glatte ids nicht behandeln"
+
+#~ msgid "cox.ph does not yet handle offsets"
+#~ msgstr "cox.ph kann mit offsets nicht umgehen"
+
+#~ msgid "scaled t df must be > min.df"
+#~ msgstr "skalierte t df müssen > min.df sein"
+
+#~ msgid "Extended Fellner Schall only implemented for general families"
+#~ msgstr ""
+#~ "Erweiterter Fellner Schall nur für allgemeine Familien implementiert"
+
+#~ msgid "p-values may give low power in some circumstances"
+#~ msgstr "p-Werte können unter Umständen geringere Power geben"
+
+#~ msgid "p-values un-reliable"
+#~ msgstr "p-Werte unzuverlässig"
+
+#~ msgid "p-values may give very low power"
+#~ msgstr "p-Werte geben evtl. sehr geringe Power"
+
+#~ msgid "p.type!=0 is deprecated, and liable to be removed in future"
+#~ msgstr "p.type!=0 ist veraltet und wird in der Zukunft entfernt"
+
+#~ msgid "no automatic plotting for smooths of more than one variable"
+#~ msgstr ""
+#~ "keine automatische Darstellung für Glättungen von mehr als einer Variable"
+
+#~ msgid ""
+#~ "single penalty tensor product smooths are deprecated and likely to be "
+#~ "removed soon"
+#~ msgstr ""
+#~ "Tensorprodukt-Glätter mit einfachem Strafterm sind veraltet und werden "
+#~ "wahrscheinlich bald entfernt"
 
 #~ msgid "non-finite coefficients at iteration"
 #~ msgstr "nicht-endliche Koeffizienten bei Iteration"

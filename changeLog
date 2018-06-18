@@ -1,9 +1,62 @@
 **  denotes quite substantial/important changes
 *** denotes really big changes 
 
+Liable to change in future release:
+- method="GCV.Cp" as default in gam. Default will 
+  change to "REML". (1.8-24, June 2018) 
+
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
-- argument 'pers' in plot.gam (1.8-23, Nov 2018)
+- argument 'pers' in plot.gam (1.8-23, Nov 2017)
+
+Issues: 
+
+* t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
+present, and reparameterization needs checking (also for bam). 
+
+1.8-24
+
+* Extended Fellner Schall optimizer now avaialable for all families with 'gam'
+  using gam(...,optimizer="efs").
+
+* Change to default behaviour of plot.gam when 'seWithMean=TRUE', and of
+  predict.gam when 'type="iterms"'. The extra uncertainty added to CIs or
+  standard errors now reflects the uncertainty in the mean in all other model
+  terms, not just the uncertanity in the mean of the fixed effects as before.
+  See ?plot.gam and ?predict.gam (including for how to get the old behaviour).  
+
+* 're' smooths can now accept matrix arguments: see ?linear.functional.terms. 
+
+* cox.ph now allows an offset to be provided.
+
+* Fix in smoothCon for bug in case in which only a single coefficient is 
+  involved in a sum-to-zero constraint. Could cause failure in e.g. t2 with
+  cc marginal. 
+
+* Model terms s, te etc are now always evaluated in mgcv workspace explicitly
+  to avoid masking problems in obscure circumstances. 
+
+* 'mrf' smooth documentation modified to make it clearer how to specify 'nb',
+  and code modified so that it is now possible to speficy the neighbour 
+  structure using names rather than indices.
+
+* 'bfgs' fix to handle extended families.
+
+* plot.gam modified to only prompt (via devAskNewPage) for a new page after 
+  the first page is used up.
+
+* export 'k.check'.
+
+* Fix to 'Rrank'. Previously a matrix R with more columns than rows could 
+  cause a segfault. 
+
+* Fix to non-finite likelihood handling in gam.fit5.
+
+* Fix in bgam.fitd to step reduce under indefinite deviance and to ensure 
+  penalty evaluation is round off negative proof. 
+
+* newton slighty modified to avoid (small) chance of all sp's being dropped
+  for indef likelihood. 
 
 1.8-23
 

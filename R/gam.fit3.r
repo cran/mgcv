@@ -118,7 +118,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
     if (family$link==family$canonical) fisher <- TRUE else fisher=FALSE 
     ## ... if canonical Newton = Fisher, but Fisher cheaper!
     if (scale>0) scale.known <- TRUE else scale.known <- FALSE
-    if (!scale.known&&scoreType%in%c("REML","ML")) { ## the final element of sp is actually log(scale)
+    if (!scale.known&&scoreType%in%c("REML","ML","EFS")) { ## the final element of sp is actually log(scale)
       nsp <- length(sp)
       scale <- exp(sp[nsp])
       sp <- sp[-nsp]
@@ -137,9 +137,10 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
 
     q <- ncol(x)
+
     if (length(UrS)) { ## find a stable reparameterization...
-    
-      grderiv <- deriv*as.numeric(scoreType%in%c("REML","ML","P-REML","P-ML"))
+      
+      grderiv <- if (scoreType=="EFS") 1 else deriv*as.numeric(scoreType%in%c("REML","ML","P-REML","P-ML")) 
       rp <- gam.reparam(UrS,sp,grderiv) ## note also detects fixed penalty if present
  ## Following is for debugging only...
  #     deriv.check <- FALSE
@@ -177,7 +178,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
       rows.E <- q-Mp
       Sr <- cbind(rp$E,matrix(0,nrow(rp$E),Mp))
       St <- rbind(cbind(rp$S,matrix(0,nrow(rp$S),Mp)),matrix(0,Mp,q))
-    } else { 
+    } else {
+      grderiv <- 0
       T <- diag(q); 
       St <- matrix(0,q,q) 
       rSncol <- sp <- rows.E <- Eb <- Sr <- 0   
@@ -185,7 +187,12 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
       rp <- list(det=0,det1 = rep(0,0),det2 = rep(0,0),fixed.penalty=FALSE)
     }
     iter <- 0;coef <- rep(0,ncol(x))
-   
+
+    if (scoreType=="EFS") {
+      scoreType <- "REML" ## basically optimizing REML
+      deriv <- 0 ## only derivatives of log|S|_+ required (see above)
+    }
+
     conv <- FALSE
     n <- nobs <- NROW(y) ## n is just to keep codetools happy
     if (n.true <= 0) n.true <- nobs ## n.true is used in criteria in place of nobs
@@ -773,7 +780,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
         boundary = boundary,D1=D1,D2=D2,P=P,P1=P1,P2=P2,trA=trA,trA1=trA1,trA2=trA2,
         GCV=GCV,GCV1=GCV1,GCV2=GCV2,GACV=GACV,GACV1=GACV1,GACV2=GACV2,UBRE=UBRE,
         UBRE1=UBRE1,UBRE2=UBRE2,REML=REML,REML1=REML1,REML2=REML2,rV=rV,db.drho=db.drho,
-        dw.drho=dw.drho,dVkk = matrix(oo$dVkk,nSp,nSp),
+        dw.drho=dw.drho,dVkk = matrix(oo$dVkk,nSp,nSp),ldetS1 = if (grderiv) rp$det1 else 0,
         scale.est=scale.est,reml.scale= reml.scale,aic=aic.model,rank=oo$rank.est,K=Kmat)
 } ## end gam.fit3
 
@@ -1338,8 +1345,10 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     ## tiny relative to largest, as this space is likely to be poorly
     ## modelled on scale of Newton step...
     
-    uconv.ind <- uconv.ind & abs(grad)>max(abs(grad))*.001 
-
+    uconv.ind1 <- uconv.ind & abs(grad)>max(abs(grad))*.001 
+    if (sum(uconv.ind1)==0) uconv.ind1 <- uconv.ind ## nothing left reset
+    if (sum(uconv.ind)==0) uconv.ind[which(abs(grad)==max(abs(grad)))] <- TRUE ## need at least 1 to update
+    
     ## exclude apparently converged gradients from computation
     hess1 <- hess[uconv.ind,uconv.ind] 
     grad1 <- grad[uconv.ind]
@@ -1776,8 +1785,22 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
      score <- b$UBRE;grad <- t(L)%*%b$UBRE1  
   } else { ## default to deviance based GCV
      score <- b$GCV;grad <- t(L)%*%b$GCV1;
+  }
+  ## dVkk only refers to smoothing parameters, but sp may contain
+  ## extra parameters at start and scale parameter at end. Have
+  ## to reduce L accordingly... 
+  if (!is.null(family$n.theta)&&family$n.theta>0) {
+    ind <- 1:family$n.theta
+    nind <- ncol(L) - family$n.theta - if (family$n.theta + nrow(b$dVkk)<nrow(L)) 1 else 0 
+    spind <- if (nind>0) family$n.theta+1:nind else rep(0,0)
+    rspind <- family$n.theta + 1:nrow(b$dVkk)
+  } else {
+    nind <- ncol(L) - if (nrow(b$dVkk)<nrow(L)) 1 else 0 
+    spind <- if (nind>0) 1:nind else rep(0,0) ## index of smooth parameters
+    rspind <- 1:nrow(b$dVkk)
   }  
-  L0 <- if (nrow(L)==nrow(b$dVkk)) L else L[-nrow(L),-ncol(L)]
+  L0 <- L[rspind,spind] ##if (nrow(L)!=nrow(b$dVkk)) L[spind,spind] else L
+  
   initial$dVkk <- diag(t(L0) %*% b$dVkk %*% L0)
   initial$score <- score;initial$grad <- grad;
   initial$scale.est <- b$scale.est
@@ -2004,9 +2027,10 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
       else score.scale <- abs(trial$scale.est) + abs(trial$score)  ##trial$dev/nrow(X) + abs(trial$score)    
       uconv.ind <- abs(trial$grad) > score.scale*conv.tol 
       if (sum(uconv.ind)) converged <- FALSE
-      if (length(uconv.ind)>length(trial$dVkk)) trial$dVkk <- c(trial$dVkk,score.scale)
+      #if (length(uconv.ind)>length(trial$dVkk)) trial$dVkk <- c(trial$dVkk,score.scale)
       ## following must be tighter than convergence...
-      uconv.ind <- abs(trial$grad) > score.scale*conv.tol*.1 | abs(trial$dVkk) > score.scale * conv.tol*.1 
+      uconv.ind <- abs(trial$grad) > score.scale*conv.tol*.1 
+      uconv.ind[spind] <- uconv.ind[spind] | abs(trial$dVkk) > score.scale * conv.tol*.1 
       if (abs(initial$score-trial$score) > score.scale*conv.tol) { 
         if (!sum(uconv.ind)) uconv.ind <- uconv.ind | TRUE ## otherwise can't progress
         converged <- FALSE      
@@ -2045,10 +2069,11 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
           trial$dscore <- sum(trial$grad*step)
           trial$scale.est <- b$scale.est
           trial$dVkk <- diag(t(L0) %*% b$dVkk %*% L0) ## curvature testing matrix 
-          if (length(uconv.ind)>length(trial$dVkk)) trial$dVkk <- c(trial$dVkk,score.scale)
+          #if (length(uconv.ind)>length(trial$dVkk)) trial$dVkk <- c(trial$dVkk,score.scale)
           rm(b);counter <- counter + 1
           ## note that following rolls back until there is clear signal in derivs...
-          uconv.ind0 <- abs(trial$grad) > score.scale*conv.tol*20 | abs(trial$dVkk) > score.scale * conv.tol * 20         
+          uconv.ind0 <- abs(trial$grad) > score.scale*conv.tol*20        
+          uconv.ind0[spind] <- uconv.ind0[spind] |  abs(trial$dVkk) > score.scale * conv.tol * 20
           uconv.ind0 <- uconv.ind0 | uconv.ind ## make sure we don't start rolling back unproblematic sps 
         }
         uconv.ind <- uconv.ind | TRUE

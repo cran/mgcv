@@ -211,7 +211,7 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
 ## * nr records the number of unique discretized covariate values
 ##   i.e. the number of rows before the padding starts
 ## * k.start contains the starting column in index vector k, for
-##   each variable.
+##   each variable. The final element is the column beyond the last one.
 ## * k is the index matrix. The ith record of the 1st column of the 
 ##   jth variable is in row k[i,k.start[j]] of the corresponding 
 ##   column of mf.
@@ -527,7 +527,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
     for (iter in 1L:control$maxit) { ## main fitting loop 
       devold <- dev
       dev <- 0
-      ## accumulate the QR decomposition of the weighted model matrix
+     
       if (iter==1||!additive) {
         qrx <- list()
 
@@ -536,10 +536,13 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
           eta <- Xbd(G$Xd,coef,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,G$drop) + offset
 	  lsp.full <- G$lsp0
 	  if (n.sp>0) lsp.full <- lsp.full + if (is.null(G$L)) lsp[1:n.sp] else G$L %*% lsp[1:n.sp]
-	  Sb <- Sl.Sb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
+	  #Sb <- Sl.Sb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
+	  rSb <- Sl.rSb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
 	  if (iter>2) {
-            Sb0 <- Sl.Sb(Sl,lsp.full,b0)
-	    bSb0 <- sum(b0*Sb0) ## penalty at start of beta step
+            #Sb0 <- Sl.Sb(Sl,lsp.full,b0)
+	    #bSb0 <- sum(b0*Sb0) ## penalty at start of beta step
+	    rSb0 <- Sl.rSb(Sl,lsp.full,b0)
+	    bSb0 <- sum(rSb0^2)
 	    ## get deviance at step start, with current theta if efam
 	    dev0 <- if (efam) sum(family$dev.resids(G$y,mu0,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu0,G$w))
@@ -551,10 +554,12 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	  dev <- if (efam) sum(family$dev.resids(G$y,mu,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu,G$w))
           if (iter>2) { ## coef step length control
-	    bSb <- sum(prop$beta*Sb) ## penalty at end of beta step 
-            if (dev0 + bSb0 < dev + bSb && kk < 30) { ## beta step not improving current pen dev
+	    #bSb <- sum(prop$beta*Sb) ## penalty at end of beta step
+	    bSb <- sum(rSb^2) ## penalty at end of beta step 
+            if ((!is.finite(dev) || dev0 + bSb0 < dev + bSb) && kk < 30) { ## beta step not improving current pen dev
               coef <- (coef0 + coef)/2 ## halve the step
-	      Sb <- (Sb0 + Sb)/2
+	      #Sb <- (Sb0 + Sb)/2
+	      rSb <- (rSb0 + rSb)/2
 	      eta <- (eta0 + eta)/2
 	      prop$beta <- (b0 + prop$beta)/2
 	      kk <- kk + 1
@@ -567,7 +572,8 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	  eta0 <- eta
 	  mu0 <- mu
 	  b0 <- prop$beta ## beta repara
-	  dev <- dev + sum(prop$beta*Sb) ## add penalty to deviance
+	  #dev <- dev + sum(prop$beta*Sb) ## add penalty to deviance
+	  dev <- dev + sum(rSb^2)
 	} else reml <- dev ## for convergence checking
 	
 	if (efam) { ## extended family
@@ -2113,7 +2119,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         } else { ## not a tensor smooth
           v[[kb]] <- rep(0,0)
           dt[kb] <- dt[kb] + 1
-          G$Xd[[k]] <- G$X[1:dk$nr[k],G$smooth[[i]]$first.para:G$smooth[[i]]$last.para]
+          G$Xd[[k]] <- G$X[1:dk$nr[k],G$smooth[[i]]$first.para:G$smooth[[i]]$last.para,drop=FALSE]
           k <- k + 1
         }
         kb <- kb + 1

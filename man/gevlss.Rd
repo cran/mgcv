@@ -24,7 +24,9 @@ The fitted values for this family will be a three column matrix. The first colum
 
 This family does not produce a null deviance. Note that the distribution for \eqn{\xi=0}{xi=0} is approximated by setting \eqn{\xi}{xi} to a small number. 
 
-The derivative system code for this family is mostly auto-generated, and the family is still somewhat experimental.  
+The derivative system code for this family is mostly auto-generated, and the family is still somewhat experimental.
+
+The GEV distribution is rather challenging numerically, and for small datasets or poorly fitting models imporoved numerical robustness may be obtained by using the extended Fellner-Schall method of Wood and Fasiolo (2017) for smoothing parameter estimation. See examples.
 }
 
 \references{
@@ -36,6 +38,8 @@ model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
 \url{http://dx.doi.org/10.1080/01621459.2016.1180986}
 
+Wood, S.N. and M. Fasiolo (2017) A generalized Fellner-Schall method for smoothing parameter optimization with application to Tweedie location, scale and shape models. Biometrics 73(4): 1071-1081.
+\url{http://dx.doi.org/10.1111/biom.12666}
 }
 
 
@@ -65,6 +69,11 @@ dat <- data.frame(y,x0,x1,x2);pairs(dat)
 
 ## fit model....
 b <- gam(list(y~s(x2),~s(x0),~s(x1)),family=gevlss,data=dat)
+
+## same fit using the extended Fellner-Schall method which
+## can provide improved numerical robustness... 
+b <- gam(list(y~s(x2),~s(x0),~s(x1)),family=gevlss,data=dat,
+         optimizer="efs")
 
 ## plot and look at residuals...
 plot(b,pages=1,scale=0)

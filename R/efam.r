@@ -1,12 +1,13 @@
-## (c) Simon N. Wood (ocat, tw, nb, ziP) & Natalya Pya (scat, beta), 
+## (c) Simon N. Wood & Natalya Pya (scat, beta), 
 ## 2013-2017. Released under GPL2.
+## See gam.fit4.r for testing functions fmud.test and fetad.test.
 
 estimate.theta <- function(theta,family,y,mu,scale=1,wt=1,tol=1e-7,attachH=FALSE) {
 ## Simple Newton iteration to estimate theta for an extended family,
 ## given y and mu. To be iterated with estimation of mu given theta.
 ## If used within a PIRLS loop then divergence testing of coef update
 ## will have to re-compute pdev after theta update.
-## Not clear best way to handle scale - could oprimize here as well
+## Not clear best way to handle scale - could optimize here as well
 
   if (!inherits(family,"extended.family")) stop("not an extended family")
 
@@ -115,15 +116,15 @@ find.null.dev <- function(family,y,eta,offset,weights) {
 ##       function fix.family.link.extended.family with functions 
 ##       gkg where k is 2,3 or 4 giving the kth derivative of the 
 ##       link over the first derivative of the link to the power k.
-##       for non standard links these functions muct be supplied.
+##       for non standard links these functions must be supplied.
 ## dev.resids - function computing deviance residuals.
 ## Dd - function returning derivatives of deviance residuals w.r.t. mu and theta. 
-## aic - function computing twice - log likelihood for 2df to be added to.
+## aic - function computing twice -ve log likelihood for 2df to be added to.
 ## initialize - expression to be evaluated in gam.fit4 and initial.spg 
 ##              to initialize mu or eta.
 ## preinitialize - optional function of y and family, returning a list with optional elements
 ##                 Theta - intitial Theta and y - modified y for use in fitting (see e.g. ocat and betar)
-## postproc - function with arguments family,y,prior.weights,fitted,linear.predictors,offset,intercept
+## postproc - function with arguments family, y, prior.weights, fitted, linear.predictors, offset, intercept
 ##            to call after fit to compute (optionally) the label for the family, deviance and null deviance.
 ##            See ocat for simple example and betar or ziP for complicated. Called in estimate.gam.
 ## ls - function to evaluated log saturated likelihood and derivatives w.r.t.
@@ -140,7 +141,7 @@ find.null.dev <- function(family,y,eta,offset,weights) {
 ## predict - optional function for predicting from model, called by predict.gam.
 ## family$data - optional list storing any family specific data for use, e.g. in predict
 ##               function. - deprecated (commented out below - appears to be used nowhere)
-
+## scale - < 0 to estimate. ignored if NULL 
 
 
 ## extended family object for ordered categorical
@@ -254,7 +255,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
   } ## end of dev.resids
 
   Dd <- function(y, mu, theta, wt=NULL, level=0) {
-  ## derivatives of the deviance...
+  ## derivatives of the ocat deviance...
    # F <- function(x) { ## e^(x)/(1+e^x) without overflow
    #   h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
    #   x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
@@ -387,7 +388,8 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
         oo$Dth[ind,k] <- Da0[ind]*etk
         oo$Dmuth[ind,k] <- Dmua0[ind]*etk
         oo$Dmu2th[ind,k] <- Dmu2a0[ind]*etk 
-      } 
+      }
+      oo$EDmu2th <- oo$Dmu2th
     }  
     if (level >1) { ## and the second derivative components 
       oo$Dmu4 <- 2*((3*b^2 + 4*a*c)/f + a2*(6*a2/f - 12*b)/f2 - d)/f
@@ -440,7 +442,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       } 
     }
     oo
-  } ## end of Dd
+  } ## end of Dd (ocat)
  
   aic <- function(y, mu, theta=NULL, wt, dev) {
   
@@ -473,77 +475,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
 
   ls <- function(y,w,theta,scale) {
     ## the log saturated likelihood function. 
-    #! actually only first line used since re-def as 0
-    #vec <- !is.null(attr(theta,"vec.grad"))
-    #lsth1 <- if (vec) matrix(0,length(y),R-2) else rep(0,R-2)
     return(list(ls=0,lsth1=rep(0,R-2),lsth2=matrix(0,R-2,R-2)))
-    F <- function(x) {
-      h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
-      x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
-      h 
-    } 
-    Fdiff <- function(a,b) {
-      ## cancellation resistent F(b)-F(a), b>a
-      h <- rep(1,length(b)); h[b>0] <- -1; eb <- exp(b*h)
-      h <- h*0+1; h[a>0] <- -1; ea <- exp(a*h)
-      ind <- b<0;bi <- eb[ind];ai <- ea[ind]
-      h[ind] <- bi/(1+bi) - ai/(1+ai)
-      ind1 <- a>0;bi <- eb[ind1];ai <- ea[ind1]
-      h[ind1] <- (ai-bi)/((ai+1)*(bi+1))
-      ind <- !ind & !ind1;bi <- eb[ind];ai <- ea[ind]
-      h[ind] <- (1-ai*bi)/((bi+1)*(ai+1))
-      h
-    }
-    R = length(theta)+2
-    alpha <- rep(0,R+1) ## the thresholds
-    alpha[1] <- -Inf;alpha[R+1] <- Inf
-    alpha[2] <- -1
-    if (R > 2) { 
-      ind <- 3:R
-      alpha[ind] <- alpha[2] + cumsum(exp(theta))
-    } 
-    al1 <- alpha[y+1];al0 = alpha[y]
-    g1 <- F((al1-al0)/2);g0 <- F((al0-al1)/2)
-    ##A <- pmax(g1 - g0,.Machine$double.eps)
-    A <- Fdiff((al0-al1)/2,(al1-al0)/2)
-    ls <- sum(log(A))
-    B <- g1^2 - g1 + g0^2 - g0 
-    C <- 2 * g1^3 - 3 * g1^2 + g1 - 2 * g0^3 + 3 * g0^2 - g0
-    Da0 <- .5 * B/A ; Da1 <- -0.5 *B/A 
-    Da0a0 <- .25 * C/A - .25 * B^2/A^2
-    Da1a1 <- .25 * C/A - .25 * B^2/A^2
-    Da0a1 <- - .25 * C/A + .25 * B^2/A^2
-    i <- 0 
-    n2d <- (R-2)*(R-1)/2
-    n <- length(y)
-    Dth <- matrix(0,n,R-2)
-    Dth2 <- matrix(0,n,n2d)
-    for (j in 1:(R-2)) for (k in j:(R-2)) { 
-      i <- i + 1 ## the second deriv col
-      ind <- y >= j ## rest are zero
-      ar1.k <- ar.k <- rep(exp(theta[k]),n)
-      ar.k[y==R | y <= k] <- 0; ar1.k[y<k+2] <- 0
-      ar.j <- ar1.j <- rep(exp(theta[j]),n)
-      ar.j[y==R | y <= j] <- 0; ar1.j[y<j+2] <- 0
-      ar.kj <- ar1.kj <- rep(0,n)
-      if (k==j) {
-        ar.kj[y>k&y<R] <- exp(theta[k])
-        ar1.kj[y>k+1] <- exp(theta[k])
-        Dth[ind,k] <- Da1[ind]*ar.k[ind]  + Da0[ind]*ar1.k[ind]
-      }
-      Dth2[,i] <- Da1a1*ar.k*ar.j + Da0a1*ar.k*ar1.j + Da1 * ar.kj +
-                  Da0a0*ar1.k*ar1.j + Da0a1*ar1.k*ar.j + Da0 * ar1.kj
-    } 
-    lsth2=colSums(Dth2)
-    if (R>2) {
-      ls2 <- matrix(0,R-2,R-2);ii <- 0
-      for (i in 1:(R-2)) for (j in i:(R-2)) { 
-        ii <- ii + 1 
-        ls2[i,j] <- ls2[j,i] <- lsth2[ii]
-      } 
-    }
-    list(ls=ls,lsth1=colSums(Dth),lsth2=ls2)
-   
   } ## end of ls
   
   ## initialization is interesting -- needs to be with reference to initial cut-points
@@ -748,7 +680,7 @@ nb <- function (theta = NULL, link = "log") {
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
-    ## derivatives of the deviance...
+    ## derivatives of the nb deviance...
       ##ltheta <- theta
       theta <- exp(theta)
       yth <- y + theta
@@ -765,6 +697,7 @@ nb <- function (theta = NULL, link = "log") {
         r$Dmuth <- 2 * wt * theta * (1 - yth/muth)/muth
         r$Dmu3 <- 4 * wt * (yth/muth^3 - y/mu^3)
         r$Dmu2th <- 2 * wt * theta * (2*yth/muth - 1)/muth^2
+	r$EDmu2th <- 2 * wt / muth^2
       } 
       if (level>1) { ## whole damn lot
         r$Dmu4 <- 2 * wt * (6*y/mu^4 - 6*yth/muth^4)
@@ -918,7 +851,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
   }
     
   Dd <- function(y, mu, theta, wt, level=0) {
-  ## derivatives of the deviance...
+  ## derivatives of the tw deviance...
     a <- get(".a");b <- get(".b")
     th <- theta
     p <- if (th>0) (b+a*exp(-th))/(1+exp(-th)) else (b*exp(th)+a)/(exp(th)+1)
@@ -1116,7 +1049,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
         r$Dth <- 2 * wt *theta*(-mu*log.yoney - log1p(-y)+ mu*psi0.muth+onemu*psi0.onemuth -psi0.th) 
         r$Dmuth <- r$Dmu + 2 * wt * theta^2*(mu*psi1.muth -onemu*psi1.onemuth)
         r$Dmu3 <- 2 * wt *theta^3 * (psi2.muth - psi2.onemuth) 
-        r$Dmu2th <- 2* r$Dmu2 + 2 * wt * theta^3* (mu*psi2.muth + onemu*psi2.onemuth)
+        r$EDmu2th <- r$Dmu2th <- 2* r$Dmu2 + 2 * wt * theta^3* (mu*psi2.muth + onemu*psi2.onemuth)
       } 
       if (level>1) { ## whole lot
         r$Dmu4 <- 2 * wt *theta^4 * (psi3.muth+psi3.onemuth) 
@@ -1387,7 +1320,7 @@ scat <- function (theta = NULL, link = "identity",min.df = 3) {
     }
     
     Dd <- function(y, mu, theta, wt, level=0) {
-    ## derivatives of the deviance...
+    ## derivatives of the scat deviance...
       ## ltheta <- theta
       min.df <- get(".min.df")
       nu <- exp(theta[1])+min.df; sig <- exp(theta[2])
@@ -1847,6 +1780,7 @@ ziP <- function (theta = NULL, link = "identity",b=0) {
       mu <- object$linear.predictors
       wts <- object$prior.weights
       res <- object$family$dev.resids(y,mu,wts)
+      ## next line is correct as function returns -2*saturated.log.lik
       res <- res - object$family$saturated.ll(y,object$family,wts)
       fv <- predict.gam(object,type="response")
       s <- attr(res,"sign")
@@ -1854,7 +1788,7 @@ ziP <- function (theta = NULL, link = "identity",b=0) {
       res <- as.numeric(sqrt(pmax(res,0)) * s) 
     }
     res
-  } ## residuals
+  } ## residuals (ziP)
 
   predict <- function(family,se=FALSE,eta=NULL,y=NULL,X=NULL,
                 beta=NULL,off=NULL,Vb=NULL) {
