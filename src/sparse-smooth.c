@@ -765,7 +765,7 @@ SEXP Rkradius(SEXP kdr,SEXP Xr,SEXP xr,SEXP rr,SEXP offr) {
    row of xr. off is an m+1 vector. Returns a vector ni such that ni[off[i]:(off[i+1]-1)] 
    contains the indices (rows) in Xr of the neighbours of the ith row of xr.  
  */
-  double *X,*x,*dis,*r,*xx,*ddat;
+  double *X,*x,*r,*xx,*ddat;
   kdtree_type *kd;
   int *dim,m,d,*off,*nei,*list,nn,i,j,n_buff=0,nlist,*ni,nprot=1,*idat;
   SEXP DIM,ptr,neir,IDAT;

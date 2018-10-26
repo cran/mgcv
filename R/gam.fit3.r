@@ -296,7 +296,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
           eta <- .9 * eta + .1 * etaold  
           mu <- linkinv(eta)
         }
-
+        zg <- rep(0,max(dim(x)))
         for (iter in 1:control$maxit) { ## start of main fitting iteration
             good <- weights > 0
             var.val <- variance(mu)
@@ -334,8 +334,10 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            
             if (sum(good)<ncol(x)) stop("Not enough informative observations.")
             if (control$trace) t1 <- proc.time()
-            oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
-                     E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
+
+            ng <- sum(good);zg[1:ng] <- z ## ensure y dim large enough for beta in all cases
+            oo <- .C(C_pls_fit1,y=as.double(zg),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
+                     E=as.double(Sr),Es=as.double(Eb),n=as.integer(ng),
                      q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
                      penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads),
                      use.wy=as.integer(0))
@@ -344,9 +346,10 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
             if (!fisher&&oo$n<0) { ## likelihood indefinite - switch to Fisher for this step
               z <- (eta - offset)[good] + (yg - mug)/mevg
               w <- (weg * mevg^2)/var.mug
+	      ng <- sum(good);zg[1:ng] <- z ## ensure y dim large enough for beta in all cases
               if (control$trace) t1 <- proc.time()
-              oo <- .C(C_pls_fit1,y=as.double(z),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
-                       E=as.double(Sr),Es=as.double(Eb),n=as.integer(sum(good)),
+              oo <- .C(C_pls_fit1,y=as.double(zg),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
+                       E=as.double(Sr),Es=as.double(Eb),n=as.integer(ng),
                        q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
                        penalty=as.double(1),rank.tol=as.double(rank.tol),nt=as.integer(control$nthreads),
                        use.wy=as.integer(0))
@@ -2633,7 +2636,7 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
     structure(list(family = famname, link = linktemp, linkfun = stats$linkfun,
         linkinv = stats$linkinv, variance = variance,dvar=dvar,d2var=d2var,d3var=d3var, dev.resids = dev.resids,
         aic = aic, mu.eta = stats$mu.eta, initialize = initialize,ls=ls,
-        validmu = validmu, valideta = stats$valideta,getTheta = getTheta,qf=qf,rd=rd,canonical="log"), class = "family")
+        validmu = validmu, valideta = stats$valideta,getTheta = getTheta,qf=qf,rd=rd,canonical=""), class = "family")
 } ## negbin
 
 

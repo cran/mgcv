@@ -20,12 +20,20 @@
 /* sed -i 's/old-text/new-text/g' *.c
    is quite useful!!
 */
-// For safe memory handling from R...
+
+/* For safe memory handling from R... */
 #define CALLOC R_chk_calloc
 #define FREE R_chk_free
-// Can reset to check for memory errors...
+/* BUT, this can mess up valgrinding for memory error checking - problems are 
+   sometimes missed because standard allocation is being circumvented. Then errors can 
+   corrupt R memory management without detection and trigger nothing until R
+   messes up internally becuase of corruption, which then makes it look as if
+   R is generating the problem. Hence better to reset for checking. Also sizing
+   errors in .C often generate no obvious valgrind error.*/
 //#define CALLOC calloc
 //#define FREE free
+void *R_chk_calloc1(size_t nmemb,size_t size);
+
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
 	   double *lsp0,double *gamma,double *scale, int *control,int *cS,double *rank_tol,
 	   double *tol,double *b,double *rV,double *norm_const,int *n_score,int *nt);
@@ -81,6 +89,9 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
 void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
           int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
           int *ar_row,double *ar_weights);
+void XWXd0(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
+          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
+          int *ar_row,double *ar_weights);
 void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *ks, int *m,int *p, int *n, 
 	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
           int *ar_stop,int *ar_row,double *ar_weights);
@@ -109,7 +120,9 @@ void MinimumSeparation(double *x,int *n, int *d,double *t,int *m,double *dist);
 void rksos(double *x,int *n,double *eps);
 void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse);
 
-/* Routines for linear algebra with direct access to linpack and lapack */ 
+/* Routines for linear algebra with direct access to linpack and lapack */
+void row_squash(double *X,int rnew,int rold,int col);
+void up2lo(double * A, int n);
 void band_chol(double *B,int *n,int *k,int *info);
 void tri_chol(double *ld,double *sd,int *n,int *info);
 void mgcv_omp(int *a);

@@ -2032,29 +2032,27 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
     object$S[[i+1]] <- object$S[[1]]*0
     object$S[[i+1]][object$rank+i,object$rank+i] <- 1  
   }
-  
+ 
   object$P <- rp$P ## X' = X%*%P, where X is original version
   object$fterm <- fterm ## the factor name...
   if (!is.factor(fac)) warning("no factor supplied to fs smooth")
   object$flev <- levels(fac)
+  object$fac <- fac ## gamm should use this for grouping
 
-  ## now full penalties ...
-  #fullS <- list()
-  #fullS[[1]] <- diag(rep(c(rp$D,rep(0,null.d)),nf)) ## range space penalties
-  #for (i in 1:null.d) { ## null space penalties
-  #    um <- rep(0,ncol(rp$X));um[object$rank+i] <- 1
-  #    fullS[[i+1]] <- diag(rep(um,nf))
-  #}
   ## Now the model matrix 
   if (gamm) { ## no duplication, gamm will handle this by nesting
     if (object$fixed==TRUE) stop("\"fs\" terms can not be fixed here")
     object$X <- rp$X 
-    object$fac <- fac ## gamm should use this for grouping
+    #object$fac <- fac ## gamm should use this for grouping
     object$te.ok <- 0 ## would break special handling
     ## rank??
     
   } else { ## duplicate model matrix columns, and penalties...
     nf <- length(object$flev)
+    ## Store the base model matrix/S in case user wants to convert to r.e. but
+    ## has not created with a "gamm" attribute on object
+    object$Xb <- rp$X
+    object$base$S <- object$S
     ## creating the model matrix...
     object$X <- rp$X * as.numeric(fac==object$flev[1])
     if (nf>1) for (i in 2:nf) { 
@@ -2535,7 +2533,6 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
       if (length(ind)>0) for (i in length(ind):1) object$xt$polys[[ind[i]]] <- NULL 
     }
     object$plot.me <- TRUE
-    object$dim <- 2 ## signal that it's really 2D here to avoid attempt to plot in te term
     ## polygon list in correct format
   } else { 
     object$plot.me <- FALSE ## can't plot without polygon information
