@@ -56,7 +56,7 @@ from \code{environment(formula)}: typically the environment from
 which \code{gam} is called.} 
 
 \item{weights}{ prior weights on the contribution of the data to the log likelihood. Note that a weight of 2, for example, 
-                is equivalent to having made exactly the same observation twice. If you want to reweight the contributions 
+                is equivalent to having made exactly the same observation twice. If you want to re-weight the contributions 
                 of each datum without changing the overall magnitude of the log likelihood, then you should normalize the weights
                 (e.g. \code{weights <- weights/mean(weights)}). }
 
@@ -177,11 +177,11 @@ where the (independent) response variables \eqn{y_i \sim {\rm Poi }}{y_i~Poi}, a
 requires constraints on the smooth functions. By default these are imposed automatically and require that the function sums to zero over the observed covariate values (the presence of a metric \code{by} variable is the only case which usually suppresses this). 
 
 If absolutely any smooth functions were allowed in model fitting then maximum likelihood 
-estimation of such models would invariably result in complex overfitting estimates of 
+estimation of such models would invariably result in complex over-fitting estimates of 
 \eqn{f_1}{f_1}  and \eqn{f_2}{f_2}. For this reason the models are usually fit by 
 penalized likelihood 
 maximization, in which the model (negative log) likelihood is modified by the addition of 
-a penalty for each smooth function, penalizing its `wiggliness'. To control the tradeoff 
+a penalty for each smooth function, penalizing its `wiggliness'. To control the trade-off 
 between penalizing wiggliness and penalizing badness of fit each penalty is multiplied by 
 an associated smoothing parameter: how to estimate these parameters, and 
 how to practically represent the smooth functions are the main statistical questions 
@@ -214,10 +214,10 @@ coefficient matrices for each smooth term in the model formula, obtaining a mode
 the strictly parametric part of the model formula, and combining these to obtain a 
 complete model matrix (/design matrix) and a set of penalty matrices for the smooth terms. 
 The linear identifiability constraints are also obtained at this point. The model is 
-fit using \code{\link{gam.fit}}, \code{\link{gam.fit3}} or varaints, which are modifications 
+fit using \code{\link{gam.fit}}, \code{\link{gam.fit3}} or variants, which are modifications 
 of \code{\link{glm.fit}}. The GAM 
 penalized likelihood maximization problem is solved by Penalized Iteratively 
-Reweighted  Least Squares (P-IRLS) (see e.g. Wood 2000). 
+Re-weighted  Least Squares (P-IRLS) (see e.g. Wood 2000). 
 Smoothing parameter selection is possible in one of two ways. (i)
 `Performance iteration' uses the fact that at each P-IRLS step a working penalized linear model
 is estimated, and the smoothing parameter estimation can be performed for each such working model.

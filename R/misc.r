@@ -133,8 +133,12 @@ mvn.ll <- function(y,X,beta,dbeta=NULL) {
 XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
 ## Form X'WX given weights in w and X in compressed form in list X.
 ## each element of X is a (marginal) model submatrix. Full version 
-## is given by X[[i]][k[,i],]. list X relates to length(ts) separate
+## is given by X[[i]][k[,i],] (see below for summation convention).
+## list X relates to length(ts) separate
 ## terms. ith term starts at matrix ts[i] and has dt[i] marginal matrices.
+## For summation convention, k[,ks[j,1]:ks[j,2]] gives index columns
+## for matrix j, thereby allowing summation over matrix covariates....
+## i.e. for q in ks[j,1]:ks[j,2] sum up X[[j]][k[,q],] 
 ## Terms with several marginals are tensor products and may have 
 ## constraints (if qc[i]>1), stored as a householder vector in v[[i]]. 
 ## check ts and k index start (assumed 1 here)
@@ -142,13 +146,24 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
   n <- length(w);pt <- 0;
-  for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0) 
-  oo <- .C(C_XWXd,XWX =as.double(rep(0,pt^2)),X= as.double(unlist(X)),w=as.double(w),
+  for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0)
+  ## block oriented code...
+  t0 <- system.time(oo <- .C(C_XWXd0,XWX =as.double(rep(0,(pt+nt)^2)),X= as.double(unlist(X)),w=as.double(w),
            k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
            ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
            v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
-           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))
-  if (is.null(drop)) matrix(oo$XWX,pt,pt) else matrix(oo$XWX,pt,pt)[-drop,-drop]
+           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w)))
+## old strictly level 2 code for comparison...	   
+#  t1 <- system.time(ooo <- .C(C_XWXd,XWX =as.double(rep(0,pt^2)),X= as.double(unlist(X)),w=as.double(w),
+#           k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
+#           ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
+#           v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
+#           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w)))
+  
+#  XWX <- matrix(oo$XWX[1:pt^2],pt,pt)
+#  XWX0 <- matrix(ooo$XWX[1:pt^2],pt,pt)
+#  plot(XWX0,XWX,pch=".",main=range(XWX-XWX0));abline(0,1,col=2)
+  if (is.null(drop)) matrix(oo$XWX[1:pt^2],pt,pt) else matrix(oo$XWX[1:pt^2],pt,pt)[-drop,-drop]
 } ## XWXd
 
 XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1) {
@@ -266,7 +281,7 @@ pqr2 <- function(x,nt=1,nb=30) {
 pbsi <- function(R,nt=1,copy=TRUE) {
 ## parallel back substitution inversion of upper triangular R
 ## library(mgcv); n <- 500;p<-400;x <- matrix(runif(n*p),n,p)
-## qrx <- mgcv:::pqr2(x,2);R <- qr.R(qrx)
+## qrx <- qr(x);R <- qr.R(qrx)
 ## system.time(Ri <- mgcv:::pbsi(R,2))
 ## system.time(Ri2 <- backsolve(R,diag(p)));range(Ri-Ri2)
   if (copy) R <- R * 1 ## ensure that R modified only within pbsi
@@ -274,11 +289,12 @@ pbsi <- function(R,nt=1,copy=TRUE) {
  R
 } ## pbsi
 
-pchol <- function(A,nt=1,nb=30) {
+pchol <- function(A,nt=1,nb=40) {
 ## parallel Choleski factorization.
 ## library(mgcv);
 ## set.seed(2);n <- 200;r <- 190;A <- tcrossprod(matrix(runif(n*r),n,r))
 ## system.time(R <- chol(A,pivot=TRUE));system.time(L <- mgcv:::pchol(A));range(R[1:r,]-L[1:r,])
+## k <- 30;range(R[1:k,1:k]-L[1:k,1:k])
 ## system.time(L <- mgcv:::pchol(A,nt=2,nb=30))
 ## piv <- attr(L,"pivot");attr(L,"rank");range(crossprod(L)-A[piv,piv])
 ## should nb be obtained from 'ILAENV' as page 23 of Lucas 2004??
@@ -306,7 +322,8 @@ pcrossprod <- function(A,trans=FALSE,nt=1,nb=30) {
 pRRt <- function(R,nt=1) {
 ## parallel RR' for upper triangular R
 ## following creates index of lower triangular elements...
-## n <- 4000;a <- rep(1:n,n);b <- rep(1:n,each=n)-1;which(a-b>0) -> ii;a[ii]+b[ii]*n->ii
+## n <- 4000;a <- rep(1:n,n);b <- rep(1:n,each=n);which(a>=b) -> ii;a[ii]+(b[ii]-1)*n->ii ## lower
+## n <- 4000;a <- rep(1:n,n);b <- rep(1:n,each=n);which(a<=b) -> ii;a[ii]+(b[ii]-1)*n->ii ## upper
 ## library(mgcv);R <- matrix(0,n,n);R[ii] <- runif(n*(n+1)/2)
 ## Note: A[a-b<=0] <- 0 zeroes upper triangle 
 ## system.time(A <- mgcv:::pRRt(R,2))

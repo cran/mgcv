@@ -435,7 +435,7 @@ lolaxy <- function(lo,la,theta,phi) {
   list(x=x[ind],y=y[ind])
 } ## end of lolaxy
 
-plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
+plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
@@ -638,7 +638,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
   par(oldpar)
 } ## polys.plot
 
-plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
+plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
@@ -663,7 +663,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 
 } ## end plot.mrf.smooth
 
-plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
+plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
@@ -697,7 +697,7 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=
   }
 } ## end plot.fs.interaction
 
-plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
+plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
@@ -707,14 +707,18 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 ## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
 ##     'coefficients' containing the coefs for the smooth, but usually these
 ##     are not needed.
+## Usually this function is called twice. First to set up P, then to compute the
+## actual plot information including standard error bands, and then to actually 
+## plot... 
 ## `P' is a list of plot data. 
-##     If `P' is NULL then the routine should compute some of this plot data
+##     If `P' is NULL (first call) then the routine should compute some of this plot data
 ##     and return without plotting...  
 ##     * X the matrix mapping the smooth's coefficients to the values at
 ##         which the smooth must be computed for plotting.
 ##     * The values against which to plot.
 ##     * `exclude' indicates rows of X%*%p to set to NA for plotting -- NULL for none.
 ##     * se TRUE if plotting of the term can use standard error information.
+##     * se.mult - the multiplier of the standard error used to plot confidence bands
 ##     * scale TRUE if the term should be considered by plot.gam if a common
 ##             y scale is required.
 ##     * any raw data information.
@@ -723,9 +727,9 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
 ##     very little processing is done outside the routine, except for partial residual
 ##     computations.
 ##     Alternatively return P as NULL if x should not be plotted.
-##     If P is not NULL it will contain 
+##     If P is not NULL (second call) it will contain the following...
 ##     * fit - the values for plotting 
-##     * se.fit - standard errors of fit (can be NULL)
+##     * se - standard errors of fit multiplied by se.mult
 ##     * the values against which to plot
 ##     * any raw data information
 ##     * any partial.residuals 
@@ -1255,7 +1259,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
           se.fit <- sqrt(pmax(0,rowSums((X1%*%x$Vp)*X1)))
         } else se.fit <- ## se in centred (or anyway unconstained) space only
         sqrt(pmax(0,rowSums((P$X%*%x$Vp[first:last,first:last,drop=FALSE])*P$X)))
-        if (!is.null(P$exclude)) P$se.fit[P$exclude] <- NA
+        if (!is.null(P$exclude)) se.fit[P$exclude] <- NA
       } ## standard errors for fit completed
       if (partial.resids) { P$p.resid <- fv.terms[,length(order)+i] + w.resid }
       if (se && P$se) P$se <- se.fit*P$se.mult  # Note multiplier

@@ -1023,12 +1023,7 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
     for (p0=IpK,p1=K,p2=K+ *n * *r;p1<p2;p0++,p1++) *p0 = *p1; 
     /*IpK = K;*/
   }
-  /*  lowK=hiK=*K;
 
-  for (p1=K,i=0;i<*n;i++) for (j=0;j<*r;j++,p1++) {
-      if (*p1>hiK) hiK= *p1; else if (*p1<lowK) lowK = *p1;
-    }
-    Rprintf("K range = %g - %g\n",lowK,hiK);*/
   bt=1;ct=0;mgcv_pmmult(KtK,K,IpK,&bt,&ct,r,r,n,nt);  
   if (neg_w) FREE(IpK); else FREE(IpK);
   KKtK = (double *)CALLOC((size_t)*n * *r,sizeof(double));
@@ -1713,7 +1708,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
    If type==1 uses wz instead of sqrt(|w|)z and returns K s.t. \hat \beta = PK'Wz. In this case
    z must contain Wz on entry.
 */
-{ int i,j,k,*pivot,nt1,nr,left,tp,bt,ct,TRUE=1,FALSE=0,one=1;
+{ int i,j,k,*pivot,nt1,nr,left,tp,bt,ct,TRUE=1,FALSE=0,one=1,rr;
   double *zz=NULL,*WX,*tau,*R1,Rnorm,Enorm,Rcond,*Q=NULL,*tau1,*Ri,ldetI2D,*IQ,*d,*p0,*p1,*p2,*p3,*p4,xx,norm1,norm2;
   nt1 = *nt;
   
@@ -1743,19 +1738,21 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   /* pivot[i] gives the unpivoted position of the ith pivoted parameter.*/
   
   /* copy out upper triangular factor R, and unpivot it */
-  R1 = (double *)CALLOC((size_t)*q * *q,sizeof(double));
  
-  getRpqr(R1,WX,n,q,q,&nt1);
+  rr = *q; if (*n < rr) rr = *n;
+  R1 = (double *)CALLOC((size_t)rr * *q,sizeof(double));
+ 
+  getRpqr(R1,WX,n,q,&rr,&nt1);
 
-  pivoter(R1,q,q,pivot,&TRUE,&TRUE); /* unpivoting the columns of R1 */
+  pivoter(R1,&rr,q,pivot,&TRUE,&TRUE); /* unpivoting the columns of R1 */
  
   /* Form a nicely scaled version of [R',Es']' for rank determination */ 
-  Rnorm = frobenius_norm(R1,q,q);
+  Rnorm = frobenius_norm(R1,&rr,q);
   Enorm =  frobenius_norm(Es,Enrow,q);
-  nr = *q + *Enrow;
+  nr = rr + *Enrow;
   for (j=0;j<*q;j++) { 
-    for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j]/Rnorm;
-    for (i=0;i< *Enrow;i++) R[i + *q + nr * j] = Es[i + *Enrow * j]/Enorm;
+    for (i=0;i< rr;i++) R[i + nr * j] = R1[i + rr * j]/Rnorm;
+    for (i=0;i< *Enrow;i++) R[i + rr + nr * j] = Es[i + *Enrow * j]/Enorm;
   }
   
   /* ... and now use it to establish rank */
@@ -1765,7 +1762,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   mgcv_qr(R,&nr,q,pivot1,tau1);
   
   /* now actually find the rank of R */
-  *rank = *q;
+  *rank = *q;if (nr < *rank) *rank = nr;
   R_cond(R,&nr,rank,work,&Rcond);
   while (*rank_tol * Rcond > 1) { (*rank)--;R_cond(R,&nr,rank,work,&Rcond);}
 
@@ -1782,7 +1779,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     for (i=0;i < *n_drop;i++) drop[i] = pivot1[*rank+i];
     qsort(drop,*n_drop,sizeof(int),icompare); /* key assumption of the drop/undrop routines is that `drop' is ascending */
     /* drop columns indexed in `drop'... */
-    drop_cols(R1,*q,*q,drop,*n_drop);    /* R1 now q by rank */
+    drop_cols(R1,rr,*q,drop,*n_drop);    /* R1 now q by rank */
     drop_cols(E,*Enrow,*q,drop,*n_drop); /* E now q by rank */ 
     drop_cols(X,*n,*q,drop,*n_drop);     /* X now n by rank */
     drop_rows(rS,*q,ScS,drop,*n_drop);   /* rS now rank by ScS */ 
@@ -1795,8 +1792,8 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
 
   /* Now augment R1 with the real square root penalty (not the nicely scaled version), result in R... */  
   for (j=0;j < *rank;j++) { 
-    for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j];
-      for (i=0;i< *Enrow;i++) R[i + *q + nr * j] = E[i + *Enrow * j];
+    for (i=0;i< rr;i++) R[i + nr * j] = R1[i + rr * j];
+      for (i=0;i< *Enrow;i++) R[i + rr + nr * j] = E[i + *Enrow * j];
   }
    
   mgcv_qr(R,&nr,rank,pivot1,tau1); /* The final QR decomposition */ 
@@ -1804,8 +1801,8 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   i=1;pivoter(nulli,rank,&i,pivot1,&FALSE,&FALSE); /* pivoting the rows of nulli */
 
   if (deriv2) { /* get first bit of X'WX (hessian of the deviance)*/
-    pivoter(R1,q,rank,pivot1,&TRUE,&FALSE); /* pivot the columns of R1 */
-    getXtX(dev_hess,R1,q,rank);    
+    pivoter(R1,&rr,rank,pivot1,&TRUE,&FALSE); /* pivot the columns of R1 */
+    getXtX(dev_hess,R1,&rr,rank);    
   } 
     
   /* Form Q1 = Qf Qs[1:q,] where Qf and Qs are orthogonal factors from first and final QR decomps
@@ -1816,8 +1813,8 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
     left=1;tp=0;mgcv_qrqy(Q,R,tau1,&nr,rank,rank,&left,&tp); /* Q from the second QR decomposition */
 
     /* Q1 = Qb Q[1:q,]  where Qb from first QR decomposition... */
-    for (i=0;i<*q;i++) for (j=0;j < *rank;j++) Q1[i + *q * j] = Q[i + nr * j];
-    tp=0;mgcv_pqrqy(Q1,WX,tau,n,q,rank,&tp,&nt1);
+    for (i=0;i<rr;i++) for (j=0;j < *rank;j++) Q1[i + rr * j] = Q[i + nr * j];
+    tp=0;mgcv_pqrqy(Q1,WX,tau,n,&rr,rank,&tp,&nt1);
     /* so, at this stage WX = Q1 R, dimension n by rank */
   }
 
@@ -1949,7 +1946,6 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
       norm1 += xx*xx; norm2 += work[i + *q] * work[i + *q];   
     }
     if (norm1 > *rank_tol * norm2) {
-      //Rprintf("gdi2 instability detected norm1= %g norm2 = %g\n",norm1,norm2);
       applyPt(zz,work + *q,R,Vt,neg_w,nr,*rank,1,0); /* P'X'Wz */
       applyP(PKtz,zz,R,Vt,neg_w,nr,*rank,1,0);
     } else applyP(PKtz,work,R,Vt,neg_w,nr,*rank,1,0);
@@ -2022,7 +2018,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
    *o ldet, ldet1, ldet2, log|X'WX + S| & derivs wrt sp (incl theta)
    *o rV sqrt covariance matrix of coefs.
    *i rank_tol tol to use for rank estimation
-   *o rank_est estiamted rank
+   *o rank_est estimated rank
    *i n , q, M, n_theta number of data, coefs, smoothing params and theta params.
    *i Mp penalty null space dimension
    *i Enrow rows of E.
@@ -2085,9 +2081,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
 
   ScS=0;for (pi=rSncol;pi<rSncol + *M;pi++) ScS+= *pi;  /* total columns of input rS */
 
-  /*d_tol = sqrt(*rank_tol * 100);*/
   /* first step is to obtain P and K */
-
   PKtz = (double *)CALLOC((size_t)*q,sizeof(double)); /* PK'z --- the pivoted coefficients*/
   nulli = (double *)CALLOC((size_t)*q,sizeof(double)); /* keep track of the params in null space */   
   drop = (int *)CALLOC((size_t)*q,sizeof(int)); /* original locations of dropped parameters */
@@ -2883,7 +2877,7 @@ void R_cond(double *R,int *r,int *c,double *work,double *Rcondition)
   int i,j,k;
   /* allocate work */
   pp=work;work+= *c;pm=work;work+= *c;
-  y=work;work+= *c;p=work;work+= *c;   
+  y=work;work+= *c;p=work;//work+= *c;   
   for (i=0;i<*c;i++) p[i] = 0.0;
   for (k=*c-1;k>=0;k--) {
       yp = (1-p[k])/R[k + *r *k];
@@ -2912,7 +2906,11 @@ void R_cond(double *R,int *r,int *c,double *work,double *Rcondition)
 void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int *n,int *q,int *rE,double *eta,
               double *penalty,double *rank_tol,int *nt,int *use_wy)
 /* Fast but stable PLS fitter. Obtains linear predictor, eta, of weighted penalized linear model,
-   without evaluating the coefficients, but also returns coefficients in case they are needed.
+   without evaluating the coefficients, but also returns coefficients in case they are needed. 
+
+   WARNING: Coefficients are returned in first *q elements of y - which means that if n < q, y had better 
+   be padded or you'll spend days searching for a segfault that valgrind doesn't find the 
+   culprit for. 
 
    Uses QR approach, but tests that X'Wz = R'Q_1'sqrt(\bar w)\bar z (in Wood 2011 notation), to
    ensure that rhs is stable, and uses R^{-T}X'Wy in plce of Q_1'sqrt(\bar w)\bar z if not. 
@@ -2945,7 +2943,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
 */
 
-{ int i,j,k,rank,one=1,*pivot,*pivot1,left,tp,neg_w=0,*nind,bt,ct,nr,n_drop=0,*drop,TRUE=1,FALSE=0,nz;
+{ int i,j,k,rank,one=1,*pivot,*pivot1,left,tp,neg_w=0,*nind,bt,ct,nr,rr,n_drop=0,*drop,TRUE=1,FALSE=0,nz;
   double *z,*WX,*tau,Rcond,xx,zz,zz1,*work,*Q,*Q1,*IQ,*raw,*d,*Vt,*p0,*p1,
     *R1,*tau1,Rnorm,Enorm,*R,*Xp;
   #ifdef OPENMP_ON
@@ -2956,11 +2954,10 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   #else
   *nt = 1; /* no openMP support - turn off threading */
   #endif
-
-  nr = *q + *rE;
+  rr = *q;if (rr>*n) rr = *n; /* number of rows of QR factor R */
+  nr = rr + *rE;
   nz = *n; if (nz<nr) nz=nr; /* possible for nr to be more than n */
   z = (double *)CALLOC((size_t) nz,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
-  
   raw = (double *)CALLOC((size_t) *n,sizeof(double)); /* storage for sqrt(|w|) */
   
   for (i=0;i< *n;i++) 
@@ -2999,20 +2996,20 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   /* pivot[i] gives the unpivoted position of the ith pivoted parameter.*/
   
   /* copy out upper triangular factor R, and unpivot it */
-  R1 = (double *)CALLOC((size_t)*q * *q,sizeof(double));
+  R1 = (double *)CALLOC((size_t) rr * *q,sizeof(double));
   /* st for (i=0;i<*q;i++) for (j=i;j<*q;j++) R1[i + *q * j] = WX[i + *n * j]; */ 
-  getRpqr(R1,WX,n,q,q,nt);
+  getRpqr(R1,WX,n,q,&rr,nt);
   
-  pivoter(R1,q,q,pivot,&TRUE,&TRUE); /* unpivoting the columns of R1 */
+  pivoter(R1,&rr,q,pivot,&TRUE,&TRUE); /* unpivoting the columns of R1 */
  
   /* Form a nicely scaled version of [R',Es']' for rank determination */ 
-  Rnorm = frobenius_norm(R1,q,q);
+  Rnorm = frobenius_norm(R1,&rr,q);
   Enorm =  frobenius_norm(Es,rE,q);
  
   R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
   for (j=0;j<*q;j++) { 
-    for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j]/Rnorm;
-    for (i=0;i< *rE;i++) R[i + *q + nr * j] = Es[i + *rE * j]/Enorm;
+    for (i=0;i< rr;i++) R[i + nr * j] = R1[i + rr * j]/Rnorm;
+    for (i=0;i< *rE;i++) R[i + rr + nr * j] = Es[i + *rE * j]/Enorm;
   }
   
   /* ... and now use it to establish rank */
@@ -3023,7 +3020,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   
   /* now actually find the rank of R */
   work = (double *)CALLOC((size_t)(4 * *q),sizeof(double));
-  rank = *q;
+  rank = *q; if (nr < rank) rank = nr;
   R_cond(R,&nr,&rank,work,&Rcond);
   while (*rank_tol * Rcond > 1) { rank--;R_cond(R,&nr,&rank,work,&Rcond);}
   
@@ -3038,7 +3035,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     for (i=0;i<n_drop;i++) drop[i] = pivot1[rank+i];
     qsort(drop,n_drop,sizeof(int),icompare); /* key assumption of the drop/undrop routines is that `drop' is ascending */
     /* drop columns indexed in `drop'... */
-    drop_cols(R1,*q,*q,drop,n_drop);    /* R1 now q by rank */
+    drop_cols(R1,rr,*q,drop,n_drop);    /* R1 now q by rank */
     drop_cols(E,*rE,*q,drop,n_drop); /* E now q by rank */ 
   } else {drop=NULL;}
 
@@ -3047,8 +3044,8 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   /* Now augment R1 with the real square root penalty (not the nicely scaled version), result in R... */  
   for (j=0;j<rank;j++) { 
-    for (i=0;i< *q;i++) R[i + nr * j] = R1[i + *q * j];
-      for (i=0;i< *rE;i++) R[i + *q + nr * j] = E[i + *rE * j];
+    for (i=0;i< rr;i++) R[i + nr * j] = R1[i + rr * j];
+      for (i=0;i< *rE;i++) R[i + rr + nr * j] = E[i + *rE * j];
   }
   FREE(R1);
   mgcv_qr(R,&nr,&rank,pivot1,tau1); /* The final QR decomposition */ 
@@ -3062,8 +3059,8 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     Q1 = (double *)CALLOC((size_t) *n * rank,sizeof(double)); 
     /* st for (i=0;i<*q;i++) for (j=0;j<rank;j++) Q1[i + *n * j] = Q[i + nr * j]; */
     /* st left=1;tp=0;mgcv_qrqy(Q1,WX,tau,n,&rank,q,&left,&tp); */ /* Q1 = Qb Q[1:q,]  where Qb from first QR decomposition */   
-    for (i=0;i<*q;i++) for (j=0;j<rank;j++) Q1[i + *q * j] = Q[i + nr * j];
-    tp=0;mgcv_pqrqy(Q1,WX,tau,n,q,&rank,&tp,nt);/* Q1 = Qb Q[1:q,]  where Qb from first QR decomposition */   
+    for (i=0;i<rr;i++) for (j=0;j<rank;j++) Q1[i + rr * j] = Q[i + nr * j];
+    tp=0;mgcv_pqrqy(Q1,WX,tau,n,&rr,&rank,&tp,nt);/* Q1 = Qb Q[1:rr,]  where Qb from first QR decomposition (contained in WX, tau) */   
     
     FREE(Q);
 
@@ -3096,8 +3093,9 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   if (!*use_wy) { /* Now get the fitted values X \beta, *without* finding \beta */
     /* st left=1;tp=1;mgcv_qrqy(z,WX,tau,n,&one,q,&left,&tp); */ /* z = Q'z */
-    tp=1;mgcv_pqrqy(z,WX,tau,n,q,&one,&tp,nt);
-    for (i=rank;i<nz;i++) z[i]=0.0;
+    tp=1;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt);
+    j = rank; if (j > rr) j = rr; /* number of rows in r factor */
+    for (i=j;i<nz;i++) z[i]=0.0;
     left=1,tp=1; 
     mgcv_qrqy(z,R,tau1,&nr,&one,&rank,&left,&tp); /* z = Q1'Q'z, where Q1 is the first rank rows of second orth factor */
  
@@ -3119,14 +3117,10 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     for (i=rank;i < *n;i++) z[i]=0.0;
 
     /* st left=1;tp=0;mgcv_qrqy(z,WX,tau,n,&one,q,&left,&tp); */ /* z = Q Q1 Q1'Q z */
-    tp=0;mgcv_pqrqy(z,WX,tau,n,q,&one,&tp,nt);
+    tp=0;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt);
 
     for (i=0;i<*n;i++) eta[i] = z[i]/raw[i]; /* the linear predictor */
   } /* if (!*use_wy) */
-  /* form Wz (not sqrt(|W|)z)... */ 
-  //  for (i=0;i< *n;i++) { 
-  //  z[i] = y[i]*w[i]; /* form z itself*/
-  //}
 
   /* form X'Wz, drop any entries in drop and pivot... */
   bt=1;ct=0;mgcv_mmult(work,X,wy,&bt,&ct,q,&one,n);     
@@ -3136,13 +3130,11 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
   if (!*use_wy) { /* Test R'Q'wz = X'Wz - not equal implies stability loss */ 
     for (zz=zz1=0,i=0;i<rank;i++) {
       for (xx=0,j=0;j<=i;j++) xx += R[j + nr * i] * work[*q + j];
-      //Rprintf("XtWz = %g   RtQtwz = %g\n",work[i],xx);
       xx -= work[i];
       zz1 += xx*xx; zz += work[i]*work[i];   
     }
     if (zz1 > *rank_tol * zz) {
       *use_wy = 1;
-      //Rprintf("instability detected zz1= %g zz = %g\n",zz1,zz);
     }
   }
 

@@ -14,6 +14,47 @@ Issues:
 * t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
 present, and reparameterization needs checking (also for bam). 
 
+* OpenBLAS 0.3.2/3 appears not to be thread safe at present - can
+  cause problems when opemmp multithreading.
+
+1.8-25
+
+** bam(...,discrete=TRUE) methods improved. Cross products now usually faster 
+   (can be much faster) and code can now make better use of optimised BLAS. 
+
+* fix to 'fs' smooth.construct method and smooth2random method, to allow
+  constructor to be called without a "gamm" atribute set on the smooth spec
+  but still get a sensible result from smooth2random (albeit never using
+  sarse matrices). Useful for other packages using constructors and 
+  smooth2random, for 'fs' smooths.
+
+* The mrf smooth constructor contained an obsolete hack in which the term 
+  dimension was set to 2 to avoid plotting when used as a te marginal. This 
+  messed up side constraints for terms where a mrf smooth was a main effect 
+  and te marginal. Fixed. 
+
+* extract.lme.cov/2 documentation modified to cover NA handling properly, and 
+  routines modified to not require data to be supplied.
+
+* fix of efsudr bug whereby extended families with no extra parameters to 
+  estimate could give incorrect results when using optimer="efs" in 'gam'.  
+
+* negbin() corrected - it was declaring the log link to be canonical, leading 
+  to poor convergence and slight misfit.
+
+* predict.bam(...,discrete=TRUE) now handles na.action properly, rather than
+  always dropping NAs. 
+
+* Fix of very obscure bug in which very poor model of small dataset could
+  end up with fewer `good' data than coefs, breaking an assumption of C code 
+  and segfaulting. 
+
+* fix of null deviance computation bug introduced with extended families in 
+  bam - null deviance was wrong for non-default methods.
+
+* liu2 modified to deal with random effects estimated to be exactly 0, so 
+  that summary.gam does not fail in this case.
+
 1.8-24
 
 * Extended Fellner Schall optimizer now avaialable for all families with 'gam'
@@ -37,7 +78,7 @@ present, and reparameterization needs checking (also for bam).
   to avoid masking problems in obscure circumstances. 
 
 * 'mrf' smooth documentation modified to make it clearer how to specify 'nb',
-  and code modified so that it is now possible to speficy the neighbour 
+  and code modified so that it is now possible to specify the neighbour 
   structure using names rather than indices.
 
 * 'bfgs' fix to handle extended families.

@@ -3208,6 +3208,8 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
   lh <- lh*lambda
   c3 <- sum(lh)
   
+  if (x<=0 || c2 <= 0) return(1)
+
   s1 <- c3/c2^1.5
   s2 <- sum(lh*lambda)/c2^2
 
@@ -3222,6 +3224,7 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
   } else {
     a <- 1/s1
     delta <- 0
+    if (c3==0) return(1)
     l <- c2^3/c3^2
   }
 

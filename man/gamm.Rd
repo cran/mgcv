@@ -14,7 +14,7 @@ see \code{gamm4} from package \code{gamm4}.
 Smooths are specified as in a call to \code{\link{gam}} as part of the fixed 
 effects model formula, but the wiggly components of the smooth are treated as 
 random effects. The random effects structures and correlation structures 
-availabale for \code{lme} are used to specify other random effects and 
+available for \code{lme} are used to specify other random effects and 
 correlations. 
 
 It is assumed that the random effects and correlation structures are employed 
@@ -58,7 +58,7 @@ is a GEE approach to correlation in the generalized case. See examples below.}
 
 \item{family}{A \code{family} as used in a call to \code{\link{glm}} or \code{\link{gam}}.
 The default \code{gaussian} with identity link causes \code{gamm} to fit by a direct call to
-\code{\link[nlme]{lme}} procided there is no offset term, otherwise
+\code{\link[nlme]{lme}} provided there is no offset term, otherwise
 \code{gammPQL} is used.}
 
 \item{data}{ A data frame or list containing the model response variable and 
@@ -195,7 +195,7 @@ Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statis
 
 \section{WARNINGS }{
 
-\code{gamm} was a somewhat different argument list to \code{\link{gam}},
+\code{gamm} has a somewhat different argument list to \code{\link{gam}},
 \code{gam} arguments such as \code{gamma} supplied to \code{gamm} will
 just be ignored.  
 

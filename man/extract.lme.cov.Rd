@@ -10,8 +10,8 @@ calculation. \code{extract.lme.cov} forms the full matrix explicitly:
 \code{extract.lme.cov2} tries to be more economical than this.
 }
 \usage{
-extract.lme.cov(b,data,start.level=1)
-extract.lme.cov2(b,data,start.level=1)
+extract.lme.cov(b,data=NULL,start.level=1)
+extract.lme.cov2(b,data=NULL,start.level=1)
 }
 
 %- maybe also `usage' for other objects documented here.
@@ -19,7 +19,8 @@ extract.lme.cov2(b,data,start.level=1)
 \item{b}{ A fitted model object returned by a call to \code{\link[nlme]{lme}}}.
 
 \item{data}{ The data frame/ model frame that was supplied to
- \code{\link[nlme]{lme}}.}
+ \code{\link[nlme]{lme}}, but with any rows removed by the na action dropped. Uses
+ the data stored in the model object if not supplied.}
 
 \item{start.level}{The level of nesting at which to start including random 
 effects in the calculation. This is used to allow smooth terms to be estimated
@@ -92,7 +93,8 @@ require(mgcv)
 library(nlme)
 data(Rail)
 b <- lme(travel~1,Rail,~1|Rail)
-extract.lme.cov(b,Rail)
+extract.lme.cov(b)
+extract.lme.cov2(b)
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
