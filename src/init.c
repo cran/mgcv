@@ -10,7 +10,8 @@
 R_CallMethodDef CallMethods[] = {
   {"mgcv_pmmult2", (DL_FUNC) &mgcv_pmmult2,5},
   {"mgcv_Rpiqr", (DL_FUNC) &mgcv_Rpiqr,5}, 
-  { "mgcv_tmm",(DL_FUNC)&mgcv_tmm,5}, 
+  { "mgcv_tmm",(DL_FUNC)&mgcv_tmm,5},
+  { "mgcv_chol_down",(DL_FUNC)&mgcv_chol_down,5}, 
   { "mgcv_Rpbsi",(DL_FUNC)&mgcv_Rpbsi,2},
   { "mgcv_RPPt",(DL_FUNC)&mgcv_RPPt,3},
   { "mgcv_Rpchol",(DL_FUNC)&mgcv_Rpchol,4},
@@ -34,6 +35,7 @@ R_CMethodDef CEntries[] = {
     {"Xbd", (DL_FUNC) &Xbd,15},
     {"vcorr", (DL_FUNC) &vcorr, 5},
     {"dchol", (DL_FUNC) &dchol, 4},
+    {"chol_down", (DL_FUNC) &chol_down, 5},
     {"mgcv_omp", (DL_FUNC) &mgcv_omp, 1},
     {"coxpred", (DL_FUNC) &coxpred, 14},
     {"coxpp", (DL_FUNC) &coxpp, 10},

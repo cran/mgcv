@@ -200,9 +200,10 @@ The extended families given in \code{\link{family.mgcv}} can also be used. The e
 
 \references{
 Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.
+\url{http://dx.doi.org/10.1111/rssc.12068}
 
-Wood, S.N., Li, Z., Shaddick, G. & Augustin N.H. (2017) Generalized additive models for gigadata: modelling the UK black smoke network daily data. Journal of the American Statistical Association.
-
+Wood, S.N., Li, Z., Shaddick, G. & Augustin N.H. (2017) Generalized additive models for gigadata: modelling the UK black smoke network daily data. Journal of the American Statistical Association. 112(519):1199-1210
+\url{http://dx.doi.org/10.1080/01621459.2016.1195744}
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}

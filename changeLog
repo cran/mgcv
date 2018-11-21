@@ -17,6 +17,16 @@ present, and reparameterization needs checking (also for bam).
 * OpenBLAS 0.3.2/3 appears not to be thread safe at present - can
   cause problems when opemmp multithreading.
 
+1.8-26
+
+* LINPACK dependency removed.
+
+* Added service routine chol.down to down date a Cholesky factor on row/col
+  deletion.
+
+* liu2 had a check messed up when vectorized. Fix to stop vector being 
+  checked for equality to zero.
+
 1.8-25
 
 ** bam(...,discrete=TRUE) methods improved. Cross products now usually faster 
@@ -28,7 +38,7 @@ present, and reparameterization needs checking (also for bam).
   sarse matrices). Useful for other packages using constructors and 
   smooth2random, for 'fs' smooths.
 
-* The mrf smooth constructor contained an obsolete hack in which the term 
+* The mrf smooth constructor contained a obsolete hack in which the term 
   dimension was set to 2 to avoid plotting when used as a te marginal. This 
   messed up side constraints for terms where a mrf smooth was a main effect 
   and te marginal. Fixed. 
