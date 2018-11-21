@@ -227,6 +227,21 @@ dchol <- function(dA,R) {
   return(matrix(oo$dR,p,p))
 } ## dchol
 
+choldrop <- function(R,k) {
+## routine to update Cholesky factor R of A on dropping row/col k of A.
+## R can be upper triangular, in which case (R'R=A) or lower triangular in
+## which case RR'=A...
+  n <- as.integer(ncol(R))
+  k1 <- as.integer(k-1)
+  ut <- as.integer(as.numeric(R[1,2]!=0))
+  if (k<1||k>n) return(R)
+  Rup <- matrix(0,n-1,n-1)
+  #oo <- .C(C_chol_down,R=as.double(R),Rup=as.double(Rup),n=as.integer(n),k=as.integer(k-1),ut=as.integer(ut))
+  .Call(C_mgcv_chol_down,R,Rup,n,k1,ut)
+  #matrix(oo$Rup,n-1,n-1)
+  Rup
+} ## choldrop
+
 vcorr <- function(dR,Vr,trans=TRUE) {
 ## Suppose b = sum_k op(dR[[k]])%*%z*r_k, z ~ N(0,Ip), r ~ N(0,Vr). vcorr returns cov(b).
 ## dR is a list of p by p matrices. 'op' is 't' if trans=TRUE and I() otherwise.

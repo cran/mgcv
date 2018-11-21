@@ -161,6 +161,8 @@ void mgcv_Rpbsi(SEXP A, SEXP NT);
 void mgcv_RPPt(SEXP a,SEXP r, SEXP NT);
 SEXP mgcv_Rpchol(SEXP Amat,SEXP PIV,SEXP NT,SEXP NB);
 void dchol(double *dA, double *R, double *dR,int *p);
+void chol_down(double *R,double *Rup,int *n,int *k,int *ut);
+void mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT);
 void vcorr(double *dR,double *Vr,double *Vb,int *p,int *M);
 SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT);
 SEXP mgcv_Rpbacksolve(SEXP R, SEXP B,SEXP NT);

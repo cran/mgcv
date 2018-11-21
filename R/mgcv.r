@@ -3208,14 +3208,16 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
   lh <- lh*lambda
   c3 <- sum(lh)
   
-  if (x<=0 || c2 <= 0) return(1)
+  xpos <- x > 0
+  res <- 1 + 0 * x
+  if (sum(xpos)==0 || c2 <= 0) return(res)
 
   s1 <- c3/c2^1.5
   s2 <- sum(lh*lambda)/c2^2
 
   sigQ <- sqrt(2*c2)
 
-  t <- (x-muQ)/sigQ
+  t <- (x[xpos]-muQ)/sigQ
 
   if (s1^2>s2) {
     a <- 1/(s1-sqrt(s1^2-s2))
@@ -3224,16 +3226,15 @@ liu2 <- function(x, lambda, h = rep(1,length(lambda)),lower.tail=FALSE) {
   } else {
     a <- 1/s1
     delta <- 0
-    if (c3==0) return(1)
+    if (c3==0) return(res)
     l <- c2^3/c3^2
   }
 
   muX <- l+delta
   sigX <- sqrt(2)*a
-  
-  return(pchisq(t*sigX+muX,df=l,ncp=delta,lower.tail=lower.tail))
-
-}
+  res[xpos] <- pchisq(t*sigX+muX,df=l,ncp=delta,lower.tail=lower.tail)
+  res
+} ## liu2
 
 simf <- function(x,a,df,nq=50) {
 ## suppose T = sum(a_i \chi^2_1)/(chi^2_df/df). We need
