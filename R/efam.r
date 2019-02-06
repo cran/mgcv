@@ -45,11 +45,19 @@ estimate.theta <- function(theta,family,y,mu,scale=1,wt=1,tol=1e-7,attachH=FALSE
     } else H <- NULL
     list(nll=nll,g=g,H=H)
   } ## nlogl
+
+  if (scale>=0&&family$n.theta==0) stop("erroneous call to estimate.theta - no free parameters")
+  n.theta <- length(theta) ## dimension of theta vector (family$n.theta==0 => all fixed)
+  del.ind <- 1:n.theta
   if (scale<0) theta <- c(theta,log(var(y)*.1))
   nll <- nlogl(theta,family,y,mu,scale,wt,2)
+  g <- if (family$n.theta==0) nll$g[-del.ind] else nll$g
+  H <- if (family$n.theta==0) nll$H[-del.ind,-del.ind,drop=FALSE] else nll$H
   step.failed <- FALSE
   for (i in 1:100) { ## main Newton loop
-    eh <- eigen(nll$H,symmetric=TRUE)
+    #H <- if (family$n.theta==0) nll$H[-del.ind,-del.ind,drop=FALSE] else nll$H
+    #g <- if (family$n.theta==0) nll$g[-del.ind] else nll$g
+    eh <- eigen(H,symmetric=TRUE)
     pdef <- sum(eh$values <= 0)==0
     if (!pdef) { ## Make the Hessian pos def
       eh$values <- abs(eh$values)
@@ -57,10 +65,11 @@ estimate.theta <- function(theta,family,y,mu,scale=1,wt=1,tol=1e-7,attachH=FALSE
       eh$values[eh$values<thresh] <- thresh
     }
     ## compute step = -solve(H,g) (via eigen decomp)...
-    step <- - drop(eh$vectors %*% ((t(eh$vectors) %*% nll$g)/eh$values))
+    step <- - drop(eh$vectors %*% ((t(eh$vectors) %*% g)/eh$values))
+    if (family$n.theta==0) step <- c(rep(0,n.theta),step)
     ## limit the step length...
     ms <- max(abs(step))
-   if (ms>4) step <- step*4/ms
+    if (ms>4) step <- step*4/ms
 
     nll1 <- nlogl(theta+step,family,y,mu,scale,wt,2)
     iter <- 0
@@ -76,11 +85,13 @@ estimate.theta <- function(theta,family,y,mu,scale=1,wt=1,tol=1e-7,attachH=FALSE
     theta <- theta + step ## accept updated theta
     ## accept log lik and derivs ...
     nll <- if (iter>0) nlogl(theta,family,y,mu,scale,wt,2) else nll1
+    g <- if (family$n.theta==0) nll$g[-del.ind] else nll$g
+    H <- if (family$n.theta==0) nll$H[-del.ind,-del.ind,drop=FALSE] else nll$H
     ## convergence checking...
-    if (sum(abs(nll$g) > tol*abs(nll$nll))==0) break 
+    if (sum(abs(g) > tol*abs(nll$nll))==0) break 
   } ## main Newton loop
   if (step.failed) warning("step failure in theta estimation")
-  if (attachH) attr(theta,"H") <- nll$H
+  if (attachH) attr(theta,"H") <- H#nll$H
   theta
 } ## estimate.theta
 

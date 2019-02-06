@@ -1722,6 +1722,15 @@ void mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT) {
   chol_down(R,Rup,n,k,ut);
 }
 
+inline double hypot(double x, double y) {
+/* stable computation of sqrt(x^2 + y^2) */  
+  double t;
+  x = fabs(x);y=fabs(y);
+  if (y>x) { t = x;x = y; y = t;}
+  if (x==0) return(y); else t = y/x;
+  return(x*sqrt(1+t*t));
+} /* hypot */   
+
 void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
 /* R is an n by n choleski factor of an n by n matrix A. We want the downdated
    factor for A[-k,-k] returned in n-1 by n-1 matrix Rup. 
@@ -1731,7 +1740,6 @@ void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
    columnwise. Calls from R should ideally be made from a wrapper called from 
    .Call, since otherwise copying can be the dominant cost. 
 
-   Currently called directly with .C for accuracy testing. Assumes Rup zeroed on entry.
 */
   int i,j,n1;
   double x,*Ri1,*Ri,*Rj,c,s,*Re,*ca,*sa,*sp,*cp;
@@ -1778,7 +1786,8 @@ void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
     for (i = *k;i<n1;i++) { /* work down diagonal */
       Ri = Rup + i  + i * n1; /* rotate into here */
       Rj = R + (i+1) + (i+1) * *n;  /* zeroing this */
-      x = sqrt(*Ri * *Ri + *Rj * *Rj);
+      /* x = sqrt(*Ri * *Ri + *Rj * *Rj);*/
+      x = hypot(*Ri,*Rj);
       c = *Ri / x; s = *Rj / x;*Ri = x;
       Rj++;Ri++;Ri1=Ri+n1;Re = Rup + (i+1) * n1;
       for (;Ri<Re;Rj++,Ri++,Ri1++) {
@@ -1789,6 +1798,97 @@ void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
   }  
  
 } /* chol_down */  
+
+void chol_up(double *R,double *u, int *n,int *up,double *eps) {
+/* Rank 1 update of a cholesky factor. Works as follows:
+ 
+   [up=1] R'R + uu' = [u,R'][u,R']' =  [u,R']Q'Q[u,R']', and then uses Givens rotations to
+   construct Q such that Q[u,R']' = [0,R1']'. Hence R1'R1 = R'R + uu'. The construction 
+   operates from first column to last.
+
+   [up=0] uses an almost identical sequence, but employs hyperbolic rotations
+   in place of Givens. See Golub and van Loan (2013, 4e 6.5.4)
+
+   Givens rotations are of form [c,-s] where c = cos(theta), s = sin(theta). 
+                                [s,c]
+
+   Currently does not check that result of down date is positive definite. 
+ 
+   Assumes R upper triangular, and that it is OK to use first two columns 
+   below diagonal as temporary strorage for Givens rotations (the storage is 
+   needed to ensure algorithm is column oriented). 
+*/ 
+  double c0,s0,*c,*s,z,*x,z0,*c1;
+  int j,j1,n1;
+  n1 = *n - 1;
+  if (*up) for (j1=-1,j=0;j<*n;j++,u++,j1++) { /* loop over columns of R */
+    z = *u; /* initial element of u */
+    x = R + *n * j; /* current column */
+    c = R + 2;s = R + *n + 2; /* Storage for first n-2 Givens rotations */ 
+    for (c1=c+j1;c<c1;c++,s++,x++) { /* apply previous Givens */
+      z0 = z;
+      z = *c * z - *s * *x;
+      *x = *s * z0 + *c * *x;
+    }
+    if (j) {
+      /* apply last computed Givens */
+      z0 = z;
+      z = c0 * z - s0 * *x;
+      *x = s0 * z0 + c0 * *x;
+      x++;
+      if (j<n1) {*c = c0; *s = s0;} /* store if needed for further columns */
+    }  
+    
+    /* now construct the next rotation u[j] <-> R[j,j] */
+    z0 = hypot(z,*x); /* sqrt(z^2+R[j,j]^2) */
+    c0 = *x/z0; s0 = z/z0;  /* need to zero z */
+    /* now apply this rotation and this column is finished (so no need to update z) */
+    *x = s0 * z + c0 * *x;
+  } else  for (j1=-1,j=0;j<*n;j++,u++,j1++) { /* loop over columns of R for down-dating */
+    z = *u; /* initial element of u */
+    x = R + *n * j; /* current column */
+    c = R + 2;s = R + *n + 2; /* Storage for first n-2 hyperbolic rotations */ 
+    for (c1=c+j1;c<c1;c++,s++,x++) { /* apply previous hyperbolic */
+      z0 = z;
+      z =  *c * z - *s * *x;
+      *x = -*s * z0 + *c * *x;
+    }
+    if (j) {
+      /* apply last computed hyperbolic */
+      z0 = z;
+      z = c0 * z - s0 * *x;
+      *x = -s0 * z0 + c0 * *x;
+      x++;
+      if (j<n1) {*c = c0; *s = s0;} /* store if needed for further columns */
+    }  
+    
+    /* now construct the next hyperbolic rotation u[j] <-> R[j,j] */
+    z0 = z / *x; /* sqrt(z^2+R[j,j]^2) */
+    if (fabs(z0>=1)) { /* downdate not +ve def */
+      //Rprintf("j = %d  d = %g ",j,z0);
+      if (*n>1) R[1] = -2.0;return; /* signals error */
+    }
+    if (z0 > 1 - *eps) z0 = 1 - *eps;
+    c0 = 1/sqrt(1-z0*z0);s0 = c0 * z0;
+    /* now apply this rotation and this column is finished (so no need to update z) */
+    *x = -s0 * z + c0 * *x;
+  }
+
+ /* now zero c and s storage */
+  c = R + 2;s = R + *n + 2;
+  for (x = c + *n - 2;c<x;c++,s++) *c = *s = 0.0;
+} /* chol_up */  
+
+void mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS) {
+/* wrapper for calling chol_down using .Call */
+  double *R,*u,*eps;
+  int *n,*up;
+  R = REAL(r);u=REAL(U);
+  eps = REAL(EPS);
+  n = INTEGER(N);
+  up = INTEGER(UP);
+  chol_up(R,u,n,up,eps);
+} /* mgcv_chol_up */
 
 void mgcv_chol(double *a,int *pivot,int *n,int *rank)
 /* a stored in column order, this routine finds the pivoted choleski decomposition of matrix a 

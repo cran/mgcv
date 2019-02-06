@@ -436,7 +436,8 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 ## and to control the step length to ensure that at the end of the step we
 ## are not going uphill w.r.t. the REML criterion...
     
-    y <- mf[[gp$response]]
+    #y <- mf[[gp$response]]
+    y <- G$y
     weights <- G$w 
     conv <- FALSE
     nobs <- nrow(mf)
@@ -447,7 +448,8 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
       pini <- if (is.null(G$family$preinitialize)) NULL else G$family$preinitialize(y,G$family)
       if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
       if (!is.null(pini$y)) y <- pini$y
-      scale <- if (is.null(G$family$scale)) 1 else G$family$scale
+      if (is.null(G$family$scale)) scale <- 1 else scale <- if (G$family$scale<0) scale else G$family$scale
+      scale1 <- scale
       if (scale < 0) scale <- var(y) *.1 ## initial guess
     } else efam <- FALSE
 
@@ -578,9 +580,9 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	
 	if (efam) { ## extended family
 	  if (iter>1) { ## estimate theta
-	    scale1 <- if (!is.null(family$scale)) family$scale else scale
-            if (family$n.theta>0||scale<0) theta <- estimate.theta(theta,family,y,mu,scale=scale1,wt=G$w,tol=1e-7)
-            if (!is.null(family$scale) && family$scale<0) {
+	    #scale1 <- if (!is.null(family$scale)) family$scale else scale
+            if (family$n.theta>0||scale1<0) theta <- estimate.theta(theta,family,y,mu,scale=scale1,wt=G$w,tol=1e-7)
+            if (!is.null(family$scale) && scale1<0) {
 	      scale <- exp(theta[family$n.theta+1])
 	      theta <- theta[1:family$n.theta]
 	    }  
@@ -791,8 +793,9 @@ regular.Sb <- function(S,off,sp,beta) {
 
 bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etastart = NULL,
     mustart = NULL, offset = rep(0, nobs), control = gam.control(), intercept = TRUE, 
-    cl = NULL,gc.level=0,use.chol=FALSE,nobs.extra=0,samfrac=1,npt=1)
-{   y <- mf[[gp$response]]
+    cl = NULL,gc.level=0,use.chol=FALSE,nobs.extra=0,samfrac=1,npt=1) {
+    #y <- mf[[gp$response]]
+    y <- G$y
     weights <- G$w
     conv <- FALSE
     nobs <- nrow(mf)
@@ -805,7 +808,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       pini <- if (is.null(G$family$preinitialize)) NULL else G$family$preinitialize(y,G$family)
       if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
       if (!is.null(pini$y)) y <- pini$y
-      scale <- if (is.null(G$family$scale)) 1 else G$family$scale
+      if (is.null(G$family$scale)) scale <- 1 else scale <- if (G$family$scale<0) scale else G$family$scale
+      scale1 <-scale
       if (scale < 0) scale <- var(y) *.1 ## initial guess
     } else efam <- FALSE
 
@@ -1086,9 +1090,9 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       }
 
       if (efam && iter>1) { ## estimate theta
-	scale1 <- if (!is.null(family$scale)) family$scale else scale
-        if (family$n.theta>0||scale<0) theta <- estimate.theta(theta,family,G$y,linkinv(eta),scale=scale1,wt=G$w,tol=1e-7)
-        if (!is.null(family$scale) && family$scale<0) {
+	#scale1 <- if (!is.null(family$scale)) family$scale else scale
+        if (family$n.theta>0||scale1<0) theta <- estimate.theta(theta,family,G$y,linkinv(eta),scale=scale1,wt=G$w,tol=1e-7)
+        if (!is.null(family$scale) && scale1<0) {
 	   scale <- exp(theta[family$n.theta+1])
 	   theta <- theta[1:family$n.theta]
 	}  
@@ -1377,9 +1381,9 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 
 
 bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
-                    cl=NULL,gc.level=0,use.chol=FALSE,npt=1) 
+                    cl=NULL,gc.level=0,use.chol=FALSE,npt=1) {
 ## function that does big additive model fit in strictly additive case
-{  ## first perform the QR decomposition, blockwise....
+   ## first perform the QR decomposition, blockwise....
    n <- nrow(mf)
    if (rho!=0) { ## AR1 error model
      ld <- 1/sqrt(1-rho^2) ## leading diagonal of root inverse correlation
@@ -1526,7 +1530,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
        yX.last <- res[[n.threads]]$yX.last
      } 
      G$n <- n
-     G$y <- mf[[gp$response]]
+     #G$y <- mf[[gp$response]]
    
    } else { ## n <= chunk.size
      if (rho==0) qrx <- qr.update(sqrt(G$w)*G$X,sqrt(G$w)*(G$y-G$offset),use.chol=use.chol,nt=npt) else {
@@ -1946,9 +1950,6 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (inherits(family,"extended.family")) {
       family <- fix.family.link(family); efam <- TRUE
     } else efam <- FALSE
-    #else {
-      #if (inherits(family,"extended.family")) stop("used bam(...,discrete=TRUE) with extended families")
-    #}
     
     if (method%in%c("fREML")&&!is.null(min.sp)) {
       min.sp <- NULL
@@ -1995,11 +1996,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (gc.level>0) gc()
 
     mf <- eval(mf, parent.frame()) # the model frame now contains all the data
-   # if ("matrix"%in%unlist(lapply(mf,class))) {
-   #   mfattr <- attributes(mf)
-   #   mf <- lapply(mf,drop) # avoid single column matrices
-   #   mfattr -> attributes(mf)
-   # }
+
     if (nrow(mf)<2) stop("Not enough (non-NA) data to do anything meaningful")
     terms <- attr(mf,"terms")
     if (gc.level>0) gc()  
@@ -2121,7 +2118,6 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
             rind <- k:(k+dt[kb] - 1 - by.present)    
             dk$nr[rind] <- dk$nr[k+G$smooth[[i]]$rind-1]
             G$ks[rind,] <- G$ks[k+G$smooth[[i]]$rind-1,] # either this line or next not both
-            #G$kd[,rind] <- G$kd[,k+G$smooth[[i]]$rind-1]
           }       
           for (j in 1:nmar) {
             G$Xd[[k]] <- G$smooth[[i]]$margin[[j]]$X[1:dk$nr[k],,drop=FALSE]
@@ -2175,7 +2171,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   
     if (is.null(mf$"(weights)")) G$w<-rep(1,n)
     else G$w<-mf$"(weights)"    
-  
+
+    G$y <- mf[[gp$response]]
     G$offset <- model.offset(mf)  
     if (is.null(G$offset)) G$offset <- rep(0,n)
 
@@ -2198,17 +2195,28 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     environment(G$formula) <- .BaseNamespaceEnv
 
   } else { ## G supplied
-    scale <- G$scale
+    if (scale<=0) scale <- G$scale
     efam <- G$efam
     mf <- G$mf; G$mf <- NULL
     gp <- G$gp; G$gp <- NULL
     na.action <- G$na.action; G$na.action <- NULL
+    if (!is.null(sp)&&any(sp>=0)) { ## request to modify smoothing parameters
+      if (is.null(G$L)) G$L <- diag(length(G$sp))
+      if (length(sp)!=ncol(G$L)) stop('length of sp must be number of free smoothing parameters in original model')
+      ind <- sp>=0 ## which smoothing parameters are now fixed
+      spind <- log(sp[ind]); 
+      spind[!is.finite(spind)] <- -30 ## set any zero parameters to effective zero
+      G$lsp0 <- G$lsp0 + drop(G$L[,ind,drop=FALSE] %*% spind) ## add fix to lsp0
+      G$L <- G$L[,!ind,drop=FALSE] ## drop the cols of G
+      G$sp <- rep(-1,ncol(G$L))
+    }
   } ## end of G setup 
 
   if (!fit) {
     G$efam <- efam
     G$scale <- scale
     G$mf <- mf;G$na.action <- na.action;G$gp <- gp
+    class(G) <- "bam.prefit"
     return(G)
   }
 

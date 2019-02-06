@@ -689,7 +689,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    names(residuals) <- ynames
    wtdmu <- sum(weights * y)/sum(weights) ## has to then be corrected when this is incorrect
    ## wtdmu <- sum(weights * mu)/sum(weights) ## changed from y
-   nulldev <- sum(dev.resids(y, rep(wtdmu,length(y)), weights))
+   nulldev <- sum(dev.resids(y, rep(wtdmu,length(y)), weights)) ## this will be corrected in family postproc
    n.ok <- nobs - sum(weights == 0)
    nulldf <- n.ok
    ww <- wt <- rep.int(0, nobs)
@@ -921,7 +921,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   perturbed <- 0 ## counter for number of times perturbation tried on possible saddle
   for (iter in 1:(2*control$maxit)) { ## main iteration
     ## get Newton step... 
-    if (check.deriv) {
+    if (check.deriv) { ## code for checking derivatives when debugging
       fdg <- ll$lb*0; fdh <- ll$lbb*0
       for (k in 1:length(coef)) {
         coef1 <- coef;coef1[k] <- coef[k] + eps
@@ -929,14 +929,22 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
         fdg[k] <- (ll.fd$l-ll$l)/eps
         fdh[,k] <- (ll.fd$lb-ll$lb)/eps
       }
-    }
+    } ## derivative checking end
     grad <- ll$lb - St%*%coef 
     Hp <- -ll$lbb+St
     D <- diag(Hp)
     if (sum(!is.finite(D))>0) stop("non finite values in Hessian")
-    indefinite <- FALSE
-    if (sum(D <= 0)) { ## Hessian indefinite, for sure
-      D <- rep(1,ncol(Hp))
+
+    if (min(D)<0) { ## 2/2/19 replaces any D<0 indicating indef
+      Dthresh <- max(D)*sqrt(.Machine$double.eps) 
+      if (-min(D) < Dthresh) { ## could be indef or +ve semi def
+        indefinite <- FALSE
+	D[D<Dthresh] <- Dthresh
+      } else indefinite <- TRUE ## min D too negative to be semi def
+    } else indefinite <- FALSE ## On basis of D could be +ve def
+    
+    if (indefinite) { ## Hessian indefinite, for sure
+      ## D <- rep(1,ncol(Hp)) # moved to later otherwise Ip/Ib pointless 2/2/19
       if (eigen.fix) {
         eh <- eigen(Hp,symmetric=TRUE);
         ev <- abs(eh$values)
@@ -946,6 +954,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
         Ip <- diag(rank)*abs(max(D)*.Machine$double.eps^.5)
         Hp <- Hp  + Ip + Ib
       }
+      D <- rep(1,ncol(Hp)) ## 2/2/19
       indefinite <- TRUE
     } else { ## Hessian could be +ve def in which case Choleski is cheap!
       D <- D^-.5 ## diagonal pre-conditioner
@@ -1080,8 +1089,9 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     }
   } ## end of main fitting iteration
 
-  ## at this stage the Hessian (of pen lik. w.r.t. coefs) should be +ve definite,
+  ## at this stage the Hessian (of pen lik. w.r.t. coefs) should be +ve semi definite,
   ## so that the pivoted Choleski factor should exist...
+  
   if (iter == 2*control$maxit&&converged==FALSE) 
     warning(gettextf("iteration limit reached: max abs grad = %g",max(abs(grad))))
 
@@ -1163,11 +1173,6 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       k <- k + 1
       d2ldetH[i,j] <- -sum(d1Hp[[i]]*t(d1Hp[[j]])) - llr$trHid2H[k] 
       if (i==j) { ## need to add term relating to smoothing penalty
-        #A <- t(Sl.mult(rp$Sl,diag(q),i,full=FALSE))
-        #bind <- rowSums(abs(A))!=0 ## FIX: abs 3/3/16 
-        #ind <- which(bind)
-        #bind <- bind[!bdrop]
-        #A <- A[!bdrop,!bdrop[ind]]
         A <- Sl.mult(rp$Sl,diag(q),i,full=TRUE)[!bdrop,!bdrop]
         bind <- rowSums(abs(A))!=0 ## row/cols of non-zero block
         A <- A[,bind] ## drop the zero columns  
@@ -1180,24 +1185,20 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   ## Compute derivs of b'Sb...
 
   if (deriv>0) {
-    # Sb <- St%*%coef
     Skb <- Sl.termMult(rp$Sl,fcoef,full=TRUE)
     d1bSb <- rep(0,m)
     for (i in 1:m) { 
       Skb[[i]] <- Skb[[i]][!bdrop]
-      d1bSb[i] <- # 2*sum(d1b[,i]*Sb) + # cancels
-                  sum(coef*Skb[[i]])
+      d1bSb[i] <- sum(coef*Skb[[i]])
     }
   }
  
   if (deriv>1) {
     d2bSb <- matrix(0,m,m)
-    # k <- 0
     for (i in 1:m) {
       Sd1b <- St%*%d1b[,i] 
       for (j in i:m) {
-         k <- k + 1
-         d2bSb[j,i] <- d2bSb[i,j] <- 2*sum( # d2b[,k]*Sb + # cancels 
+         d2bSb[j,i] <- d2bSb[i,j] <- 2*sum( 
          d1b[,i]*Skb[[j]] + d1b[,j]*Skb[[i]] + d1b[,j]*Sd1b)
       }
       d2bSb[i,i] <-  d2bSb[i,i] + sum(coef*Skb[[i]]) 
@@ -1217,12 +1218,13 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     if (!is.null(REML1)) cat("REML1 =",REML1,"\n")
   }
   REML2 <- if (deriv<2) NULL else -( (d2l - d2bSb/2)/gamma + rp$ldet2/2  - d2ldetH/2 ) 
- ## bSb <- t(coef)%*%St%*%coef
+
+  ## Get possibly multiple linear predictors
   lpi <- attr(x,"lpi")
-  if (is.null(lpi)) { 
+  if (is.null(lpi)) { ## only one...
     linear.predictors <- if (is.null(offset)) as.numeric(x%*%coef) else as.numeric(x%*%coef+offset)
     fitted.values <- family$linkinv(linear.predictors) 
-  } else {
+  } else { ## multiple...
     fitted.values <- linear.predictors <- matrix(0,nrow(x),length(lpi))
     if (!is.null(offset)) offset[[length(lpi)+1]] <- 0
     for (j in 1:length(lpi)) {
@@ -1280,6 +1282,7 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
   fit <- gam.fit5(x=x,y=y,lsp=lsp,Sl=Sl,weights=weights,offset=offset,deriv=0,family=family,
                      control=control,Mp=Mp,start=start,gamma=1)
   score.hist <- rep(0,200)
+  tiny <- .Machine$double.eps^.5 ## used to bound above zero
   for (iter in 1:200) {
     start <- fit$coefficients
     ## obtain Vb...
@@ -1305,8 +1308,9 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
     for (i in 1:length(Sb)) {
       bSb[i] <- sum(start*Sb[[i]])
     }
-    a <- pmax(0,fit$S1*exp(-lsp) - trVS)
-    r <- a/pmax(0,bSb)
+   
+    a <- pmax(tiny,fit$S1*exp(-lsp) - trVS)
+    r <- a/pmax(tiny,bSb)
     r[a==0&bSb==0] <- 1
     r[!is.finite(r)] <- 1e6
     lsp1 <- pmin(lsp + log(r)*mult,control$efs.lspmax)

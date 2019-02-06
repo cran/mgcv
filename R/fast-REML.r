@@ -123,6 +123,7 @@ Sl.setup <- function(G) {
           Sl[[b]]$start <- G$smooth[[i]]$first.para + sbStart[j]-1
           Sl[[b]]$stop <- G$smooth[[i]]$first.para + sbStop[j]-1
           Sl[[b]]$rank <- G$smooth[[i]]$rank[j]
+	  Sl[[b]]$lambda <- 1 ## dummy here
           Sl[[b]]$repara <- TRUE ## signals ok to linearly reparameterize
           if (!is.null(G$smooth[[i]]$g.index)) { ## then some parameters are non-linear - can't re-param
             if (any(G$smooth[[i]]$g.index[ind])) Sl[[b]]$repara <- FALSE
@@ -774,7 +775,6 @@ Sl.ift <- function(Sl,R,X,y,beta,piv,rp) {
   }
   XX.db <- t(X)%*%(X%*%db)
   S.db <- Sl.mult(Sl,db,k=0)
-##  Sk.db <- Sl.termMult(Sl,db,full=TRUE) ## Sk.db[[j]][,k] is S_j d beta / d rho_k
 
   rss2 <- bSb2 <- matrix(0,nd,nd)
   for (k in 1:nd) { ## second derivative loop 
@@ -805,39 +805,16 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
   ## timing close to identical - modified for parallel exec
   D <- matrix(unlist(Skb),nrow(XX),nd)
   bSb1 <- colSums(beta*D)
-  #D <- D[piv,]/d[piv]
   D1 <- .Call(C_mgcv_Rpforwardsolve,R,D[piv,]/d[piv],nt) ## note R transposed internally unlike forwardsolve
   db[piv,] <- -.Call(C_mgcv_Rpbacksolve,R,D1,nt)/d[piv]
-  #db[piv,] <- -backsolve(R,forwardsolve(t(R),D))/d[piv]
-
-  ## original serial - a bit slow with very large numbers of smoothing
-  ## parameters.... 
-  #Rt <- t(R) ## essential to do this first, or t(R) dominates cost in loop
-  #for (i in 1:nd) { ## compute the first derivatives
-  #  db[piv,i] <- -backsolve(R,forwardsolve(Rt,Skb[[i]][piv]/d[piv]))/d[piv] ## d beta/ d rho_i
-  #  bSb1[i] <- sum(beta*Skb[[i]])  ## d b'Sb / d_rho_i
-  #}
   
   ## XX.db <- XX%*%db
   XX.db <- .Call(C_mgcv_pmmult2,XX,db,0,0,nt)
-  #XX.db[piv,] <- d[piv]*(t(R)%*%(R%*%(d[piv]*db[piv,]))) ## X'Xdb
-
+ 
   S.db <- Sl.mult(Sl,db,k=0)
-  ##Sk.db <- Sl.termMult(Sl,db,full=TRUE) ## Sk.db[[j]][,k] is S_j d beta / d rho_k
 
-  ## following loop very slow if large numbers of smoothing parameters...
-  #rss2 <- bSb2 <- matrix(0,nd,nd)
-  #for (k in 1:nd) { ## second derivative loop 
-  #  for (j in k:nd) {
-  #    rss2[j,k] <- rss2[k,j] <- 2 * sum(db[,j]*XX.db[,k]) 
-  #    bSb2[j,k] <- bSb2[k,j] <-  (k==j)*sum(beta*Skb[[k]])  + 2*(sum(db[,k]*(Skb[[j]]+S.db[,j])) + 
-  #                               sum(db[,j]*Skb[[k]]))                                  
-  #  }
-  #}
-  ## rss2 <- 2 * t(db) %*% XX.db
   rss2 <- 2 * .Call(C_mgcv_pmmult2,db,XX.db,1,0,nt)
   bSb2 <- diag(x=colSums(beta*D),nrow=nd)
-  ## bSb2 <- bSb2 + 2*(t(db)%*%(D+S.db) + t(D)%*%db)
   bSb2 <- bSb2 + 2 * (.Call(C_mgcv_pmmult2,db,D+S.db,1,0,nt) + .Call(C_mgcv_pmmult2,D,db,1,0,nt))
   list(bSb=sum(beta*Sb),bSb1=bSb1,bSb2=bSb2,
        d1b=db ,rss1=rss1,rss2=rss2)

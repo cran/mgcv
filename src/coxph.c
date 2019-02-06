@@ -22,7 +22,7 @@ void coxpred(double *X,double *t,double *beta,double *off,double *Vb,double *a,d
 /* Function to predict the survivor function for the new data in 
    X (n by p), t, given fit results in a, h, q, Vb, and original event times 
    tr (length nt). 
-   The new data are in descending order on entry, as is tr. 
+   The new data are in descending time order on entry, as is tr. 
    On exit n - vectors s and se contain the estimated survival function and its se.
 */
   double eta,*p1,*p2,*p3,*v,*pv,*pa,x,vVv,hi,exp_eta; 

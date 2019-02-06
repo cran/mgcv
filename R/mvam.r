@@ -88,10 +88,44 @@ mvn <- function(d=2) {
   ## initialization has to add in the extra parameters of 
   ## the cov matrix...
   
-    preinitialize <- expression({
+#    preinitialize <- expression({
     ## code to evaluate in estimate.gam...
     ## extends model matrix with dummy columns and 
     ## finds initial coefficients
+#      ydim <- ncol(G$y) ## dimension of response
+#      nbeta <- ncol(G$X)
+#      ntheta <- ydim*(ydim+1)/2 ## number of cov matrix factor params
+#      lpi <- attr(G$X,"lpi")
+#      #offs <- attr(G$X,"offset")
+#      XX <- crossprod(G$X)
+#      G$X <- cbind(G$X,matrix(0,nrow(G$X),ntheta)) ## add dummy columns to G$X
+#      #G$cmX <- c(G$cmX,rep(0,ntheta)) ## and corresponding column means
+#      G$term.names <- c(G$term.names,paste("R",1:ntheta,sep="."))
+#      attr(G$X,"lpi") <- lpi
+#      #offs -> attr(G$X,"offset")
+#      attr(G$X,"XX") <- XX
+#      ## pad out sqrt of balanced penalty matrix to account for extra params
+#      attr(G$Sl,"E") <- cbind(attr(G$Sl,"E"),matrix(0,nbeta,ntheta))
+#      G$family$data <- list(ydim = ydim,nbeta=nbeta)
+#      G$family$ibeta = rep(0,ncol(G$X))
+#      ## now get initial parameters and store in family...
+#      for (k in 1:ydim) {
+#        sin <- G$off %in% lpi[[k]]
+ #       #Sk <- G$S[sin]
+#        um <- magic(G$y[,k],G$X[,lpi[[k]]],rep(-1,sum(sin)),G$S[sin],
+#                    match(G$off[sin],lpi[[k]]), ## turn G$off global indices into indices for this predictor
+#                    nt=control$nthreads)
+#        G$family$ibeta[lpi[[k]]] <- um$b
+#        G$family$ibeta[nbeta+1] <- -.5*log(um$scale) ## initial log root precision
+#        nbeta <- nbeta + ydim - k + 1
+#      }
+#    })
+
+   preinitialize <- function(G) {
+      ## G is a gam pre-fit object. Pre-initialize can manipulate some of its
+      ## elements, returning a named list of the modified ones.
+      ## extends model matrix with dummy columns and 
+      ## finds initial coefficients
       ydim <- ncol(G$y) ## dimension of response
       nbeta <- ncol(G$X)
       ntheta <- ydim*(ydim+1)/2 ## number of cov matrix factor params
@@ -105,7 +139,7 @@ mvn <- function(d=2) {
       #offs -> attr(G$X,"offset")
       attr(G$X,"XX") <- XX
       ## pad out sqrt of balanced penalty matrix to account for extra params
-      attr(G$Sl,"E") <- cbind(attr(G$Sl,"E"),matrix(0,nbeta,ntheta))
+      if (!is.null(G$Sl)) attr(G$Sl,"E") <- cbind(attr(G$Sl,"E"),matrix(0,nbeta,ntheta))
       G$family$data <- list(ydim = ydim,nbeta=nbeta)
       G$family$ibeta = rep(0,ncol(G$X))
       ## now get initial parameters and store in family...
@@ -113,15 +147,17 @@ mvn <- function(d=2) {
         sin <- G$off %in% lpi[[k]]
         #Sk <- G$S[sin]
         um <- magic(G$y[,k],G$X[,lpi[[k]]],rep(-1,sum(sin)),G$S[sin],
-                    match(G$off[sin],lpi[[k]]), ## turn G$off global indices into indices for this predictor
-                    nt=control$nthreads)
+                    match(G$off[sin],lpi[[k]])) # , ## turn G$off global indices into indices for this predictor
+                    #nt=control$nthreads)
         G$family$ibeta[lpi[[k]]] <- um$b
         G$family$ibeta[nbeta+1] <- -.5*log(um$scale) ## initial log root precision
         nbeta <- nbeta + ydim - k + 1
       }
-    })
-    
-    postproc <- expression({
+      list(X=G$X,term.names=G$term.names,family=G$family)
+   } ## preinitialize
+
+
+   postproc <- expression({
     ## code to evaluate in estimate.gam, to do with estimated factor of
     ## precision matrix, etc...
       ydim <- G$family$data$ydim

@@ -1,4 +1,4 @@
-##  R routines for the package mgcv (c) Simon Wood 2000-2016
+##  R routines for the package mgcv (c) Simon Wood 2000-2019
 
 ##  This file is primarily concerned with defining classes of smoother,
 ##  via constructor methods and prediction matrix methods. There are

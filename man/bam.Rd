@@ -151,7 +151,7 @@ be reduced by first fitting a model to a random sample of the data, and using th
 involving factor variables you might want to turn this off. Only do so if you know what you are doing.}
 
 \item{G}{if not \code{NULL} then this should be the object returned by a previous call to \code{bam} with 
-\code{fit=FALSE}. Causes all other arguments to be ignored except \code{chunk.size}, \code{gamma},\code{nthreads}, \code{cluster}, \code{rho}, \code{gc.level}, \code{samfrac}, \code{use.chol} and \code{method}.}
+\code{fit=FALSE}. Causes all other arguments to be ignored except \code{sp}, \code{chunk.size}, \code{gamma},\code{nthreads}, \code{cluster}, \code{rho}, \code{gc.level}, \code{samfrac}, \code{use.chol}, \code{method} and \code{scale} (if >0).}
 
 \item{fit}{if \code{FALSE} then the model is set up for fitting but not estimated, and an object is returned, suitable for passing as the \code{G} argument to \code{bam}.}
 

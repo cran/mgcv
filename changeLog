@@ -17,11 +17,44 @@ present, and reparameterization needs checking (also for bam).
 * OpenBLAS 0.3.2/3 appears not to be thread safe at present - can
   cause problems when opemmp multithreading.
 
+1.8-27
+
+** Added routine 'ginla' for fully Bayesian inference based on an integrated
+  nested Laplace approximation (INLA) approach. See ?ginla.
+
+* Tweedie location scale family added: 'twlss'. 
+
+* gam.fit5 modified to distinguish more carefully between +ve semi definite
+  and +ve definite. Previously could fail, claiming indefinteness when it 
+  should not have. Affects general families.
+
+* bam was ignoring supplied scale parameter in extended family cases - fixed.
+
+* work around in list formula handling for reformulate sometimes setting
+  response to a name in place of a call.
+
+* preinitialize in general families is now a function, not an expression. See 
+  cox.ph for an example.
+
+* added routine cholup for rank one modification of Cholesky factor.
+
+* two stage gam/bam fitting now allows 'sp' to be modified. 
+
+* predict.gam could fail with type="response" for families requiring the 
+  response to be provided in this case (e.g. cox.ph). Fixed.
+
+* sp.vcov defaults to extracting edge corrected log sp cov matrix, if 
+  gam(...,gam.control(edge.control=TRUE)) used for fitting. 
+
+* gam(...,gam.control(edge.correct=TRUE)) could go into infinite loop if
+  sp was effectively zero. Corrected.
+
+
 1.8-26
 
 * LINPACK dependency removed.
 
-* Added service routine chol.down to down date a Cholesky factor on row/col
+* Added service routine choldrop to down date a Cholesky factor on row/col
   deletion.
 
 * liu2 had a check messed up when vectorized. Fix to stop vector being 

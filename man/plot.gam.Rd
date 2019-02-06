@@ -147,7 +147,8 @@ separation of the contours of the different plots, but this is not
 always easy to achieve. Note that these plots can not be modified to the same extent as the other plot. 
    
 For 2-d smooths \code{scheme==1} produces a perspective plot, while \code{scheme==2} produces a heatmap, 
-with overlaid contours and \code{scheme==3} a greyscale heatmap.
+with overlaid contours and \code{scheme==3} a greyscale heatmap (\code{contour.col} controls the
+contour colour).
 
 Smooths of 3 and 4 variables are displayed as tiled heatmaps with overlaid contours. In the 3 variable case the third variable is discretized and a contour plot of the first 2 variables is produced for each discrete value. The panels in the lower and upper rows are labelled with the corresponding third variable value. The lowest value is bottom left, and highest at top right. For 4 variables, two of the variables are coarsely discretized and a square array of image plots is produced for each combination of the discrete values. The first two arguments of the smooth are the ones used for the image/contour plots, unless a tensor product term has 2D marginals, in which case the first 2D marginal is image/contour plotted. \code{n3} controls the number of panels.
 See also \code{\link{vis.gam}}. 
