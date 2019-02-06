@@ -369,8 +369,13 @@ interpret.gam <- function(gf,extra.special=NULL) {
     } 
     av <- unique(av) ## strip out duplicate variable names
     pav <- unique(pav)
-    ret$fake.formula <- if (length(av)>0) reformulate(av,response=ret[[1]]$response) else 
-                        ret[[1]]$fake.formula ## create fake formula containing all variables
+    if (length(av)>0) {
+      ## work around - reformulate with response = "log(x)" will treat log(x) as a name,
+      ## not the call it should be... 
+      fff <- formula(paste(ret[[1]]$response,"~ ."))
+      ret$fake.formula <- reformulate(av,response=ret[[1]]$response) 
+      ret$fake.formula[[2]] <- fff[[2]] ## fix messed up response
+    } else ret$fake.formula <- ret[[1]]$fake.formula ## create fake formula containing all variables
     ret$pred.formula <- if (length(pav)>0) reformulate(pav) else ~1 ## predictor only formula
     ret$response <- ret[[1]]$response 
     ret$nlp <- nlp ## number of linear predictors
@@ -1596,7 +1601,7 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
     
        method <- "REML" ## any method you like as long as it's REML
        G$Sl <- Sl.setup(G) ## prepare penalty sequence
-       ## Xorig <- G$X ## store original X incase it is needed by family - poor option pre=proc can manipulate G$X
+      
        G$X <- Sl.initial.repara(G$Sl,G$X,both.sides=FALSE) ## re-parameterize accordingly
  
        if (!is.null(start)) start <- Sl.initial.repara(G$Sl,start,inverse=FALSE,both.sides=FALSE)
@@ -1690,7 +1695,10 @@ estimate.gam <- function (G,method,optimizer,control,in.out,scale,gamma,start=NU
   ## extended family may need to manipulate G...
     
   if (!is.null(G$family$preinitialize)) {
-    if (inherits(G$family,"general.family")) eval(G$family$preinitialize) else {
+    if (inherits(G$family,"general.family")) {
+      Gmod <- G$family$preinitialize(G) ## modifies some elements of G
+      for (gnam in names(Gmod)) G[[gnam]] <- Gmod[[gnam]] ## copy these into G  
+    } else {
       ## extended family - just initializes theta and possibly y
       pini <- G$family$preinitialize(G$y,G$family)
       if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
@@ -2014,9 +2022,23 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     G$formula <- formula
     G$pred.formula <- gp$pred.formula
     environment(G$formula)<-environment(formula)
+  } else { ## G not null
+    if (!is.null(sp)&&any(sp>=0)) { ## request to modify smoothing parameters
+      if (is.null(G$L)) G$L <- diag(length(G$sp))
+      if (length(sp)!=ncol(G$L)) stop('length of sp must be number of free smoothing parameters in original model')
+      ind <- sp>=0 ## which smoothing parameters are now fixed
+      spind <- log(sp[ind]); 
+      spind[!is.finite(spind)] <- -30 ## set any zero parameters to effective zero
+      G$lsp0 <- G$lsp0 + drop(G$L[,ind,drop=FALSE] %*% spind) ## add fix to lsp0
+      G$L <- G$L[,!ind,drop=FALSE] ## drop the cols of G
+      G$sp <- rep(-1,ncol(G$L))
+    }
   }
 
-  if (!fit) return(G)
+  if (!fit) {
+    class(G) <- "gam.prefit"
+    return(G)
+  }  
 
   if (ncol(G$X)>nrow(G$X)) stop("Model has more coefficients than data") 
 
@@ -2932,7 +2954,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
           #lpi <- list();pst <- c(pstart,ncol(X)+1)
           #for (i in 1:(length(pst)-1)) lpi[[i]] <- pst[i]:(pst[i+1]-1)
           attr(X,"lpi") <- lpi  
-          ffv <- fam$predict(fam,se.fit,y=response,X=X,beta=object$coefficients,
+          ffv <- fam$predict(fam,se.fit,y=response[start:stop],X=X,beta=object$coefficients,
                              off=offs,Vb=object$Vp)
           if (is.matrix(fit)&&!is.matrix(ffv[[1]])) {
             fit <- fit[,1]; if (se.fit) se <- se[,1]
@@ -2959,7 +2981,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
             if (se.fit) se[start:stop]<-se[start:stop]*abs(dmu.deta(fit[start:stop])) 
             fit[start:stop] <- linkinv(fit[start:stop])
           } else { ## family has its own prediction code for response case
-            ffv <- fam$predict(fam,se.fit,y=response,X=X,beta=object$coefficients,off=offs,Vb=object$Vp)
+            ffv <- fam$predict(fam,se.fit,y=response[start:stop],X=X,beta=object$coefficients,off=offs,Vb=object$Vp)
             if (is.null(fit1)&&is.matrix(ffv[[1]])) {
               fit1 <- matrix(0,np,ncol(ffv[[1]]))
               if (se.fit) se1 <- fit1
@@ -3840,11 +3862,17 @@ cooks.distance.gam <- function(model,...)
 }
 
 
-sp.vcov <- function(x) {
+sp.vcov <- function(x,edge.correct=TRUE,reg=1e-3) {
 ## get cov matrix of smoothing parameters, if available
   if (!inherits(x,"gam")) stop("argument is not a gam object")
   if (x$method%in%c("ML","P-ML","REML","P-REML","fREML")&&!is.null(x$outer.info$hess)) {
-    return(solve(x$outer.info$hess))
+    hess <- x$outer.info$hess
+    p <- ncol(hess)
+    if (edge.correct&&!is.null(attr(hess,"hess1"))) {
+      V <- solve(attr(hess,"hess1")+diag(p)*reg) 
+      attr(V,"lsp") <- attr(hess,"lsp1")
+      return(V)
+    } else return(solve(hess+reg))
   } else return(NULL)
 }
 

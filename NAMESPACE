@@ -1,9 +1,9 @@
 useDynLib(mgcv, .registration = TRUE, .fixes = "C_")
 
 export(anova.gam, bam, bam.update,bandchol, betar, 
-       choldrop,cox.ph,concurvity, 
+       choldrop,cholup,cox.ph,concurvity, 
        cSplineDes,dDeta,
-       exclude.too.far,extract.lme.cov, extract.lme.cov2,
+       exclude.too.far,extract.lme.cov, extract.lme.cov2,FFdes,
        formXtViX, full.score, formula.gam,fixDependence,fix.family.link,
        fix.family.var, fix.family.ls, fix.family.qf,fix.family.rd,   
        fs.test,fs.boundary,gam, gam2derivative, 
@@ -12,7 +12,7 @@ export(anova.gam, bam, bam.update,bandchol, betar,
        gam.fit,gam.fit5.post.proc,
        gamlss.etamu,gamlss.gH,
        gam.outer,gam.reparam, gam.vcomp, gamSim , 
-       gaulss,gam.side,get.var,gevlss,
+       gaulss,gam.side,get.var,gevlss,ginla,
        influence.gam, 
        in.out,inSide,interpret.gam,initial.sp,
        jagam,k.check,ldetS, 
@@ -72,13 +72,16 @@ export(anova.gam, bam, bam.update,bandchol, betar,
        spasm.construct,spasm.sp,spasm.smooth,
        t2,te,ti,tensor.prod.model.matrix,tensor.prod.penalties,
        totalPenaltySpace,trichol,trind.generator,
-       Tweedie,tw,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
+       Tweedie,tw,twlss,uniquecombs, vcov.gam, vis.gam, ziP, ziplss)
 
 importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,
            heat.colors,terrain.colors,topo.colors,axisTicks)
 importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,
            mtext, par, persp,plot,points,
            polygon,rect,strheight,strwidth,text,title)
+importFrom(utils, setTxtProgressBar, txtProgressBar)
+
+importFrom(splines,interpSpline)
 
 importFrom(stats,.checkMFClasses,.getXlevels,anova,approx,as.formula,
 binomial,coef,contrasts,"contrasts<-",cooks.distance,cor,cov,

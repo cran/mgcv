@@ -25,8 +25,26 @@ cox.ph <- function (link = "identity") {
     ## initialization is tough here... need data frame in reverse time order,
     ## and intercept removed from X...
   
-    preinitialize <- expression({
+#    preinitialize <- expression({
     ## code to evaluate in estimate.gam...
+      ## sort y (time) into decending order, and
+      ## re-order weights and rows of X accordingly
+      ## matrix y has strat as second column
+#      G$family$data <- list()
+#      y.order <- if (is.matrix(G$y)) order(G$y[,2],G$y[,1],decreasing=TRUE) else
+#                 order(G$y,decreasing=TRUE)
+#      G$family$data$y.order <- y.order
+#      G$y <- if (is.matrix(G$y)) G$y[y.order,] else G$y[y.order]
+#      attrX <- attributes(G$X)
+#      G$X <- G$X[y.order,,drop=FALSE]
+#      attributes(G$X) <- attrX
+#      G$w <- G$w[y.order]
+#      G$offset <- G$offset[y.order]
+#    })
+
+    preinitialize <- function(G) {
+      ## G is a gam pre-fit object. Pre-initialize can manipulate some of its
+      ## elements, returning a named list of the modified ones.
       ## sort y (time) into decending order, and
       ## re-order weights and rows of X accordingly
       ## matrix y has strat as second column
@@ -40,7 +58,8 @@ cox.ph <- function (link = "identity") {
       attributes(G$X) <- attrX
       G$w <- G$w[y.order]
       G$offset <- G$offset[y.order]
-    })
+      list(family=G$family,y=G$y,X=G$X,w=G$w,offset=G$offset)
+    } ##  preinitialize
     
     postproc <- expression({
     ## code to evaluate in estimate.gam, to do with data ordering and 
@@ -59,6 +78,7 @@ cox.ph <- function (link = "identity") {
       object$null.deviance <- ## sum of squares of null deviance residuals
       2*sum(abs((object$prior.weights + log(s0.base) + object$prior.weights*(log(-log(s0.base)))))) 
       ## and undo the re-ordering...
+      y.order <- G$family$data$y.order
       object$linear.predictors[y.order] <- object$linear.predictors
       object$fitted.values[y.order] <- object$fitted.values
       if (is.matrix(object$y)) object$y[y.order,] <- object$y else object$y[y.order] <- object$y  

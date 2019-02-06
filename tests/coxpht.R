@@ -33,7 +33,7 @@ tdpois <- function(dat,event="z",et="futime",t="day",status="status1",
     ## Now do the interpolation of covariates to event times...
     um <- data.frame(lapply(X=di,FUN=app,t=di[[t]],to=tr))
     ## Mark the actual event...
-    if (um[[et]][1]==max(tr)&&um[[status]]==1) um[[event]][nrow(um)] <- 1 
+    if (um[[et]][1]==max(tr)&&um[[status]][1]==1) um[[event]][nrow(um)] <- 1 
     um[[et]] <- tr ## reset time to relevant event times
     dap[start:(start-1+nrow(um)),] <- um ## copy to dap
     start <- start + nrow(um)

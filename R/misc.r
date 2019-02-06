@@ -242,6 +242,19 @@ choldrop <- function(R,k) {
   Rup
 } ## choldrop
 
+cholup <- function(R,u,up=TRUE) {
+## routine to update Cholesky factor R to the factor of R'R + uu' (up == TRUE)
+## or R'R - uu' (up=FALSE). 
+  n <- as.integer(ncol(R))
+  up <- as.integer(up)
+  eps <- as.double(.Machine$double.eps)
+  R1 <- R * 1.0
+  .Call(C_mgcv_chol_up,R1,u,n,up,eps)
+  if (up==0) if ((n>1 && R1[2,1] < -1)||(n==1&&u[1]>R[1])) stop("update not positive definite")
+  R1
+} ## cholup
+
+
 vcorr <- function(dR,Vr,trans=TRUE) {
 ## Suppose b = sum_k op(dR[[k]])%*%z*r_k, z ~ N(0,Ip), r ~ N(0,Vr). vcorr returns cov(b).
 ## dR is a list of p by p matrices. 'op' is 't' if trans=TRUE and I() otherwise.

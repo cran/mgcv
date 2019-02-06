@@ -15,7 +15,7 @@ and the provision of a variety of smooths of more than one variable. User define
 smooths can be added. A Bayesian approach to confidence/credible interval calculation is
 provided. Linear functionals of smooths, penalization of parametric model terms and linkage 
 of smoothing parameters are all supported. Lower level routines for generalized ridge 
-regression and penalized linearly constrained least squares are also available.
+regression and penalized linearly constrained least squares are also available. In addition to the main modelling functions, \code{\link{jagam}} provided facilities to ease the set up of models for use with JAGS, while \code{\link{ginla}} provides marginal inference via a version of Integrated Nested Laplace Approximation. 
 }
 
 \details{ \code{mgcv} provides generalized additive modelling functions \code{\link{gam}},

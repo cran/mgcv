@@ -32,8 +32,8 @@ censoring.
 Stratification is possible, allowing for different baseline hazards in different strata. In that case the response has two columns: the first is event/censoring time and the second is a numeric stratum index. See below for an example.  
 
 Prediction from the fitted model object (using the \code{predict} method) with \code{type="response"} will predict on the 
-survivor function scale. See example code below for extracting the cumulative baseline hazard/survival directly.
-Martingale or deviance 
+survivor function scale. This requires evaluation times to be provided as well as covariates (see example). Also see example code
+below for extracting the cumulative baseline hazard/survival directly. Martingale or deviance 
 residuals can be extracted. The \code{fitted.values} stored in the model object are survival function estimates for each 
 subject at their event/censoring time. 
 

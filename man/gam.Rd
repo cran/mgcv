@@ -137,7 +137,7 @@ would be required to fit is returned is returned. See argument \code{G}.}
 
 \item{G}{Usually \code{NULL}, but may contain the object returned by a previous call to \code{gam} with 
 \code{fit=FALSE}, in which case all other arguments are ignored except for
-\code{gamma}, \code{in.out}, \code{scale}, \code{control}, \code{method} \code{optimizer} and \code{fit}.}
+\code{sp}, \code{gamma}, \code{in.out}, \code{scale}, \code{control}, \code{method} \code{optimizer} and \code{fit}.}
 
 \item{in.out}{optional list for initializing outer iteration. If supplied
 then this must contain two elements: \code{sp} should be an array of

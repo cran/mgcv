@@ -1,4 +1,4 @@
-## (c) Simon N. Wood (2013-2016) distributed under GPL2
+## (c) Simon N. Wood (2013-2019) distributed under GPL2
 ## Code for the gamlss families.
 ## idea is that there are standard functions converting
 ## derivatives w.r.t. mu to derivatives w.r.t. eta, given 
@@ -1572,19 +1572,31 @@ gevlss <- function(link=list("identity","identity","logit")) {
     ## been tested against raw translated code. 
 
     exp1 <- exp(1); ## facilitates lazy auto-translation
-    aa0 <- (xi*(y-mu))/exp1^rho # added
-    log.aa1 <- log1p(aa0) # added
+    ymu <- y - mu
+    aa0 <- (xi*ymu)/exp1^rho # added
+    ind <- which(aa0 <= -1) ## added
+    if (FALSE&&length(ind)>0) { ## all added
+      xii <- xi[ind] ## this idea is really not a good one - messes up derivatives when triggered
+      erho <- exp1^rho[ind]
+      eps1 <- 1-.Machine$double.eps^.25
+      ymu[ind] <- -erho/xii*eps1
+      aa0[ind] <- -eps1
+    }
+    log.aa1 <- log1p(aa0) ## added
     aa1 <- aa0 + 1 # (xi*(y-mu))/exp1^rho+1;
     aa2 <- 1/xi;
     l  <-  sum((-aa2*(1+xi)*log.aa1)-1/aa1^aa2-rho);
+    #if (length(ind)>0) cat(aa0[ind]," l = ",l,"\n")
 
     if (deriv>0) {
       ## first derivatives m, r, x...
       bb1 <- 1/exp1^rho;
-      bb2 <- bb1*xi*(y-mu)+1;
+      bb2 <- bb1*xi*ymu+1;
+     
       l1[,1]  <-  (bb1*(xi+1))/bb2-bb1*bb2^((-1/xi)-1);
-      cc2 <- y-mu;
+      cc2 <- ymu;
       cc0 <- bb1*xi*cc2 ## added
+      
       log.cc3 <- log1p(cc0) ## added
       cc3 <- cc0 + 1 ##bb1*xi*cc2+1;
       l1[,2]  <-  (-bb1*cc2*cc3^((-1/xi)-1))+(bb1*(xi+1)*cc2)/cc3-1;
@@ -1847,3 +1859,212 @@ gevlss <- function(link=list("identity","identity","logit")) {
     available.derivs = 2 ## can use full Newton here
     ),class = c("general.family","extended.family","family"))
 } ## end gevlss
+
+
+
+## attempt at a Tweedie gamlss family, suitable for extended FS
+## estimation (i.e. avoiding horrendous 4th derivative series
+## summations)
+
+
+tw.null.fit <- function(y,a=1.001,b=1.999) {
+## MLE of c(mu,p,phi) for sample of Tweedie data, y.
+## Stabilized, step controlled, Newton
+  th <- c(0,0,0)
+  ld <- ldTweedie(y,exp(th[1]),rho=th[3],theta=th[2],a=a,b=b,all.derivs=TRUE)
+  lds <- colSums(ld)
+  for (i in 1:50) {
+    g <- lds[c(7,4,2)]
+    if (sum(abs(g)>1e-9*abs(lds[1]))==0) break
+    g[1] <- g[1] * exp(th[1]) ## work on log scale for mu
+    H <- matrix(0,3,3) ## mu, th, rh 
+    diag(H) <- c(lds[8],lds[5],lds[3])
+    H[1,2] <- H[2,1] <- lds[9]
+    H[1,3] <- H[3,1] <- lds[10]
+    H[2,3] <- H[3,2] <- lds[6]
+    H[,1] <- H[,1]*exp(th[1])
+    H[1,-1] <- H[1,-1] * exp(th[1])
+    eh <- eigen(H,symmetric=TRUE) 
+    tol <- max(abs(eh$values))*1e-7
+    eh$values[eh$values>-tol] <- -tol
+    step <- as.numeric(eh$vectors%*%((t(eh$vectors)%*%g)/eh$values))
+    ms <- max(abs(step))
+    if (ms>3) step <- step*3/ms
+    ok <- FALSE
+    while (!ok) {
+      th1 <- th - step
+      ld1 <- ldTweedie(y,exp(th1[1]),rho=th1[3],theta=th1[2],a=a,b=b,all.derivs=TRUE)
+      if (sum(ld1[,1])<lds[1]) step <- step/2 else {
+        ok <- TRUE
+        th <- th1
+        lds <- colSums(ld1)
+      }
+    }
+  }
+  p <- if (th[2]>0) (b + a*exp(-th[2]))/(1+exp(-th[2])) else (b*exp(th[2])+a)/(exp(th[2])+1)
+  c(exp(th[1]),p,exp(th[3])) # mu, p, sigma
+} ## tw.null.fit
+
+
+twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
+## General family for Tweedie location scale model...
+## so mu is mu1, rho = log(sigma) is mu2 and transformed p is mu3
+## Need to redo ldTweedie to allow vector p and phi
+## -- advantage is that there is no point buffering
+## 1. get derivatives wrt mu, rho and p.
+## 2. get required link derivatives and tri indices.
+## 3. transform derivs to derivs wrt eta (gamlss.etamu).
+## 4. get the grad and Hessian etc for the model
+##    via a call to gamlss.gH  
+  
+  ## first deal with links and their derivatives...
+  if (length(link)!=3) stop("gevlss requires 3 links specified as character strings")
+  okLinks <- list(c("log", "identity", "sqrt"),"identity",c("identity"))
+  stats <- list()
+  for (i in 1:3) {
+    if (link[[i]] %in% okLinks[[i]]) stats[[i]] <- make.link(link[[i]]) else 
+    stop(link[[i]]," link not available for mu parameter of twlss")
+    fam <- structure(list(link=link[[i]],canonical="none",linkfun=stats[[i]]$linkfun,
+           mu.eta=stats[[i]]$mu.eta),
+           class="family")
+    fam <- fix.family.link(fam)
+    stats[[i]]$d2link <- fam$d2link
+    stats[[i]]$d3link <- fam$d3link
+    stats[[i]]$d4link <- fam$d4link
+  }
+
+  env <- new.env(parent = .GlobalEnv)
+  assign(".a",a, envir = env);assign(".b",b, envir = env)
+
+  residuals <- function(object,type=c("deviance","pearson","response")) {
+      
+      a <- get(".a");b <- get(".b")
+      type <- match.arg(type)
+      mu <- object$fitted.values[,1]
+      p <- object$fitted.values[,2]
+      ind <- p > 0;
+      ethi <- exp(-p[ind]);ethni <- exp(p[!ind])
+      p[ind] <- (b+a*ethi)/(1+ethi)
+      p[!ind] <- (b*ethni+a)/(ethni+1)
+      phi <- exp(object$fitted.values[,3])
+      if (type=="pearson") {
+        rsd <- (object$y-mu)/sqrt(phi*mu^p) ## Pearson
+      } else if (type=="response") rsd <- object$y-mu else {
+        y1 <- object$y + (object$y == 0)
+        theta <- (y1^(1 - p) - mu^(1 - p))/(1 - p)
+        kappa <- (object$y^(2 - p) - mu^(2 - p))/(2 - p)
+        rsd <- sign(object$y-mu)*sqrt(pmax(2 * (object$y * theta - kappa) * object$prior.weights/phi,0))
+      }
+      return(rsd) ## (y-mu)/sigma 
+    }
+    
+  postproc <- expression({
+    ## code to evaluate in estimate.gam, to evaluate null deviance
+    ## used for dev explained - really a mean scale concept.
+    ## makes no sense to use single scale param here...
+    tw.para <- tw.null.fit(object$y) ## paramaters mu, p and phi
+    tw.y1 <- object$y + (object$y == 0)
+    tw.theta <- (tw.y1^(1 - tw.para[2]) - tw.para[1]^(1 - tw.para[2]))/(1 - tw.para[2])
+    tw.kappa <- (object$y^(2 - tw.para[2]) - tw.para[1]^(2 - tw.para[2]))/(2 - tw.para[2])
+    object$null.deviance <- sum(pmax(2 * (object$y * tw.theta - tw.kappa) * object$prior.weights/exp(object$fitted.values[,3]),0))
+  })
+
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
+  ## function defining the gamlss Tweedie model log lik. 
+  ## deriv: 0 - eval
+  ##        1 - grad and Hess
+  ##        2 - diagonal of first deriv of Hess
+  ##        3 - first deriv of Hess
+  ##        4 - everything.
+  ## This family does not have code for 3 and 4
+    if (is.null(offset)) offset <- list(0,0,0) else offset[[4]] <- 0
+    for (i in 1:3) if (is.null(offset[[i]])) offset[[i]] <- 0
+    jj <- attr(X,"lpi") ## extract linear predictor index
+    eta <- X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]] + offset[[1]]
+    mu <- family$linfo[[1]]$linkinv(eta) ## mean
+    theta <- X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] +offset[[2]] ## transformed p
+    rho <- X[,jj[[3]],drop=FALSE]%*%coef[jj[[3]]] +offset[[3]] ## log scale parameter
+    a <- get(".a");b <- get(".b")
+   
+    ld <- ldTweedie(y,mu=mu,p=NA,phi=NA,rho=rho,theta=theta,a=a,b=b,all.derivs=TRUE)
+    ## m, t, r ; mm, mt, mr, tt, tr, rr
+    l <- sum(ld[,1])
+    l1 <- cbind(ld[,7],ld[,4],ld[,2])
+    l2 <- cbind(ld[,8],ld[,9],ld[,10],ld[,5],ld[,6],ld[,3])
+
+    ig1 <- cbind(family$linfo[[1]]$mu.eta(eta),family$linfo[[2]]$mu.eta(theta),
+                   family$linfo[[3]]$mu.eta(rho))
+    g2 <- cbind(family$linfo[[1]]$d2link(mu),family$linfo[[2]]$d2link(theta),
+                  family$linfo[[3]]$d2link(rho))
+
+    n <- length(y)
+    
+    l3 <- l4 <- g3 <- g4 <- 0 ## defaults
+
+
+    if (deriv) {
+      i2 <- family$tri$i2;#i3 <- i4 <- 0
+      i3 <- family$tri$i3;i4 <- family$tri$i4
+   
+      ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
+      de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,0)
+
+      ## get the gradient and Hessian...
+      ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
+                      d1b=d1b,d2b=d2b,deriv=0,fh=fh,D=D) 
+    } else ret <- list()
+    ret$l <- l; ret
+  } ## end ll twlss
+
+  initialize <- expression({
+   ## idea is to regress g(y) on model matrix for mean, and then 
+   ## to regress the corresponding log absolute scaled residuals on 
+   ## the model matrix for log(sigma) - may be called in both
+   ## gam.fit5 and initial.spg... note that appropriate E scaling
+   ## for full calculation may be inappropriate for initialization 
+   ## which is basically penalizing something different here.
+   ## best we can do here is to use E only as a regularizer.
+   ## initial theta params are zero for p = 1.5
+      n <- rep(1, nobs)
+      ## should E be used unscaled or not?..
+      use.unscaled <- if (!is.null(attr(E,"use.unscaled"))) TRUE else FALSE
+      if (is.null(start)) {
+        jj <- attr(x,"lpi")
+        start <- rep(0,ncol(x))
+        yt1 <- if (family$link[[1]]=="identity") y else 
+               family$linfo[[1]]$linkfun(abs(y)+max(y)*1e-7)
+        x1 <- x[,jj[[1]],drop=FALSE]
+        e1 <- E[,jj[[1]],drop=FALSE] ## square root of total penalty
+        #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
+        if (use.unscaled) {
+          qrx <- qr(rbind(x1,e1))
+          x1 <- rbind(x1,e1)
+          startji <- qr.coef(qr(x1),c(yt1,rep(0,nrow(E))))
+          startji[!is.finite(startji)] <- 0       
+        } else startji <- pen.reg(x1,e1,yt1)
+        ## now the scale parameter
+        start[jj[[1]]] <- startji
+	mu1 <- family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]])
+        lres1 <- log(abs((y-mu1)/mu1^1.5))
+        x1 <-  x[,jj[[3]],drop=FALSE];e1 <- E[,jj[[3]],drop=FALSE]
+        #ne1 <- norm(e1); if (ne1==0) ne1 <- 1
+        if (use.unscaled) {
+          x1 <- rbind(x1,e1)
+          startji <- qr.coef(qr(x1),c(lres1,rep(0,nrow(E))))   
+          startji[!is.finite(startji)] <- 0
+        } else startji <- pen.reg(x1,e1,lres1)
+        start[jj[[3]]] <- startji
+      } ## is.null(start)
+  }) ## initialize twlss
+
+  environment(ll) <- environment(residuals) <- env
+
+  structure(list(family="twlss",ll=ll,link=paste(link),nlp=3,
+    tri = trind.generator(3), ## symmetric indices for accessing derivative arrays
+    initialize=initialize,postproc=postproc,residuals=residuals,
+    linfo = stats, ## link information list
+    d2link=1,d3link=1,d4link=1, ## signals to fix.family.link that all done    
+    ls=1, ## signals that ls not needed here
+    available.derivs = 0 ## no higher derivs
+    ),class = c("general.family","extended.family","family"))
+} ## end twlss
