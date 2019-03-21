@@ -84,7 +84,7 @@ Wood, S.N. (2017) P-splines with derivative based penalties and tensor product s
   fv <- predict(b,pd,se=TRUE)
   ul <- fv$fit + fv$se.fit*2; ll <- fv$fit - fv$se.fit*2
   plot(x,y,xlim=c(-.7,1.7),ylim=range(c(y,ll,ul)),main=
-  "1st order penalties: red tps; blue bs over (0,1); black bs over (-.5,1.5)")
+  "Order 1 penalties: red tps; blue bs on (0,1); black bs on (-.5,1.5)")
   ## penalty defined on (-.5,1.5) gives plausible predictions and intervals
   ## over this range...
   lines(pd$x,fv$fit);lines(pd$x,ul,lty=2);lines(pd$x,ll,lty=2)

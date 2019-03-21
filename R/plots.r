@@ -32,6 +32,10 @@ fix.family.qf <- function(fam) {
     }
   } else if (family=="binomial") {
     fam$qf <- function(p,mu,wt,scale) {
+      if (all.equal(wt,ceiling(wt))!=TRUE) {
+        wt <- ceiling(wt)
+	warning("non-integer binomial denominator: quantiles incorrect")
+      }
       qbinom(p,wt,mu)/(wt + as.numeric(wt==0))
     }
   } else if (family=="Gamma") {
@@ -440,7 +444,7 @@ plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(100),
-                     contour.col=3,...) {
+                     contour.col=4,...) {
 ## plot method function for sos.smooth terms
   if (scheme>1) return(plot.mgcv.smooth(x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
@@ -702,7 +706,7 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(50),
-                     contour.col=3,...) {
+                     contour.col=4,...) {
 ## default plot method for smooth objects `x' inheriting from "mgcv.smooth"
 ## `x' is a smooth object, usually part of a `gam' fit. It has an attribute
 ##     'coefficients' containing the coefs for the smooth, but usually these
@@ -1551,7 +1555,7 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     surf.col<-surf.col/(max.z-min.z)  
     surf.col<-round(surf.col*nCol)
     con.col <-1
-    if (color=="heat") { pal<-heat.colors(nCol);con.col<-3;}
+    if (color=="heat") { pal<-heat.colors(nCol);con.col<-4;}
     else if (color=="topo") { pal<-topo.colors(nCol);con.col<-2;}
     else if (color=="cm") { pal<-cm.colors(nCol);con.col<-1;}
     else if (color=="terrain") { pal<-terrain.colors(nCol);con.col<-2;}

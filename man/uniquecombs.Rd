@@ -54,7 +54,7 @@ If a dataframe contains variables of a type other than numeric, logical, factor 
 either have no \code{as.character} method, or whose \code{as.character} method is a many to one mapping,
 then the routine is likely to fail.
 
-If the character representation of a dataframe variable (other than of class factor of character) contains \code{*} then in priniciple the method could fail (but with a warning).
+If the character representation of a dataframe variable (other than of class factor of character) contains \code{*} then in principle the method could fail (but with a warning).
 }
 
 \examples{

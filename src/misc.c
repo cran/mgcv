@@ -184,6 +184,10 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
    rho=log(phi), and th defines p = (a + b * exp(th))/(exp(th)+1). 
    note, 1<a<b<2 (all strict) 
 
+   eps is set to negative on return if there is a problem:
+   -1.0 exhausted maximum buffer size - may not all be converged.
+   -2.0 failed due to index overflow (usually a stupidly low scale parameter)
+
    The somewhat involved approach is all about avoiding overflow or underflow. 
    Extensive use is made of 
         log { sum_j exp(x_j)} = log { sum_j exp(x_j-x_max) } + x_max
@@ -192,7 +196,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
    NOTE: still some redundancy for readability 
  
 */
-{ int j_max,i,j_lo,j_hi,jb,jal,j0,j,ok;
+{ int j_max,i,j_lo,j_hi,jb,jal,j0,j,ok,jal_lim=50000000,buffer_run_out=0,failed=0;
   double x,x1,x2,xx,ymax,ymin,alpha,*alogy,*p1,*p2,*p3,*p4,*p5,
     *wb,*wb1,//*wb2,
     *wp1,*wp2,*wpp,dpth1=0,dpth2=0,//xmax,x1max,x2max,
@@ -298,13 +302,23 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
     /* first find the location of the series maximum... */
     x = pow(y[i],2 - p)/(phi * (2 - p));
     j_max = (int) floor(x);
-    if (x - j_max  > .5||j_max<1) j_max++; 
+    if (x - j_max  > .5||j_max<1) j_max++;
+    if (fabs(j_max-x)>1) { /* index has integer overflowed */
+      failed = 1;
+      break;
+    }  
     j_max -= j0; /* converted to buffer index */
     
     j = j_max+j0;
     jalogy = j*alogy[i];
     wdW2d2W= wdlogwdp=dWpp=0.0;
     wi=w1i=w2i=0.0; // 1.0;
+    /* j_max could be > jal_1 the currently allocated, or outside [j_lo,j_hi] 
+       the currently initialized. In either case we need fill in all the buffer 
+       values from the initialized set to j_max, so we might as well reset j_max 
+       to the appropriate buffer edge.
+    */
+    if (j_max>j_hi) j_max = j_hi; if (j_max<j_lo) j_max = j_lo;
     wmax = wb[j_max] - jalogy;wmin = wmax + log_eps; 
     //  w1max = wb1[j_max] - jalogy;w1min = w1max + log_eps;    
     // w2max = wb2[j_max] - jalogy;w2min = w2max + log_eps;
@@ -384,7 +398,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         
       } 
       j_hi = jb; if (j_hi > jal-1) j_hi = jal-1; /* set j_hi to last element filled */
-      if (!ok) { /* need to expand buffer storage*/
+      if (!ok) if (jal<jal_lim) { /* need to expand buffer storage*/
         /*Rprintf("forward buffer expansion\n");*/
         wb = forward_buf(wb,&jal,0);
         wb1 = forward_buf(wb1,&jal,0);
@@ -392,7 +406,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         wp1 = forward_buf(wp1,&jal,0);
         wp2 = forward_buf(wp2,&jal,0);
         wpp = forward_buf(wpp,&jal,1);
-      }
+      } else ok = buffer_run_out = 1; /* run out of buffer - terminate */
     } /* finished upsweep and any buffer expansion */
   
     /* start downsweep to convergence or start of available buffered values */
@@ -468,7 +482,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
       if (j<=1) ok=1; /* don't care about element size if reached base */
 
       j_lo = jb; if (j_lo<0) j_lo=0; /* set j_lo to first element filled */
-      if (!ok) { /* need to expand buffer storage*/
+      if (!ok) if (jal<jal_lim) { /* need to expand buffer storage*/
         /*Rprintf("backward buffer expansion\n");*/
         wb = backward_buf(wb,&jal,&j0,&j_lo,&j_hi,0);
         wb1 = backward_buf(wb1,&jal,&j0,&j_lo,&j_hi,0);
@@ -476,7 +490,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         wp1 = backward_buf(wp1,&jal,&j0,&j_lo,&j_hi,0);
         wp2 = backward_buf(wp2,&jal,&j0,&j_lo,&j_hi,0);
         wpp = backward_buf(wpp,&jal,&j0,&j_lo,&j_hi,1); /* final '1' updates jal,j0 etc. */
-      }
+      } else ok = buffer_run_out = 1;
 
     } /* finished downsweep and any buffer expansion */
     /* Summation now complete: need to do final transformations */
@@ -488,6 +502,8 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
     w1p[i] =  wdlogwdp/wi;
 
   } /* end of looping through y */
+  if (buffer_run_out) *eps = -1.0;
+  if (failed) *eps = -2.0;
   FREE(alogy);FREE(wb);FREE(wb1);//FREE(wb2);
   FREE(logy1p2);FREE(logy1p3);FREE(wp1);FREE(wp2);FREE(wpp);
 } /* tweedious */
@@ -518,7 +534,7 @@ void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
    NOTE: still some redundancy for readability 
  
 */
-{ int j_max,i,j,ok,incr;
+{ int k,j_max,i,j,ok,incr,jal_lim=50000000,series_too_long=0,failed=0;;
   double x,x1,x2,xx,alpha,alogy,lgammaj1,
     wbj,wb1j,wp1jb,wp2jb,wppjb,
     wp1j,wp2j,wppj,dpth1,dpth2,
@@ -547,6 +563,10 @@ void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
     x = pow(y[i],2 - p)/(phi * (2 - p));
     j_max = (int) floor(x);
     if (x - j_max  > .5||j_max<1) j_max++; 
+    if (fabs(j_max-x)>1) { /* index has integer overflowed */
+      failed = 1;
+      break;
+    }
     
     j = j_max; 
     onep = 1 - p;onep2 = onep * onep;
@@ -573,6 +593,7 @@ void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
     //for (j=j_max+j0,jb=j_max;jb<=j_hi;jb++,j++) { // note initially wi etc initialized to 1 and summation starts 1 later
     incr = 1;
     lgammaj1 = lgamma((double)j+1); // lgamma(j+1) to be computed by recursion
+    k=0;
     while (!ok) {
       wbj = j * w_base - lgammaj1 - lgamma(-j * alpha);
       wb1j = -j/onep;
@@ -621,6 +642,8 @@ void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
 	lgammaj1 += -log(j+1);
         if (wj < wmin||j<1) ok=1; // finished
       }
+      k++;
+      if (k>=jal_lim) ok = series_too_long = 1; /* avoid going on for ever */
     } /* end of upsweep/downsweep */ 
     //Rprintf("wdlogwdp = %g\n",wdlogwdp);
     /* Summation now complete: need to do final transformations */
@@ -632,6 +655,8 @@ void tweedious2(double *w,double *w1,double *w2,double *w1p,double *w2p,
     w1p[i] =  wdlogwdp/wi;
 
   } /* end of looping through y */
+  if (series_too_long) *eps = -1.0;
+  if (failed) *eps = -2.0;
 } /* tweedious2 */
 
 

@@ -1736,9 +1736,12 @@ void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
    factor for A[-k,-k] returned in n-1 by n-1 matrix Rup. 
    If ut!=0 then R'R = A, with R and Rup upper triangular. 
    Otherwise RR'=A, with R and Rup lower triangular. The latter update 
-   is more Cache friendly, since the update is then from the right and operates 
-   columnwise. Calls from R should ideally be made from a wrapper called from 
-   .Call, since otherwise copying can be the dominant cost. 
+   is more Cache friendly with less effort, since the update is then from 
+   the right and operates columnwise. However, code below is column oriented in both 
+   cases, storing the givens rotations as they are computed to facilitate
+   column orientation when R is upper triangular.
+   Calls from R should ideally be made from a wrapper called from .Call, 
+  since otherwise copying can be the dominant cost. 
 
 */
   int i,j,n1;
@@ -1864,7 +1867,7 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps) {
     
     /* now construct the next hyperbolic rotation u[j] <-> R[j,j] */
     z0 = z / *x; /* sqrt(z^2+R[j,j]^2) */
-    if (fabs(z0>=1)) { /* downdate not +ve def */
+    if (fabs(z0)>=1) { /* downdate not +ve def */
       //Rprintf("j = %d  d = %g ",j,z0);
       if (*n>1) R[1] = -2.0;return; /* signals error */
     }

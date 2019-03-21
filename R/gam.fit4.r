@@ -326,13 +326,6 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
   ## if (!is.null(start)) null.coef <- start - can be on edge of feasible - not good
   null.eta <- as.numeric(x%*%null.coef + as.numeric(offset))
 
-  #old.pdev <- sum(dev.resids(y, linkinv(null.eta), weights,theta)) + t(null.coef)%*%St%*%null.coef 
-
-  #if (!is.null(start)) { ## check it's at least better than null.coef
-  #  pdev <- sum(dev.resids(y, linkinv(x%*%start+as.numeric(offset)), weights,theta)) + t(start)%*%St%*%start
-  #  if (pdev>old.pdev) start <- mustart <- etastart <- NULL
-  #}
-
   ## call the families initialization code...
 
   if (is.null(mustart)) {
@@ -372,7 +365,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
    mu <- linkinv(eta);etaold <- eta
    conv <-  boundary <- FALSE
    dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
-   w <- dd$Deta2 * .5;
+   w <- dd$Deta2 * .5
    wz <- w*(eta-offset) - .5*dd$Deta
    z <- (eta-offset) - dd$Deta.Deta2
    good <- is.finite(z)&is.finite(w)
@@ -907,7 +900,6 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   if (is.null(weights)) weights <- rep.int(1, nobs)
   if (is.null(offset)) offset <- rep.int(0, nobs)
  
-
   ## get log likelihood, grad and Hessian (w.r.t. coefs - not s.p.s) ...
   llf <- family$ll
   ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1) 
@@ -919,6 +911,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
   check.deriv <- FALSE; eps <- 1e-5 
   drop <- NULL;bdrop <- rep(FALSE,q) ## by default nothing dropped
   perturbed <- 0 ## counter for number of times perturbation tried on possible saddle
+
   for (iter in 1:(2*control$maxit)) { ## main iteration
     ## get Newton step... 
     if (check.deriv) { ## code for checking derivatives when debugging

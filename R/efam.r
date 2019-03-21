@@ -935,7 +935,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
 	#if (vec) lsth1 <- LS[,c(4,2)]
 	LS <- colSums(LS)
         #if (!vec) lsth1 <- c(LS[4],LS[2])
-	lsth1 <- c(LS[4],LS[2])
+	lsth1 <- c(LS[4],LS[2]) ## deriv w.r.t. p then log scale
         lsth2 <- matrix(c(LS[5],LS[6],LS[6],LS[3]),2,2)
         list(ls=LS[1],lsth1=lsth1,lsth2=lsth2)
     }
