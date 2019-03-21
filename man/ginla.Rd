@@ -2,7 +2,7 @@
 \alias{ginla}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{GAM Integrated Nested Laplace Approximation Newton Enhanced}
-\description{Apply Integrated Nested Laplace Approximation (INLA, Rue et al. 2009) to models estimable by \code{\link{gam}} or \code{\link{bam}}, using the INLA variant described in Wood (2018). Produces marginal posterior densities for each coefficient, selected coefficients or linear transformations of the coefficient vector. 
+\description{Apply Integrated Nested Laplace Approximation (INLA, Rue et al. 2009) to models estimable by \code{\link{gam}} or \code{\link{bam}}, using the INLA variant described in Wood (2019). Produces marginal posterior densities for each coefficient, selected coefficients or linear transformations of the coefficient vector. 
 }
 \usage{
 ginla(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,int=0,approx=0)
@@ -36,7 +36,7 @@ Note that for many models the INLA estimates are very close to the usual Gaussia
 \references{
 Rue, H, Martino, S. & Chopin, N. (2009) Approximate Bayesian inference for latent Gaussian models by using integrated nested Laplace approximations (with discussion). Journal of the Royal Statistical Society, Series B.  71: 319-392.
 
-Wood (2018, submitted) Simplified Integrated Laplace Approximation. 
+Wood (2019) Simplified Integrated Laplace Approximation. In press Biometrika. 
 }
 
 \section{WARNINGS}{

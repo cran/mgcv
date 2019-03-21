@@ -16,7 +16,7 @@ the length of the example code sections.
 
 \item{n}{ number of data to simulate.}
 
-\item{dist}{character string which may be used to spcify the distribution of
+\item{dist}{character string which may be used to specify the distribution of
 the response.}
 
 \item{scale}{Used to set noise level.}

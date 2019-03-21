@@ -4,7 +4,7 @@
 \alias{ldetS}
 \title{Getting log generalized determinant of penalty matrices}
 \usage{
-ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE, nt = 1)
+ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE, nt = 1,deriv=2)
 }
 \arguments{
 \item{Sl}{the output of \code{Sl.setup}.}
@@ -21,6 +21,8 @@ ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE, nt = 1)
 a re-parameterization object supplied in the returned object.}
 
 \item{nt}{number of parallel threads to use.}
+
+\item{deriv}{maximum order of derivatives to compute.}
 }
 \value{
 A list containing: \itemize{

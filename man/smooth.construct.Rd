@@ -211,10 +211,10 @@ constraint free parameterizations.}
 ## using this, since mgcv can happily handle non-identity 
 ## penalties.)
 
-smooth.construct.tr.smooth.spec<-function(object,data,knots)
+smooth.construct.tr.smooth.spec<-function(object,data,knots) {
 ## a truncated power spline constructor method function
 ## object$p.order = null space dimension
-{ m <- object$p.order[1]
+  m <- object$p.order[1]
   if (is.na(m)) m <- 2 ## default 
   if (m<1) stop("silly m supplied")
   if (object$bs.dim<0) object$bs.dim <- 10 ## default
@@ -249,9 +249,9 @@ smooth.construct.tr.smooth.spec<-function(object,data,knots)
   object
 }
 
-Predict.matrix.tr.smooth<-function(object,data)
+Predict.matrix.tr.smooth<-function(object,data) {
 ## prediction method function for the `tr' smooth class
-{ x <- data[[object$term]]
+  x <- data[[object$term]]
   x <- x - object$x.shift # stabilizing shift
   m <- object$m;     # spline order (3=cubic)
   k<-object$knots    # knot locations

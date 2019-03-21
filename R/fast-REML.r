@@ -401,7 +401,7 @@ ldetSblock <- function(rS,rho,deriv=2,root=FALSE,nt=1) {
   list(det = 2*sum(log(diag(R))+log(d[piv])),det1=dS1,det2=dS2,E=E)
 } ## ldetSblock
 
-ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1) {
+ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
 ## Get log generalized determinant of S stored blockwise in an Sl list.
 ## If repara=TRUE multi-term blocks will be re-parameterized using gam.reparam, and
 ## a re-parameterization object supplied in the returned object.
@@ -445,13 +445,13 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1) {
       ind <- k.sp:(k.sp+m-1) ## index for smoothing parameters
       ## call gam.reparam to deal with this block
       ## in a stable way...
-      grp <- if (repara) gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=2) else 
-             ldetSblock(Sl[[b]]$rS,rho[ind],deriv=2,root=root,nt=nt)
+      grp <- if (repara) gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=deriv) else 
+             ldetSblock(Sl[[b]]$rS,rho[ind],deriv=deriv,root=root,nt=nt)
       Sl[[b]]$lambda <- exp(rho[ind])
       ldS <- ldS + grp$det
       ## next deal with the derivatives...
       grp$det1 <- grp$det1[!fixed[ind]] ## discard derivatives for fixed components
-      grp$det2 <- grp$det2[!fixed[ind],!fixed[ind]]
+      grp$det2 <- if (deriv>1) grp$det2[!fixed[ind],!fixed[ind]] else 0 ##NULL
       nd <- length(grp$det1)
       if (nd>0) { ## then not all sp's are fixed
         dind <- k.deriv:(k.deriv+nd-1)
@@ -735,7 +735,7 @@ Sl.termMult <- function(Sl,A,full=FALSE,nt=1) {
   SA
 } ## end Sl.termMult
 
-d.detXXS <- function(Sl,PP,nt=1) {
+d.detXXS <- function(Sl,PP,nt=1,deriv=2) {
 ## function to obtain derivatives of log |X'X+S| given unpivoted PP' where 
 ## P is inverse of R from the QR of the augmented model matrix. 
   SPP <- Sl.termMult(Sl,PP,full=FALSE,nt=nt) ## SPP[[k]] is S_k PP'
@@ -744,11 +744,13 @@ d.detXXS <- function(Sl,PP,nt=1) {
   for (i in 1:nd) { 
     indi <- attr(SPP[[i]],"ind")
     d1[i] <- sum(diag(SPP[[i]][,indi,drop=FALSE]))
-    for (j in i:nd) {
-      indj <- attr(SPP[[j]],"ind")
-      d2[i,j] <- d2[j,i] <- -sum(t(SPP[[i]][,indj,drop=FALSE])*SPP[[j]][,indi,drop=FALSE])
-    }
-    d2[i,i] <- d2[i,i] + d1[i]
+    if (deriv==2) {
+      for (j in i:nd) {
+        indj <- attr(SPP[[j]],"ind")
+        d2[i,j] <- d2[j,i] <- -sum(t(SPP[[i]][,indj,drop=FALSE])*SPP[[j]][,indi,drop=FALSE])
+      }
+      d2[i,i] <- d2[i,i] + d1[i]
+    }  
   }
   list(d1=d1,d2=d2)
 } ## end d.detXXS
@@ -803,10 +805,12 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
 
   ## alternative all in one code - matches loop results, but
   ## timing close to identical - modified for parallel exec
-  D <- matrix(unlist(Skb),nrow(XX),nd)
+  D <- matrix(unlist(Skb),length(beta),nd)
   bSb1 <- colSums(beta*D)
   D1 <- .Call(C_mgcv_Rpforwardsolve,R,D[piv,]/d[piv],nt) ## note R transposed internally unlike forwardsolve
   db[piv,] <- -.Call(C_mgcv_Rpbacksolve,R,D1,nt)/d[piv]
+
+  if (is.null(XX)) return(list(bSb1=bSb1,db=db)) ## return early
   
   ## XX.db <- XX%*%db
   XX.db <- .Call(C_mgcv_pmmult2,XX,db,0,0,nt)
@@ -825,7 +829,7 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,
                        nobs=0,Mp=0,nt=c(1,1),tol=0,gamma=1) {
 ## given X'WX in XX and f=X'Wy solves the penalized least squares problem
 ## with penalty defined by Sl and rho, and evaluates a REML Newton step, the REML 
-## gradiant and the the estimated coefs bhat. If phi.fixed=FALSE then we need 
+## gradient and the the estimated coefs bhat. If phi.fixed=FALSE then we need 
 ## yy = y'Wy in order to get derivsatives w.r.t. phi.
 ## NOTE: with an optimized BLAS nt==1 is likely to be much faster than
 ##       nt > 1
@@ -1198,7 +1202,7 @@ Sl.Xprep <- function(Sl,X,nt=1) {
   }
   rank <- 0
   for (b in 1:length(Sl)) rank <- rank + Sl[[b]]$rank ## the total penalty rank
-  ## Also add Mp, the total mull space dimension to return list.  
+  ## Also add Mp, the total null space dimension to return list.  
   list(X=X,Sl=Sl,undrop=id$undrop,rank=rank,Mp=ncol(X)-rank) 
 } ## end Sl.Xprep
 

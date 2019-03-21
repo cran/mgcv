@@ -1080,7 +1080,7 @@ gam.setup <- function(formula,pterms,
     # idea here is that terms are set up in accordance with information given in split$smooth.spec
     # appropriate basis constructor is called depending on the class of the smooth
     # constructor returns penalty matrices model matrix and basis specific information
-    ## sm[[i]] <- smoothCon(split$smooth.spec[[i]],data,knots,absorb.cons,scale.penalty=scale.penalty,sparse.cons=sparse.cons) ## old code
+  
     id <- split$smooth.spec[[i]]$id
     if (is.null(id)||!idLinksBases) { ## regular evaluation
       sml <- smoothCon(split$smooth.spec[[i]],data,knots,absorb.cons,scale.penalty=scale.penalty,
@@ -1126,11 +1126,12 @@ gam.setup <- function(formula,pterms,
     if (is.null(sm[[i]]$L)) Li <- diag(length.S) else Li <- sm[[i]]$L 
      
     if (length.S > 0) { ## there are smoothing parameters to name
-       if (length.S == 1) spn <- sm[[i]]$label else {
+       if (length.S == 1) lspn <- sm[[i]]$label else {
           Sname <- names(sm[[i]]$S)
-          if (is.null(Sname)) spn <- paste(sm[[i]]$label,1:length.S,sep="") else
-          spn <- paste(sm[[i]]$label,Sname,sep="")
+          lspn <- if (is.null(Sname)) paste(sm[[i]]$label,1:length.S,sep="") else
+                  paste(sm[[i]]$label,Sname,sep="") ## names for all sp's
        }
+       spn <- lspn[1:ncol(Li)] ## names for actual working sps
     }
 
     ## extend the global L matrix...
@@ -1143,7 +1144,7 @@ gam.setup <- function(formula,pterms,
                  cbind(matrix(0,nrow(Li),ncol(L)),Li))
       if (length.S > 0) { ## there are smoothing parameters to name
         sp.names <- c(sp.names,spn) ## extend the sp name vector
-        lsp.names <- c(lsp.names,spn) ## extend full.sp name vector
+        lsp.names <- c(lsp.names,lspn) ## extend full.sp name vector
       }
     } else { ## it's a repeat id => shares existing sp's
       L0 <- matrix(0,nrow(Li),ncol(L))
@@ -1153,7 +1154,7 @@ gam.setup <- function(formula,pterms,
       L0[,idx[[id]]$c:(idx[[id]]$c+ncol(Li)-1)] <- Li
       L <- rbind(L,L0)
       if (length.S > 0) { ## there are smoothing parameters to name
-        lsp.names <- c(lsp.names,spn) ## extend full.sp name vector
+        lsp.names <- c(lsp.names,lspn) ## extend full.sp name vector
       }
     }
   }

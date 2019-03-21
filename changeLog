@@ -17,6 +17,18 @@ present, and reparameterization needs checking (also for bam).
 * OpenBLAS 0.3.2/3 appears not to be thread safe at present - can
   cause problems when opemmp multithreading.
 
+1.8-28
+
+* fix of obscure sp naming bug.	 
+
+* changed some contour default colours from green to blue (they overlay 
+  heatmaps, so green was not clever).
+
+* Tweedie likelihood evaluation code made slightly more robust - for a model
+  with machine zero scale parameter estimate it could segfault, as series 
+  maximum location could then overflow integer storage. Fixed + upper limit 
+  imposed on series length (warning if it's not enough). 
+
 1.8-27
 
 ** Added routine 'ginla' for fully Bayesian inference based on an integrated
@@ -25,7 +37,7 @@ present, and reparameterization needs checking (also for bam).
 * Tweedie location scale family added: 'twlss'. 
 
 * gam.fit5 modified to distinguish more carefully between +ve semi definite
-  and +ve definite. Previously could fail, claiming indefinteness when it 
+  and +ve definite. Previously could fail, claiming indefiniteness when it 
   should not have. Affects general families.
 
 * bam was ignoring supplied scale parameter in extended family cases - fixed.
@@ -71,7 +83,7 @@ present, and reparameterization needs checking (also for bam).
   sarse matrices). Useful for other packages using constructors and 
   smooth2random, for 'fs' smooths.
 
-* The mrf smooth constructor contained a obsolete hack in which the term 
+* The mrf smooth constructor contained an obsolete hack in which the term 
   dimension was set to 2 to avoid plotting when used as a te marginal. This 
   messed up side constraints for terms where a mrf smooth was a main effect 
   and te marginal. Fixed. 

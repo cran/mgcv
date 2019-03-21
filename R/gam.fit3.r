@@ -28,7 +28,7 @@ gam.reparam <- function(rS,lsp,deriv)
   rSncol <- unlist(lapply(rS,ncol))
   M <- length(lsp) 
   if (length(rS)>M) fixed.penalty <- TRUE else fixed.penalty <- FALSE
-  
+ 
   d.tol <- .Machine$double.eps^.3 ## group `similar sized' penalties, to save work
 
   r.tol <- .Machine$double.eps^.75 ## This is a bit delicate -- too large and penalty range space can be supressed.
@@ -1672,8 +1672,6 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
 } ## newton
 
 
-
-
 bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
                    control,gamma,scale,conv.tol=1e-6,maxNstep=3,maxSstep=2,
                    maxHalf=30,printWarn=FALSE,scoreType="GCV",start=NULL,
@@ -1810,6 +1808,8 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   initial$dVkk <- diag(t(L0) %*% b$dVkk %*% L0)
   initial$score <- score;initial$grad <- grad;
   initial$scale.est <- b$scale.est
+  start0 <- coef(b)
+  mustart0 <- fitted(b)
   rm(b)
 
   B <- diag(length(initial$grad)) ## initial Hessian
@@ -1819,7 +1819,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
      b <- gam.fit3(x=X, y=y, sp=L%*%ilsp+lsp0,Eb=Eb,UrS=UrS,
                offset = offset,U1=U1,Mp=Mp,family = family,weights=weights,deriv=1,
                control=control,gamma=gamma,scale=scale,printWarn=FALSE,
-               start=start,mustart=mustart,
+               start=start0,mustart=mustart0,
                scoreType=scoreType,null.coef=null.coef,
                pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,...) 
      if (reml) {
@@ -2497,7 +2497,7 @@ fix.family.var <- function(fam)
 } ## fix.family.var
 
 
-fix.family.ls<-function(fam)
+fix.family.ls <- function(fam)
 # adds ls the log saturated likelihood and its derivatives
 # w.r.t. the scale parameter to the family object.
 { if (!inherits(fam,"family")) stop("fam not a family object")
@@ -2951,6 +2951,12 @@ ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999,all.der
            w2pp=as.double(y*0),y=as.double(y),eps=as.double(.Machine$double.eps^2),n=as.integer(length(y)),
            th=as.double(theta[ind]),rho=as.double(rho[ind]),a=as.double(a),b=as.double(b))
     }
+    if (oo$eps < -.5) {
+      if (oo$eps < -1.5) { ## failure of series in C code
+        oo$w2 <- oo$w1 <- oo$w2p <- oo$w1p <- oo$w2pp <- rep(NA,length(y)) 
+      }
+      else warning("Tweedie density may be unreliable - series not fully converged")
+    }
     phii <- phi[ind]
     if (!work.param) { ## transform working param derivatives to p/phi derivs...
       if (length(dthp1)!=n) dthp1 <- array(dthp1,dim=n)
@@ -2960,7 +2966,7 @@ ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999,all.der
       oo$w1 <- oo$w1/phii
       oo$w2p <- oo$w2p*dthp1i^2 + dthp2[ind] * oo$w1p
       oo$w1p <- oo$w1p*dthp1i
-      oo$w2pp <- oo$w2pp*dthp1i/phii ## this appears to be wrong
+      oo$w2pp <- oo$w2pp*dthp1i/phii 
     }
 
 
@@ -3014,7 +3020,7 @@ ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999,all.der
     ld[ind,6] <- ld[ind,6] + oo$w2pp ## d2 logf / dphi dp
   } 
 
-if (FALSE) { ## DEBUG disconnetion of density terms
+if (FALSE) { ## DEBUG disconnection of density terms
   ld[ind,1] <-  oo$w ## log density
   ld[ind,2] <-  oo$w1   ## d log f / dphi
   ld[ind,3] <-  oo$w2 ## d2 logf / dphi2

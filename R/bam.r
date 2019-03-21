@@ -1,5 +1,5 @@
 ## routines for very large dataset generalized additive modelling.
-## (c) Simon N. Wood 2009-2017
+## (c) Simon N. Wood 2009-2019
 
 
 ls.size <- function(x) {
@@ -249,7 +249,6 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
     nmarg <- if (inherits(gp$smooth.spec[[i]],"tensor.smooth.spec")) length(gp$smooth.spec[[i]]$margin) else 1
     maxj <- if (gp$smooth.spec[[i]]$by=="NA") nmarg else nmarg + 1 
     mi <- if (is.null(m)||length(m)==1) m else m[i]
-#    if (!is.null(gp$smooth.spec[[i]]$id)) stop("discretization can not handle smooth ids")
     j <- 0
     for (jj in 1:maxj) { ## loop through marginals
       if (jj==1&&maxj!=nmarg) termi <- gp$smooth.spec[[i]]$by else {
@@ -599,24 +598,15 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	    w <- dd$EDeta2 * .5 
             z <- (eta-offset) - dd$Deta.EDeta2
 	  }
-          #if (rho!=0) { 
-          #  ind <- which(w<0)
-	  #  if (length(ind)>0) { ## substitute Fisher weights
-	  #    w[ind] <- dd$EDeta2[ind] * .5
-	  #    z[ind] <- (eta[ind]-offset[ind]) - dd$Deta.EDeta2[ind]
-	  #  }  
-          #}
           good <- is.finite(z)&is.finite(w)
 	  w[!good] <- 0 ## drop if !good
 	  z[!good] <- 0 ## irrelevant
-	  #dev <- sum(family$dev.resids(G$y,mu,G$w,theta))
         } else { ## exponential family
           mu.eta.val <- mu.eta(eta)
           good <- mu.eta.val != 0
           mu.eta.val[!good] <- .1 ## irrelvant as weight is zero
           z <- (eta - offset) + (G$y - mu)/mu.eta.val
           w <- (G$w * mu.eta.val^2)/variance(mu)
-          #dev <- sum(family$dev.resids(G$y,mu,G$w))
         }
       
   
@@ -655,7 +645,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
       ## block diagonal penalty object, Sl, set up before loop
 
       if (iter==1) { ## need to get initial smoothing parameters 
-        lambda.0 <- initial.sp(qrx$R,G$S,G$off,XX=TRUE) ## note that this uses the untrasformed X'X in qrx$R
+        lambda.0 <- initial.sp(qrx$R,G$S,G$off,XX=TRUE) ## note that this uses the untransformed X'X in qrx$R
         ## convert intial s.p.s to account for L 
         lsp0 <- log(lambda.0) ## initial s.p.
         if (!is.null(G$L)) lsp0 <- 
