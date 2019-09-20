@@ -25,22 +25,6 @@ cox.ph <- function (link = "identity") {
     ## initialization is tough here... need data frame in reverse time order,
     ## and intercept removed from X...
   
-#    preinitialize <- expression({
-    ## code to evaluate in estimate.gam...
-      ## sort y (time) into decending order, and
-      ## re-order weights and rows of X accordingly
-      ## matrix y has strat as second column
-#      G$family$data <- list()
-#      y.order <- if (is.matrix(G$y)) order(G$y[,2],G$y[,1],decreasing=TRUE) else
-#                 order(G$y,decreasing=TRUE)
-#      G$family$data$y.order <- y.order
-#      G$y <- if (is.matrix(G$y)) G$y[y.order,] else G$y[y.order]
-#      attrX <- attributes(G$X)
-#      G$X <- G$X[y.order,,drop=FALSE]
-#      attributes(G$X) <- attrX
-#      G$w <- G$w[y.order]
-#      G$offset <- G$offset[y.order]
-#    })
 
     preinitialize <- function(G) {
       ## G is a gam pre-fit object. Pre-initialize can manipulate some of its
@@ -115,7 +99,6 @@ cox.ph <- function (link = "identity") {
 	tr <- unique(y)
 	nt <- length(tr)
       }
-      #tr <- unique(y);nt <- length(tr)
       p <- ncol(X)
       eta <- as.double(X%*%beta) + offset
       if (ns==1) {
@@ -147,9 +130,7 @@ cox.ph <- function (link = "identity") {
         }
 	return(list(tr=tr,h=h,q=q,a=a,nt=nt,r=r,km=km,strat=strat,tr.strat=tr.strat))
       }
-      #p <- ncol(X)
-      #list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[1:(p*nt)],p,nt),nt=nt,r=r,km=oo$km,strat=strat,tr.strat=tr.strat)
-    }
+    } ## hazard
 
     residuals <- function(object,type=c("deviance","martingale")) {
       type <- match.arg(type)
@@ -160,7 +141,7 @@ cox.ph <- function (link = "identity") {
         res <- sign(res)*sqrt(-2*(res + w * log(-log.s)))
       }
       res 
-    }
+    } ## residuals
 
 
     predict <- function(family,se=FALSE,eta=NULL,y=NULL,
@@ -214,21 +195,21 @@ cox.ph <- function (link = "identity") {
     rd <- qf <- NULL ## these functions currently undefined for Cox PH
 
     ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL) {
-    ## function defining the cox model log lik.
+    ## function defining the Cox model log lik.
     ## Calls C code "coxlpl"
     ## deriv codes: 0   - evaluate the log likelihood
     ##              1   - evaluate the grad and Hessian, H, of log lik w.r.t. coefs (beta)
-    ##              2/3 - evaluate d1H =dH/drho given db/drho in d1b 
+    ##              2   - evaluate tr(Hp^{-1}dH/drho) - Hp^{-1} must be supplied in fh
+    ##                    and db/drho in d1b. Not clear if a more efficient algorithm exists for this.
+    ##              3   - evaluate d1H =dH/drho given db/drho in d1b 
     ##                    (2 is for evaluation of diagonal only)
     ##              4 -  given d1b and d2b evaluate trHid2H= tr(Hp^{-1}d2H/drhodrho')
-    ## Hp is the preconditioned penalized hessian of the log lik
+    ## Hp is the preconditioned penalized Hessian of the log lik
     ##    which is of rank 'rank'.
     ## fh is a factorization of Hp - either its eigen decomposition 
     ##    or its Choleski factor
     ## D is the diagonal pre-conditioning matrix used to obtain Hp
     ##   if Hr is the raw Hp then Hp = D*t(D*Hr)
-
-#!! if (!is.null(offset)&&sum(offset!=0)) stop("cox.ph does not yet handle offsets")
       
       if (is.matrix(y)) {
         ## first column is time, second is *numeric* code indicating strata
@@ -264,11 +245,12 @@ cox.ph <- function (link = "identity") {
         r <- match(y[ind],tr)
         ## note that the following call can not use .C(C_coxlpl,...) since the ll
         ## function is not in the mgcv namespace.
+	cderiv <- if (deriv==1) 2 else deriv ## reset 1 to 2 to get whole d1H returned
         oo <- .C("coxlpl",as.double(mu[ind]),as.double(X[ind,]),as.integer(r),as.integer(wt[ind]),
             as.double(tr),n=as.integer(length(y[ind])),p=as.integer(p),nt=as.integer(length(tr)),
             lp=as.double(0),g=as.double(g),H=as.double(H),
             d1b=as.double(d1b),d1H=as.double(d1H),d2b=as.double(d2b),d2H=as.double(d2H),
-            n.sp=as.integer(M),deriv=as.integer(deriv),PACKAGE="mgcv");
+            n.sp=as.integer(M),deriv=as.integer(cderiv),PACKAGE="mgcv");
 	if (j==1) {
           lp <- oo$lp
 	  lb <- oo$g
@@ -278,8 +260,15 @@ cox.ph <- function (link = "identity") {
 	  lb <- oo$g + lb
 	  lbb <- matrix(oo$H,p,p) + lbb
 	}
-        if (deriv==1) { d1Ho <- matrix(oo$d1H,p,M) + if (j==1) 0 else d1Ho } else
-        if (deriv>1) {
+        if (deriv==1) {
+	  #d1Ho <- matrix(oo$d1H,p,M) + if (j==1) 0 else d1Ho
+	  ind <- 1:(p^2)
+          if (j==1) d1Ho <- rep(0,M)
+          for (i in 1:M) { 
+            d1Ho[i] <- d1Ho[i] + sum(fh*matrix(oo$d1H[ind],p,p)) ## tr(Hp^{-1}dH/drho_i)
+            ind <- ind + p^2
+          }
+	} else if (deriv>1) {
           ind <- 1:(p^2)
           if (j==1) d1Ho <- list()
           for (i in 1:M) { 
@@ -289,9 +278,6 @@ cox.ph <- function (link = "identity") {
         } 
         if (deriv>2) { 
           d2Ho <- if (j==1) matrix(oo$d2H,p,M*(M+1)/2) else d2Ho + matrix(oo$d2H,p,M*(M+1)/2)
-          #d <- ev$values
-          #d[d>0] <- 1/d[d>0];d[d<=0] <- 0
-          #trHid2H <- colSums(d2H*d)
         }
       } ## strata loop
       if (deriv>2) {

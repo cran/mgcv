@@ -11,11 +11,51 @@ Currently deprecated and liable to be removed:
 
 Issues: 
 
+** openblas 0.3.x x<7 is not thread safe if itself compiled for single thread 
+   use and then called from multiple threads (unlike the reference BLAS, say).
+   0.2.20 appears to be OK. For 0.3.x x>6 make USE_THREAD=0 USE_LOCKING=1
+   to make openblas ensures thread safety.
+
 * t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
 present, and reparameterization needs checking (also for bam). 
 
-* OpenBLAS 0.3.2/3 appears not to be thread safe at present - can
-  cause problems when opemmp multithreading.
+* bam(...,discrete=TRUE) does not currently deal with the corner case in 
+  which no smoother is penalized.
+
+1.8-29
+
+* gammPQL modified to use standard GLM IRLS initilization (rather than 
+  glmmPQL method) to improve convergence of `gamm' fits.
+
+* bam(...,discrete=TRUE) now drops rownames from parametric model matrix
+  components, to save substantial memory. 
+
+* All BLAS/LAPACK calls from C now explicitly pass hidden string length 
+  arguments to avoid breakage by recent gfortran optimizations (stack 
+  corruption causing BLAS/LAPACK to return error code).  
+
+* predict.gam bug fix - parameteric interaction terms could be dropped for 
+  type="terms" if there were no smooths. knock on was that they were also 
+  dropped for all bam(...,discrete=TRUE) fits. (Thanks Justin Davis.)
+
+* bam(...,discrete=TRUE) indexing bug in setup meant that models containing 
+  smooths with matrix arguments and other smooths with factor by variable 
+  would fail at the setup stage. 
+
+* gam.fit4 initial divergence bug fix.
+
+* Gamma location-scale family 'gammals' added. See ?gammals. 
+
+* row-wise Kronecker product operator %.% added for convenience.
+
+* changes to general families to allow return of first deriv of penalized 
+  Hessian component more easily.
+
+* ocat bug fix. Response scale prediction was wrong - it ignored the estimated
+  thresholds. Thanks to Fabian Scheipl. 
+
+* bam deviance could be wrongly returned, leading to 100% explained 
+  deviance. Fixed.  
 
 1.8-28
 

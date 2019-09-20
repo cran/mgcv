@@ -1,7 +1,7 @@
 \name{missing.data}
 \alias{missing.data}
 \title{Missing data in GAMs}
-\description{If there are missing values in the reponse or covariates of a GAM then the default is simply to use only the `complete cases'. If there are many missing covariates, this can get rather wasteful. One possibility is then to use imputation. Another is to substitute a simple random effects model in which the \code{by} variable mechanism is used to set \code{s(x)} to zero for any missing \code{x}, while a Gaussian random effect is then substituted for the `missing' s(x). See the example for details of how this works, and \code{\link{gam.models}}for the necessary background on \code{by} variables. 
+\description{If there are missing values in the response or covariates of a GAM then the default is simply to use only the `complete cases'. If there are many missing covariates, this can get rather wasteful. One possibility is then to use imputation. Another is to substitute a simple random effects model in which the \code{by} variable mechanism is used to set \code{s(x)} to zero for any missing \code{x}, while a Gaussian random effect is then substituted for the `missing' s(x). See the example for details of how this works, and \code{\link{gam.models}} for the necessary background on \code{by} variables. 
 }
 
 \seealso{\code{\link{gam.vcomp}}, \code{\link{gam.models}}, \code{\link{s}}, 

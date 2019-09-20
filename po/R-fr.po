@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.3-10\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2018-06-06 15:48\n"
+"POT-Creation-Date: 2019-04-29 12:44\n"
 "PO-Revision-Date: 2005-12-09 09:13+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -64,10 +64,6 @@ msgstr ""
 msgid "family not recognized"
 msgstr "famille non reconnue"
 
-#, fuzzy
-msgid "general families not supported by bam"
-msgstr "argument test ignor"
-
 msgid "un-supported smoothness selection method"
 msgstr ""
 
@@ -101,6 +97,14 @@ msgstr ""
 msgid "Model has more coefficients than data"
 msgstr "Le modle a plus de coefficients que le nombre de donnes"
 
+msgid ""
+"length of sp must be number of free smoothing parameters in original model"
+msgstr ""
+
+#, fuzzy
+msgid "general families not supported by bam"
+msgstr "argument test ignor"
+
 msgid "AR1 parameter rho unused with generalized model"
 msgstr ""
 
@@ -121,6 +125,9 @@ msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
 msgid "not an extended family"
+msgstr ""
+
+msgid "erroneous call to estimate.theta - no free parameters"
 msgstr ""
 
 msgid "step failure in theta estimation"
@@ -345,6 +352,9 @@ msgstr ""
 msgid "all.derivs only available in rho, theta parameterization"
 msgstr ""
 
+msgid "Tweedie density may be unreliable - series not fully converged"
+msgstr ""
+
 msgid "Only 1<p<=2 supported"
 msgstr ""
 
@@ -367,8 +377,15 @@ msgstr "La longueur de start doit tre gale "
 msgid "and correspond to initial coefs for"
 msgstr " et correspond aux coefs initiaux pour "
 
+msgid "no good data in iteration"
+msgstr ""
+
 msgid "Non-finite coefficients at iteration"
 msgstr "Coefficients non finis  l'itration"
+
+#, fuzzy
+msgid "not enough finite derivatives"
+msgstr "Pas assez d'observations informatives."
 
 msgid "non finite values in Hessian"
 msgstr ""
@@ -385,6 +402,9 @@ msgstr ""
 #, fuzzy
 msgid "dist not recognised"
 msgstr "link non reconnu"
+
+msgid "er... no discrete methods for higher derivatives"
+msgstr ""
 
 msgid "gaulss requires 2 links specified as character strings"
 msgstr ""
@@ -421,6 +441,15 @@ msgid "Using ziplss for binary data makes no sense"
 msgstr ""
 
 msgid "gevlss requires 3 links specified as character strings"
+msgstr ""
+
+msgid "link not available for mu parameter of twlss"
+msgstr ""
+
+msgid "gammals requires 2 links specified as character strings"
+msgstr ""
+
+msgid "link not available for mu parameter of gammals"
 msgstr ""
 
 #, fuzzy
@@ -536,6 +565,28 @@ msgstr ""
 
 msgid "Nested smooths must be fully random"
 msgstr ""
+
+msgid "size must be in [1,120]"
+msgstr ""
+
+msgid "rank deficient re-parameterization"
+msgstr ""
+
+msgid "modal weight <=0 in integration step!!"
+msgstr ""
+
+msgid "Requires a gam or bam prefit object"
+msgstr ""
+
+msgid "bam fits only supported with discrete==TRUE"
+msgstr ""
+
+msgid "integration not available with this family - insufficient derivatives"
+msgstr ""
+
+#, fuzzy
+msgid "something wrong with A index vector"
+msgstr "il y a quelque chose d'anormal avec l'argument d."
 
 msgid "sorry link not yet handled"
 msgstr ""
@@ -925,6 +976,10 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+#, fuzzy
+msgid "update not positive definite"
+msgstr "]] n'est pas +ve dfinie."
+
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
@@ -938,6 +993,9 @@ msgid "mvn does not yet handle offsets"
 msgstr ""
 
 msgid "mvn dimension error"
+msgstr ""
+
+msgid "non-integer binomial denominator: quantiles incorrect"
 msgstr ""
 
 msgid "object is not a glm or gam"

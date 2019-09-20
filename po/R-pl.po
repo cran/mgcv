@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2018-06-06 15:48\n"
+"POT-Creation-Date: 2019-04-29 12:44\n"
 "PO-Revision-Date: 2014-03-25 17:39+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -114,12 +114,6 @@ msgstr ""
 msgid "family not recognized"
 msgstr "'family' nie został rozpoznany"
 
-# mgcv/R/mgcv.r: 3063
-# warning("'test' argument ignored")
-#, fuzzy
-msgid "general families not supported by bam"
-msgstr "argument 'test' został zignorowany"
-
 # mgcv/R/bam.r: 1079
 # stop("unsupported smoothness selection method")
 msgid "un-supported smoothness selection method"
@@ -176,6 +170,22 @@ msgstr "zażądano niezaimplementowanego typu rzadkiego więzu"
 msgid "Model has more coefficients than data"
 msgstr "Model posiada więcej współczynników niż danych"
 
+# mgcv/R/mgcv.r: 822
+# stop("incorrect number of smoothing parameters supplied for a smooth term")
+# mgcv/R/mgcv.r: 830
+# stop("incorrect number of smoothing parameters supplied for a smooth term")
+#, fuzzy
+msgid ""
+"length of sp must be number of free smoothing parameters in original model"
+msgstr ""
+"niepoprawna liczba parametrów wygładzających dostarczona do członu 'smooth'"
+
+# mgcv/R/mgcv.r: 3063
+# warning("'test' argument ignored")
+#, fuzzy
+msgid "general families not supported by bam"
+msgstr "argument 'test' został zignorowany"
+
 # mgcv/R/bam.r: 1187
 # warning("AR1 parameter rho unused with generalized model")
 msgid "AR1 parameter rho unused with generalized model"
@@ -211,6 +221,9 @@ msgid "NA times supplied for cox.ph prediction"
 msgstr ""
 
 msgid "not an extended family"
+msgstr ""
+
+msgid "erroneous call to estimate.theta - no free parameters"
 msgstr ""
 
 msgid "step failure in theta estimation"
@@ -639,6 +652,9 @@ msgstr ""
 msgid "all.derivs only available in rho, theta parameterization"
 msgstr ""
 
+msgid "Tweedie density may be unreliable - series not fully converged"
+msgstr ""
+
 # mgcv/R/gam.fit3.r: 2284
 # stop("Only 1<p<=2 supported")
 msgid "Only 1<p<=2 supported"
@@ -672,12 +688,21 @@ msgstr "Długość argumentu 'start' powinna być równa"
 msgid "and correspond to initial coefs for"
 msgstr "oraz odpowiadać początkowym współczynnikom dla"
 
+msgid "no good data in iteration"
+msgstr ""
+
 # mgcv/R/gam.fit3.r: 339
 # warning(gettextf("Non-finite coefficients at iteration %d", iter))
 # mgcv/R/mgcv.r: 1940
 # warning(gettextf("Non-finite coefficients at iteration %d", iter))
 msgid "Non-finite coefficients at iteration"
 msgstr "Nieskończone współczynniki w iteracji"
+
+# mgcv/R/gam.fit3.r: 314
+# stop("Not enough informative observations.")
+#, fuzzy
+msgid "not enough finite derivatives"
+msgstr "Zbyt mało informacyjnych obserwacji"
 
 msgid "non finite values in Hessian"
 msgstr ""
@@ -704,6 +729,9 @@ msgstr ""
 # stop("link not recognised")
 msgid "dist not recognised"
 msgstr "rozkład nie został rozpoznany"
+
+msgid "er... no discrete methods for higher derivatives"
+msgstr ""
 
 msgid "gaulss requires 2 links specified as character strings"
 msgstr ""
@@ -764,6 +792,25 @@ msgstr ""
 
 msgid "gevlss requires 3 links specified as character strings"
 msgstr ""
+
+# mgcv/R/gam.fit3.r: 2300
+# stop(gettextf("link \"%s\" is not available for Tweedie family.", linktemp), domain = "R-mgcv")
+#, fuzzy
+msgid "link not available for mu parameter of twlss"
+msgstr ""
+"połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
+"poissona"
+
+msgid "gammals requires 2 links specified as character strings"
+msgstr ""
+
+# mgcv/R/gam.fit3.r: 2300
+# stop(gettextf("link \"%s\" is not available for Tweedie family.", linktemp), domain = "R-mgcv")
+#, fuzzy
+msgid "link not available for mu parameter of gammals"
+msgstr ""
+"połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
+"poissona"
 
 # mgcv/R/gamm.r: 115
 # stop(gettextf("An object of length %d does not match the required parameter size", aux))
@@ -951,6 +998,35 @@ msgstr "wagi muszą być jak wagi w 'glm' dla ogólnego przypadku"
 # stop("Nested smooths must be fully random")
 msgid "Nested smooths must be fully random"
 msgstr "Zagnieżdżone wygładzania muszą być w pełni losowe"
+
+# mgcv/R/gam.fit3.r: 2219
+# stop("p must be in [1,2]")
+#, fuzzy
+msgid "size must be in [1,120]"
+msgstr "argument 'p' musi być w przedziale [1,2]"
+
+msgid "rank deficient re-parameterization"
+msgstr ""
+
+msgid "modal weight <=0 in integration step!!"
+msgstr ""
+
+msgid "Requires a gam or bam prefit object"
+msgstr ""
+
+msgid "bam fits only supported with discrete==TRUE"
+msgstr ""
+
+msgid "integration not available with this family - insufficient derivatives"
+msgstr ""
+
+# mgcv/R/smooth.r: 265
+# warning("something wrong with argument 'd'.")
+# mgcv/R/smooth.r: 373
+# warning("something wrong with argument 'd'.")
+#, fuzzy
+msgid "something wrong with A index vector"
+msgstr "coś nie tak z argumentem 'd'"
 
 msgid "sorry link not yet handled"
 msgstr ""
@@ -1518,6 +1594,12 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+# mgcv/R/mgcv.r: 3463
+# stop(gettextf("S[[%d]] matrix is not +ve definite.", i))
+#, fuzzy
+msgid "update not positive definite"
+msgstr "]] nie jest dodatnio określona"
+
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
@@ -1531,6 +1613,9 @@ msgid "mvn does not yet handle offsets"
 msgstr ""
 
 msgid "mvn dimension error"
+msgstr ""
+
+msgid "non-integer binomial denominator: quantiles incorrect"
 msgstr ""
 
 # mgcv/R/plots.r: 90

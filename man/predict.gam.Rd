@@ -52,7 +52,9 @@ outside \code{R} (see example code, below). }
 will be returned. Otherwise any smooth terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
 
 \item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
-If \code{NULL} then no terms are excluded. Note that this is the term names as it appears in the model summary, see example.}
+If \code{NULL} then no terms are excluded. Note that this is the term names as it appears in the model summary, see example.
+You can avoid providing the covariates for the excluded terms by setting \code{newdata.guaranteed=TRUE}, which will avoid all
+checks on \code{newdata}.}
 
 \item{block.size}{maximum number of predictions to process per call to underlying
 code: larger is quicker, but more memory intensive. Set to < 1 to use total number
@@ -157,6 +159,9 @@ b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3),data=dat)
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
 pred0 <- predict(b,newd,exclude="s(x0)") ## prediction excluding a term
+## ...and the same, but without needing to provide x0 prediction data...
+newd1 <- newd;newd1$x0 <- NULL ## remove x0 from `newd1'
+pred1 <- predict(b,newd1,exclude="s(x0)",newdata.guaranteed=TRUE)
 
 #############################################
 ## difference between "terms" and "iterms"

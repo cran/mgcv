@@ -22,7 +22,7 @@ a re-parameterization object supplied in the returned object.}
 
 \item{nt}{number of parallel threads to use.}
 
-\item{deriv}{maximum order of derivatives to compute.}
+\item{deriv}{order of derivative to use}
 }
 \value{
 A list containing: \itemize{

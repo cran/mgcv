@@ -32,7 +32,7 @@ To use this function effectively it helps to be quite familiar with the use of
 \usage{
 gamm(formula,random=NULL,correlation=NULL,family=gaussian(),
 data=list(),weights=NULL,subset=NULL,na.action,knots=NULL,
-control=list(niterEM=0,optimMethod="L-BFGS-B"),
+control=list(niterEM=0,optimMethod="L-BFGS-B",returnObject=TRUE),
 niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,...)
 }
 

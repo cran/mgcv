@@ -4,10 +4,11 @@
 \alias{Sl.setup}
 \title{Setting up a list representing a block diagonal penalty matrix}
 \usage{
-Sl.setup(G)
+Sl.setup(G,cholesky=FALSE)
 }
 \arguments{
 \item{G}{the output of \code{gam.setup}.}
+\item{cholesky}{re-parameterize using Cholesky only.}
 }
 \value{
 A list with an element for each block. 

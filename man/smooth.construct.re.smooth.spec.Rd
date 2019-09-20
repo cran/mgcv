@@ -64,6 +64,8 @@ The situation in which factor variable random effects intentionally have unobser
 You should set \code{drop.unused.levels=FALSE} in the model fitting function, \code{\link{gam}}, \code{\link{bam}} 
 or \code{\link{gamm}}, having first ensured that any fixed effect factors do not contain unobserved levels.
 
+The implementation is designed so that supplying random effect factor levels to \code{\link{predict.gam}} that were not levels of
+the factor when fitting, will result in the corresponding random effect (or interactions involving it) being set to zero (with zero standard error) for prediction. See \code{\link{random.effects}} for an example. This is achieved by the \code{Predict.matrix} method zeroing any rows of the prediction matrix involving factors that are \code{NA}. \code{\link{predict.gam}} will set any factor observation to \code{NA} if it is a level not present in the fit data. 
 
 }
 

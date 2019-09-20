@@ -1002,7 +1002,8 @@ deriv.check <- function(x, y, sp, Eb,UrS=list(),
    P0 <- b$P;fd.P1 <- P10 <- b$P1;  if (deriv==2) fd.P2 <- P2 <- b$P2 
    trA0 <- b$trA;fd.gtrA <- gtrA0 <- b$trA1 ; if (deriv==2) fd.htrA <- htrA <- b$trA2 
    dev0 <- b$deviance;fd.D1 <- D10 <- b$D1 ; if (deriv==2) fd.D2 <- D2 <- b$D2 
-
+   fd.db <- b$db.drho*0
+   
    if (scoreType%in%c("REML","P-REML","ML","P-ML")) reml <- TRUE else reml <- FALSE
 
    if (reml) {
@@ -1015,8 +1016,9 @@ deriv.check <- function(x, y, sp, Eb,UrS=list(),
      score0 <- b$GCV;grad0 <- b$GCV1;if (deriv==2) hess <- b$GCV2
    }
   
-   fd.grad <- grad0
+   fd.grad <- grad0*0
    if (deriv==2) fd.hess <- hess
+   diter <- rep(20,length(sp))
    for (i in 1:length(sp)) {
      sp1 <- sp;sp1[i] <- sp[i]+eps/2
      bf<-gam.fit3(x=x, y=y, sp=sp1,Eb=Eb,UrS=UrS,
@@ -1031,8 +1033,10 @@ deriv.check <- function(x, y, sp, Eb,UrS=list(),
       control=control,gamma=gamma,scale=scale,printWarn=FALSE,
       start=start,etastart=etastart,mustart=mustart,scoreType=scoreType,
      null.coef=null.coef,Sl=Sl,...)
-      
-   
+     diter[i] <- bf$iter - bb$iter ## check iteration count same 
+     fd.db[,i] <- (bf$coefficients - bb$coefficients)/eps
+
+
       if (!reml) {
         Pb <- bb$P;Pf <- bf$P 
         P1b <- bb$P1;P1f <- bf$P1
@@ -1105,9 +1109,12 @@ deriv.check <- function(x, y, sp, Eb,UrS=list(),
        cat("fd.hess\n");print(fd.D2)
      }
    }
- 
-   cat("\n\n The objective...\n")
 
+   plot(b$db.drho,fd.db,pch=".")
+   for (i in 1:ncol(fd.db)) points(b$db.drho[,i],fd.db[,i],pch=19,cex=.3,col=i)
+
+   cat("\n\n The objective...\n")
+   cat("diter    ");print(diter)
    cat("grad    ");print(grad0)
    cat("fd.grad ");print(fd.grad)
    if (deriv==2) {
@@ -2010,12 +2017,13 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
      
       yg <- trial$grad-initial$grad
       step <- step*trial$alpha
-      if (Wolfe2) { ## only update if Wolfe2 is met, otherwise B can fail to be +ve def.
+      rho <- sum(yg*step)
+      if (rho>0) { #Wolfe2) { ## only update if Wolfe2 is met, otherwise B can fail to be +ve def.
         if (i==1) { ## initial step --- adjust Hessian as p143 of N&W
           B <- B * trial$alpha ## this is my version 
           ## B <- B * sum(yg*step)/sum(yg*yg) ## this is N&W
         }
-        rho <- 1/sum(yg*step)
+        rho <- 1/rho # sum(yg*step)
         B <- B - rho*step%*%(t(yg)%*%B)
 
         ## Note that Wolfe 2 guarantees that rho>0 and updated B is 

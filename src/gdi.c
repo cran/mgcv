@@ -2065,7 +2065,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   int i,j,k,*pivot1,ScS,*pi,rank,*pivot,
     ntot,n_2dCols=0,n_drop,*drop,tp,
     n_work,deriv2,neg_w=0,*nind,nr,TRUE=1,FALSE=0,ML=0; 
-  
+ 
   #ifdef OPENMP_ON
   int m;
   m = omp_get_num_procs(); /* detected number of processors */
@@ -2113,7 +2113,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   
   /* get  R,nulli,dev_hess,P,K,Vt,PKtz (== beta),Q1, nind,pivot1,drop,rank,n_drop,ldetXWXS */
   if (*type==1) z=wz; /* need to pass wz to gdiPK */ 
-
+  //j=1; // debug &j for nt
   gdiPK(work,X,E,Es,rS,U1,z,raw,
         R,Rh,nulli,dev_hess,P,K,Vt,PKtz,Q1,
         nind,pivot1,drop,
@@ -2248,8 +2248,8 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   get_bSb(P0,P1,P2,sp,E,rS,rSncol,Enrow,&rank,M,n_theta,PKtz,b1,b2,deriv);
 
   /* Now get the derivatives of log|X'WX+S| w.r.t. all parameters [theta,sp] */ 
- 
-  if (ML) { 
+  //j=2; // debug &j for nt
+  if (ML) {
     *ldet = MLpenalty1(ldet1,ldet2,Tk,Tkm,nulli,X,R,Q1,nind,sp,rS,rSncol,
 		       &rank,n,Mp,M,n_theta,&neg_w,rank_tol,deriv,nt,type);
 
@@ -2283,6 +2283,7 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   /* QR decompose it and hence get new P and K */
   pivot = (int *)CALLOC((size_t)rank,sizeof(int));
   tau = (double *)CALLOC((size_t)rank*(*nt+1),sizeof(double));
+  //j=1; // debug &j for nt
   mgcv_pqr(WX,&nr,&rank,pivot,tau,nt);
   R1 = (double *)CALLOC((size_t)rank*rank,sizeof(double));
   getRpqr(R1,WX,&nr,&rank,&rank,nt);
@@ -2948,6 +2949,7 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     *R1,*tau1,Rnorm,Enorm,*R,*Xp;
   #ifdef OPENMP_ON
   int m;
+ 
   m = omp_get_num_procs(); /* detected number of processors */
   if (*nt > m || *nt < 1) *nt = m; /* no point in more threads than m */
   omp_set_num_threads(*nt); /* set number of threads to use */

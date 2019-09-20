@@ -29,8 +29,6 @@ USA. */
 #include "matrix.h"
 #include "qp.h"
 #include "general.h"
-#include <R_ext/Lapack.h>
-#include <R_ext/BLAS.h>
 
 #define round(a) ((a)-floor(a) <0.5 ? (int)floor(a):(int) floor(a)+1)
 

@@ -1,3 +1,4 @@
+##  R routines for mgcv::gamm (c) Simon Wood 2002-2019
 
 ### the following two functions are for use in place of log and exp
 ### in positivity ensuring re-parameterization.... they have `better' 
@@ -939,9 +940,10 @@ extract.lme.cov2<-function(b,data=NULL,start.level=1)
     { # get matrix with columns that are indicator variables for ith set of groups...
       # groups has outer levels first 
       if(length(levels(b$groups[[n.levels-i+1]]))==1) { ## model.matrix needs >1 level 
-        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else { 
-        X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
-                  contrasts.arg=c("contr.treatment","contr.treatment")) }
+        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else {
+	clist <- list('b$groups[[n.levels - i + 1]]'=c("contr.treatment","contr.treatment"))
+        X[[1]] <- model.matrix(~b$groups[[n.levels - i + 1]]-1,
+                  contrasts.arg=clist) }
       # Get `model matrix' columns relevant to current grouping level...
       X[[2]] <- Zt[,i.col:(i.col+grp.dims[i]-1),drop=FALSE]
       i.col <- i.col+grp.dims[i]
@@ -1057,9 +1059,10 @@ extract.lme.cov<-function(b,data=NULL,start.level=1)
     { # get matrix with columns that are indicator variables for ith set of groups...
       # groups has outer levels first 
       if(length(levels(b$groups[[n.levels-i+1]]))==1) { ## model.matrix needs >1 level 
-        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else { 
-        X[[1]] <- model.matrix(~b$groups[[n.levels-i+1]]-1,
-                  contrasts.arg=c("contr.treatment","contr.treatment")) }
+        X[[1]] <- matrix(rep(1,nrow(b$groups))) } else {
+	clist <- list('b$groups[[n.levels - i + 1]]'=c("contr.treatment","contr.treatment"))
+        X[[1]] <- model.matrix(~b$groups[[n.levels - i + 1]]-1,
+                  contrasts.arg=clist) }
       # Get `model matrix' columns relevant to current grouping level...
       X[[2]] <- Zt[,i.col:(i.col+grp.dims[i]-1),drop=FALSE]
       i.col <- i.col+grp.dims[i]
@@ -1129,34 +1132,42 @@ new.name <- function(proposed,old.names)
 }
 
 gammPQL <- function (fixed, random, family, data, correlation, weights,
-    control, niter = 30, verbose = TRUE, ...)
-
+    control, niter = 30, verbose = TRUE, ...) {
 ## service routine for `gamm' to do PQL fitting. Based on glmmPQL
-## from the MASS library (Venables & Ripley). In particular, for back 
-## compatibility the numerical results should be identical with gamm 
-## fits by glmmPQL calls. Because `gamm' already does some of the 
-## preliminary stuff that glmmPQL does, gammPQL can be simpler. It also 
-## deals with the possibility of the original data frame containing 
-## variables called `zz' `wts' or `invwt'
-
-{ off <- model.offset(data)
+## from the MASS library (Venables & Ripley). Because `gamm' already
+## does some of the preliminary stuff that glmmPQL does, gammPQL can
+## be simpler. It also deals with the possibility of the original
+## data frame containing variables called `zz' `wts' or `invwt'.
+## Modified 2019 to use standard GLM initialization to improve convergence.
+## Old glmmPQL style initialization commented out (single # first col) for
+## eventual removal.
+  off <- model.offset(data)
   if (is.null(off)) off <- 0
+  
+  y <- model.response(data) 
+  nobs <- nrow(data) 
+  if (is.null(weights)) weights <- rep(1, nrow(data))
+  mustart=NULL
+  eval(family$initialize) 
 
   wts <- weights
-  if (is.null(wts)) wts <- rep(1, nrow(data))
+# if (is.null(wts)) wts <- rep(1, nrow(data))
   wts.name <- new.name("wts",names(data)) ## avoid overwriting what's already in `data'
   data[[wts.name]] <- wts 
-
-  fit0 <- NULL ## keep checking tools happy 
+ 
+#  fit0 <- NULL ## keep checking tools happy 
   ## initial fit (might be better replaced with `gam' call)
-  eval(parse(text=paste("fit0 <- glm(formula = fixed, family = family, data = data,",
-                        "weights =",wts.name,",...)")))
-  w <- fit0$prior.weights
-  eta <- fit0$linear.predictors
-    
-  zz <- eta + fit0$residuals - off
-  wz <- fit0$weights
+#  eval(parse(text=paste("fit0 <- glm(formula = fixed, family = family, data = data,",
+#                        "weights =",wts.name,",...)")))
+#  w <- fit0$prior.weights
+#  eta <- fit0$linear.predictors
   fam <- family
+  w <- wts;eta <- fam$linkfun(mustart)    
+#  zz <- eta + fit0$residuals - off
+  mu.eta.val <- fam$mu.eta(eta)
+  zz <- eta + (y - mustart)/mu.eta.val - off
+#  wz <- fit0$weights
+  wz <- w * mu.eta.val^2/fam$variance(mustart)
   
   ## find non clashing name for pseudodata and insert in formula
   zz.name <- new.name("zz",names(data))
@@ -1191,27 +1202,22 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
     mu <- fam$linkinv(eta)
     mu.eta.val <- fam$mu.eta(eta)
     ## get pseudodata and insert in `data' 
-    data[[zz.name]] <- eta + (fit0$y - mu)/mu.eta.val - off
+#    data[[zz.name]] <- eta + (fit0$y - mu)/mu.eta.val - off
+    data[[zz.name]] <- eta + (y - mu)/mu.eta.val - off
     wz <- w * mu.eta.val^2/fam$variance(mu)
     data[[invwt.name]] <- 1/wz
   } ## end i in 1:niter
   if (!converged) warning("gamm not converged, try increasing niterPQL")
-  fit$y <- fit0$y
+# fit$y <- fit0$y
+  fit$y <- y 
   fit$w <- w ## prior weights
-  ## would require full edf to be computable with re terms include!
-  #if (is.null(correlation)) { ## then a conditional AIC is possible
-  #  y <- fit$y;weights <- w; nobs <- length(y)
-  #  eval(fam$initialize)
-  #  dev <- sum(fam$dev.resids(y,mu,w))
-  #  fit$aic <- fam$aic(y,n,mu,w,dev)
-  #}
   fit
-}
+} ## gammPQL
 
 
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
-      subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B"),
+      subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B",returnObject=TRUE),
       niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,...)
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
