@@ -2404,9 +2404,16 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
 
 
 
-Predict.matrix.random.effect <- function(object,data)
-# prediction method function for the random effect class
-{ X <- model.matrix(object$form,data)
+Predict.matrix.random.effect <- function(object,data) {
+## prediction method function for the random effect class.
+## Any NA's in the variables used from data will result in the
+## corresponding model matrix rows being set to 0. This means that
+## when predict.gam/bam sets prediction factor levels to the
+## fit factor levels, we will get NA's for levels introduced at the
+## prediction stage, and these effects will be set to zero in prediction.
+  ##X <- model.matrix(object$form,data)
+  X <- model.matrix(object$form,model.frame(object$form,data,na.action=na.pass))
+  X[!is.finite(X)] <- 0
   X
 } ## Predict.matrix.random.effect
 

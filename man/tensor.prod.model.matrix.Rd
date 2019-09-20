@@ -1,25 +1,31 @@
 \name{tensor.prod.model.matrix}
 \alias{tensor.prod.model.matrix}
 \alias{tensor.prod.penalties}
+\alias{\%.\%}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{ Utility functions for constructing tensor product smooths}
+\title{Row Kronecker product/ tensor product smooth construction}
 \description{
 Produce model matrices or penalty matrices for a tensor product smooth from the model matrices or
-penalty matrices for the marginal bases of the smooth.
+penalty matrices for the marginal bases of the smooth. The model matrix construction uses row Kronecker products.
 }
 \usage{
 tensor.prod.model.matrix(X)
 tensor.prod.penalties(S)
+a\%.\%b
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
   \item{X}{a list of model matrices for the marginal bases of a smooth} 
  \item{S}{a list of penalties for the marginal bases of a smooth.}
+ \item{a}{a matrix with the same number of rows as \code{A}.}
+ \item{b}{a matrix with the same number of rows as \code{B}.}
 }
 \details{ If \code{X[[1]]}, \code{X[[2]]} ... \code{X[[m]]} are the model matrices of the marginal bases of 
 a tensor product smooth then the ith row of the model matrix for the whole tensor product smooth is given by
 \code{X[[1]][i,]\%x\%X[[2]][i,]\%x\% ... X[[m]][i,]}, where \code{\%x\%} is the Kronecker product. Of course 
 the routine operates column-wise, not row-wise!
+
+\code{A\%.\%B} is the operator form of this `row Kronecker product'.
 
 If \code{S[[1]]}, \code{S[[2]]} ... \code{S[[m]]} are  the penalty matrices for the marginal bases, and 
 \code{I[[1]]}, \code{I[[2]]} ... \code{I[[m]]} are corresponding identity matrices, each of the same 
@@ -54,6 +60,7 @@ Generalized Additive Mixed Models. Biometrics 62(4):1025-1036
 require(mgcv)
 X <- list(matrix(1:4,2,2),matrix(5:10,2,3))
 tensor.prod.model.matrix(X)
+X[[1]]\%.\%X[[2]]
 
 S<-list(matrix(c(2,1,1,2),2,2),matrix(c(2,1,0,1,2,1,0,1,2),3,3))
 tensor.prod.penalties(S)

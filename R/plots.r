@@ -679,7 +679,7 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=
     xx <- seq(min(raw),max(raw),length=n) # generate x sequence for prediction
     nf <- length(x$flev)
     fac <- rep(x$flev,rep(n,nf))
-    dat <- data.frame(fac,xx)
+    dat <- data.frame(fac,xx,stringsAsFactors=TRUE)
     names(dat) <- c(x$fterm,x$base$term)  
     if (x$by!="NA") {        # deal with any by variables
       dat[[x$by]] <- rep(1,n)

@@ -344,7 +344,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
     if (pdev>old.pdev) start <- mukeep <- etastart <- NULL
   }
   coefold <- null.coef ## set to default, may be replaced below
-  
+  etaold <- x %*% coefold + offset
   if (!is.null(mukeep)) mustart <- mukeep
 
   ## and now finalize initialization of mu and eta...
@@ -362,7 +362,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
               }
               else family$linkfun(mustart)
   
-   mu <- linkinv(eta);etaold <- eta
+   mu <- linkinv(eta)
    conv <-  boundary <- FALSE
    dd <- dDeta(y,mu,weights,theta,family,0) ## derivatives of deviance w.r.t. eta
    w <- dd$Deta2 * .5
@@ -470,7 +470,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
                   mu <- linkinv(eta)
          }
          boundary <- TRUE
-         dev <- sum(dev.resids(y, mu, weights))
+         dev <- sum(dev.resids(y, mu, weights,theta))
          penalty <- t(start)%*%St%*%start ## need to reset penalty too
          if (control$trace) 
                   cat("Step halved: new deviance =", dev, "\n")
@@ -871,11 +871,14 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ## the stability reparameterization + log|S|_+ and derivs... 
     rp <- ldetS(Sl,rho=lsp,fixed=rep(FALSE,length(lsp)),np=q,root=TRUE) 
     x <- Sl.repara(rp$rp,x) ## apply re-parameterization to x
-    Eb <- Sl.repara(rp$rp,Eb) ## root balanced penalty 
+    #x <- Sl.repa(rp$rp,x,r=-1)
+    Eb <- Sl.repara(rp$rp,Eb) ## root balanced penalty
+    #Eb <- Sl.repa(rp$rp,Eb,r=-1)
     St <- crossprod(rp$E) ## total penalty matrix
     E <- rp$E ## root total penalty
     attr(E,"use.unscaled") <- TRUE ## signal initialization code that E not to be further scaled   
     if (!is.null(start)) start  <- Sl.repara(rp$rp,start) ## re-para start
+    #if (!is.null(start)) start  <- Sl.repa(rp$rp,start,l=1) ## re-para start
     ## NOTE: it can be that other attributes need re-parameterization here
     ##       this should be done in 'family$initialize' - see mvn for an example. 
 
@@ -1227,12 +1230,17 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     }
   }
   coef <- Sl.repara(rp$rp,fcoef,inverse=TRUE) ## undo re-parameterization of coef 
- 
+  #coef <- Sl.repa(rp$rp,fcoef,l=-1)
   if (!is.null(drop)&&!is.null(d1b)) { ## create full version of d1b with zeros for unidentifiable 
     db.drho <- matrix(0,length(bdrop),ncol(d1b));db.drho[!bdrop,] <- d1b
   } else db.drho <- d1b
   ## and undo re-para...
-  if (!is.null(d1b)) db.drho <- t(Sl.repara(rp$rp,t(db.drho),inverse=TRUE,both.sides=FALSE)) 
+  #if (!is.null(d1b)) db.drho <- t(Sl.repara(rp$rp,t(db.drho),inverse=TRUE,both.sides=FALSE)) ## wrong
+  if (!is.null(d1b)) db.drho <- Sl.repa(rp$rp,db.drho,l=-1)
+  #if (!is.null(d2b)) d2b <- Sl.repa(rp$rp,d2b,l=-1) ## NOTE: DEBUG only
+  ## Following needed for debugging H derivatives if Cholesky stabilization used
+  #if (!is.null(ll$d1H)) for (i in 1:length(ll$d1H)) ll$d1H[[i]] <- Sl.repa(rp$rp,ll$d1H[[i]],l=2,r=1) ## debug
+  #ll$lbb <- Sl.repa(rp$rp,ll$lbb,l=2,r=1) ## debug
 
   ret <- list(coefficients=coef,family=family,y=y,prior.weights=weights,
        fitted.values=fitted.values, linear.predictors=linear.predictors,
@@ -1252,7 +1260,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
        S1=rp$ldet1,
        #S=rp$ldetS,S1=rp$ldet1,S2=rp$ldet2,
        #Hp=ldetHp,Hp1=d1ldetH,Hp2=d2ldetH,
-       #b2 = d2b)
+       #b2 = d2b,
        niter=iter,H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
     ## debugging code to allow components of 2nd deriv of hessian w.r.t. sp.s 
     ## to be passed to deriv.check.... 
@@ -1468,7 +1476,8 @@ gam.fit5.post.proc <- function(object,Sl,L,lsp0,S,off) {
     Vc1 <-  Sl.initial.repara(Sl,Vc1,inverse=TRUE)
     Vc1 <- Vb + Vc1 
   } 
-  R <- Sl.repara(object$rp,R,inverse=TRUE,both.sides=FALSE)
+  #R <- Sl.repara(object$rp,R,inverse=TRUE,both.sides=FALSE)
+  R <- Sl.repa(object$rp,R,r=1)
   R <-  Sl.initial.repara(Sl,R,inverse=TRUE,both.sides=FALSE,cov=FALSE)
   F <- Vb%*%crossprod(R)
   Ve <- F%*%Vb ## 'frequentist' cov matrix
@@ -1529,13 +1538,21 @@ deriv.check5 <- function(x, y, sp,
    fd.br <- matrix(0,p,M)
    REML1 <- rep(0,M)
    fd.dH <- list()
+   if (!is.null(b$b2)) fd.br2 <- b$b2*0
+   k <- 0
    for (i in 1:M) { ## the smoothing parameter loop
      sp0 <- sp1 <- sp;sp1[i] <- sp[i] + spe/2;sp0[i] <- sp[i] - spe/2
-     b0 <- gam.fit5(x=x,y=y,lsp=sp0,Sl=Sl,weights=weights,offset=offset,deriv=0,
+     b0 <- gam.fit5(x=x,y=y,lsp=sp0,Sl=Sl,weights=weights,offset=offset,deriv=1,
           family=family,control=control,Mp=Mp,start=start,gamma=gamma)
-     b1 <- gam.fit5(x=x,y=y,lsp=sp1,Sl=Sl,weights=weights,offset=offset,deriv=0,
+     b1 <- gam.fit5(x=x,y=y,lsp=sp1,Sl=Sl,weights=weights,offset=offset,deriv=1,
           family=family,control=control,Mp=Mp,start=start,gamma=gamma)
      fd.br[,i] <- (b1$coefficients - b0$coefficients)/spe
+     if (!is.null(b$b2)) {
+       for (j in i:M) {
+         k <- k + 1
+         fd.br2[,k] <- (b1$db.drho[,j]-b0$db.drho[,j])/spe
+       }	
+     }  
      REML1[i] <- (b1$REML-b0$REML)/spe
      fd.dH[[i]] <- (b1$lbb - b0$lbb)/spe
    }
@@ -1543,6 +1560,11 @@ deriv.check5 <- function(x, y, sp,
    for (i in 1:M) {
      plot(b$db.drho[,i],fd.br[,i],xlab="computed",ylab="FD",main="db/drho");abline(0,1)
      cat("cor db/drho[",i,"] = ",cor(b$db.drho[,i],fd.br[,i]),"\n")
+   }
+   ## second deriv of b
+   if (!is.null(b$b2)) for (i in 1:ncol(b$b2)) {
+     plot(b$b2[,i],fd.br2[,i],xlab="computed",ylab="FD",main="d2b/drhorho");abline(0,1)
+     cat("cor d2b[",i,"] = ",cor(b$b2[,i],fd.br2[,i]),"\n")
    }
    ## plot first deriv Hessian against FD version
    for (i in 1:M) {

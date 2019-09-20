@@ -54,7 +54,8 @@ outside \code{R} (see example code, below). }
 
 \item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array
 will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
-If \code{NULL} then no terms are excluded.}
+If \code{NULL} then no terms are excluded. To avoid supplying covariate values for excluded terms, set \code{newdata.guaranteed=TRUE},
+but note that this skips all checks of \code{newdata}. }
 
 
 \item{block.size}{maximum number of predictions to process per call to underlying

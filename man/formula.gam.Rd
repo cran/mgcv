@@ -94,7 +94,7 @@ indices of the linear predictors which will shre the terms specified on the r.h.
 }
 
 \section{WARNING}{
-A code{gam} formula should not refer to variables using e.g. \code{dat[["x"]]}. 
+A \code{gam} formula should not refer to variables using e.g. \code{dat[["x"]]}. 
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}

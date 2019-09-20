@@ -332,7 +332,7 @@ interpret.gam <- function(gf,extra.special=NULL) {
 ## list(y1~-1,y2~-1,1+2~s(x)), whereas if the second component was contaminated 
 ## by something else we might have list(y1~-1,y2~s(v)-1,1+2~s(x)) 
 ## 
-## For a list argument, this routine returns a list of slit.formula objects 
+## For a list argument, this routine returns a list of split.formula objects 
 ## with an extra field "lpi" indicating the linear predictors to which each 
 ## contributes...
   if (is.list(gf)) {
@@ -796,7 +796,7 @@ olid <- function(X,nsdf,pstart,flpi,lpi) {
 gam.setup.list <- function(formula,pterms,
                     data=stop("No data supplied to gam.setup"),knots=NULL,sp=NULL,
                     min.sp=NULL,H=NULL,absorb.cons=TRUE,sparse.cons=0,select=FALSE,idLinksBases=TRUE,
-                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=NULL) {
+                    scale.penalty=TRUE,paraPen=NULL,gamm.call=FALSE,drop.intercept=NULL,apply.by=TRUE,modCon=0) {
 ## version of gam.setup for when gam is called with a list of formulae, 
 ## specifying several linear predictors...
 ## key difference to gam.setup is an attribute to the model matrix, "lpi", which is a list
@@ -811,7 +811,7 @@ gam.setup.list <- function(formula,pterms,
 
   G <- gam.setup(formula[[1]],pterms[[1]],
               data,knots,sp,min.sp,H,absorb.cons,sparse.cons,select,
-              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[1],list.call=TRUE)
+              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[1],apply.by=apply.by,list.call=TRUE,modCon=modCon)
   G$pterms <- pterms
   
   G$offset <- list(G$offset)
@@ -842,7 +842,7 @@ gam.setup.list <- function(formula,pterms,
     um <- gam.setup(formula[[i]],pterms[[i]],
               data,knots,sp,min.sp,#sp[spind],min.sp[spind],
 	      H,absorb.cons,sparse.cons,select,
-              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[i],list.call=TRUE)
+              idLinksBases,scale.penalty,paraPen,gamm.call,drop.intercept[i],apply.by=apply.by,list.call=TRUE,modCon=modCon)
     used.sp <- length(um$lsp0)	      
     if (!is.null(sp)&&used.sp>0) sp <- sp[-(1:used.sp)] ## need to strip off already used sp's
     if (!is.null(min.sp)&&nrow(um$L)>0) min.sp <- min.sp[-(1:nrow(um$L))]  
@@ -932,6 +932,13 @@ gam.setup.list <- function(formula,pterms,
   attr(lpi,"overlap") <- lp.overlap
   attr(G$X,"lpi") <- lpi
   attr(G$nsdf,"pstart") <- pstart ##unlist(lapply(lpi,min))
+
+  ## assemble a global indicator array for non-linear parameters... 
+  G$g.index <- rep(FALSE,ncol(G$X))
+  if (length(G$smooth)) for (i in 1:length(G$smooth))
+    if (!is.null(G$smooth[[i]]$g.index)) G$g.index[G$smooth[[i]]$first.para:G$smooth[[i]]$last.para] <- G$smooth[[i]]$g.index
+  if (!any(G$g.index)) G$g.index <- NULL  
+
   G
 } ## gam.setup.list
 
@@ -1406,19 +1413,24 @@ gam.setup <- function(formula,pterms,
   if (G$nsdf > 0) term.names <- colnames(G$X)[1:G$nsdf] else term.names<-array("",0)
   n.smooth <- length(G$smooth)
   if (n.smooth)
-  for (i in 1:n.smooth) { ## create coef names, if smooth has any coefs!
-    k<-1
+  ## create coef names, if smooth has any coefs, and create a global indicator of non-linear parameters
+  ## g.index, if needed
+  for (i in 1:n.smooth) {
+    k <- 1
     jj <- G$smooth[[i]]$first.para:G$smooth[[i]]$last.para
     if (G$smooth[[i]]$df > 0) for (j in jj) {
       term.names[j] <- paste(G$smooth[[i]]$label,".",as.character(k),sep="")
       k <- k+1
     }
+    if (!is.null(G$smooth[[i]]$g.index)) {
+      if (is.null(G$g.index)) G$g.index <- rep(FALSE,n.p)
+      G$g.index[jj] <- G$smooth[[i]]$g.index
+    } 
   }
   G$term.names <- term.names
 
-  # now run some checks on the arguments
-  
-  ### Should check that there are enough unique covariate combinations to support model dimension
+  ## Deal with non-linear parameterizations...
+ 
 
   G$pP <- PP ## return paraPen object, if present
 
@@ -1907,7 +1919,7 @@ variable.summary <- function(pf,dl,n) {
 gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action,offset=NULL,
                 method="GCV.Cp",optimizer=c("outer","newton"),control=list(),#gam.control(),
                 scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,fit=TRUE,
-                paraPen=NULL,G=NULL,in.out=NULL,drop.unused.levels=TRUE,drop.intercept=NULL,...) {
+                paraPen=NULL,G=NULL,in.out=NULL,drop.unused.levels=TRUE,drop.intercept=NULL,discrete=FALSE,...) {
 ## Routine to fit a GAM to some data. The model is stated in the formula, which is then 
 ## interpreted to figure out which bits relate to smooth terms and which to parametric terms.
 ## Basic steps:
@@ -1925,6 +1937,12 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 ##    coefficients and obtain derivatives w.r.t. the smoothing parameters.
 ## 4. Finished 'gam' object assembled.
    control <- do.call("gam.control",control)
+   if (is.null(G) && discrete) { ## get bam to do the setup
+     cl <- match.call() ## NOTE: check all arguments more carefully
+     cl[[1]] <- quote(bam)
+     cl$fit = FALSE
+     G <- eval(cl,parent.frame()) ## NOTE: cl probaby needs modifying in G to work properly (with fit=FALSE reset?? also below??)
+   }
    if (is.null(G)) {
     ## create model frame..... 
     gp <- interpret.gam(formula) # interpret the formula 
@@ -1932,7 +1950,7 @@ gam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     mf <- match.call(expand.dots=FALSE)
     mf$formula <- gp$fake.formula 
     mf$family <- mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp<-mf$H<-mf$select <- mf$drop.intercept <-
-                 mf$gamma<-mf$method<-mf$fit<-mf$paraPen<-mf$G<-mf$optimizer <- mf$in.out <- mf$...<-NULL
+                 mf$gamma<-mf$method<-mf$fit<-mf$paraPen<-mf$G<-mf$optimizer <- mf$in.out <- mf$discrete <- mf$...<-NULL
     mf$drop.unused.levels <- drop.unused.levels
     mf[[1]] <- quote(stats::model.frame) ## as.name("model.frame")
     pmf <- mf
@@ -2699,8 +2717,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
       levm <- levels(object$model[,nn[i]]) ## original levels
       levn <- levels(factor(newdata[[i]])) ## new levels
       if (sum(!levn%in%levm)>0) { ## check not trying to sneak in new levels 
-        msg <- paste(paste(levn[!levn%in%levm],collapse=", "),"not in original fit",collapse="")
-        stop(msg)
+        msg <- paste("factor levels",paste(levn[!levn%in%levm],collapse=", "),"not in original fit",collapse="")
+        warning(msg)
       }
       ## set prediction levels to fit levels...
       if (is.matrix(newdata[[i]])) {
@@ -2744,25 +2762,25 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 
   # setup prediction arrays...
   ## in multi-linear predictor models, lpi[[i]][j] is the column of model matrix contributing the jth col to lp i 
-  lpi <- if (is.list(object$formula)) attr(object$formula,"lpi") else NULL 
+  lpi <- if (is.list(object$formula)) attr(object$formula,"lpi") else NULL
+  nlp <- if (is.null(lpi)) 1 else length(lpi)  ## number of linear predictors
   n.smooth<-length(object$smooth)
   if (type=="lpmatrix") {
     H <- matrix(0,np,nb)
   } else if (type=="terms"||type=="iterms") { 
     term.labels <- attr(object$pterms,"term.labels")
-    if (is.null(attr(object,"para.only"))) para.only <-FALSE else
-    para.only <- TRUE  # if true then only return information on parametric part
+    para.only <- attr(object,"para.only")
+    if (is.null(para.only)) para.only <- FALSE  # if TRUE then only return information on parametric part
     n.pterms <- length(term.labels)
-    fit <- array(0,c(np,n.pterms+as.numeric(!para.only)*n.smooth))
+    fit <- array(0,c(np,n.pterms+as.numeric(para.only==0)*n.smooth))
     if (se.fit) se <- fit
     ColNames <- term.labels
   } else { ## "response" or "link"
     ## get number of linear predictors, in case it's more than 1...
-    if (is.list(object$formula)) {
-      # nf <- length(object$formula) ## number of model formulae
-      nlp <- length(lpi) ## number of linear predictors
-    } else nlp <- 1 ## nf <- 1
-    # nlp <- if (is.list(object$formula)) length(object$formula) else 1
+    #if (is.list(object$formula)) {
+    #  nlp <- length(lpi) ## number of linear predictors
+    #} else nlp <- 1 
+   
     fit <- if (nlp>1) matrix(0,np,nlp) else array(0,np)
     if (se.fit) se <- fit
     fit1 <- NULL ## "response" returned by fam$fv can be non-vector 
@@ -2905,28 +2923,31 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
             sqrt(pmax(0,rowSums((X[,first:last,drop=FALSE]%*%
                           object$Vp[first:last,first:last,drop=FALSE])*X[,first:last,drop=FALSE])))
           } ## end if (se.fit)
-        }
+        } 
         colnames(fit) <- ColNames
         if (se.fit) colnames(se) <- ColNames
       } else {
         if (para.only&&is.list(object$pterms)) { 
           ## have to use term labels that match original data, or termplot fails 
-          ## to plot. This only applies for 'para.only' calls which are 
+          ## to plot. This only applies for 'para.only==1' calls which are 
           ## designed for use from termplot called from plot.gam
           term.labels <- unlist(lapply(object$pterms,attr,"term.labels"))
         }
         colnames(fit) <- term.labels
         if (se.fit) colnames(se) <- term.labels
-        # retain only terms of order 1 - this is to make termplot work
-        order <- if (is.list(object$pterms)) unlist(lapply(object$pterms,attr,"order")) else attr(object$pterms,"order")
-        term.labels <- term.labels[order==1]
-        ## fit <- as.matrix(as.matrix(fit)[,order==1])
-        fit <- fit[,order==1,drop=FALSE]
-        colnames(fit) <- term.labels
-        if (se.fit) { ## se <- as.matrix(as.matrix(se)[,order==1])
-        se <- se[,order==1,drop=FALSE]
-        colnames(se) <- term.labels } 
-      }
+        if (para.only) { 
+          # retain only terms of order 1 - this is to make termplot work
+          order <- if (is.list(object$pterms)) unlist(lapply(object$pterms,attr,"order")) else attr(object$pterms,"order")
+          term.labels <- term.labels[order==1]
+          ## fit <- as.matrix(as.matrix(fit)[,order==1])
+          fit <- fit[,order==1,drop=FALSE]
+          colnames(fit) <- term.labels
+          if (se.fit) { ## se <- as.matrix(as.matrix(se)[,order==1])
+            se <- se[,order==1,drop=FALSE]
+            colnames(se) <- term.labels 
+          }
+        } 
+      } 
     } else { ## "link" or "response" case
       fam <- object$family
       k <- attr(attr(object$model,"terms"),"offset")
@@ -3038,8 +3059,13 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
       s.offset <- napredict(na.act,s.offset)
       attr(H,"offset") <- s.offset ## term specific offsets...
     }
-    if (!is.null(attr(attr(object$model,"terms"),"offset"))) {
-      attr(H,"model.offset") <- napredict(na.act,model.offset(mf)) 
+    #if (!is.null(attr(attr(object$model,"terms"),"offset"))) {
+    #  attr(H,"model.offset") <- napredict(na.act,model.offset(mf)) 
+    #}
+    if (!is.null(offs)) {
+      offs <- offs[1:nlp]
+      for (i in 1:nlp) offs[[i]] <- napredict(na.act,offs[[i]])
+      attr(H,"model.offset") <- if (nlp==1) offs[[1]] else offs
     }
     H <- napredict(na.act,H)
     if (length(object$nsdf)>1) { ## add "lpi" attribute if more than one l.p.

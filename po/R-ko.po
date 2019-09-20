@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2018-06-06 15:48\n"
+"POT-Creation-Date: 2019-04-29 12:44\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -68,11 +68,6 @@ msgstr ""
 msgid "family not recognized"
 msgstr "family에 대한 정보를 찾을 수 없습니다."
 
-#, fuzzy
-msgid "general families not supported by bam"
-msgstr ""
-"plot.gam에 전달되는 인자 residuals의 길이가 올바르지 않아 무시되었습니다. "
-
 msgid "un-supported smoothness selection method"
 msgstr "지원되지 않는 평활화 선택법(smoothness selection method)입니다."
 
@@ -108,6 +103,15 @@ msgstr ""
 msgid "Model has more coefficients than data"
 msgstr "모형(model)이 가진 계수(coefficients)가 데이터의 개수보다 많습니다."
 
+msgid ""
+"length of sp must be number of free smoothing parameters in original model"
+msgstr ""
+
+#, fuzzy
+msgid "general families not supported by bam"
+msgstr ""
+"plot.gam에 전달되는 인자 residuals의 길이가 올바르지 않아 무시되었습니다. "
+
 msgid "AR1 parameter rho unused with generalized model"
 msgstr ""
 
@@ -132,6 +136,9 @@ msgstr ""
 #, fuzzy
 msgid "not an extended family"
 msgstr "본 페밀리(family)에 사용가능한 링크(link)가 없습니다."
+
+msgid "erroneous call to estimate.theta - no free parameters"
+msgstr ""
 
 msgid "step failure in theta estimation"
 msgstr ""
@@ -373,6 +380,9 @@ msgstr ""
 msgid "all.derivs only available in rho, theta parameterization"
 msgstr ""
 
+msgid "Tweedie density may be unreliable - series not fully converged"
+msgstr ""
+
 msgid "Only 1<p<=2 supported"
 msgstr "p는 반드시 1<p<=2라는 조건을 만족해야 합니다."
 
@@ -396,9 +406,15 @@ msgstr ""
 "와 같아야 하며 다음에 상응하는 계수(coef)들에 대한 초기값을 가지고 있어야 합"
 "니다."
 
+msgid "no good data in iteration"
+msgstr ""
+
 msgid "Non-finite coefficients at iteration"
 msgstr ""
 "다음의 반복에서 얻어진 계수의 추정치가 유한(finite)한 값을 가지지 않습니다."
+
+msgid "not enough finite derivatives"
+msgstr ""
 
 msgid "non finite values in Hessian"
 msgstr ""
@@ -414,6 +430,9 @@ msgstr "최대반복(iteration limit)에 도달했습니다: max abs grad = %g"
 
 msgid "dist not recognised"
 msgstr "dist의 정보를 찾을 수 없습니다."
+
+msgid "er... no discrete methods for higher derivatives"
+msgstr ""
 
 msgid "gaulss requires 2 links specified as character strings"
 msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
@@ -452,6 +471,18 @@ msgstr ""
 #, fuzzy
 msgid "gevlss requires 3 links specified as character strings"
 msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
+
+#, fuzzy
+msgid "link not available for mu parameter of twlss"
+msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니다."
+
+#, fuzzy
+msgid "gammals requires 2 links specified as character strings"
+msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
+
+#, fuzzy
+msgid "link not available for mu parameter of gammals"
+msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니다."
 
 msgid "An object of length %d does not match the required parameter size"
 msgstr "object의 길이 %d는 요구되어지는 모수의 크기와 일치하지 않습니다."
@@ -559,6 +590,29 @@ msgstr ""
 
 msgid "Nested smooths must be fully random"
 msgstr ""
+
+#, fuzzy
+msgid "size must be in [1,120]"
+msgstr "p는 반드시 구간 [1,2]내에 존재해야 합니다."
+
+msgid "rank deficient re-parameterization"
+msgstr ""
+
+msgid "modal weight <=0 in integration step!!"
+msgstr ""
+
+msgid "Requires a gam or bam prefit object"
+msgstr ""
+
+msgid "bam fits only supported with discrete==TRUE"
+msgstr ""
+
+msgid "integration not available with this family - insufficient derivatives"
+msgstr ""
+
+#, fuzzy
+msgid "something wrong with A index vector"
+msgstr "zlim이 올바르지 않습니다."
 
 msgid "sorry link not yet handled"
 msgstr ""
@@ -938,6 +992,9 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+msgid "update not positive definite"
+msgstr ""
+
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
@@ -951,6 +1008,9 @@ msgid "mvn does not yet handle offsets"
 msgstr ""
 
 msgid "mvn dimension error"
+msgstr ""
+
+msgid "non-integer binomial denominator: quantiles incorrect"
 msgstr ""
 
 msgid "object is not a glm or gam"

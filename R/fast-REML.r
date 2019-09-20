@@ -1,11 +1,68 @@
 ## code for fast REML computation. key feature is that first and 
 ## second derivatives come at no increase in leading order 
 ## computational cost, relative to evaluation! 
-## (c) Simon N. Wood, 2010-2017
+## (c) Simon N. Wood, 2010-2019
 
-Sl.setup <- function(G) {
+singleStrans <- function(S,rank=NULL) {
+## transform single penalty matrix to partial identity using Cholesky
+## t(D)%*%S%*%D transforms to a partial identity (rank rank)
+  Ri <- R <- suppressWarnings(chol(S,pivot=TRUE))
+  k <- ncol(S)
+  if (is.null(rank)) {
+    rank <- Rrank(R)
+    normS <- norm(S)
+    while (rank>1&&max(abs(crossprod(R[1:(rank-1),rank:k,drop=FALSE])-S[rank:k,rank:k,drop=FALSE]))
+           <.Machine$double.eps^.75*normS) rank <- rank - 1
+  }
+  piv <- attr(R,"pivot")
+  if (rank<k) {
+    R[(rank+1):k,] <- 0
+    diag(R)[(rank+1):k] <- 1
+  }  
+  Ri[piv,] <- solve(R)
+  R[,piv] <- R
+  list(D=Ri,Di=R,rank=rank)
+} ## singleStrans
+
+
+iniStrans <- function(S,rank = NULL) {
+## let a block penalty matrix be \sum_i \lambda_i S_i, and of rank r.
+## This routine finds a reparameterization such that the Si are confined to
+## the initial r by r block.
+  St <- S[[1]]/norm(S[[1]]); m <- length(S)
+  if (m>1) for (i in 2:m) St <- St + S[[i]]/norm(S[[i]])
+  R <- suppressWarnings(chol(St,pivot=TRUE))
+  p <- nrow(St)
+  if (is.null(rank)) {
+    rank <- Rrank(R)
+    normS <- norm(St) ## direct check that rank not over-estimated
+    while (rank>1&&max(abs(crossprod(R[1:(rank-1),rank:p,drop=FALSE])-St[rank:p,rank:p,drop=FALSE]))
+           <.Machine$double.eps^.75*normS) rank <- rank - 1
+  }
+  piv <- attr(R,"pivot")
+  ipiv <- piv; ipiv[piv] <- 1:p
+  if (rank==p) { ## nothing to do
+    return(list(S=S,T=diag(p),Ti=diag(p)))
+  }
+  ind <- (rank+1):p
+  R[ind,ind] <- diag(length(ind))
+  # S1 <- S # save original for checking
+  for (i in 1:m) {
+    S[[i]] <- forwardsolve(t(R),t(forwardsolve(t(R),S[[i]][piv,piv])))[1:rank,1:rank]
+    S[[i]] <- (S[[i]] + t(S[[i]]))*.5
+  }
+  T <- backsolve(R,diag(p))[ipiv,]
+  #range((t(T)%*%S1[[1]]%*%T)[1:rank,1:rank]-S[[1]])
+  #range(T%*%R[,ipiv]-diag(p))
+  ## So T will map original S to transformed S, and R[,ipiv] is inverse transform.
+  list(S=S,T=T,Ti=R[,ipiv],rank=rank)
+} ## iniStrans
+
+
+Sl.setup <- function(G,cholesky=FALSE) {
 ## Sets up a list representing a block diagonal penalty matrix.
 ## from the object produced by `gam.setup'.
+## Uses only pivoted Cholesky if cholesky==TRUE.
 ## Return object is a list, Sl, with an element for each block.
 ## For block, b, Sl[[b]] is a list with the following elements
 ## * repara - should re-parameterization be applied to model matrix etc 
@@ -15,14 +72,19 @@ Sl.setup <- function(G) {
 ##   - If length(S)==1 then this will be an identity penalty.
 ##   - Otherwise it is a multiple penalty, and an rS list of square
 ##     root penalty matrices will be added. S (if repara) and rS (always) 
-##     will be projected into range space of total penalty matrix. 
-## * rS sqrt penalty matrices if it's a multiple penalty.
+##     will be projected into range space of total penalty matrix.
+##     If cholesky==TRUE then rS contains the projected S if !repara and otherwise
+##     rS not returned (since S contains same thing).
+## * rS sqrt penalty matrices if it's a multiple penalty and cholesky==FALSE.
+##      projected penalty if cholesky==TRUE and !repara. NULL otherwise. 
 ## * D a reparameterization matrix for the block
 ##   - Applies to cols/params from start:stop.
 ##   - If numeric then X[,start:stop]%*%diag(D) is repara X[,start:stop],
 ##     b.orig = D*b.repara
 ##   - If matrix then X[,start:stop]%*%D is repara X[,start:stop],
 ##     b.orig = D%*%b.repara
+## * Di is inverse of D, but is only supplied if D is not orthogonal, or
+##   diagonal.
 ## The penalties in Sl are in the same order as those in G
 ## Also returns attribute "E" a square root of the well scaled total
 ## penalty, suitable for rank deficiency testing, and attribute "lambda"
@@ -160,18 +222,30 @@ Sl.setup <- function(G) {
         D[ind] <- 1/sqrt(D[ind]);D[!ind] <- 1 ## X' = X%*%diag(D) 
         Sl[[b]]$D <- D; Sl[[b]]$ind <- ind
       } else { ## S is not diagonal
-        es <- eigen(Sl[[b]]$S[[1]],symmetric=TRUE)
-        U <- es$vectors;D <- es$values
-        if (is.null(Sl[[b]]$rank)) { ## need to estimate rank
-          Sl[[b]]$rank <- sum(D>.Machine$double.eps^.8*max(D))
-        }
-        ind <- rep(FALSE,length(D))
-        ind[1:Sl[[b]]$rank] <- TRUE ## index penalized elements
-        D[ind] <- 1/sqrt(D[ind]);D[!ind] <- 1
-        Sl[[b]]$D <- t(D*t(U)) ## D <- U%*%diag(D)
-        Sl[[b]]$Di <- t(U)/D
-        ## so if X is smooth model matrix X%*%D is re-parameterized form 
-        ## crossprod(Sl[[b]]$Di[1:Sl[[b]]$rank]) is the original penalty
+        if (cholesky) { ## use Cholesky based reparameterization
+          tr <- singleStrans(Sl[[b]]$S[[1]],Sl[[b]]$rank)
+	  ind <- rep(FALSE,ncol(tr$D))
+	  ind[1:tr$rank] <- TRUE
+	  Sl[[b]]$D <- tr$D
+	  Sl[[b]]$Di <- tr$Di
+	  Sl[[b]]$rank <- tr$rank
+        } else { ## use eigen based re-parameterization
+          es <- eigen(Sl[[b]]$S[[1]],symmetric=TRUE)
+          U <- es$vectors;D <- es$values
+          if (is.null(Sl[[b]]$rank)) { ## need to estimate rank
+            Sl[[b]]$rank <- sum(D>.Machine$double.eps^.8*max(D))
+          }
+          ind <- rep(FALSE,length(D))
+          ind[1:Sl[[b]]$rank] <- TRUE ## index penalized elements
+          D[ind] <- 1/sqrt(D[ind]);D[!ind] <- 1
+          Sl[[b]]$D <- t(D*t(U)) ## D <- U%*%diag(D)
+          Sl[[b]]$Di <- t(U)/D
+	}  
+        ## so if X is smooth model matrix X%*%D is re-parameterized form
+	## and t(D)%*%Sl[[b]]$S[[1]]%*%D is the reparameterized penalty
+	## -- a partial identity matrix.
+        ## Di is the inverse of D and crossprod(Di[1:rank,]) is the original
+	## penalty matrix
         Sl[[b]]$ind <- ind
       }
       ## add penalty square root into E  
@@ -189,24 +263,38 @@ Sl.setup <- function(G) {
       }
     } else { ## multiple S block
       ## must be in range space of total penalty...
-      Sl[[b]]$rS <- list() ## needed for adaptive re-parameterization
-      S <- Sl[[b]]$S[[1]]
-      for (j in 2:length(Sl[[b]]$S)) S <- S + Sl[[b]]$S[[j]] ## scaled total penalty
-      es <- eigen(S,symmetric=TRUE);U <- es$vectors; D <- es$values
-      Sl[[b]]$D <- U
-      if (is.null(Sl[[b]]$rank)) { ## need to estimate rank
-          Sl[[b]]$rank <- sum(D>.Machine$double.eps^.8*max(D))
-      }
-      ind <- 1:Sl[[b]]$rank
-      for (j in 1:length(Sl[[b]]$S)) { ## project penalties into range space of total penalty
-        bob <- t(U[,ind])%*%Sl[[b]]$S[[j]]%*%U[,ind]
-        bob <- (t(bob) + bob)/2 ## avoid over-zealous chol sym check
-        if (Sl[[b]]$repara) { ## otherwise want St and E in original parameterization
-          Sl[[b]]$S[[j]] <- bob
-        } 
-        Sl[[b]]$rS[[j]] <- mroot(bob,Sl[[b]]$rank)
-      }
-      Sl[[b]]$ind <- rep(FALSE,ncol(U))
+      Sl[[b]]$ind <- rep(FALSE,ncol(Sl[[b]]$S[[1]]))
+      if (cholesky) {
+        tr <- iniStrans(Sl[[b]]$S,Sl[[b]]$rank)
+	if (Sl[[b]]$repara) Sl[[b]]$rS <- list() 
+	for (i in 1:length(tr$S)) {
+          if (Sl[[b]]$repara) Sl[[b]]$S[[i]] <- tr$S[[i]] else
+	  Sl[[b]]$rS[[i]] <- tr$S[[i]] ## only need to store here if !repara
+        }
+	ind <- 1:tr$rank
+	Sl[[b]]$rank <- tr$rank
+	Sl[[b]]$D <- tr$T
+	Sl[[b]]$Di <- tr$Ti
+      } else {
+        Sl[[b]]$rS <- list() ## needed for adaptive re-parameterization
+        S <- Sl[[b]]$S[[1]]
+        for (j in 2:length(Sl[[b]]$S)) S <- S + Sl[[b]]$S[[j]] ## scaled total penalty
+        es <- eigen(S,symmetric=TRUE);U <- es$vectors; D <- es$values
+        Sl[[b]]$D <- U
+        if (is.null(Sl[[b]]$rank)) { ## need to estimate rank
+            Sl[[b]]$rank <- sum(D>.Machine$double.eps^.8*max(D))
+        }
+        ind <- 1:Sl[[b]]$rank
+        for (j in 1:length(Sl[[b]]$S)) { ## project penalties into range space of total penalty
+          bob <- t(U[,ind])%*%Sl[[b]]$S[[j]]%*%U[,ind]
+          bob <- (t(bob) + bob)/2 ## avoid over-zealous chol sym check
+          if (Sl[[b]]$repara) { ## otherwise want St and E in original parameterization
+            Sl[[b]]$S[[j]] <- bob
+          } 
+          Sl[[b]]$rS[[j]] <- mroot(bob,Sl[[b]]$rank)
+        }
+      }	
+      #Sl[[b]]$ind <- rep(FALSE,ncol(Sl[[b]]$S[[1]]))
       Sl[[b]]$ind[ind] <- TRUE ## index penalized within sub-range
      
       ## now compute well scaled sqrt
@@ -227,6 +315,7 @@ Sl.setup <- function(G) {
   } ## re-para finished
   attr(Sl,"E") <- E ## E'E = scaled total penalty
   attr(Sl,"lambda") <- lambda ## smoothing parameters corresponding to E
+  attr(Sl,"cholesky") <- cholesky ## store whether this is Cholesky based or not
   Sl ## the penalty list
 } ## end of Sl.setup
 
@@ -283,10 +372,37 @@ Sl.rSb <- function(Sl,rho,beta) {
   a
 } ## Sl.rSb
 
+
+Sl.inirep <- function(Sl,X,l=0,r=0,nt=1) {
+## Re-parameterize X using initial Sl reparameterization info.
+## l,r = -2,-1,0,1,2. O is do not apply, negative to apply inverse transform Di,
+##       positive for transform D, 1 for transform, 2 for its transpose.
+## Aim is for simpler and cleaner than 
+  if (length(Sl)==0 && !l && !r) return(X) ## nothing to do
+  if (is.matrix(X)) {
+    for (b in 1:length(Sl)) if (Sl[[b]]$repara) {
+      ind <- Sl[[b]]$start:Sl[[b]]$stop
+      if (l) X[ind,] <- if (l == 1) Sl[[b]]$D%*%X[ind,,drop=FALSE] else if (l == 2) t(Sl[[b]]$D)%*%X[ind,,drop=FALSE] else
+                        if (l == -1) Sl[[b]]$Di%*%X[ind,,drop=FALSE] else t(Sl[[b]]$Di)%*%X[ind,,drop=FALSE]
+      if (r) X[,ind] <- if (l == 1) X[,ind,drop=FALSE]%*%Sl[[b]]$D else if (l == 2) X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) else
+                        if (l == -1) X[,ind,drop=FALSE]%*%Sl[[b]]$Di else X[,ind,drop=FALSE]%*%t(Sl[[b]]$Di)			
+    }
+  } else { ## it's a vector
+    for (b in 1:length(Sl)) if (Sl[[b]]$repara) {
+      ind <- Sl[[b]]$start:Sl[[b]]$stop
+      if (l) X[ind] <- if (l == 1) Sl[[b]]$D%*%X[ind] else if (l == 2) t(Sl[[b]]$D)%*%X[ind] else
+                        if (l == -1) Sl[[b]]$Di%*%X[ind] else t(Sl[[b]]$Di)%*%X[ind]
+      if (r) X[ind] <- if (l == 1) X[ind]%*%Sl[[b]]$D else if (l == 2) X[ind]%*%t(Sl[[b]]$D) else
+                        if (l == -1) X[ind]%*%Sl[[b]]$Di else X[ind]%*%t(Sl[[b]]$Di)			
+    }
+  }
+  X
+} ## Sl.inirep
+
 Sl.initial.repara <- function(Sl,X,inverse=FALSE,both.sides=TRUE,cov=TRUE,nt=1) {
 ## Routine to apply initial Sl re-parameterization to model matrix X,
 ## or, if inverse==TRUE, to apply inverse re-para to parameter vector 
-## or cov matrix. if inverse is TRUE and both.sides=FALSE then 
+## or cov matrix. If inverse is TRUE and both.sides=FALSE then 
 ## re-para only applied to rhs, as appropriate for a choleski factor.
 ## If both.sides==FALSE, X is a vector and inverse==FALSE then X is
 ## taken as a coefficient vector (so re-para is inverse of that for model
@@ -357,6 +473,8 @@ Sl.initial.repara <- function(Sl,X,inverse=FALSE,both.sides=TRUE,cov=TRUE,nt=1) 
 } ## end Sl.initial.repara
 
 
+
+
 ldetSblock <- function(rS,rho,deriv=2,root=FALSE,nt=1) {
 ## finds derivatives wrt rho of log|S| where 
 ## S = sum_i tcrossprod(rS[[i]]*exp(rho[i]))
@@ -401,6 +519,133 @@ ldetSblock <- function(rS,rho,deriv=2,root=FALSE,nt=1) {
   list(det = 2*sum(log(diag(R))+log(d[piv])),det1=dS1,det2=dS2,E=E)
 } ## ldetSblock
 
+ginv1 <- function(a) {
+## Cholesky generalized inverse and log det function
+  eps <- norm(a)*.Machine$double.eps^.8
+  da <- diag(a+eps)^-.5
+  R <- suppressWarnings(chol(t(da*t(da*a)),pivot=TRUE))
+  piv <- attr(R,"pivot")
+  r <- attr(R,"rank")
+  r <- Rrank(R)
+  b <- a*0
+  E <- R[1:r,]*0
+  E[,piv] <- R[1:r,]
+  E <- t(t(E)/da)
+  piv <- piv[1:r]
+  b[piv,piv] <- chol2inv(R[1:r,1:r])
+  b <- t(t(da*b)*da)
+  ldet <- sum(log(diag(R)[1:r])) - sum(log(da))
+  list(inv = b, ldet = ldet,E=E)
+} ## ginv1
+
+ldetSt <- function(S,lam,deriv=0,repara=TRUE) {
+## completely Cholesky based computation of the determinant of
+## an additive block. Assumes initial reparameterization using
+## cholesky approach in Sl.setup.
+## Formally, St, the sum of S[[i]]*lam[i] must be full rank.
+## The S[[i]] are not all full rank (or this is pointless)
+## Returns a transformed St which can be used for stable
+## determinant evaluation by QR or Cholesky *without pivoting*
+## --- pivoting the Cholesky will mess up the very structure
+## that ensures stable computation. Also returns the matrix
+## mapping original St to its transformed version, and the
+## corresponding inverse transform. The returned S is such that
+## the sum of S[[i]]*lam[i] is *exactly* the transformed St.
+## Set repara to FALSE to get determinant computations without
+## stabilizing transforms.
+## NOTE: If T is the transformation matrix, log|T| is ommited from
+##       returned log|S| as if will cancel with log|X'X+S| in
+##       LAML. Can be re-instated by commenting in below. 
+  dominant.set <- function(nos,nD) {
+  ## on entry 'nD' is the index of the current set and 'nos' the
+  ## norms for these. On exit 'D' contains the indices (from nD)
+  ## of the dominant terms, and nD the remainder...
+    #j <- min(which(nos==max(nos))) ## single selector
+    j <- which(nos>max(nos)*1e-5)
+    D <- nD[j]; nD <- nD[-j]
+    cat("Dset =",j,"\n")
+    return(list(D=D,nD=nD))
+  } ## dominant.set
+
+  Rldet <- 0
+  m <- length(S)
+  nD <- 1:m ## index of terms not yet dealt with
+  a <- 1 ## starting row/col
+  p <- ncol(S[[1]]) ## dimension
+  T <- Ti <- diag(p) 
+  while (repara&&length(nD)>1 && a <= p) {
+    ## get indices of dominant terms and remainder
+    nos <- rep(0,length(nD)) ## for dominance determining norms 
+    j <- 1
+    for (i in nD) { nos[j] <- norm(S[[i]][a:p,a:p,drop=FALSE])*lam[i]; j <- j + 1}
+    ds <- dominant.set(nos,nD) 
+    nD <- ds$nD ## not dominant set
+    D <- ds$D   ## dominant set
+    ## Form the dominant term and its pivoted Cholesky
+    k <- p-a+1 ## current block dimension
+    Sd <- matrix(0,k,k)
+    for (i in D) Sd <- Sd + lam[i] * S[[i]][a:p,a:p,drop=FALSE]
+    R <- suppressWarnings(chol(Sd,pivot=TRUE))
+    rank <- min(Rrank(R),attr(R,"rank"))
+    piv <- attr(R,"pivot")
+    ipiv <- piv; ipiv[piv] <- 1:k
+    Sp <- Sd[piv,piv,drop=FALSE]; normS <- norm(Sp)
+    ## more expensive refinement of rank... 
+    while (rank>1&&max(abs(crossprod(R[1:(rank-1),rank:k,drop=FALSE])-Sp[rank:k,rank:k,drop=FALSE]))<.Machine$double.eps^.75*normS) rank <- rank - 1
+
+    if (rank < k) {
+      ind <- (rank+1):k
+      R[ind,ind] <- diag(length(ind)) ## augment to full rank k
+    }
+    ## Apply transform to components of D, suppressing definite machine zeroes
+    for (i in D) {
+      S[[i]][,a:p] <- t(forwardsolve(t(R),t(S[[i]][,a:p,drop=FALSE][,piv,drop=FALSE]))) ## SRi
+      S[[i]][a:p,] <- forwardsolve(t(R),S[[i]][a:p,,drop=FALSE][piv,,drop=FALSE]) ## Ri'S
+      if (rank < k) S[[i]][a:p,a:p][ind,] <- S[[i]][a:p,a:p][,ind] <- 0   
+    }
+    ## Apply transform to components of nD
+    for (i in nD) {
+      S[[i]][,a:p] <- t(forwardsolve(t(R),t(S[[i]][,a:p,drop=FALSE][,piv,drop=FALSE]))) ## SRi
+      S[[i]][a:p,] <- forwardsolve(t(R),S[[i]][a:p,,drop=FALSE][piv,,drop=FALSE]) ## Ri'S
+    }
+    ## Update the total transform matrix, its log determinant and inverse...
+    Rldet <- Rldet + sum(log(diag(R)))
+    ## Accumulate T such that |sum_i lam_i*S_i| = |T' sum_i lam_i * St_i T|
+    ## St_i being transformed versions...
+    Ti[,a:p] <- t(forwardsolve(t(R),t(Ti[,a:p,drop=FALSE][,piv,drop=FALSE]))) ## this is inverse
+    T[a:p,] <- R %*% T[a:p,,drop=FALSE][piv,,drop=FALSE]
+    a <- a + rank 
+  } ## finished transforming
+  ## compute the log determinant
+  St <- matrix(0,p,p)
+  for (i in 1:m) St <- St + lam[i]*S[[i]]
+  if (repara) {
+    E <- R1 <- chol(St)
+    Rldet <- sum(log(diag(R1))) # + Rldet ## note: no log|T| - cancels in REML
+  } else { ## use stabilized generalized inverse
+    gi <- ginv1(St)
+    E <- gi$E
+    Rldet <- gi$ldet #+ Rldet ## note: no log|T| - cancels in REML
+  }
+  det1 <- det2 <- NULL
+  if (deriv>0) {
+    R1 <- if (repara) chol2inv(R1) else gi$inv
+    det1 <- lam*0
+    for (i in 1:m) det1[i] <- sum(R1*S[[i]]*lam[i])
+  }
+  if (deriv>1) {
+    SiS <- list()
+    det2 <- matrix(0,m,m)
+    for (i in 1:m) {
+      SiS[[i]] <- R1 %*% S[[i]]
+      for (j in 1:i) det2[i,j] <- det2[j,i] <- -sum(SiS[[i]]*t(SiS[[j]]))*lam[i]*lam[j]
+      det2[i,i] <- det2[i,i] + det1[i]
+    }  
+  }
+  list(det=2*Rldet,T=T,S=S,Ti=Ti,det1=det1,det2 = det2,St=St,E=E,kappa=kappa(St))
+} ## ldetSt
+
+
 ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
 ## Get log generalized determinant of S stored blockwise in an Sl list.
 ## If repara=TRUE multi-term blocks will be re-parameterized using gam.reparam, and
@@ -417,6 +662,7 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
   ldS <- 0
   d1.ldS <- rep(0,n.deriv)
   d2.ldS <- matrix(0,n.deriv,n.deriv)
+  cholesky <- attr(Sl,"cholesky")
   rp <- list() ## reparameterization list
   if (root) E <- matrix(0,np,np) else E <- NULL
   if (length(Sl)>0) for (b in 1:length(Sl)) { ## work through blocks
@@ -445,7 +691,9 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
       ind <- k.sp:(k.sp+m-1) ## index for smoothing parameters
       ## call gam.reparam to deal with this block
       ## in a stable way...
-      grp <- if (repara) gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=deriv) else 
+      if (cholesky) {
+	grp <-  ldetSt(Sl[[b]]$S,lam=exp(rho[ind]),deriv=deriv,repara)
+      } else grp <- if (repara) gam.reparam(Sl[[b]]$rS,lsp=rho[ind],deriv=deriv) else 
              ldetSblock(Sl[[b]]$rS,rho[ind],deriv=deriv,root=root,nt=nt)
       Sl[[b]]$lambda <- exp(rho[ind])
       ldS <- ldS + grp$det
@@ -460,11 +708,15 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
         k.deriv <- k.deriv + nd
       }
       ## now store the reparameterization information   
-      if (repara) {   
-        rp[[k.rp]] <- list(block =b,ind = (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind],Qs = grp$Qs,repara=Sl[[b]]$repara)
+      if (repara) {
+        ## note that Ti is equivalent to Qs...
+        rp[[k.rp]] <- if (cholesky) list(block =b,ind = (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind],T=grp$T,
+	              Ti=grp$Ti,repara=Sl[[b]]$repara) else list(block =b,ind = (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind],
+	              Qs = grp$Qs,repara=Sl[[b]]$repara) 
         k.rp <- k.rp + 1
         for (i in 1:m) {
-          Sl[[b]]$Srp[[i]] <- Sl[[b]]$lambda[i]*grp$rS[[i]]%*%t(grp$rS[[i]])
+          Sl[[b]]$Srp[[i]] <- if (cholesky) Sl[[b]]$lambda[i]*grp$S[[i]] else
+	                      Sl[[b]]$lambda[i]*grp$rS[[i]]%*%t(grp$rS[[i]])
         }
       }
       k.sp <- k.sp + m
@@ -477,6 +729,7 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2) {
         } else {  
           ## gam.reparam always returns root penalty in E, but 
           ## ldetSblock returns penalty in E if root==FALSE
+	  if (cholesky) Sl[[b]]$St <- grp$St else
           Sl[[b]]$St <- if (repara) crossprod(grp$E) else grp$E
         }
       } else { ## square root block and St need to be in original parameterization...
@@ -527,6 +780,7 @@ Sl.addS0 <- function(Sl,A,rho) {
 ## Routine to add total penalty to matrix A. Sl is smooth penalty
 ## list from Sl.setup, so initial reparameterizations have taken place,
 ## and should have already been applied to A using Sl.initial.repara
+## inefficient prototype of Sl.addS 
   k <- 1
   for (b in 1:length(Sl)) {
     ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind] 
@@ -543,29 +797,58 @@ Sl.addS0 <- function(Sl,A,rho) {
   A
 } ## Sl.addS0
 
+Sl.repa <- function(rp,X,l=0,r=0) {
+## Re-parameterize X using rp reparameterization info.
+## l,r = -2,-1,0,1,2. O is do not apply, negative to apply inverse transform Di,
+##       positive for transform D, 1 for transform, 2 for its transpose.
+## If b' is transformed and b  orginal. Di b' = b and b' = D b.
+## If T present D=T and Di = Ti. Otherwise D = t(Qs) and Di = Qs.
+## Aim is for simpler and cleaner than Sl.repara
+  nr <- length(rp);if (nr==0) return(X)
+  for (i in 1:nr) if (rp[[i]]$repara) {
+    if (l) {
+      T <- if (is.null(rp[[i]]$Qs)) { if (l<0) { if (l==-2) t(rp[[i]]$Ti) else rp[[i]]$Ti
+           } else { if (l==2) t(rp[[i]]$T) else rp[[i]]$T }} else { if (l<0) { if (l==-2) t(rp[[i]]$Qs) else rp[[i]]$Qs
+           } else { if (l==2) rp[[i]]$Qs else t(rp[[i]]$Qs) }}
+     if (is.matrix(X)) X[rp[[i]]$ind,] <- T %*% X[rp[[i]]$ind,] else X[rp[[i]]$ind] <- T %*% X[rp[[i]]$ind]	   	   
+    }
+    if (r) {
+      T <- if (is.null(rp[[i]]$Qs)) { if (r<0) { if (r==-2) t(rp[[i]]$Ti) else rp[[i]]$Ti
+           } else { if (r==2) t(rp[[i]]$T) else rp[[i]]$T }} else {if (r<0) { if (r==-2) t(rp[[i]]$Qs) else rp[[i]]$Qs
+           } else { if (r==2) rp[[i]]$Qs else t(rp[[i]]$Qs) }}
+      if (is.matrix(X)) X[,rp[[i]]$ind] <- X[,rp[[i]]$ind]%*%T else X[rp[[i]]$ind] <- t(X[rp[[i]]$ind])%*%T	   	   
+    }
+  }
+  X
+} ## Sl.repa
+
 Sl.repara <- function(rp,X,inverse=FALSE,both.sides=TRUE) {
 ## Apply re-parameterization from ldetS to X, blockwise.
 ## If X is a matrix it is assumed to be a model matrix
 ## whereas if X is a vector it is assumed to be a parameter vector.
 ## If inverse==TRUE applies the inverse of the re-para to
 ## parameter vector X or cov matrix X...
+## beta_trans = Ti beta_original T is inverse Ti
   nr <- length(rp);if (nr==0) return(X)
   if (inverse) {
     if (is.matrix(X)) { ## X is a cov matrix
       for (i in 1:nr) if (rp[[i]]$repara) {
-        if (both.sides) X[rp[[i]]$ind,]  <- 
+        if (both.sides) X[rp[[i]]$ind,]  <- if (is.null(rp[[i]]$Qs)) rp[[i]]$Ti %*% X[rp[[i]]$ind,,drop=FALSE] else
                      rp[[i]]$Qs %*% X[rp[[i]]$ind,,drop=FALSE]
-        X[,rp[[i]]$ind]  <- 
+        X[,rp[[i]]$ind]  <-  if (is.null(rp[[i]]$Qs)) X[,rp[[i]]$ind,drop=FALSE] %*% t(rp[[i]]$Ti) else
                      X[,rp[[i]]$ind,drop=FALSE] %*% t(rp[[i]]$Qs)
       }
     } else { ## X is a vector
-     for (i in 1:nr) if (rp[[i]]$repara) X[rp[[i]]$ind]  <- rp[[i]]$Qs %*% X[rp[[i]]$ind]
+     for (i in 1:nr) if (rp[[i]]$repara) X[rp[[i]]$ind]  <- if (is.null(rp[[i]]$Qs))
+                     rp[[i]]$Ti %*% X[rp[[i]]$ind] else rp[[i]]$Qs %*% X[rp[[i]]$ind]
     }
   } else { ## apply re-para to X
     if (is.matrix(X)) {
-      for (i in 1:nr) if (rp[[i]]$repara) X[,rp[[i]]$ind]  <- X[,rp[[i]]$ind]%*%rp[[i]]$Qs
+      for (i in 1:nr) if (rp[[i]]$repara) X[,rp[[i]]$ind]  <- if (is.null(rp[[i]]$Qs))
+                      X[,rp[[i]]$ind]%*%rp[[i]]$Ti else X[,rp[[i]]$ind]%*%rp[[i]]$Qs
     } else {
-      for (i in 1:nr) if (rp[[i]]$repara) X[rp[[i]]$ind]  <- t(rp[[i]]$Qs) %*% X[rp[[i]]$ind]
+      for (i in 1:nr) if (rp[[i]]$repara) X[rp[[i]]$ind]  <- if (is.null(rp[[i]]$Qs))
+      rp[[i]]$T %*% X[rp[[i]]$ind] else t(rp[[i]]$Qs) %*% X[rp[[i]]$ind]
     }
   }
   X
@@ -618,7 +901,7 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
                 if (Amat) A <- Sl[[b]]$lambda*A[ind,] else
                           A <- as.numeric(Sl[[b]]$lambda*A[ind])
               } 
-            } else { ## not reparamterized version 
+            } else { ## not reparameterized version 
               if (full) {
                 B <- A*0
                 if (Amat) B[ind,] <- Sl[[b]]$lambda*Sl[[b]]$S[[1]]%*%A[ind,] else  
@@ -1145,7 +1428,8 @@ Sl.drop <- function(Sl,drop,np) {
   ##      for i in drop, b1[new.loc[i]] = b0[j] where j is largest
   ##      j < i s.t. j not in drop. 
   ## These indices facilitate easy dropping from parts of blocks 
-  ## corresponding to coef indices in drop.     
+  ## corresponding to coef indices in drop.
+  cholesky <- attr(Sl,"cholesky") ## is setup all Cholesky based?
   new.loc <- cumsum(keep) 
   dropped.blocks <- FALSE
   for (b in 1:length(Sl)) {
@@ -1169,7 +1453,7 @@ Sl.drop <- function(Sl,drop,np) {
       if (Sl[[b]]$rank <=0) dropped.blocks <- TRUE 
       ## need to drop rows and cols from S and and rows from rS        
       for (i in 1:length(Sl[[b]]$S)) {
-        Sl[[b]]$rS[[i]] <- Sl[[b]]$rS[[i]][keep,]
+        if (length(Sl[[b]]$rS)) Sl[[b]]$rS[[i]] <- if (cholesky) Sl[[b]]$rS[[i]][keep,keep] else Sl[[b]]$rS[[i]][keep,]
         Sl[[b]]$S[[i]] <- Sl[[b]]$S[[i]][keep,keep] 
       }
       Sl[[b]]$start <- new.loc[Sl[[b]]$start]
@@ -1185,6 +1469,7 @@ Sl.drop <- function(Sl,drop,np) {
       }
     }
   }
+  attr(Sl,"drop") <- drop
   Sl
 } ## Sl.drop
 

@@ -32,7 +32,7 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     optimizer=c("outer","newton"),control=list(),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
     fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,
-    drop.intercept=NULL,...)
+    drop.intercept=NULL,discrete=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -152,6 +152,8 @@ involving factor variables you might want to turn this off. Only do so if you kn
 
 \item{drop.intercept}{Set to \code{TRUE} to force the model to really not have the a constant in the parametric model part,
 even with factor variables present. Can be vector when \code{formula} is a list.}
+
+\item{discrete}{experimental option for setting up models for use with discrete methods employed in \code{\link{bam}}. Do not modify.}
 
 \item{...}{further arguments for 
 passing on e.g. to \code{gam.fit} (such as \code{mustart}). }

@@ -88,38 +88,6 @@ mvn <- function(d=2) {
   ## initialization has to add in the extra parameters of 
   ## the cov matrix...
   
-#    preinitialize <- expression({
-    ## code to evaluate in estimate.gam...
-    ## extends model matrix with dummy columns and 
-    ## finds initial coefficients
-#      ydim <- ncol(G$y) ## dimension of response
-#      nbeta <- ncol(G$X)
-#      ntheta <- ydim*(ydim+1)/2 ## number of cov matrix factor params
-#      lpi <- attr(G$X,"lpi")
-#      #offs <- attr(G$X,"offset")
-#      XX <- crossprod(G$X)
-#      G$X <- cbind(G$X,matrix(0,nrow(G$X),ntheta)) ## add dummy columns to G$X
-#      #G$cmX <- c(G$cmX,rep(0,ntheta)) ## and corresponding column means
-#      G$term.names <- c(G$term.names,paste("R",1:ntheta,sep="."))
-#      attr(G$X,"lpi") <- lpi
-#      #offs -> attr(G$X,"offset")
-#      attr(G$X,"XX") <- XX
-#      ## pad out sqrt of balanced penalty matrix to account for extra params
-#      attr(G$Sl,"E") <- cbind(attr(G$Sl,"E"),matrix(0,nbeta,ntheta))
-#      G$family$data <- list(ydim = ydim,nbeta=nbeta)
-#      G$family$ibeta = rep(0,ncol(G$X))
-#      ## now get initial parameters and store in family...
-#      for (k in 1:ydim) {
-#        sin <- G$off %in% lpi[[k]]
- #       #Sk <- G$S[sin]
-#        um <- magic(G$y[,k],G$X[,lpi[[k]]],rep(-1,sum(sin)),G$S[sin],
-#                    match(G$off[sin],lpi[[k]]), ## turn G$off global indices into indices for this predictor
-#                    nt=control$nthreads)
-#        G$family$ibeta[lpi[[k]]] <- um$b
-#        G$family$ibeta[nbeta+1] <- -.5*log(um$scale) ## initial log root precision
-#        nbeta <- nbeta + ydim - k + 1
-#      }
-#    })
 
    preinitialize <- function(G) {
       ## G is a gam pre-fit object. Pre-initialize can manipulate some of its
@@ -193,15 +161,13 @@ mvn <- function(d=2) {
     } ## residuals
 
 
-    ##rd <- qf <- NULL ## these functions currently undefined for 
-
     ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=NULL,d2b=NULL,Hp=NULL,rank=0,fh=NULL,D=NULL) {
     ## function defining the Multivariate Normal model log lik.
     ## Calls C code "mvn_ll"
     ## deriv codes: 0   - evaluate the log likelihood
     ##              1   - evaluate the grad and Hessian, H, of log lik w.r.t. coefs (beta)
-    ##              2/3 - evaluate d1H =dH/drho given db/drho in d1b 
-    ##                    (2 is diagonal only - not implemented efficiently)
+    ##              2   - evaluate tr(Hp^{-1}dH/drho), given Hp^{-1} in fh and db/drho in d1b. Could be made more efficient.
+    ##              3   - evaluate d1H =dH/drho given db/drho in d1b 
     ##              4 -  given d1b and d2b evaluate trHid2H= tr(Hp^{-1}d2H/drhodrho') (not implemented)
     ## Hp is the preconditioned penalized hessian of the log lik
     ##    which is of rank 'rank'.
@@ -258,11 +224,12 @@ mvn <- function(d=2) {
         lbb <- lpi.contract(lbb,lpi0)
       }
       if (nsp==0) d1H <- NULL else if (deriv==2) {
-        d1H <- matrix(0,nb,nsp)
+        d1H <- rep(0,nsp) #matrix(0,nb,nsp)
         for (i in 1:nsp) { 
           dH <- matrix(oo$dH[ind],nb,nb)
           if (overlap) dH <- lpi.contract(dH,lpi0)
-          d1H[,i] <- diag(dH)
+          # d1H[,i] <- diag(dH)
+	  d1H[i] <- sum(fh*dH)
           ind <- ind + nb*nb
         }
       } else { ## deriv==3

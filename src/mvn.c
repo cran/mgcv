@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <R.h>
-#include <R_ext/BLAS.h>
+
 #include "mgcv.h"
+#include <R.h>
 
 void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note zero indexing */
             int *m,double *ll,double *lb,double *lbb,double *dbeta,
@@ -57,7 +57,7 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
   for (l=0;l<*m;l++) { /* loop through components */
     if (l==0) { Xl = X;pl = lpi[0];bl=beta;} /* Xl is lth model matrix with pl columns, coef vec bl */ 
     else { Xl = X + *n * lpi[l-1];pl = lpi[l]-lpi[l-1];bl = beta + lpi[l-1];}   
-    F77_CALL(dgemv)(&not_trans,n,&pl,&oned,Xl,n, bl, &one,&zerod, mu, &one); /* BLAS call for mu = Xl bl */
+    F77_CALL(dgemv)(&not_trans,n,&pl,&oned,Xl,n, bl, &one,&zerod, mu, &one FCONE); /* BLAS call for mu = Xl bl */
     /* now subtract mu from relevant component of y */
     for (p=mu,p1= mu + *n,p2=y+l;p<p1;p++,p2 += *m) *p2 -= *p;
   }

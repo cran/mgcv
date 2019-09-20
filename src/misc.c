@@ -398,7 +398,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         
       } 
       j_hi = jb; if (j_hi > jal-1) j_hi = jal-1; /* set j_hi to last element filled */
-      if (!ok) if (jal<jal_lim) { /* need to expand buffer storage*/
+      if (!ok) { if (jal<jal_lim) { /* need to expand buffer storage*/
         /*Rprintf("forward buffer expansion\n");*/
         wb = forward_buf(wb,&jal,0);
         wb1 = forward_buf(wb1,&jal,0);
@@ -406,7 +406,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         wp1 = forward_buf(wp1,&jal,0);
         wp2 = forward_buf(wp2,&jal,0);
         wpp = forward_buf(wpp,&jal,1);
-      } else ok = buffer_run_out = 1; /* run out of buffer - terminate */
+	} else ok = buffer_run_out = 1;} /* run out of buffer - terminate */
     } /* finished upsweep and any buffer expansion */
   
     /* start downsweep to convergence or start of available buffered values */
@@ -482,7 +482,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
       if (j<=1) ok=1; /* don't care about element size if reached base */
 
       j_lo = jb; if (j_lo<0) j_lo=0; /* set j_lo to first element filled */
-      if (!ok) if (jal<jal_lim) { /* need to expand buffer storage*/
+      if (!ok) { if (jal<jal_lim) { /* need to expand buffer storage*/
         /*Rprintf("backward buffer expansion\n");*/
         wb = backward_buf(wb,&jal,&j0,&j_lo,&j_hi,0);
         wb1 = backward_buf(wb1,&jal,&j0,&j_lo,&j_hi,0);
@@ -490,7 +490,7 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
         wp1 = backward_buf(wp1,&jal,&j0,&j_lo,&j_hi,0);
         wp2 = backward_buf(wp2,&jal,&j0,&j_lo,&j_hi,0);
         wpp = backward_buf(wpp,&jal,&j0,&j_lo,&j_hi,1); /* final '1' updates jal,j0 etc. */
-      } else ok = buffer_run_out = 1;
+	} else ok = buffer_run_out = 1;}
 
     } /* finished downsweep and any buffer expansion */
     /* Summation now complete: need to do final transformations */

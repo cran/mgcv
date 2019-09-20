@@ -81,6 +81,18 @@ gam.vcomp(rm1)
 
 fv0 <- predict(rm1,exclude="s(fac)") ## predictions setting r.e. to 0
 fv1 <- predict(rm1) ## predictions setting r.e. to predicted values
+## prediction setting r.e. to 0 and not having to provide 'fac'...
+pd <- dat; pd$fac <- NULL
+fv0 <- predict(rm1,pd,exclude="s(fac)",newdata.guaranteed=TRUE)
+
+## Prediction with levels of fac not in fit data.
+## The effect of the new factor levels (or any interaction involving them)
+## is set to zero.
+xx <- seq(0,1,length=10)
+pd <- data.frame(x0=xx,x1=xx,x2=xx,x3=xx,fac=c(1:10,21:30))
+fv <- predict(rm1,pd)
+pd$fac <- NULL
+fv0 <- predict(rm1,pd,exclude="s(fac)",newdata.guaranteed=TRUE)
 
 }
 \keyword{regression}

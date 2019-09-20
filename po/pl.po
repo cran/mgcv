@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-06-06 15:48+0100\n"
+"POT-Creation-Date: 2019-09-04 12:37+0100\n"
 "PO-Revision-Date: 2014-03-24 17:59+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -102,7 +102,7 @@ msgstr "QPCLS - Niedobór rang w modelu"
 # (_("You must have 2m>d for a thin plate spline."),1)
 # mgcv/src/tprs.c: 81
 # (_("You must have 2m>d for a thin plate spline."),1)
-#: tprs.c:40
+#: tprs.c:42
 msgid "You must have 2m>d for a thin plate spline."
 msgstr "Musisz mieć 2m>d dla cienkiej płyty splajnu."
 
@@ -113,7 +113,7 @@ msgstr "Musisz mieć 2m>d dla cienkiej płyty splajnu."
 # mgcv/R/smooth.r: 2518
 # stop(
 #    "A term has fewer unique covariate combinations than specified maximum degrees of freedom")
-#: tprs.c:375 tprs.c:383
+#: tprs.c:377 tprs.c:385
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"
