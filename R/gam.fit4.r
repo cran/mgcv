@@ -931,7 +931,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     D <- diag(Hp)
     if (sum(!is.finite(D))>0) stop("non finite values in Hessian")
 
-    if (min(D)<0) { ## 2/2/19 replaces any D<0 indicating indef
+    if (min(D)<=0) { ## 2/2/19 replaces any D<0 indicating indef
       Dthresh <- max(D)*sqrt(.Machine$double.eps) 
       if (-min(D) < Dthresh) { ## could be indef or +ve semi def
         indefinite <- FALSE

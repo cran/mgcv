@@ -7,7 +7,7 @@
 \code{gam} objects. For a single fitted \code{gam} object, Wald tests of
 the significance of each parametric and smooth term are performed, so interpretation 
 is analogous to \code{\link{drop1}} rather than \code{anova.lm} (i.e. it's like type III ANOVA, 
-rather than a sequential type I ANOVA). Otherwise the fitted models are compared using an analysis of deviance table: this latter approach should not be use to test the significance of terms which can be penalized 
+rather than a sequential type I ANOVA). Otherwise the fitted models are compared using an analysis of deviance table or GLRT test: this latter approach should not be use to test the significance of terms which can be penalized 
 to zero. Models to be compared should be fitted to the same data using the same smoothing parameter selection method.
 }
 \usage{
@@ -21,7 +21,7 @@ to zero. Models to be compared should be fitted to the same data using the same 
 \item{x}{an \code{anova.gam} object produced by a single model call to \code{anova.gam()}.} 
 \item{dispersion}{ a value for the dispersion parameter: not normally used.}
 \item{test}{what sort of test to perform for a multi-model call. One of
-\code{"Chisq"}, \code{"F"} or \code{"Cp"}. }
+\code{"Chisq"}, \code{"F"} or \code{"Cp"}. Reset to \code{"Chisq"} for extended and general families unless \code{NULL}. }
 \item{freq}{whether to use frequentist or Bayesian approximations for parametric term 
 p-values. See \code{\link{summary.gam}} for details.}
 \item{digits}{number of digits to use when printing output.}
@@ -29,7 +29,7 @@ p-values. See \code{\link{summary.gam}} for details.}
 \details{ If more than one fitted model is provided than \code{anova.glm} is
 used, with the difference in model degrees of freedom being taken as the difference 
 in effective degress of freedom (when possible this is a smoothing parameter uncertainty corrected version).
-The p-values resulting from this are only approximate, 
+For extended and general families this is set so that a GLRT test is used.  The p-values resulting from the multi-model case are only approximate, 
 and must be used with care. The approximation is most accurate when the comparison 
 relates to unpenalized terms, or smoothers with a null space of dimension greater than zero.
 (Basically we require that the difference terms could be well approximated by unpenalized 
