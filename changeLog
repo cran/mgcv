@@ -22,6 +22,37 @@ present, and reparameterization needs checking (also for bam).
 * bam(...,discrete=TRUE) does not currently deal with the corner case in 
   which no smoother is penalized.
 
+1.8-30
+
+* anova.gam now uses GLRT for multi-model comparisons in both extended and 
+  general family cases. 
+
+* Fix to bug in bam(...,discrete=TRUE) offset handling introduced in 1.8-29, 
+  which corrupted offset (and generated numerous warnings). Also fixes a 
+  less obvious bug introduced at the same time in predict.gam which could get 
+  the offset wrong when predicting with such models. Thanks to Brian 
+  Montgomery and Sean Wilson.
+
+* Fix to problem in pen.reg (used to initialize location scale models in 
+  particular), which could lead to initialization failure for lightly
+  penalized models. Thanks Matteo Fasiolo.
+
+* Fix to predict.bamd handling of 'terms' and 'exclude' for models fit by 
+  bam(...,discrete=TRUE).
+
+* Work around in predict.gam for a spurious model.matrix warning when a 
+  contrasts.arg relates to a variable in data not required by object. 
+
+* Fix to gammals family which had 'd2link' etc defined with argument 'eta' 
+  instead of the intended 'mu'. Thanks to Jim Stagge.
+
+* 'in.out' modified to allow boundaries specified exactly as for a soap film 
+  smoother.
+
+* soap film smoother constructor modified to check knots are within boundary 
+  on entry and drop those that are not, with a warning. Also halts if it 
+  detects that basis setup is catastrophically ill-conditioned.
+
 1.8-29
 
 * gammPQL modified to use standard GLM IRLS initilization (rather than 

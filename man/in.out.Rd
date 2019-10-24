@@ -14,8 +14,8 @@ in.out(bnd,x)
 
 \arguments{ 
 \item{bnd}{A two column matrix, the rows of which define the vertices of polygons defining the boundary of a region.
-Different polygons should be separated by an \code{NA} row, and the polygons are assumed closed.}
-\item{x}{A two column matrix. Each row is a point to test for inclusion in the region defined by \code{bnd}.}
+Different polygons should be separated by an \code{NA} row, and the polygons are assumed closed. Alternatively can be a lists where \code{bnd[[i]][[1]]}, \code{bnd[[i]][[2]]} defines the ith boundary loop.}
+\item{x}{A two column matrix. Each row is a point to test for inclusion in the region defined by \code{bnd}. Can also be a 2-vector, defining a single point.}
 } 
 
 

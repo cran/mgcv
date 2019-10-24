@@ -966,8 +966,13 @@ pen.reg <- function(x,e,y) {
   ## EDF is k * rr where k is somewhere in e.g. (.7,.9)
   k <- .01 * norm(R)/norm(e)
   qrr <- qr(rbind(R,e*k));
-  edf <- sum(qr.Q(qrr)[1:r,]^2) 
-  while (edf > .9*rr) { ## increase penalization
+  edf <- sum(qr.Q(qrr)[1:r,]^2)
+  ## compute rank of e less rank of the space penalized by e not in
+  ## range space of x, this is how much penalty can in principle change
+  ## edf by. Needed for corner cases where e.g. penalty is imposed for
+  ## identifiability reasons and then only penalizes null space of x...
+  re <- min(sum(colSums(abs(e))!=0),nrow(e)) - Rrank(qr.R(qrr)) + rr
+  while (edf > rr-.1*re) { ## increase penalization
     k <- k*10
     qrr <- qr(rbind(R,e*k));
     edf <- sum(qr.Q(qrr)[1:r,]^2)
@@ -2153,21 +2158,21 @@ gammals <- function(link=list("identity","log"),b=-7) {
       "ii <- !ii;if (any(ii)) mu[ii] <- b + log(1 + exp(eta[ii]))\n",
       "mu }\n")))
 
-    stats[[2]]$d2link <- eval(parse(text=paste("function(eta,b=",b,") {\n",
+    stats[[2]]$d2link <- eval(parse(text=paste("function(mu,b=",b,") {\n",
       "eta <- lb.linkfun(mu,b=b); ii <- eta > 0\n",
       "eta <- exp(-eta*sign(eta))\n",
       "if (any(ii)) { ei <- eta[ii];eta[ii] <- -(ei^2 + ei) }\n",
       "ii <- !ii;if (any(ii)) { ei <- eta[ii];eta[ii] <- -(1+ei)/ei^2 }\n",
       "eta }\n")))
 
-    stats[[2]]$d3link <- eval(parse(text=paste("function(eta,b=",b,") {\n",
+    stats[[2]]$d3link <- eval(parse(text=paste("function(mu,b=",b,") {\n",
       "eta <- lb.linkfun(mu,b=b);ii <- eta > 0\n",
       "eta <- exp(-eta*sign(eta))\n",
       "if (any(ii)) { ei <- eta[ii]; eta[ii] <- (2*ei^2+ei)*(ei+1) }\n",
       "ii <- !ii;if (any(ii)) { ei <- eta[ii]; eta[ii] <- (2+ei)*(1+ei)/ei^3 }\n",
       "eta }\n")))
     
-    stats[[2]]$d4link <- eval(parse(text=paste("function(eta,b=",b,") {\n",
+    stats[[2]]$d4link <- eval(parse(text=paste("function(mu,b=",b,") {\n",
       "eta <- lb.linkfun(mu,b=b);ii <- eta > 0\n",
       "eta <- exp(-eta*sign(eta))\n",
       "if (any(ii)) { ei <- eta[ii];eta[ii] <- -(6*ei^3+6*ei^2+ei)*(ei+1) }\n",

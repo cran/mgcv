@@ -429,6 +429,11 @@ smooth.construct.so.smooth.spec<-function(object,data,knots)
   bnd <- object$xt$bnd
   if (is.null(bnd)) stop("can't soap smooth without a boundary")
   if (!inherits(bnd,"list")) stop("bnd must be a list of boundary loops")
+
+  ## check knots within boundary...
+  kin <- in.out(bnd,cbind(knt[[1]],knt[[2]]))
+  if (any(!kin)) warning("dropping soap knots not inside boundary - use 'in.out' to investigate.")
+  knt[[1]] <- knt[[1]][kin];knt[[2]] <- knt[[2]][kin] 
   
   for (i in 1:length(bnd)) { ## re-lable boundary
     nm <- names(bnd[[i]])
@@ -481,6 +486,8 @@ smooth.construct.so.smooth.spec<-function(object,data,knots)
   }
 
   object$irng <- irng ## the column scaling factor 
+
+  if (any(!is.finite(irng))) stop("soap basis ill-conditioned - changing 'xt$nmax' may help")
 
   object$X <- b$X ## model matrix
   attr(object$X,"offset") <- b$offset

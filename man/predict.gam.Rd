@@ -104,7 +104,7 @@ then all variables must be supplied.
 Bayesian posterior covariance matrix of the parameters \code{Vp} in the fitted
 gam object.
 
-When predicting from models with \code{link{linear.functional.terms}} then there are two possibilities. If the summation convention is to be used in prediction, as it was in fitting, then \code{newdata} should be a list, with named matrix arguments corresponding to any variables that were matrices in fitting. Alternatively one might choose to simply evaluate the constitutent smooths at particular values in which case arguments that were matrices can be replaced by vectors (and \code{newdata} can be a dataframe). See \code{link{linear.functional.terms}} for example code.
+When predicting from models with \code{\link{linear.functional.terms}} then there are two possibilities. If the summation convention is to be used in prediction, as it was in fitting, then \code{newdata} should be a list, with named matrix arguments corresponding to any variables that were matrices in fitting. Alternatively one might choose to simply evaluate the constitutent smooths at particular values in which case arguments that were matrices can be replaced by vectors (and \code{newdata} can be a dataframe). See \code{\link{linear.functional.terms}} for example code.
 
 To facilitate plotting with \code{\link{termplot}}, if \code{object} possesses
 an attribute \code{"para.only"} and \code{type=="terms"} then only parametric

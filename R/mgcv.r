@@ -2847,8 +2847,14 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
         if (nd.is.mf) mf <- model.frame(data,xlev=object$xlevels) else {
           mf <- model.frame(Terms[[i]],data,xlev=object$xlevels)
           if (!is.null(cl <- attr(pterms[[i]],"dataClasses"))) .checkMFClasses(cl,mf)
-        } 
-        Xp <- model.matrix(Terms[[i]],mf,contrasts=object$contrasts) 
+        }
+	## next line is just a work around to prevent a spurious warning (e.g. R 3.6) from
+	## model.matrix if contrast relates to a term in mf which is not
+	## part of Terms[[i]] (mode.matrix doc actually defines contrast w.r.t. mf,
+	## not Terms[[i]])...
+	oc <- if (length(object$contrasts)==0) object$contrasts else
+	      object$contrasts[names(object$contrasts)%in%attr(Terms[[i]],"term.labels")]
+        Xp <- model.matrix(Terms[[i]],mf,contrasts=oc) 
       } else { 
         Xp <- model.matrix(Terms[[i]],object$model)
         mf <- newdata # needed in case of offset, below
@@ -2865,8 +2871,8 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
       }
       if (object$nsdf[i]>0) X[,pstart[i]-1 + 1:object$nsdf[i]] <- Xp
     } ## end of parametric loop
-    if (length(offs)==1) offs <- offs[[1]]
-    
+ ##   if (length(offs)==1) offs <- offs[[1]] ## messes up later handling
+     
     if (!is.null(drop.ind)) X <- X[,-drop.ind]
 
     if (n.smooth) for (k in 1:n.smooth) { ## loop through smooths
@@ -3803,7 +3809,7 @@ anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE)
       dfc <- if (is.null(object$edf2)) 0 else sum(object$edf2) - sum(object$edf) 
       object$df.residual <- n - sum(object$edf1) - dfc
       ## reset the deviance to -2*logLik for general families...
-      if (inherits(object$family,"general.family")) { 
+      if (inherits(object$family,"extended.family")) { 
         object$deviance <- -2 * as.numeric(logLik(object)) 
         if (!is.null(test)) test <- "Chisq"
       }
@@ -3812,7 +3818,7 @@ anova.gam <- function (object, ..., dispersion = NULL, test = NULL,  freq=FALSE)
         if (is.list(dotargs[[i]]$formula)) dotargs[[i]]$formula <- dotargs[[i]]$formula[[1]]
         dfc <- if (is.null(dotargs[[i]]$edf2)) 0 else sum(dotargs[[i]]$edf2) - sum(dotargs[[i]]$edf) 
         dotargs[[i]]$df.residual <- n - sum(dotargs[[i]]$edf1) - dfc
-        if (inherits(dotargs[[i]]$family,"general.family")) { 
+        if (inherits(dotargs[[i]]$family,"extended.family")) { 
           dotargs[[i]]$deviance <- -2 * as.numeric(logLik(dotargs[[i]]))
         } 
       }
@@ -4185,7 +4191,9 @@ initial.spg <- function(x,y,weights,family,S,rank,off,offset=NULL,L=NULL,lsp0=NU
     for (i in 1:length(S)) {
       ind <- off[i]:(off[i]+ncol(S[[i]])-1)
       lami <- 1
-      dlb <- -diag(lbb[ind,ind]);dS <- diag(S[[i]])
+      #dlb <- -diag(lbb[ind,ind])
+      dlb <- abs(diag(lbb[ind,ind])) 
+      dS <- diag(S[[i]])
       pc <- pcount[ind]
       ## get index of elements doing any actual penalization...
       ind <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0 ## dlb > 0

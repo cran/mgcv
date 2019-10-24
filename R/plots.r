@@ -7,6 +7,15 @@ in.out <- function(bnd,x) {
 ## or outside boundary defined by bnd. bnd my be made up of multiple 
 ## nested loops.
   if (!is.matrix(x)) x <- matrix(x,1,2)
+  if (is.list(bnd)) { ## convert list of lists to matrix form
+    b1 <- bnd[[1]][[1]]
+    b2 <- bnd[[1]][[2]]
+    if (length(bnd)>1) for (i in 2:length(bnd)) {
+      b1 <- c(b1,NA,bnd[[i]][[1]])
+      b2 <- c(b2,NA,bnd[[i]][[2]])
+    }
+    bnd <- cbind(b1,b2)
+  }
   ## replace NA segment separators with a numeric code 
   lowLim <- min(bnd,na.rm=TRUE) - mean(abs(bnd),na.rm=TRUE)
   ind <- is.na(rowSums(bnd))
