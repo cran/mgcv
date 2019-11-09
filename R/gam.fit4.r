@@ -1157,7 +1157,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     d1Hp <- list()
     for (i in 1:m) {
       A <- -ll$d1H[[i]] + Sl.mult(rp$Sl,diag(q),i)[!bdrop,!bdrop]
-      d1Hp[[i]] <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,])  
+      d1Hp[[i]] <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])  
       d1ldetH[i] <- sum(diag(d1Hp[[i]]))
     }
   } ## if (deriv > 0)
@@ -1171,9 +1171,9 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
       if (i==j) { ## need to add term relating to smoothing penalty
         A <- Sl.mult(rp$Sl,diag(q),i,full=TRUE)[!bdrop,!bdrop]
         bind <- rowSums(abs(A))!=0 ## row/cols of non-zero block
-        A <- A[,bind] ## drop the zero columns  
-        A <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,])
-        d2ldetH[i,j] <- d2ldetH[i,j] + sum(diag(A[bind,]))
+        A <- A[,bind,drop=FALSE] ## drop the zero columns  
+        A <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])
+        d2ldetH[i,j] <- d2ldetH[i,j] + sum(diag(A[bind,,drop=FALSE]))
       } else d2ldetH[j,i] <- d2ldetH[i,j]
     }
   } ## if (deriv > 1)

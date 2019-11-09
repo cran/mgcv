@@ -1132,26 +1132,30 @@ new.name <- function(proposed,old.names)
 }
 
 gammPQL <- function (fixed, random, family, data, correlation, weights,
-    control, niter = 30, verbose = TRUE, ...) {
+    control, niter = 30, verbose = TRUE, mustart=NULL, etastart=NULL, ...) {
 ## service routine for `gamm' to do PQL fitting. Based on glmmPQL
 ## from the MASS library (Venables & Ripley). Because `gamm' already
 ## does some of the preliminary stuff that glmmPQL does, gammPQL can
 ## be simpler. It also deals with the possibility of the original
 ## data frame containing variables called `zz' `wts' or `invwt'.
-## Modified 2019 to use standard GLM initialization to improve convergence.
-## Old glmmPQL style initialization commented out (single # first col) for
-## eventual removal.
+## Modified 2019 to use standard GLM initialization to imporove convergence.
   off <- model.offset(data)
   if (is.null(off)) off <- 0
-  
-  y <- model.response(data) 
-  nobs <- nrow(data) 
+  y <- model.response(data) ## NEW
+  nobs <- nrow(data) ## NEW
   if (is.null(weights)) weights <- rep(1, nrow(data))
-  mustart=NULL
-  eval(family$initialize) 
+  start <-  NULL ## never used
+  if (is.null(mustart)) {
+    eval(family$initialize)
+  } else {
+    mukeep <- mustart
+    eval(family$initialize)
+    mustart <- mukeep
+  }
+  #eval(family$initialize) ## NEW
 
   wts <- weights
-# if (is.null(wts)) wts <- rep(1, nrow(data))
+  #if (is.null(wts)) wts <- rep(1, nrow(data))
   wts.name <- new.name("wts",names(data)) ## avoid overwriting what's already in `data'
   data[[wts.name]] <- wts 
  
@@ -1162,10 +1166,14 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 #  w <- fit0$prior.weights
 #  eta <- fit0$linear.predictors
   fam <- family
-  w <- wts;eta <- fam$linkfun(mustart)    
+  eta <- if (!is.null(etastart)) 
+            etastart
+	 else fam$linkfun(mustart)
+  mu <- fam$linkinv(eta)	 
+  w <- wts;  
 #  zz <- eta + fit0$residuals - off
   mu.eta.val <- fam$mu.eta(eta)
-  zz <- eta + (y - mustart)/mu.eta.val - off
+  zz <- eta + (y - mu)/mu.eta.val - off
 #  wz <- fit0$weights
   wz <- w * mu.eta.val^2/fam$variance(mustart)
   
@@ -1218,7 +1226,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 
 gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=list(),weights=NULL,
       subset=NULL,na.action,knots=NULL,control=list(niterEM=0,optimMethod="L-BFGS-B",returnObject=TRUE),
-      niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,...)
+      niterPQL=20,verbosePQL=TRUE,method="ML",drop.unused.levels=TRUE,mustart=NULL, etastart=NULL,...)
 # Routine to fit a GAMM to some data. Fixed and smooth terms are defined in the formula, but the wiggly 
 # parts of the smooth terms are treated as random effects. The onesided formula random defines additional 
 # random terms. correlation describes the correlation structure. This routine is basically an interface
@@ -1390,7 +1398,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
       eval(parse(text=paste("ret$lme<-gammPQL(",deparse(fixed.formula),
           ",random=rand,data=strip.offset(mf),family=family,",
           "correlation=correlation,control=control,",
-            "weights=weights,niter=niterPQL,verbose=verbosePQL)",sep=""))) 
+            "weights=weights,niter=niterPQL,verbose=verbosePQL,mustart=mustart,etastart=etastart,...)",sep=""))) 
       G$y <- ret$lme$y ## makes sure that binomial response is returned as a vector!
      
     }

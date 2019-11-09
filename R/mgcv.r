@@ -4179,7 +4179,7 @@ initial.spg <- function(x,y,weights,family,S,rank,off,offset=NULL,L=NULL,lsp0=NU
     pcount <- rep(0,ncol(lbb))
     for (i in 1:length(S)) {
       ind <- off[i]:(off[i]+ncol(S[[i]])-1)
-      dlb <- -diag(lbb[ind,ind])
+      dlb <- -diag(lbb[ind,ind,drop=FALSE])
       indp <- rowSums(abs(S[[i]]))>max(S[[i]])*.Machine$double.eps^.75 & dlb!=0
       ind <- ind[indp] ## drop indices of unpenalized
       pcount[ind] <- pcount[ind] + 1 ## add up times penalized
@@ -4192,7 +4192,7 @@ initial.spg <- function(x,y,weights,family,S,rank,off,offset=NULL,L=NULL,lsp0=NU
       ind <- off[i]:(off[i]+ncol(S[[i]])-1)
       lami <- 1
       #dlb <- -diag(lbb[ind,ind])
-      dlb <- abs(diag(lbb[ind,ind])) 
+      dlb <- abs(diag(lbb[ind,ind,drop=FALSE])) 
       dS <- diag(S[[i]])
       pc <- pcount[ind]
       ## get index of elements doing any actual penalization...

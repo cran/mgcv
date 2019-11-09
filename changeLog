@@ -14,13 +14,20 @@ Issues:
 ** openblas 0.3.x x<7 is not thread safe if itself compiled for single thread 
    use and then called from multiple threads (unlike the reference BLAS, say).
    0.2.20 appears to be OK. For 0.3.x x>6 make USE_THREAD=0 USE_LOCKING=1
-   to make openblas ensures thread safety.
+   to make openblas ensures thread safety (currently unclear if USE_LOCKING
+   will be default from 0.3.7).      
 
 * t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
 present, and reparameterization needs checking (also for bam). 
 
 * bam(...,discrete=TRUE) does not currently deal with the corner case in 
   which no smoother is penalized.
+
+1.8-31
+
+* fix in initalization in gammPQL 
+
+* fix of some C routines of type void in place of SEXP called by .Call.
 
 1.8-30
 
@@ -30,7 +37,7 @@ present, and reparameterization needs checking (also for bam).
 * Fix to bug in bam(...,discrete=TRUE) offset handling introduced in 1.8-29, 
   which corrupted offset (and generated numerous warnings). Also fixes a 
   less obvious bug introduced at the same time in predict.gam which could get 
-  the offset wrong when predicting with such models. Thanks to Brian 
+  the offset wrong when prediciting with such models. Thanks to Brian 
   Montgomery and Sean Wilson.
 
 * Fix to problem in pen.reg (used to initialize location scale models in 

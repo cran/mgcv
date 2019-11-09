@@ -2167,7 +2167,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
       npt <- if (nlp==1) 1 else length(G$pterms)
       lpip <- list() ## record coef indices for each discretized term
       for (j in 1:npt) { ## loop over parametric terms in each formula
-        G$Xd[[k]] <- if (nlp==1) model.matrix(G$pterms,mf) else model.matrix(G$pterms[[j]],mf)
+        G$Xd[[k]] <- if (nlp==1&&!is.list(G$pterms)) model.matrix(G$pterms,mf) else
+	             model.matrix(G$pterms[[j]],mf)
 	attr(G$Xd[[k]],"dimnames") <- NULL ## unused and storage space otherwise huge
         if (drop.intercept[j]) {
           xat <- attributes(G$Xd[[1]]);ind <- xat$assign > 0 ## index of non intercept columns 
