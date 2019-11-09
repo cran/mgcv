@@ -331,7 +331,7 @@ void mgcv_tensor_mm(double *X,double *T,int *d,int *m,int *n) {
   }  
 } /* mgcv_tensor_mm */
 
-void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N) {
+SEXP mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N) {
   /* wrapper for calling mgcv_tensor_mm using .Call */
   double *X,*T;
   int *d,*m,*n;
@@ -340,6 +340,7 @@ void mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N) {
   m = INTEGER(M);
   n = INTEGER(N);
   mgcv_tensor_mm(X,T,d,m,n);
+  return(R_NilValue);
 }
 
 void mgcv_mmult0(double *A,double *B,double *C,int *bt,int *ct,int *r,int *c,int *n)
@@ -1714,7 +1715,7 @@ void dchol(double *dA, double *R, double *dR,int *p) {
 
 
 
-void mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT) {
+SEXP mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT) {
 /* wrapper for calling chol_down using .Call */
   double *R,*Rup;
   int *n,*k,*ut;
@@ -1723,6 +1724,7 @@ void mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT) {
   k = INTEGER(K);
   ut = INTEGER(UT);
   chol_down(R,Rup,n,k,ut);
+  return(R_NilValue);
 }
 
 inline double hypot(double x, double y) {
@@ -1885,7 +1887,7 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps) {
   for (x = c + *n - 2;c<x;c++,s++) *c = *s = 0.0;
 } /* chol_up */  
 
-void mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS) {
+SEXP mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS) {
 /* wrapper for calling chol_down using .Call */
   double *R,*u,*eps;
   int *n,*up;
@@ -1894,6 +1896,7 @@ void mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS) {
   n = INTEGER(N);
   up = INTEGER(UP);
   chol_up(R,u,n,up,eps);
+  return(R_NilValue);
 } /* mgcv_chol_up */
 
 void mgcv_chol(double *a,int *pivot,int *n,int *rank)
@@ -2233,7 +2236,7 @@ void mgcv_pbsi(double *R,int *r,int *nt) {
 
 
 
-void mgcv_Rpbsi(SEXP A, SEXP NT) {
+SEXP mgcv_Rpbsi(SEXP A, SEXP NT) {
 /* parallel back sub inversion of upper triangular matrix A 
    designed for use with .call, but using mgcv_pbsi to do the work. 
 */
@@ -2243,6 +2246,7 @@ void mgcv_Rpbsi(SEXP A, SEXP NT) {
   r = nrows(A);
   R = REAL(A);
   mgcv_pbsi1(R,&r,&nt);
+  return(R_NilValue);
 } /* mgcv_Rpbsi */
 
 void mgcv_PPt1(double *A,double *R,int *r,int *nt) {
@@ -2389,7 +2393,7 @@ void mgcv_PPt(double *A,double *R,int *r,int *nt) {
   #endif
 } /* mgcv_PPt */
 
-void mgcv_RPPt(SEXP a,SEXP r, SEXP NT) {
+SEXP mgcv_RPPt(SEXP a,SEXP r, SEXP NT) {
 /* Form a = rr' where r is upper triangular. 
    designed for use with .Call, but using mgcv_PPt to do the work. 
 */
@@ -2400,6 +2404,7 @@ void mgcv_RPPt(SEXP a,SEXP r, SEXP NT) {
   A = REAL(a);
   R = REAL(r);
   mgcv_PPt1(A,R,&n,&nt);
+  return(R_NilValue);
 } /* mgcv_Rpbsi */
 
 
