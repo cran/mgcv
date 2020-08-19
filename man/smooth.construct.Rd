@@ -190,7 +190,7 @@ then the built in "ps" class is probably a marginally better bet. It's based on
 Eilers, P.H.C. and B.D. Marx (1996) Flexible Smoothing with B-splines and Penalties. 
 Statistical Science, 11(2):89-121
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 }
 
 \author{Simon N. Wood \email{simon.wood@r-project.org}}

@@ -4,7 +4,8 @@
 \alias{ldetS}
 \title{Getting log generalized determinant of penalty matrices}
 \usage{
-ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE, nt = 1,deriv=2)
+ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE,
+      nt = 1,deriv=2,sparse=FALSE)
 }
 \arguments{
 \item{Sl}{the output of \code{Sl.setup}.}
@@ -15,7 +16,7 @@ ldetS(Sl, rho, fixed, np, root = FALSE, repara = TRUE, nt = 1,deriv=2)
 
 \item{np}{number of coefficients.}
 
-\item{root}{indicates whether or not to return the matrix square root, E, of the total penalty S_tot.}
+\item{root}{indicates whether or not to return the matrix square root, \code{E}, of the total penalty S_tot.}
 
 \item{repara}{if TRUE multi-term blocks will be re-parameterized using \code{gam.reparam}, and
 a re-parameterization object supplied in the returned object.}
@@ -23,6 +24,7 @@ a re-parameterization object supplied in the returned object.}
 \item{nt}{number of parallel threads to use.}
 
 \item{deriv}{order of derivative to use}
+\item{sparse}{should \code{E} be sparse?}
 }
 \value{
 A list containing: \itemize{

@@ -218,12 +218,8 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
 
   validmu <- function(mu) all(is.finite(mu))
 
-  dev.resids <- function(y, mu, wt,theta=NULL) {
-    #F <- function(x) {
-    #  h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
-    #  x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
-    #  h 
-    #}
+  dev.resids <- function(y, mu, wt,theta=NULL) { ## ocat dev resids
+   
     Fdiff <- function(a,b) {
       ## cancellation resistent F(b)-F(a), b>a
       h <- rep(1,length(b)); h[b>0] <- -1; eb <- exp(b*h)
@@ -252,26 +248,17 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     ## logistic regression....
     s <- sign((al1 + al0)/2-mu) ## sign for deviance residuals
     al1mu <- al1-mu;al0mu <- al0-mu
-    ## f1 <- F(al1mu);f0 <- F(al0mu);
-    ##f <- pmax(f1 - f0,.Machine$double.eps)
+  
     f <- Fdiff(al0mu,al1mu)
-    ##a1 <- f1^2 - f1;a0 <- f0^2 - f0; a <- a1 -a0
-#!    al1al0 <- (al1-al0)/2;al0al1 <- (al0-al1)/2
-    ##g1 <- F(al1al0);g0 <- F(al0al1)
-    ##A <- pmax(g1 - g0,.Machine$double.eps)
-#!    A <- Fdiff(al0al1,al1al0)
-    rsd <- -2*log(f) #! 2*(log(A)-log(f))
+
+    rsd <- -2*wt*log(f) 
     attr(rsd,"sign") <- s
     rsd
   } ## end of dev.resids
 
   Dd <- function(y, mu, theta, wt=NULL, level=0) {
   ## derivatives of the ocat deviance...
-   # F <- function(x) { ## e^(x)/(1+e^x) without overflow
-   #   h <- ind <- x > 0; h[ind] <- 1/(exp(-x[ind]) + 1)
-   #   x <- exp(x[!ind]); h[!ind] <- (x/(1+x))
-   #   h 
-   # }
+
     Fdiff <- function(a,b) {
       ## cancellation resistent F(b)-F(a), b>a 
       h <- rep(1,length(b)); h[b>0] <- -1; eb <- exp(b*h)
@@ -293,17 +280,14 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       aj <- -ex/ex1k
       if (level>=0) {
         ## compute f_j - 3 f_j^2 + 2f_j^3 without cancellation error
-        ##  x <- 10;F(x)-3*F(x)^2+2*F(x)^3;abcd(x,0)$bj
         ex1k <- ex1k*ex1;ex2 <- ex^2
         bj <- h*(ex-ex^2)/ex1k
         if (level>0) {
           ## compute -f_j + 7 f_j^2 - 12 f_j^3 + 6 f_j^4
-          ## x <- 10;-F(x)+7*F(x)^2-12*F(x)^3+6*F(x)^4;abcd(x,1)$cj
           ex1k <- ex1k*ex1;ex3 <- ex2*ex
           cj <- (-ex3 + 4*ex2 - ex)/ex1k
           if (level>1) {    
             ## compute d_j
-            ## x <- 10;F(x)-15*F(x)^2+50*F(x)^3-60*F(x)^4+24*F(x)^5;abcd(x,2)$dj
             ex1k <- ex1k*ex1;ex4 <- ex3*ex
             dj <- h * (-ex4 + 11*ex3 - 11*ex2 + ex)/ex1k
           }
@@ -311,7 +295,8 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       }        
       list(aj=aj,bj=bj,cj=cj,dj=dj)
     }
- 
+    if (is.null(wt)) wt <- 1
+
     R = length(theta)+2
     alpha <- rep(0,R+1) ## the thresholds
     alpha[1] <- -Inf;alpha[R+1] <- Inf
@@ -322,88 +307,72 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     } 
     al1 <- alpha[y+1];al0 = alpha[y]
     al1mu <- al1-mu;al0mu <- al0 - mu
-    ##f1 <- F(al1mu);f0 <- F(al0mu);
-    ##f <- pmax(f1 - f0,.Machine$double.eps)
+   
     f <- pmax(Fdiff(al0mu,al1mu),.Machine$double.xmin)
     r1 <- abcd(al1mu,level); a1 <- r1$aj
     r0 <- abcd(al0mu,level); a0 <- r0$aj
-    ## a1 <- f1^2 - f1;a0 <- f0^2 - f0; 
     a <- a1 - a0
     
-    #!al1al0 <- (al1-al0)/2; #! al0al1 <- (al0-al1)/2
-    ##g1 <- F(al1al0);g0 <- F(al0al1)
-    ##A <- pmax(g1 - g0,.Machine$double.eps)
-#!    A <- Fdiff(al0al1,al1al0)
     if (level>=0) {
-      ## b1 <- f1 - 3 * f1^2 + 2 * f1^3;b0 <- f0 - 3 * f0^2 + 2 * f0^3  
       b1 <- r1$bj;b0 <- r0$bj
       b <- b1 - b0
     }
     if (level>0) {
-      ##c1 <- -f1 + 7 * f1^2 - 12* f1^3 + 6 * f1^4
-      ##c0 <- -f0 + 7 * f0^2 - 12* f0^3 + 6 * f0^4
       c1 <- r1$cj;c0 <- r0$cj
       c <- c1 - c0
-#!      R1 <- abcd(al1al0,level-2) 
-#!      R0 <- abcd(al0al1,level-2)
-      ## B <- g1^2 - g1 + g0^2 - g0
-#!     B <- R1$aj + R0$aj
     }
     if (level>1) {
-      ##d1 <- f1 - 15 * f1^2 + 50 * f1^3 - 60 * f1^4 + 24 * f1^5
-      ##d0 <- f0 - 15 * f0^2 + 50 * f0^3 - 60 * f0^4 + 24 * f0^5
       d1 <- r1$dj;d0 <- r0$dj
       d <- d1 - d0
-      ##C <- 2 * g1^3 - 3 * g1^2 + g1 - 2 * g0^3 + 3 * g0^2 - g0
-#!      C <- R1$bj - R0$bj
     }
 
     oo <- list(D=NULL,Dmu=NULL,Dmu2=NULL,Dth=NULL,Dmuth=NULL,
              Dmu2th=NULL)
     n <- length(y)
     ## deviance...
-    oo$D <- -2 * log(f) #! 2*(log(A)-log(f))
+    oo$D <- -2 * wt * log(f)
     if (level >= 0) { ## get derivatives used in coefficient estimation
-      oo$Dmu <- -2 * a / f
+      oo$Dmu <- -2 * wt * a / f
       a2 <- a^2
-      oo$EDmu2 <- oo$Dmu2 <- 2 * (a2/f -  b)/f
+      oo$EDmu2 <- oo$Dmu2 <- 2 * wt * (a2/f -  b)/f
     }
     if (R<3) level <- 0 ## no free parameters
 
     if (level > 0) { ## get first derivative related stuff
       f2 <- f^2;a3 <- a2*a
-      oo$Dmu3 <- 2*(- c - 2 * a3/f2 + 3 * a * b/f)/f
-      Dmua0 <- 2 * (a0 * a/f -  b0)/f
-      Dmua1 <- -2 * (a1 * a /f - b1)/f
-      Dmu2a0 <- -2* (c0 + (a0*(2*a2/f - b)- 2*b0*a  )/f)/f
-      Dmu2a1 <- 2*(c1  + (2*(a1*a2/f - b1*a) - a1*b)/f)/f
-      Da0 <- -2*a0/f #! + B/A; 
-      Da1 <-  2 * a1/f #! - B/A 
+      oo$Dmu3 <- 2 * wt * (- c - 2 * a3/f2 + 3 * a * b/f)/f
+      Dmua0 <- 2 *  (a0 * a/f -  b0)/f
+      Dmua1 <- -2 *  (a1 * a /f - b1)/f
+      Dmu2a0 <- -2 * (c0 + (a0*(2*a2/f - b)- 2*b0*a  )/f)/f
+      Dmu2a1 <- 2 * (c1  + (2*(a1*a2/f - b1*a) - a1*b)/f)/f
+      Da0 <- -2*a0/f
+      Da1 <-  2 * a1/f 
       ## now transform to derivatives w.r.t. theta...
       oo$Dmu2th <- oo$Dmuth <- oo$Dth <- matrix(0,n,R-2)
       for (k in 1:(R-2)) { 
         etk <- exp(theta[k])
-        ind <- y == k+1
-        oo$Dth[ind,k] <- Da1[ind]*etk
-        oo$Dmuth[ind,k] <- Dmua1[ind]*etk
-        oo$Dmu2th[ind,k] <- Dmu2a1[ind]*etk
+        ind <- y == k+1;wti <- wt[ind]
+        oo$Dth[ind,k] <- wti * Da1[ind]*etk
+        oo$Dmuth[ind,k] <- wti * Dmua1[ind]*etk
+        oo$Dmu2th[ind,k] <- wti * Dmu2a1[ind]*etk
     
         if (R>k+2) { 
-          ind <- y > k+1 & y < R
-          oo$Dth[ind,k] <- (Da1[ind]+Da0[ind])*etk
-          oo$Dmuth[ind,k] <- (Dmua1[ind]+Dmua0[ind])*etk
-          oo$Dmu2th[ind,k] <- (Dmu2a1[ind]+Dmu2a0[ind])*etk
+          ind <- y > k+1 & y < R;wti <- wt[ind]
+          oo$Dth[ind,k] <- wti * (Da1[ind]+Da0[ind])*etk
+          oo$Dmuth[ind,k] <- wti * (Dmua1[ind]+Dmua0[ind])*etk
+          oo$Dmu2th[ind,k] <- wti * (Dmu2a1[ind]+Dmu2a0[ind])*etk
        
         }
-        ind <- y == R
-        oo$Dth[ind,k] <- Da0[ind]*etk
-        oo$Dmuth[ind,k] <- Dmua0[ind]*etk
-        oo$Dmu2th[ind,k] <- Dmu2a0[ind]*etk 
+        ind <- y == R;wti <- wt[ind]
+        oo$Dth[ind,k] <- wti * Da0[ind]*etk
+        oo$Dmuth[ind,k] <- wti * Dmua0[ind]*etk
+        oo$Dmu2th[ind,k] <- wti * Dmu2a0[ind]*etk 
       }
       oo$EDmu2th <- oo$Dmu2th
+      
     }  
     if (level >1) { ## and the second derivative components 
-      oo$Dmu4 <- 2*((3*b^2 + 4*a*c)/f + a2*(6*a2/f - 12*b)/f2 - d)/f
+      oo$Dmu4 <- 2 * wt * ((3*b^2 + 4*a*c)/f + a2*(6*a2/f - 12*b)/f2 - d)/f
       Dmu3a0 <-  2 * ((a0*c  + 3*c0*a + 3*b0*b)/f - d0  + 
                       6*a*(a0*a2/f - b0*a - a0*b)/f2 )/f
       Dmu3a1 <- 2 * (d1 - (a1*c + 3*(c1*a + b1*b))/f
@@ -419,12 +388,11 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       Dmu2a1a1 <-  2*( (2*c1*(a + a1) + b1*(2*b1 + b))/f
                 + 2*(a1*(3*a1*a2/f  - a1*b) - b1*a*(a + 4*a1))/f2 - d1)/f
 
-      Dmu2a0a1 <- 0 ## (8*a0*b1*a/f^3 + 8*b0*a1*a/f^3 - 12*a0*a1*a/f^4 - 4*b0*b1/f^2 +
-                    ## 4*a0*a1*b/f^3 - 2*c0*a1/f^2 - 2*c1*a0/f^2)
+      Dmu2a0a1 <- 0
 
-      Da0a0 <- 2 * (b0 + a0^2/f)/f #! + .5 * (C - B^2/A)/A
-      Da1a1 <- -2* (b1 - a1^2/f)/f #! + .5 * (C - B^2/A)/A
-      Da0a1 <- -2*a0*a1/f2 #! - .5 * (C - B^2/A)/A
+      Da0a0 <- 2 * (b0 + a0^2/f)/f
+      Da1a1 <- -2* (b1 - a1^2/f)/f 
+      Da0a1 <- -2*a0*a1/f2
 
       ## now transform to derivatives w.r.t. theta...
       n2d <- (R-2)*(R-1)/2
@@ -434,6 +402,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
       for (j in 1:(R-2)) for (k in j:(R-2)) { 
         i <- i + 1 ## the second deriv col
         ind <- y >= j ## rest are zero
+	wti <- wt[ind]
         ar1.k <- ar.k <- rep(exp(theta[k]),n)
         ar.k[y==R | y <= k] <- 0; ar1.k[y<k+2] <- 0
         ar.j <- ar1.j <- rep(exp(theta[j]),n)
@@ -442,14 +411,14 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
         if (k==j) {
           ar.kj[y>k&y<R] <- exp(theta[k])
           ar1.kj[y>k+1] <- exp(theta[k])
-          oo$Dmu3th[ind,k] <- Dmu3a1[ind]*ar.k[ind]  + Dmu3a0[ind]*ar1.k[ind]
+          oo$Dmu3th[ind,k] <- wti * (Dmu3a1[ind]*ar.k[ind]  + Dmu3a0[ind]*ar1.k[ind])
         }
-        oo$Dth2[,i] <- Da1a1*ar.k*ar.j + Da0a1*ar.k*ar1.j + Da1 * ar.kj +
-                     Da0a0*ar1.k*ar1.j + Da0a1*ar1.k*ar.j + Da0 * ar1.kj
-        oo$Dmuth2[,i] <- Dmua1a1*ar.k*ar.j + Dmua0a1*ar.k*ar1.j + Dmua1 * ar.kj +
-                     Dmua0a0*ar1.k*ar1.j + Dmua0a1*ar1.k*ar.j + Dmua0 * ar1.kj
-        oo$Dmu2th2[,i] <- Dmu2a1a1*ar.k*ar.j + Dmu2a0a1*ar.k*ar1.j + Dmu2a1 * ar.kj +
-                     Dmu2a0a0*ar1.k*ar1.j + Dmu2a0a1*ar1.k*ar.j + Dmu2a0 * ar1.kj
+        oo$Dth2[,i] <- wt * (Da1a1*ar.k*ar.j + Da0a1*ar.k*ar1.j + Da1 * ar.kj +
+                     Da0a0*ar1.k*ar1.j + Da0a1*ar1.k*ar.j + Da0 * ar1.kj)
+        oo$Dmuth2[,i] <- wt * (Dmua1a1*ar.k*ar.j + Dmua0a1*ar.k*ar1.j + Dmua1 * ar.kj +
+                     Dmua0a0*ar1.k*ar1.j + Dmua0a1*ar1.k*ar.j + Dmua0 * ar1.kj)
+        oo$Dmu2th2[,i] <- wt * (Dmu2a1a1*ar.k*ar.j + Dmu2a0a1*ar.k*ar1.j + Dmu2a1 * ar.kj +
+                     Dmu2a0a0*ar1.k*ar1.j + Dmu2a0a1*ar1.k*ar.j + Dmu2a0 * ar1.kj)
       } 
     }
     oo
@@ -481,7 +450,7 @@ ocat <- function(theta=NULL,link="identity",R=NULL) {
     al1 <- alpha[y+1];al0 = alpha[y]
     ##f1 <- F(al1-mu);f0 <- F(al0-mu);f <- f1 - f0
     f <- Fdiff(al0-mu,al1-mu)
-    -2*sum(log(f))
+    -2*sum(log(f)*wt)
   } ## end aic
 
   ls <- function(y,w,theta,scale) {
@@ -1297,7 +1266,7 @@ scat <- function (theta = NULL, link = "identity",min.df = 3) {
     ## Theta <-  NULL;
     n.theta <- 2
     if (!is.null(theta)&&sum(theta==0)==0) {
-      if (abs(theta[1]<=min.df)) {
+      if (abs(theta[1])<=min.df) {
         min.df <- 0.9*abs(theta[1])
         warning("Supplied df below min.df. min.df reset")
       }	

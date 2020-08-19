@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2019-04-29 12:44\n"
+"POT-Creation-Date: 2020-08-07 10:53\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -62,7 +62,7 @@ msgstr ""
 msgid "iterms reset to terms"
 msgstr ""
 
-msgid "exclude ignored by discrete prediction at present"
+msgid "requires a terms or formula object as first argument"
 msgstr ""
 
 msgid "family not recognized"
@@ -98,6 +98,9 @@ msgid "chunk.size < number of coefficients. Reset to %d"
 msgstr ""
 
 msgid "unknown tensor constraint type"
+msgstr ""
+
+msgid "constraints for sub blocked tensor products un-tested"
 msgstr ""
 
 msgid "Model has more coefficients than data"
@@ -219,6 +222,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "second derivs not available for non-linear penalties"
 msgstr ""
 
 msgid "Possible divergence detected in fast.REML.fit"
@@ -484,6 +490,31 @@ msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요�
 msgid "link not available for mu parameter of gammals"
 msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니다."
 
+#, fuzzy
+msgid "gumbls requires 2 links specified as character strings"
+msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
+
+#, fuzzy
+msgid "shash requires 4 links specified as character strings"
+msgstr "gaulss 모형은 문자열로 표현된 2개의 링크(link)를 필요로 합니다."
+
+#, fuzzy
+msgid "parameter of shashlss"
+msgstr "(ziplss의 모수)에 사용할 수 없습니다."
+
+#, fuzzy
+msgid "link not available for scale parameter of shash"
+msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니다."
+
+#, fuzzy
+msgid "'a' has to be positive"
+msgstr "인자 k는 반드시 양수(positive)이어야 합니다."
+
+#, fuzzy
+msgid "offset not still available for this family"
+msgstr ""
+"트위디 페밀리(tweedie family)에 링크(link) \"%s\"는 사용할 수 없습니다."
+
 msgid "An object of length %d does not match the required parameter size"
 msgstr "object의 길이 %d는 요구되어지는 모수의 크기와 일치하지 않습니다."
 
@@ -652,6 +683,9 @@ msgid "by.resids argument not supported"
 msgstr ""
 
 msgid "all.terms argument not supported"
+msgstr ""
+
+msgid "not usable with bam fits"
 msgstr ""
 
 msgid "silly tolerance supplied"
@@ -913,6 +947,27 @@ msgstr ""
 "이 페밀리(family)에서는 피어슨 잔차(Pearson residuals)를 얻을 수 없어 이탈잔"
 "차(deviance residuals)를 구합니다."
 
+#, fuzzy
+msgid "lengths of lb, df and nc must match"
+msgstr ""
+"z의 구성요소에 주어진 이름들과 pc의 구성요소에 주어진 이름들은 반드시 서로 일"
+"치해야 합니다."
+
+#, fuzzy
+msgid "df must be positive integers"
+msgstr "nthreads는 반드시 양의 정수이어야 합니다."
+
+#, fuzzy
+msgid "at least one element of lb must be non-zero"
+msgstr ""
+"random 인자의 개별 구성요소에 이름이 부여되어 있는 리스트이어야 합니다."
+
+msgid "danger of round-off error"
+msgstr ""
+
+msgid "failure of Davies method, falling back on Liu et al approximtion"
+msgstr ""
+
 msgid "lambda and h should have the same length!"
 msgstr "lambda와 h 모두 같은 길이를 가져야 합니다."
 
@@ -992,6 +1047,13 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+#, fuzzy
+msgid "AR not available with sparse marginals"
+msgstr "gaulss 모형의 모수 mu에 사용가능한 링크(link)가 아닙니다."
+
+msgid "reverse indices missing from sparse discrete marginals"
+msgstr ""
+
 msgid "update not positive definite"
 msgstr ""
 
@@ -1000,6 +1062,9 @@ msgstr ""
 
 msgid "a has wrong number of rows"
 msgstr "a가 가진 행의 개수가 올바르지 않습니다."
+
+msgid "isa requires a dg/tCMatrix"
+msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn은 둘 이상의 차원을 가진 데이터를 필요로 합니다."
@@ -1148,6 +1213,9 @@ msgstr "s(.)는 아직 지원되지 않습니다."
 
 msgid "argument k of s() should be integer and has been rounded"
 msgstr "s()의 인자 k는 반드시 정수이어야 하므로 반올림되었습니다."
+
+msgid "matrices must be all class dgCMatrix or all class matrix"
+msgstr ""
 
 msgid "attempt to use unsuitable marginal smooth class"
 msgstr ""
@@ -1406,6 +1474,9 @@ msgstr ""
 msgid "bnd must be a list of boundary loops"
 msgstr ""
 
+msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
+msgstr ""
+
 msgid "faulty bnd"
 msgstr ""
 
@@ -1413,6 +1484,9 @@ msgid "k and bnd lengths are inconsistent"
 msgstr "k와 bnd의 길이가 서로 일치하지 않습니다."
 
 msgid "data outside soap boundary"
+msgstr ""
+
+msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
 msgstr ""
 
 msgid "no free coefs in sf smooth"

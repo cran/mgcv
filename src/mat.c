@@ -1874,7 +1874,8 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps) {
     z0 = z / *x; /* sqrt(z^2+R[j,j]^2) */
     if (fabs(z0)>=1) { /* downdate not +ve def */
       //Rprintf("j = %d  d = %g ",j,z0);
-      if (*n>1) R[1] = -2.0;return; /* signals error */
+      if (*n>1) R[1] = -2.0;
+      return; /* signals error */
     }
     if (z0 > 1 - *eps) z0 = 1 - *eps;
     c0 = 1/sqrt(1-z0*z0);s0 = c0 * z0;
@@ -1957,30 +1958,12 @@ void mroot(double *A,int *rank,int *n)
 }
 
 
-void mgcv_svd(double *x,double *u,double *d,int *r,int *c)
-/* call LA_PACK svd routine to form x=UDV'. Assumes that V' not wanted, but that full square U is required.
-*/
-{ const char jobu='A',jobvt='N';
-  int lda,ldu,ldvt=1,lwork;
-  int info;
-  double *vt=NULL,work1,*work;
-  ldu=lda= *r;
-  lwork=-1;
-  /* workspace query */
-  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
-  		   &work1, &lwork, &info FCONE FCONE);
-  lwork=(int)floor(work1);
-  if (work1-lwork>0.5) lwork++;
-  work=(double *)CALLOC((size_t)lwork,sizeof(double));
-  /* actual call */
-  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
-  		   work, &lwork, &info FCONE FCONE);
-  FREE(work);
-}
-
 void mgcv_svd_full(double *x,double *vt,double *d,int *r,int *c)
 /* call LA_PACK svd routine to form x=UDV'. U returned in x. V' returned in vt.
    assumed r >= c. U is r by c. D is length c. V is c by c.
+   NOTE: fast=1 below selects the faster divide and conquer dgesdd routine rather 
+         than the slower dgesvd. Also around August 2020, MKL seem to have broken
+         dgesvd. 
 
 # Here is R test code.....
 library(mgcv)
@@ -1993,20 +1976,28 @@ matrix(um[[1]],n,q);er$u
 um[[3]];er$d
 matrix(um[[2]],q,q);er$v
 */
-{ const char jobu='O',jobvt='A';
-  int lda,ldu,ldvt,lwork;
-  int info;
+{ //const
+  char jobu='O',jobvt='A';
+  int lda,ldu,ldvt,lwork,info,*iwork=NULL,fast=1;
   double work1,*work,*u=NULL;
   ldu=lda= *r;ldvt = *c;
   lwork=-1;
   /* workspace query */
-  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  if (fast) {
+    iwork = (int *)CALLOC((size_t) 8 * *c,sizeof(int));
+    F77_CALL(dgesdd)(&jobu, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+			     &work1, &lwork,iwork, &info FCONE);
+  } else F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   &work1, &lwork, &info FCONE FCONE);
   lwork=(int)floor(work1);
   if (work1-lwork>0.5) lwork++;
   work=(double *)CALLOC((size_t)lwork,sizeof(double));
   /* actual call */
-  F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+  if (fast) {
+    F77_CALL(dgesdd)(&jobu, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
+			     work, &lwork,iwork, &info FCONE);
+    FREE(iwork);
+  } else F77_CALL(dgesvd)(&jobu,&jobvt, r, c, x, &lda, d, u, &ldu, vt,&ldvt,
   		   work, &lwork, &info FCONE FCONE);
   FREE(work);
 }
@@ -3333,7 +3324,7 @@ void mgcv_symeig(double *A,double *ev,int *n,int *use_dsyevd,int *get_vectors,
 
 } /* mgcv_symeig */
 
-void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending) 
+void mgcv_trisymeig(double *d,double *g,double *v,int *n,int *getvec,int *descending) 
 /* Find eigen-values and vectors of n by n symmetric tridiagonal matrix 
    with leading diagonal d and sub/super diagonals g. 
    eigenvalues returned in d, and eigenvectors in columns of v, if
@@ -3350,7 +3341,7 @@ void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descendi
   double *work,work1,x,*dum1,*dum2;
   int ldz=0,info,lwork=-1,liwork=-1,*iwork,iwork1,i,j;
 
-  if (getvec) { compz='I';ldz = *n;} else { compz='N';ldz=0;}
+  if (*getvec) { compz='I';ldz = *n;} else { compz='N';ldz=1;}
 
   /* workspace query first .... */
   F77_CALL(dstedc)(&compz,n,
@@ -3373,13 +3364,15 @@ void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descendi
 		   work, &lwork,
 		   iwork, &liwork, &info FCONE);
 
-   if (descending) { /* need to reverse eigenvalues/vectors */
+   if (*descending) { /* need to reverse eigenvalues/vectors */
      for (i=0;i<*n/2;i++) { /* reverse the eigenvalues */
        x = d[i]; d[i] = d[*n-i-1];d[*n-i-1] = x;
-       dum1 = v + *n * i;dum2 = v + *n * (*n-i-1); /* pointers to heads of cols to exchange */
-       for (j=0;j<*n;j++,dum1++,dum2++) { /* work down columns */
-         x = *dum1;*dum1 = *dum2;*dum2 = x;
-       }
+       if (*getvec) {
+         dum1 = v + *n * i;dum2 = v + *n * (*n-i-1); /* pointers to heads of cols to exchange */
+         for (j=0;j<*n;j++,dum1++,dum2++) { /* work down columns */
+           x = *dum1;*dum1 = *dum2;*dum2 = x;
+         }
+       }	 
      }
    }
 
@@ -3410,10 +3403,11 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
           4. Could use selective orthogonalization, but cost of full orth is only 2nj, while n^2 of method is
              unavoidable, so probably not worth it.  
 */
-  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,ni,pi,converged,incx=1,ri,ci=0,cir,one=1;
+  int biggest=0,f_check,i,k,kk,ok,l,j,vlength=0,ni,pi,converged,incx=1,ri,ci=0,cir=0,one=1;
   double **q,*v=NULL,bt,xx,yy,*a,*b,*d,*g,*z,*err,*p0,*p1,*zp,*qp,normTj,eps_stop,max_err,alpha=1.0,beta=0.0;
   unsigned long jran=1,ia=106,ic=1283,im=6075; /* simple RNG constants */
-  const char uplo='U',trans='T';
+  //const
+  char uplo='U',trans='T';
   #ifdef OMP_REPORT
   Rprintf("Rlanczos");
   #endif
@@ -3553,13 +3547,13 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
       /* obtain eigen values/vectors of T_j in O(j^2) flops */
     
       kk = j + 1;
-      mgcv_trisymeig(d,g,v,&kk,1,1);
+      mgcv_trisymeig(d,g,v,&kk,&one,&one);
       /* ... eigenvectors stored one after another in v, d[i] are eigenvalues */
 
       /* Evaluate ||Tj|| .... */
       normTj=fabs(d[0]);if (fabs(d[j])>normTj) normTj=fabs(d[j]);
 
-      for (k=0;k<j+1;k++) /* calculate error in each eigenvalue d[i] */
+      for (k=0;k<j+1;k++) /* calculate error in each eigenvalue d[k] */
       { err[k]=b[j]*v[k * vlength + j]; /* bound on kth e.v. is b[j]* (jth element of kth eigenvector) */
         err[k]=fabs(err[k]);
       }

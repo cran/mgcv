@@ -2,7 +2,7 @@
 \alias{blas.thread.test}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{BLAS thread safety}
-\description{Most BLAS implementations are thread safe, but some verions of OpenBLAS, for example are not. This routne is a diagnostic helper function, which you will never need if you don't set \code{nthreads>1}, and even then are unlikely to need.   
+\description{Most BLAS implementations are thread safe, but some versions of OpenBLAS, for example, are not. This routine is a diagnostic helper function, which you will never need if you don't set \code{nthreads>1}, and even then are unlikely to need.   
 }
 \usage{
 blas.thread.test(n=1000,nt=4)
@@ -17,7 +17,7 @@ blas.thread.test(n=1000,nt=4)
 
 A multi-threaded BLAS is often no faster than a single-threaded BLAS, while judicious use of threading in the code calling the BLAS can still deliver a modest speed improvement. For this reason it is often better to use a single threaded BLAS and the code{nthreads} options to \code{\link{bam}} or \code{\link{gam}}. For \code{bam(...,discrete=TRUE)} using several threads can be a substantial benefit, especially with the reference BLAS.
 
-The MKL BLAS is mutlithreaded by default. Under linux seting evironment variable \code{MKL_NUM_THREADS=1} before starting R gives single threaded operation. 
+The MKL BLAS is mutlithreaded by default. Under linux setting environment variable \code{MKL_NUM_THREADS=1} before starting R gives single threaded operation. 
 
 }
  

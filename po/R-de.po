@@ -3,10 +3,10 @@
 # This file is distributed under the same license as the mgcv package.
 msgid ""
 msgstr ""
-"Project-Id-Version: R 3.6.0 / mgcv 1.8-28\n"
+"Project-Id-Version: R 4.0.0 / mgcv 1.8-31\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2019-04-29 12:44\n"
-"PO-Revision-Date: 2019-04-02 13:37+0200\n"
+"POT-Creation-Date: 2020-08-07 10:53\n"
+"PO-Revision-Date: 2020-04-01 15:43+0200\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-Core <r-core@r-project.org>\n"
 "Language: de\n"
@@ -54,8 +54,8 @@ msgstr "Zu viele Cluster-Knoten, um alle effizient zu nutzen"
 msgid "iterms reset to terms"
 msgstr "iterms auf terms zurückgesetzt."
 
-msgid "exclude ignored by discrete prediction at present"
-msgstr "zur Zeit wird bei diskreter Prädiktion exclude ignoriert"
+msgid "requires a terms or formula object as first argument"
+msgstr ""
 
 msgid "family not recognized"
 msgstr "family nicht erkannt"
@@ -92,14 +92,17 @@ msgstr "chunk.size < number of coefficients. Zurückgesetzt auf %d"
 msgid "unknown tensor constraint type"
 msgstr "unbekannte Typ von Tensor-Einschränkungen"
 
+msgid "constraints for sub blocked tensor products un-tested"
+msgstr ""
+
 msgid "Model has more coefficients than data"
 msgstr "Modell hat mehr Koeffizienten als Daten"
 
-#, fuzzy
 msgid ""
 "length of sp must be number of free smoothing parameters in original model"
 msgstr ""
-"falsche Anzahl von Glättungsparametern an einen Glättungsterm übergeben"
+"die Länge von sp muss die Zahl der freien Glättungsparameter im "
+"Originalmodell sein"
 
 msgid "general families not supported by bam"
 msgstr "allgemeine Familien nicht von bam unterstützt"
@@ -127,7 +130,7 @@ msgid "not an extended family"
 msgstr "keine erweiterte Familie"
 
 msgid "erroneous call to estimate.theta - no free parameters"
-msgstr ""
+msgstr "fehlerhafter Aufruf von estimate.theta - keine freien Parameter"
 
 msgid "step failure in theta estimation"
 msgstr "Schritt Fehlgeschlagen in der Schätzung von theta"
@@ -207,6 +210,10 @@ msgid "Using ziP for binary data makes no sense"
 msgstr ""
 "Für binäre Daten macht Gebrauch null-inflationierter Poisson-Verteilung "
 "keinen Sinn"
+
+#, fuzzy
+msgid "second derivs not available for non-linear penalties"
+msgstr "Typ iterms ist für den Fall multipler Prädiktoren nicht verfügbar"
 
 msgid "Possible divergence detected in fast.REML.fit"
 msgstr "Mögliche Divergenz entdeckt in fast.REML.fit"
@@ -375,6 +382,8 @@ msgstr "all.derivs nur in der rho, theta Parametrisierung verfügbar"
 
 msgid "Tweedie density may be unreliable - series not fully converged"
 msgstr ""
+"Tweedie Dichte eventuell nicht zuverlässig - Folge ist nicht vollständig "
+"konvergiert"
 
 msgid "Only 1<p<=2 supported"
 msgstr "Nur 1<p<=2 unterstützt"
@@ -399,14 +408,13 @@ msgid "and correspond to initial coefs for"
 msgstr "und entsprechend den Anfangs-Koeffizienten für"
 
 msgid "no good data in iteration"
-msgstr ""
+msgstr "keine guten Daten in der Iteration"
 
 msgid "Non-finite coefficients at iteration"
 msgstr "Nicht-endliche Koeffizienten bei der Iteration"
 
-#, fuzzy
 msgid "not enough finite derivatives"
-msgstr "Nicht genug informative Beobachtungen."
+msgstr "nicht genug endliche Ableitungen"
 
 msgid "non finite values in Hessian"
 msgstr "nicht endliche Werte in der Hessematrix"
@@ -424,7 +432,7 @@ msgid "dist not recognised"
 msgstr "dist nicht erkannt"
 
 msgid "er... no discrete methods for higher derivatives"
-msgstr ""
+msgstr "ähem... keine diskreten Methoden für höhere Ableitungen"
 
 msgid "gaulss requires 2 links specified as character strings"
 msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
@@ -462,17 +470,38 @@ msgstr "Gebrauch von ziplss bei binären Daten ergibt keinen Sinn"
 msgid "gevlss requires 3 links specified as character strings"
 msgstr "gevlss verlangt 3 Links, angegeben als Zeichenketten"
 
-#, fuzzy
 msgid "link not available for mu parameter of twlss"
-msgstr "Link nicht verfügbar für den Parameter mu von gaulss"
+msgstr "Link nicht verfügbar für den Parameter mu von twlss"
+
+msgid "gammals requires 2 links specified as character strings"
+msgstr "gammals verlangt 2 Links, angegeben als Zeichenketten"
+
+msgid "link not available for mu parameter of gammals"
+msgstr "Link nicht verfügbar für den Parameter mu von gammals"
 
 #, fuzzy
-msgid "gammals requires 2 links specified as character strings"
+msgid "gumbls requires 2 links specified as character strings"
 msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
 
 #, fuzzy
-msgid "link not available for mu parameter of gammals"
-msgstr "Link nicht verfügbar für den Parameter mu von gaulss"
+msgid "shash requires 4 links specified as character strings"
+msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
+
+#, fuzzy
+msgid "parameter of shashlss"
+msgstr "Parameter von ziplss"
+
+#, fuzzy
+msgid "link not available for scale parameter of shash"
+msgstr "Link nicht verfügbar für den Parameter mu von twlss"
+
+#, fuzzy
+msgid "'a' has to be positive"
+msgstr "Argument k muss positiv sein"
+
+#, fuzzy
+msgid "offset not still available for this family"
+msgstr "Link \"%s\" nicht verfügbar für die Tweedie-Familie"
 
 msgid "An object of length %d does not match the required parameter size"
 msgstr ""
@@ -592,28 +621,27 @@ msgstr "Gewichte müssen wie glm-Gewichte sein für verallgemeinerten Fall"
 msgid "Nested smooths must be fully random"
 msgstr "Verschachtelte Glättungen müssen komplett zufällig sein"
 
-#, fuzzy
 msgid "size must be in [1,120]"
-msgstr "p muss aus [1,2] sein"
+msgstr "size muss aus [1,120] sein"
 
 msgid "rank deficient re-parameterization"
-msgstr ""
+msgstr "rangdefizitäre Re-parametrisierung"
 
 msgid "modal weight <=0 in integration step!!"
-msgstr ""
+msgstr "modales Gewicht <=0 im Integrationsschritt!!"
 
 msgid "Requires a gam or bam prefit object"
-msgstr ""
+msgstr "Benötigt ein gam- oder bam-prefit Objekt"
 
 msgid "bam fits only supported with discrete==TRUE"
-msgstr ""
+msgstr "bam Anpassungen werden nur mit discrete==TRUE unterstützt"
 
 msgid "integration not available with this family - insufficient derivatives"
 msgstr ""
+"Integration für diese Familie nicht verfügbar - unzureichende Ableitungen"
 
-#, fuzzy
 msgid "something wrong with A index vector"
-msgstr "etwas stimmt nicht mit stratifizierter Vorhersage"
+msgstr "etwas stimmt nicht mit dem A Indexvektor"
 
 msgid "sorry link not yet handled"
 msgstr "Sorry, Link noch nicht implementiert"
@@ -651,6 +679,10 @@ msgstr "by.resids Argument wird nicht unterstützt"
 
 msgid "all.terms argument not supported"
 msgstr "all.terms Argument wird nicht unterstützt"
+
+#, fuzzy
+msgid "not usable with bam fits"
+msgstr "Basis nicht nutzbar mit reduziertem te"
 
 msgid "silly tolerance supplied"
 msgstr "unangemessene Toleranz angegeben"
@@ -909,6 +941,24 @@ msgstr ""
 "Pearson-Residuen für diese Familie nicht verfügbar - geben Devianz-Residuen "
 "zurück"
 
+#, fuzzy
+msgid "lengths of lb, df and nc must match"
+msgstr "Namen von z und pc müssen übereinstimmen"
+
+#, fuzzy
+msgid "df must be positive integers"
+msgstr "nthreads muss eine positive, ganze Zahl sein"
+
+#, fuzzy
+msgid "at least one element of lb must be non-zero"
+msgstr "alle Elemente der random-Liste müssen benannt sein"
+
+msgid "danger of round-off error"
+msgstr ""
+
+msgid "failure of Davies method, falling back on Liu et al approximtion"
+msgstr ""
+
 msgid "lambda and h should have the same length!"
 msgstr "lambda und h sollten die selbe Länge haben!"
 
@@ -990,14 +1040,23 @@ msgid "sd should have exactly one less entry than ld"
 msgstr "sd sollte genau eins kleiner sein als ld"
 
 #, fuzzy
+msgid "AR not available with sparse marginals"
+msgstr "Link nicht verfügbar für den Parameter mu von gaulss"
+
+msgid "reverse indices missing from sparse discrete marginals"
+msgstr ""
+
 msgid "update not positive definite"
-msgstr "nicht positiv definit"
+msgstr "update nicht positiv definit"
 
 msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr "interner Fehler in vcorr, bitte an simon.wood@r-project.org melden"
 
 msgid "a has wrong number of rows"
 msgstr "a hat die falsche Zeilenzahl"
+
+msgid "isa requires a dg/tCMatrix"
+msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn benötigt zwei- oder höherdimensionale Daten"
@@ -1009,7 +1068,7 @@ msgid "mvn dimension error"
 msgstr "mvn Dimensionsfehler"
 
 msgid "non-integer binomial denominator: quantiles incorrect"
-msgstr ""
+msgstr "nicht-ganzzahliger Binomialnenner: Quantile inkorrekt"
 
 msgid "object is not a glm or gam"
 msgstr "Obejekt ist weder glm noch gam"
@@ -1150,6 +1209,9 @@ msgstr "s(.) wird noch nicht unterstützt."
 
 msgid "argument k of s() should be integer and has been rounded"
 msgstr "Argument k von s() sollte ganzzahlig sein und wurde gerundet"
+
+msgid "matrices must be all class dgCMatrix or all class matrix"
+msgstr ""
 
 msgid "attempt to use unsuitable marginal smooth class"
 msgstr "Versuch unpassende Randglätterklasse zu nutzen"
@@ -1430,6 +1492,9 @@ msgstr "soap Glätter braucht Grenze"
 msgid "bnd must be a list of boundary loops"
 msgstr "bnd muss eine Liste von Grenz-Schleifen sein"
 
+msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
+msgstr ""
+
 msgid "faulty bnd"
 msgstr "fehlerhaftes bnd"
 
@@ -1438,6 +1503,9 @@ msgstr "Längen von k und bnd sind inkonsistent"
 
 msgid "data outside soap boundary"
 msgstr "Daten außerhalb der soap Grenze"
+
+msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
+msgstr ""
 
 msgid "no free coefs in sf smooth"
 msgstr "keine freien Koeffizienten in sf-Glättung"
@@ -1453,6 +1521,9 @@ msgstr "kubische Splines behandeln nur 1D Daten"
 
 msgid "object not fully initialized"
 msgstr "Objekt nicht voll initialisiert"
+
+#~ msgid "exclude ignored by discrete prediction at present"
+#~ msgstr "zur Zeit wird bei diskreter Prädiktion exclude ignoriert"
 
 #~ msgid "discretization can not handle smooth ids"
 #~ msgstr "Diskretisierung kann glatte ids nicht behandeln"

@@ -30,8 +30,11 @@ which is a sum of independent terms, each coprresponding to a single response ob
 The following families implement more general model classes. Usable only with \code{\link{gam}} and only with REML smoothing parameter estimation.
 \itemize{
 \item \code{\link{cox.ph}} the Cox Proportional Hazards model for survival data.
+\item \code{\link{gammals}} a gamma location-scale model, where the mean and standared deviation are modelled with separate linear predictors.
 \item \code{\link{gaulss}} a Gaussian location-scale model where the mean and the standard deviation are both modelled using smooth linear predictors.
-\item \code{\link{gevlss}} a generalized extreme value (GEV) model where the location, scale and shape parameters are each modelled using a linear predictor. 
+\item \code{\link{gevlss}} a generalized extreme value (GEV) model where the location, scale and shape parameters are each modelled using a linear predictor.
+\item \code{\link{gumbls}} a Gumbel location-scale model (2 linear predictors).
+\item \code{\link{shash}} Sinh-arcsinh location scale and shape model family (4 linear predicors).
 \item \code{\link{ziplss}} a `two-stage' zero inflated Poisson model, in which 'potential-presence' is modelled with one linear predictor, and Poisson mean abundance
 given potential presence is modelled with a second linear predictor. 
 \item \code{\link{mvn}}: multivariate normal additive models.  
@@ -46,7 +49,7 @@ given potential presence is modelled with a second linear predictor.
 \references{Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
-\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
 }
 
 

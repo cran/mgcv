@@ -9,7 +9,7 @@
    are not null terminated) so the lengths are passed as hidden extra function arguments. BLAS/LAPACK
    only ever uses single character strings, so it never needs to access the string lengths and it is 
    then no problem that they are missing (they are at the end of the call arguments), so they are simply 
-   not passed in the C call. This was no problme until Gfortran decided to optimize the process of calling 
+   not passed in the C call. This was no problem until Gfortran decided to optimize the process of calling 
    a function with the same argument list as the calling function. Basically it passed the call stack of 
    the calling function to the called function assuming that it contained the string lengths - as it 
    didn't this caused stack corruption. 
@@ -60,6 +60,8 @@
 /* For safe memory handling from R... */
 #define CALLOC R_chk_calloc
 #define FREE R_chk_free
+#define REALLOC R_chk_realloc
+
 /* BUT, this can mess up valgrinding for memory error checking - problems are 
    sometimes missed because standard allocation is being circumvented. Then errors can 
    corrupt R memory management without detection and trigger nothing until R
@@ -68,6 +70,7 @@
    errors in .C often generate no obvious valgrind error.*/
 //#define CALLOC calloc
 //#define FREE free
+//#define REALLOC realloc
 void *R_chk_calloc1(size_t nmemb,size_t size);
 
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,
@@ -140,7 +143,8 @@ void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int
 	      int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *pv,int *cv,int *nthreads,int *cs,int *ncs,int *rs,int *nrs);
 
 /* various service routines */
-
+void davies(double *lb,double *nc,int *n,int *r,double *sigma,double *c,int *lim,
+	    double *acc,double *trace,int *ifault);
 void tweedious(double *w,double *w1,double *w2, double *w1p,double *w2p,double *w2pp, 
 	       double *y,double *eps,int *n,
                double *th,double *rho,double *a, double *b);
@@ -165,7 +169,6 @@ void band_chol(double *B,int *n,int *k,int *info);
 void tri_chol(double *ld,double *sd,int *n,int *info);
 void mgcv_omp(int *a);
 void mgcv_chol(double *a,int *pivot,int *n,int *rank);
-void mgcv_svd(double *x,double *u, double *d,int *r,int *c);
 void mgcv_qrqy(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
 void mgcv_qrqy0(double *b,double *a,double *tau,int *r,int *c,int *k,int *left,int *tp);
 void mgcv_backsolve(double *R,int *r,int *c,double *B,double *C, int *bc, int *right);
@@ -183,7 +186,7 @@ void mroot(double *A,int *rank,int *n);
 void R_cond(double *R,int *r,int *c,double *work,double *Rcondition);
 void mgcv_td_qy(double *S,double *tau,int *m,int *n, double *B,int *left,int *transpose);
 void mgcv_tri_diag(double *S,int *n,double *tau);
-void mgcv_trisymeig(double *d,double *g,double *v,int *n,int getvec,int descending); 
+void mgcv_trisymeig(double *d,double *g,double *v,int *n,int *getvec,int *descending); 
 void getXtWX(double *XtWX, double *X,double *w,int *r,int *c,double *work);
 void getXtX(double *XtX,double *X,int *r,int *c);
 void getXtMX(double *XtMX,double *X,double *M,int *r,int *c,double *work);
@@ -208,6 +211,14 @@ SEXP mgcv_Rpbacksolve(SEXP R, SEXP B,SEXP NT);
 SEXP mgcv_Rpcross(SEXP A, SEXP NT,SEXP NB);
 SEXP mgcv_madi(SEXP a, SEXP b,SEXP ind,SEXP diag);
 
+/* sparse matrix routines */
+SEXP isa1p(SEXP L,SEXP S,SEXP NT);
+SEXP stmm(SEXP X); /* row Kronecker product */
+SEXP sdiagXVXt(SEXP X, SEXP V, SEXP LT, SEXP RT);
+SEXP sXbd(SEXP X,SEXP BETA,SEXP LT);
+SEXP sXyd(SEXP X,SEXP Y,SEXP LT);
+SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT);
+SEXP AddBVB(SEXP A,SEXP bt, SEXP vbt);
 
 /* basis constructor/prediction routines*/
 

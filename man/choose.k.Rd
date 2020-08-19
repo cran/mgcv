@@ -66,7 +66,7 @@ conclusions to be drawn from a model fit, however.
 
 Wood, S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). CRC/Taylor & Francis.
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 }
 
 \examples{

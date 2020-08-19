@@ -62,7 +62,7 @@ the elements \code{polys}, \code{nb} or \code{penalty}.
       }
 \item{nb}{is a named list defining the neighbourhood structure. \code{names(nb)} must correspond to the 
           levels of the covariate of the smooth (i.e. the area labels), but can be in any order. \code{nb[[i]]} 
-          is a numeric vector indexing the neighbours of the ith area.
+          is a numeric vector indexing the neighbours of the ith area (and should not include \code{i}).
 	  All indices are relative to \code{nb} itself, but can be translated using \code{names(nb)}. See example code.
 	  As an alternative each \code{nb[[i]]} can be an array of the names of the neighbours, but these will be
 	  converted to the arrays of numeric indices internally. 

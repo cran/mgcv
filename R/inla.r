@@ -95,13 +95,13 @@ logf <- function(beta,b,Bi=NULL,Xm=NULL,deriv=0) {
     }
   } ## deviance done
   ## now the smoothing prior/penalty
-  ## NOTE: id's, fixed sp ???
+  sp <- if (is.null(b$full.sp)) b$sp else b$full.sp ## handling linked sp's
   if (length(b$smooth)) {
     k <- 1;pen <- 0
     for (i in 1:length(b$smooth)) for (j in 1:length(b$smooth[[i]]$S)) {
       ind <- b$smooth[[i]]$first.para:b$smooth[[i]]$last.para
       b0 <- beta[ind]
-      Sb <- b$smooth[[i]]$S[[j]] %*% b0 * b$sp[k]
+      Sb <- b$smooth[[i]]$S[[j]] %*% b0 * sp[k]
       pen <- pen + sum(b0*Sb)
       if (deriv) dd[ind] <- dd[ind] + Sb
       k <- k + 1 

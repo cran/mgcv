@@ -6,7 +6,7 @@
 \title{Row Kronecker product/ tensor product smooth construction}
 \description{
 Produce model matrices or penalty matrices for a tensor product smooth from the model matrices or
-penalty matrices for the marginal bases of the smooth. The model matrix construction uses row Kronecker products.
+penalty matrices for the marginal bases of the smooth (marginals and results can be sparse). The model matrix construction uses row Kronecker products.
 }
 \usage{
 tensor.prod.model.matrix(X)
@@ -15,7 +15,7 @@ a\%.\%b
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
-  \item{X}{a list of model matrices for the marginal bases of a smooth} 
+  \item{X}{a list of model matrices for the marginal bases of a smooth. Items can be class \code{"matrix"} or \code{"dgCMatrix"}, but not a mixture of the two.} 
  \item{S}{a list of penalties for the marginal bases of a smooth.}
  \item{a}{a matrix with the same number of rows as \code{A}.}
  \item{b}{a matrix with the same number of rows as \code{B}.}
@@ -43,8 +43,7 @@ Of course it's important that the model matrices and penalty matrices are presen
 constructing tensor product smooths.
 
 }
-\value{ Either a single model matrix for a tensor product smooth, or a list of penalty terms for a tensor
-product smooth.   
+\value{ Either a single model matrix for a tensor product smooth (of the same class as the marginals), or a list of penalty terms for a tensor product smooth.   
 }
 \references{
 
@@ -58,13 +57,21 @@ Generalized Additive Mixed Models. Biometrics 62(4):1025-1036
 
 \examples{
 require(mgcv)
-X <- list(matrix(1:4,2,2),matrix(5:10,2,3))
+## Dense row Kronecker product example...
+X <- list(matrix(0:3,2,2),matrix(c(5:8,0,0),2,3))
 tensor.prod.model.matrix(X)
 X[[1]]\%.\%X[[2]]
 
-S<-list(matrix(c(2,1,1,2),2,2),matrix(c(2,1,0,1,2,1,0,1,2),3,3))
-tensor.prod.penalties(S)
+## sparse equivalent...
+Xs <- lapply(X,as,"dgCMatrix")
+tensor.prod.model.matrix(Xs)
+Xs[[1]]\%.\%Xs[[2]]
 
+S <- list(matrix(c(2,1,1,2),2,2),matrix(c(2,1,0,1,2,1,0,1,2),3,3))
+tensor.prod.penalties(S)
+## Sparse equivalent...
+Ss <- lapply(S,as,"dgCMatrix")
+tensor.prod.penalties(Ss)
 }
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 

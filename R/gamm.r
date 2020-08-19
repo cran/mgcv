@@ -1138,12 +1138,16 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
 ## does some of the preliminary stuff that glmmPQL does, gammPQL can
 ## be simpler. It also deals with the possibility of the original
 ## data frame containing variables called `zz' `wts' or `invwt'.
-## Modified 2019 to use standard GLM initialization to imporove convergence.
+## Modified 2019 to use standard GLM initialization to improve convergence.
+## Old glmmPQL style initialization commented out (single # first col) for
+## eventual removal.
   off <- model.offset(data)
   if (is.null(off)) off <- 0
-  y <- model.response(data) ## NEW
-  nobs <- nrow(data) ## NEW
+  
+  y <- model.response(data) 
+  nobs <- nrow(data) 
   if (is.null(weights)) weights <- rep(1, nrow(data))
+
   start <-  NULL ## never used
   if (is.null(mustart)) {
     eval(family$initialize)
@@ -1155,7 +1159,7 @@ gammPQL <- function (fixed, random, family, data, correlation, weights,
   #eval(family$initialize) ## NEW
 
   wts <- weights
-  #if (is.null(wts)) wts <- rep(1, nrow(data))
+# if (is.null(wts)) wts <- rep(1, nrow(data))
   wts.name <- new.name("wts",names(data)) ## avoid overwriting what's already in `data'
   data[[wts.name]] <- wts 
  
@@ -1339,9 +1343,10 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
     eval(parse(text=paste("mf$",Xname,"<-G$X",sep="")))
     
     fixed.formula <- paste(yname,"~",Xname,"-1")
-    if (length(offset.name)) {
-      fixed.formula <- paste(fixed.formula,"+",offset.name) 
-    }
+    ## following appears to serve no purpose except confusing later lme versions
+    #if (length(offset.name)) {
+    #  fixed.formula <- paste(fixed.formula,"+",offset.name) 
+    #}
     fixed.formula <- as.formula(fixed.formula)
     
     ## Add any explicit random effects to the smooth induced r.e.s 

@@ -39,7 +39,7 @@ mono.con(x,up=TRUE,lower=NA,upper=NA)
   Wood, S.N. (1994) Monotonic smoothing splines fitted by cross validation.
   \emph{SIAM Journal on Scientific Computing} \bold{15}(5), 1126--1133.
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} }
 

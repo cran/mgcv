@@ -668,16 +668,24 @@ tensor.prod.model.matrix <- function(X) {
 # X is a list of model matrices, from which a tensor product model matrix is to be produced.
 # e.g. ith row is basically X[[1]][i,]%x%X[[2]][i,]%x%X[[3]][i,], but this routine works 
 # column-wise, for efficiency, and does work in compiled code.
-  m <- length(X)              ## number to row tensor product
-  d <- unlist(lapply(X,ncol)) ## dimensions of each X
-  n <- nrow(X[[1]])           ## columns in each X
-  X <- as.numeric(unlist(X))  ## append X[[i]]s columnwise
-  T <- numeric(n*prod(d))     ## storage for result
-  .Call(C_mgcv_tmm,X,T,d,m,n) ## produce product
-  ## Give T attributes of matrix. Note that initializing T as a matrix 
-  ## requires more time than forming the row tensor product itself (R 3.0.1)
-  attr(T,"dim") <- c(n,prod(d)) 
-  class(T) <- "matrix"
+  if (inherits(X[[1]],"dgCMatrix")) {
+    if (any(!unlist(lapply(X,inherits,"dgCMatrix"))))
+      stop("matrices must be all class dgCMatrix or all class matrix")
+    T <- .Call(C_stmm,X)
+  } else {
+    if (any(!unlist(lapply(X,inherits,"matrix"))))
+       stop("matrices must be all class dgCMatrix or all class matrix")
+    m <- length(X)              ## number to row tensor product
+    d <- unlist(lapply(X,ncol)) ## dimensions of each X
+    n <- nrow(X[[1]])           ## rows in each X
+    X <- as.numeric(unlist(X))  ## append X[[i]]s columnwise
+    T <- numeric(n*prod(d))     ## storage for result
+    .Call(C_mgcv_tmm,X,T,d,m,n) ## produce product
+    ## Give T attributes of matrix. Note that initializing T as a matrix 
+    ## requires more time than forming the row tensor product itself (R 3.0.1)
+    attr(T,"dim") <- c(n,prod(d)) 
+    class(T) <- "matrix"
+  }  
   T
 } ## end tensor.prod.model.matrix
 
@@ -1254,20 +1262,22 @@ smooth.construct.tp.smooth.spec <- function(object,data,knots)
   if (nk==0 && n>xtra$max.knots) { ## then there *may* be too many data  
     xu <- uniquecombs(matrix(x,n,object$dim),TRUE) ## find the unique `locations'
     nu <- nrow(xu)  ## number of unique locations
-    if (nu>xtra$max.knots) { ## then there is really a problem 
-      seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-      if (inherits(seed,"try-error")) {
-          runif(1)
-          seed <- get(".Random.seed",envir=.GlobalEnv)
-      }
-      kind <- RNGkind(NULL)
-      RNGkind("default","default")
-      set.seed(xtra$seed) ## ensure repeatability
+    if (nu>xtra$max.knots) { ## then there is really a problem
+      rngs <- temp.seed(xtra$seed)
+      #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+      #if (inherits(seed,"try-error")) {
+      #    runif(1)
+      #    seed <- get(".Random.seed",envir=.GlobalEnv)
+      #}
+      #kind <- RNGkind(NULL)
+      #RNGkind("default","default")
+      #set.seed(xtra$seed) ## ensure repeatability
       nk <- xtra$max.knots ## going to create nk knots
       ind <- sample(1:nu,nk,replace=FALSE)  ## by sampling these rows from xu
       knt <- as.numeric(xu[ind,])  ## ... like this
-      RNGkind(kind[1],kind[2])
-      assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+      temp.seed(rngs)
+      #RNGkind(kind[1],kind[2])
+      #assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
     }
   } ## end of large data set handling
   ##if (object$bs.dim[1]<0) object$bs.dim <- 10*3^(object$dim-1) # auto-initialize basis dimension
@@ -1954,6 +1964,10 @@ Predict.matrix.Bspline.smooth <- function(object,data) {
 #######################################################################
 # Smooth-factor interactions. Efficient alternative to s(x,by=fac,id=1) 
 #######################################################################
+smooth.info.fs.smooth.spec <- function(object) {
+  object$tensor.possible <- TRUE ## signal that a tensor product construction is possible here
+  object
+}
 
 smooth.construct.fs.smooth.spec <- function(object,data,knots) {
 ## Smooths in which one covariate is a factor. Generates a smooth
@@ -2090,6 +2104,9 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
     object$margin[[2]] <- object
     object$margin[[2]]$X <- rp$X
     object$margin[[2]]$margin.only <- TRUE
+    object$margin[[2]]$tensor.possible <- NULL
+    object$margin[[2]]$margin <- NULL
+    object$margin[[2]]$term <- object$term[!object$term%in%object$fterm]
     ## list(X=rp$X,term=object$base$term,base=object$base,margin.only=TRUE,P=object$P,by="NA")
     ## class(object$margin[[2]]) <- "fs.interaction"
     ## note --- no re-ordering at present - inefficiecnt as factor should really
@@ -2326,6 +2343,10 @@ smooth.construct.ad.smooth.spec <- function(object,data,knots)
 # Random effects terms start here. Plot method in plot.r
 ########################################################
 
+smooth.info.re.smooth.spec <- function(object) {
+  object$tensor.possible <- TRUE
+  object
+}
 
 smooth.construct.re.smooth.spec <- function(object,data,knots)
 ## a simple random effects constructor method function
@@ -2567,7 +2588,7 @@ smooth.construct.mrf.smooth.spec <- function(object, data, knots) {
       ind <- object$xt$nb[[i]]
       lind <- length(ind)
       S[a.name[i],a.name[i]] <- lind
-      if (lind>0) for (j in 1:lind) S[a.name[i],a.name[ind[j]]] <- -1
+      if (lind>0) for (j in 1:lind) if (ind[j]!=i) S[a.name[i],a.name[ind[j]]] <- -1
     }
     if (sum(S!=t(S))>0) stop("Something wrong with auto- penalty construction")
     object$S[[1]] <- S
@@ -2779,19 +2800,21 @@ smooth.construct.sos.smooth.spec<-function(object,data,knots)
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu>xtra$max.knots) { ## then there is really a problem 
-        seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-        if (inherits(seed,"try-error")) {
-          runif(1)
-          seed <- get(".Random.seed",envir=.GlobalEnv)
-        }
-        kind <- RNGkind(NULL)
-        RNGkind("default","default")
-        set.seed(xtra$seed) ## ensure repeatability
+        rngs <- temp.seed(xtra$seed)
+        #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+        #if (inherits(seed,"try-error")) {
+        #  runif(1)
+        #  seed <- get(".Random.seed",envir=.GlobalEnv)
+        #}
+        #kind <- RNGkind(NULL)
+        #RNGkind("default","default")
+        #set.seed(xtra$seed) ## ensure repeatability
         nk <- xtra$max.knots ## going to create nk knots
         ind <- sample(1:nu,nk,replace=FALSE)  ## by sampling these rows from xu
         knt <- as.numeric(xu[ind,])  ## ... like this
-        RNGkind(kind[1],kind[2])
-        assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+        temp.seed(rngs)
+        #RNGkind(kind[1],kind[2])
+        #assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
       } else { 
         knt <- xu;nk <- nu
       } ## end of large data set handling
@@ -2989,19 +3012,21 @@ smooth.construct.ds.smooth.spec <- function(object,data,knots)
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu>xtra$max.knots) { ## then there is really a problem 
-        seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-        if (inherits(seed,"try-error")) {
-          runif(1)
-          seed <- get(".Random.seed",envir=.GlobalEnv)
-        }
-        kind <- RNGkind(NULL)
-        RNGkind("default","default")
-        set.seed(xtra$seed) ## ensure repeatability
+        rngs <- temp.seed(xtra$seed)
+        #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+        #if (inherits(seed,"try-error")) {
+        #  runif(1)
+        #  seed <- get(".Random.seed",envir=.GlobalEnv)
+        #}
+        #kind <- RNGkind(NULL)
+        #RNGkind("default","default")
+        #set.seed(xtra$seed) ## ensure repeatability
         nk <- xtra$max.knots ## going to create nk knots
         ind <- sample(1:nu,nk,replace=FALSE)  ## by sampling these rows from xu
         knt <- as.numeric(xu[ind,])  ## ... like this
-        RNGkind(kind[1],kind[2])
-        assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+	temp.seed(rngs)
+        #RNGkind(kind[1],kind[2])
+        #assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
       } else { 
         knt <- xu;nk <- nu
       } ## end of large data set handling
@@ -3223,19 +3248,21 @@ smooth.construct.gp.smooth.spec <- function(object,data,knots)
     nu <- nrow(xu)  ## number of unique locations
     if (n > xtra$max.knots) { ## then there *may* be too many data      
       if (nu > xtra$max.knots) { ## then there is really a problem 
-        seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-        if (inherits(seed,"try-error")) {
-          runif(1)
-          seed <- get(".Random.seed",envir=.GlobalEnv)
-        }
-        kind <- RNGkind(NULL)
-        RNGkind("default","default")
-        set.seed(xtra$seed) ## ensure repeatability
+        rngs <- temp.seed(xtra$seed)
+        #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
+        #if (inherits(seed,"try-error")) {
+        #  runif(1)
+        #  seed <- get(".Random.seed",envir=.GlobalEnv)
+        #}
+        #kind <- RNGkind(NULL)
+        #RNGkind("default","default")
+        #set.seed(xtra$seed) ## ensure repeatability
         nk <- xtra$max.knots ## going to create nk knots
         ind <- sample(1:nu,nk,replace=FALSE)  ## by sampling these rows from xu
         knt <- as.numeric(xu[ind,])  ## ... like this
-        RNGkind(kind[1],kind[2])
-        assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
+	temp.seed(rngs)
+        #RNGkind(kind[1],kind[2])
+        #assign(".Random.seed",seed,envir=.GlobalEnv) ## RNG behaves as if it had not been used
       } else { 
         knt <- xu; nk <- nu
       } ## end of large data set handling
@@ -3340,6 +3367,9 @@ Predict.matrix.gp.smooth <- function(object,data)
 ## The generics and wrappers
 ############################
 
+smooth.info <- function(object) UseMethod("smooth.info")
+
+smooth.info.default <- function(object) object
 
 smooth.construct <- function(object,data,knots) UseMethod("smooth.construct")
 

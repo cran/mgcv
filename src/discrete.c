@@ -421,6 +421,9 @@ void Xbd(double *f,double *beta,double *X,int *k,int *ks, int *m,int *p, int *n,
    bc is number of cols of beta and f... 
    This version allows selection of terms via length ncs array cs. If ncs<=0 then all terms
    are returned (but the physical storage for cs must then be of length nt).
+   BUT: the selection mechanism is clunky as it assumes that beta has been re-ordered and 
+        truncated to match cs, so that the working through the selected terms in order 
+        we also only need to move through the supplied beta in order.
    LIMITED thread safety. Allocates/frees memory using R_chk_calloc/R_chk_free (usually),
    protected within critical sections. Not safe to use with other routines allocating memory using these routines
    within a parallel section. Safe to use as the only allocator of memory within a parallel section. 
@@ -506,7 +509,7 @@ void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int
    Currently inefficient. Could be speeded up by a factor of 2, by supplying a
    square root of V in place of V.
    cs and rs are ncs and nrs vectors specifying which terms should be included 
-   in the cross product. negtive ncs or nrs signals to include all. 
+   in the cross product. negative ncs or nrs signals to include all. 
 
    Basic algorithm is to compute XV and then the row sums of XV.X. 
    In practice this is done by computing one column of XV and X at a time.
@@ -1418,7 +1421,7 @@ void XWXd0(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n
 */   
   int *pt, *pd,i,j,si,maxp=0,tri,r,c,rb,cb,rt,ct,pa,*tps,*tpsu,ptot,*b,*B,*C,*R,*sb,N,kk,kb,tid=0,nxwx=0,qi=0,*worki;
   ptrdiff_t *off,*voff,mmp,q;
-  double *work,*ws,*Cost,*cost,*x0,*x1,*p0,*p1,*p2,x;
+  double *work,*ws=NULL,*Cost,*cost,*x0,*x1,*p0,*p1,*p2,x;
   unsigned long long ht[256];
   SM **sm,*SMstack;
   #ifndef OPENMP_ON
@@ -1640,7 +1643,7 @@ void XWXd1(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n
   int *pt, *pd,i,j,ri,ci,si,maxp=0,tri,r,c,rb,cb,rt,ct,pa,*tpsr,*tpsur,*tpsc,*tpsuc,ptot,
       *b,*B,*C,*R,*sb,N,kk,kb,tid=0,nxwx=0,qi=0,*worki,symmetric=1;
   ptrdiff_t *off,*voff,mmp,q;
-  double *work,*ws,*Cost,*cost,*x0,*x1,*p0,*p1,*p2,x;
+  double *work,*ws=NULL,*Cost,*cost,*x0,*x1,*p0,*p1,*p2,x;
   unsigned long long ht[256];
   SM **sm,*SMstack;
   #ifndef OPENMP_ON

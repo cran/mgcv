@@ -367,7 +367,8 @@ void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,do
 
  */
 { int *pi,*pivot,q,n,autoinit,ScS,m,mp,i,j,tp,k,use_sd=0,rank,converged,iter=0,ok,*cucS,
-    gcv,try,fit_call=0,step_fail=0,max_half,*spok,def_supplied,use_dsyevd=1,L_exists,TRUE=1,FALSE=0;
+    gcv,try,fit_call=0,step_fail=0,max_half,*spok,def_supplied,use_dsyevd=0, // try 0 re MKL problem
+    L_exists,TRUE=1,FALSE=0;
   double *sp=NULL,*p,*p1,*p2,*tau,xx,*y1,*y0,yy,**Si=NULL,*work,score,*sd_step,*n_step,*U1,*V,*d,**M,**K,
          *VS,*U1U1,**My,**Ky,**yK,*dnorm,*ddelta,**d2norm,**d2delta,norm,delta,*grad,**hess,*nsp,
     min_score,*step,d_score=1e10,*ev=NULL,*u,msg=0.0,Xms,*rSms,*bag,*bsp,sign,*grad1,*u0,*R;

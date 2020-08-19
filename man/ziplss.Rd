@@ -1,9 +1,9 @@
 \name{ziplss}
 \alias{ziplss}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{Zero inflated Poisson location-scale model family}
-\description{The \code{ziplss} family implements a zero inflated Poisson model in which one linear predictor 
-controls the probability of presence  and the other controls the mean given  presence.
+\title{Zero inflated (hurdle) Poisson location-scale model family}
+\description{The \code{ziplss} family implements a zero inflated (hurdle) Poisson model in which one linear predictor 
+controls the probability of presence  and the other controls the mean given presence.
 Useable only with \code{\link{gam}}, the linear predictors are specified via a list of formulae. 
 Should be used with care: simply having a large number of zeroes is not an indication of zero inflation. 
 
@@ -25,7 +25,7 @@ parameterization is directly in terms of log of Poisson response and logit of pr
 a list containing 2 formulae, the first specifies the response on the left hand side and the structure of the linear predictor for the Poisson parameter on the right hand side. The second is one sided, specifying the linear predictor for the probability of presence on the right hand side. 
 
 The fitted values for this family will be a two column matrix. The first column is the log of the Poisson parameter, 
-and the second column is the complimentary log log of probability of presnece.. 
+and the second column is the complimentary log log of probability of presence.. 
 Predictions using \code{\link{predict.gam}} will also produce 2 column matrices for \code{type} 
 \code{"link"} and \code{"response"}.
 
@@ -42,7 +42,7 @@ avoid problems. For 1D smooths uses e.g. \code{s(x,m=1)} and for isotropic smoot
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
-\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
 }
 
 \section{WARNINGS }{

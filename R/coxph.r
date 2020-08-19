@@ -67,6 +67,8 @@ cox.ph <- function (link = "identity") {
       object$fitted.values[y.order] <- object$fitted.values
       if (is.matrix(object$y)) object$y[y.order,] <- object$y else object$y[y.order] <- object$y  
       object$prior.weights[y.order] <- object$prior.weights
+      object$family$data$Rs[y.order,] <- object$family$data$Rs
+      object$family$data$Rc[y.order,] <- object$family$data$Rc
     })
     
     initialize <- expression({
@@ -101,14 +103,27 @@ cox.ph <- function (link = "identity") {
       }
       p <- ncol(X)
       eta <- as.double(X%*%beta) + offset
+      gamma <- exp(eta)
       if (ns==1) {
         r <- match(y,tr)
         oo <- .C("coxpp",eta,A=as.double(X),as.integer(r),d=as.integer(wt),
                h=as.double(rep(0,nt)),q=as.double(rep(0,nt)),km=as.double(rep(0,nt)),
                n=as.integer(nrow(X)),p=as.integer(ncol(X)),
                nt=as.integer(nt),PACKAGE="mgcv")
-	return(list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[1:(p*nt)],p,nt),nt=nt,r=r,km=oo$km))
+	## Now compute the Shoenfeld residuals, set to zero for censored...
+        if (p) {
+          X <- (X - apply(gamma*X,2,cumsum)/cumsum(gamma))*wt ## Schoenfeld
+	  n <- nrow(X)
+	  R <- apply(X[n:1,,drop=FALSE],2,cumsum)[n:1,,drop=FALSE] ## score residuals
+	  ## now remove the penalization induced drift...
+	  x <- (1:n)[wt!=0]; dx <- seq(1,0,length=sum(wt!=0))
+	  drift <- approx(x,dx,xout=1:n,method="constant",rule=2)$y
+	  R <- R - t(t(matrix(drift,n,ncol(R)))*R[1,])
+	  X[wt==0,] <- NA
+	} else R <- X  
+	return(list(tr=tr,h=oo$h,q=oo$q,a=matrix(oo$A[1:(p*nt)],p,nt),nt=nt,r=r,km=oo$km,Rs = X,Rc = R))
       } else {
+        R <- X 
         r <- y*0;a <- matrix(0,p,nt)
 	h <- q <- km <- rep(0,nt)
         for (i in 1:ns) { ## loop over strata
@@ -127,18 +142,52 @@ cox.ph <- function (link = "identity") {
 	  km[trind] <- oo$km
 	  r[ind] <- r0 ## note that indexing is to subsetted tr
 	  a[,trind] <- matrix(oo$A[1:(p*nti)],p,nti)
+	  ## compute Schoenfeld resiudals, within stratum
+          if (p) {
+            Xs <- X[ind,] <- (X[ind,,drop=FALSE] - apply(gamma[ind]*X[ind,],2,cumsum)/cumsum(gamma[ind]))*wt[ind]
+	    n <- nrow(Xs)
+	    Rs <- apply(Xs[n:1,,drop=FALSE],2,cumsum)[n:1,,drop=FALSE] ## score residuals
+	    ## now remove the penalization induced drift...
+	    x <- (1:n)[wt[ind]!=0]; dx <- seq(1,0,length=sum(wt[ind]!=0))
+	    drift <- approx(x,dx,xout=1:n,method="constant",rule=2)$y
+	    Rs <- Rs - t(t(matrix(drift,n,ncol(R)))*Rs[1,])
+	    R[ind,] <- Rs
+	  }  
         }
-	return(list(tr=tr,h=h,q=q,a=a,nt=nt,r=r,km=km,strat=strat,tr.strat=tr.strat))
+	X[wt==0,] <- NA
+	return(list(tr=tr,h=h,q=q,a=a,nt=nt,r=r,km=km,strat=strat,tr.strat=tr.strat,Rs=X,Rc=R))
       }
     } ## hazard
 
-    residuals <- function(object,type=c("deviance","martingale")) {
+    residuals <- function(object,type=c("deviance","martingale","score","schoenfeld")) {
       type <- match.arg(type)
       w <- object$prior.weights;log.s <- log(object$fitted.values)
       res <- w + log.s ## martingale residuals
       if (type=="deviance") { 
         log.s[log.s>-1e-50] <- -1e-50
         res <- sign(res)*sqrt(-2*(res + w * log(-log.s)))
+      } else if (type=="score") {
+        res <- object$family$data$Rc
+	term <- list()
+        if (object$nsdf) {
+	  ii <- 1:object$nsdf; sd <- sqrt(diag(object$Vp)[ii])
+	  res[,ii] <- t(sd*t(res[,ii]))
+	  term$parametric <- ii
+        }
+	m <- length(object$smooth)
+	if (m) for (i in 1:m) {
+          ii <- object$smooth[[i]]$first.para:object$smooth[[i]]$last.para
+	  R <- chol(object$Vp[ii,ii]);
+	  ## so R^T R = V_b for this term. If b' = R^{-T} b, V_b' = I
+	  ## and Xb = XR^T b'...
+	  res[,ii] <- res[,ii] %*% t(R)
+	  term[[object$smooth[[i]]$label]] <- ii
+        }
+        attr(res,"term") <- term 
+	colnames(res) <- names(coef(object))
+      } else if (type=="schoenfeld") {
+        res <- object$family$data$Rs
+	colnames(res) <- names(coef(object))
       }
       res 
     } ## residuals

@@ -74,7 +74,7 @@ dropping of \code{newdata} rows, if they contain any \code{NA} values for
 required predictors. If \code{newdata} is missing then \code{NA} handling is 
 determined from \code{object$na.action}.}
 
-\item{cluster}{\code{predict.bam} can compute in parallel using \link[parallel]{parLapply}
+\item{cluster}{\code{predict.bam} can compute in parallel using \link[parallel:clusterApply]{parLapply}
 from the \code{parallel} package, if it is supplied with a cluster on which to do this (a cluster here can be some cores of a 
 single machine). See details and example code for \code{\link{bam}}. 
 }

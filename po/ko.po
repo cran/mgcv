@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.8-4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-04 12:37+0100\n"
+"POT-Creation-Date: 2020-08-07 10:53+0100\n"
 "PO-Revision-Date: 2015-02-21 16:01-0600\n"
 "Last-Translator:Chel Hee Lee  <chl948@mail.usask.ca>\n"
 "Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
@@ -19,13 +19,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: magic.c:444
+#: magic.c:445
 msgid "magic requires smoothing parameter starting values if L supplied"
 msgstr ""
 "L에 주어진 값이 없다면 스무딩 파라미터(smoothing parameter)에 대한 초기값"
 "(starting values)가 필요합니다."
 
-#: magic.c:562
+#: magic.c:563
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr ""
 
@@ -69,11 +69,11 @@ msgstr "addconQT 에서 에러가 발생했습니다."
 msgid "QPCLS - Rank deficiency in model"
 msgstr ""
 
-#: tprs.c:42
+#: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
 msgstr ""
 
-#: tprs.c:377 tprs.c:385
+#: tprs.c:375 tprs.c:383
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"

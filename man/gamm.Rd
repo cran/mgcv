@@ -39,10 +39,9 @@ mustart=NULL, etastart=NULL,...)
 
 \arguments{ 
 \item{formula}{ A GAM formula (see also \code{\link{formula.gam}} and \code{\link{gam.models}}).
-This is like the formula for a \code{glm} except that smooth terms (\code{\link{s}} and \code{\link{te}})
-can be added to the right hand side of the
-formula. Note that \code{id}s for smooths and fixed smoothing parameters are
-not supported.} 
+This is like the formula for a \code{glm} except that smooth terms (\code{\link{s}}, \code{\link{te}} etc.)
+can be added to the right hand side of the formula. Note that \code{id}s for smooths and fixed smoothing parameters are not supported. Any offset should be specified in the formula.
+} 
 
 \item{random}{The (optional) random effects structure as specified in a call to 
 \code{\link[nlme]{lme}}: only the \code{list} form is allowed, to facilitate 
@@ -193,7 +192,7 @@ and Hall/CRC Press.
 
 Wang, Y. (1998) Mixed effects smoothing spline analysis of variance. J.R. Statist. Soc. B 60, 159-174
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 

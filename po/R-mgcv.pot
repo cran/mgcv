@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-29\n"
-"POT-Creation-Date: 2019-04-29 13:35\n"
+"Project-Id-Version: mgcv 1.8-32\n"
+"POT-Creation-Date: 2020-08-07 10:53\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -46,7 +46,7 @@ msgstr ""
 msgid "iterms reset to terms"
 msgstr ""
 
-msgid "exclude ignored by discrete prediction at present"
+msgid "requires a terms or formula object as first argument"
 msgstr ""
 
 msgid "family not recognized"
@@ -80,6 +80,9 @@ msgid "chunk.size < number of coefficients. Reset to %d"
 msgstr ""
 
 msgid "unknown tensor constraint type"
+msgstr ""
+
+msgid "constraints for sub blocked tensor products un-tested"
 msgstr ""
 
 msgid "Model has more coefficients than data"
@@ -167,6 +170,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "second derivs not available for non-linear penalties"
 msgstr ""
 
 msgid "Possible divergence detected in fast.REML.fit"
@@ -409,6 +415,24 @@ msgstr ""
 msgid "link not available for mu parameter of gammals"
 msgstr ""
 
+msgid "gumbls requires 2 links specified as character strings"
+msgstr ""
+
+msgid "shash requires 4 links specified as character strings"
+msgstr ""
+
+msgid "parameter of shashlss"
+msgstr ""
+
+msgid "link not available for scale parameter of shash"
+msgstr ""
+
+msgid "'a' has to be positive"
+msgstr ""
+
+msgid "offset not still available for this family"
+msgstr ""
+
 msgid "An object of length %d does not match the required parameter size"
 msgstr ""
 
@@ -560,6 +584,9 @@ msgid "by.resids argument not supported"
 msgstr ""
 
 msgid "all.terms argument not supported"
+msgstr ""
+
+msgid "not usable with bam fits"
 msgstr ""
 
 msgid "silly tolerance supplied"
@@ -796,6 +823,21 @@ msgstr ""
 msgid "Pearson residuals not available for this family - returning deviance residuals"
 msgstr ""
 
+msgid "lengths of lb, df and nc must match"
+msgstr ""
+
+msgid "df must be positive integers"
+msgstr ""
+
+msgid "at least one element of lb must be non-zero"
+msgstr ""
+
+msgid "danger of round-off error"
+msgstr ""
+
+msgid "failure of Davies method, falling back on Liu et al approximtion"
+msgstr ""
+
 msgid "lambda and h should have the same length!"
 msgstr ""
 
@@ -871,6 +913,12 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+msgid "AR not available with sparse marginals"
+msgstr ""
+
+msgid "reverse indices missing from sparse discrete marginals"
+msgstr ""
+
 msgid "update not positive definite"
 msgstr ""
 
@@ -878,6 +926,9 @@ msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
 msgid "a has wrong number of rows"
+msgstr ""
+
+msgid "isa requires a dg/tCMatrix"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
@@ -1016,6 +1067,9 @@ msgid "s(.) not yet supported."
 msgstr ""
 
 msgid "argument k of s() should be integer and has been rounded"
+msgstr ""
+
+msgid "matrices must be all class dgCMatrix or all class matrix"
 msgstr ""
 
 msgid "attempt to use unsuitable marginal smooth class"
@@ -1258,6 +1312,9 @@ msgstr ""
 msgid "bnd must be a list of boundary loops"
 msgstr ""
 
+msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
+msgstr ""
+
 msgid "faulty bnd"
 msgstr ""
 
@@ -1265,6 +1322,9 @@ msgid "k and bnd lengths are inconsistent"
 msgstr ""
 
 msgid "data outside soap boundary"
+msgstr ""
+
+msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
 msgstr ""
 
 msgid "no free coefs in sf smooth"

@@ -21,10 +21,10 @@ gammals(link=list("identity","log"),b=-7)
 
 
 \code{gam} is called with 
-a list containing 2 formulae, the first specifies the response on the left hand side and the structure of the linear predictor for the log mean on the right hand side. The second is one sided, specifying the linear predictor for the log sscale on the right hand side. 
+a list containing 2 formulae, the first specifies the response on the left hand side and the structure of the linear predictor for the log mean on the right hand side. The second is one sided, specifying the linear predictor for the log scale on the right hand side. 
 
 
-The fitted values for this family will be a two column matrix. The first column is the mean (on origianl, not log, scale), and the second column is the log scale. Predictions using \code{\link{predict.gam}} will also produce 2 column matrices for \code{type} \code{"link"} and \code{"response"}. The first column is on the original data scale when \code{type="response"} and on the log mean scale of the linear predictor when \code{type="link"}. The second column when \code{type="response"} is again the log scale parameter, but is on the linear predictor when \code{type="link"}.
+The fitted values for this family will be a two column matrix. The first column is the mean (on original, not log, scale), and the second column is the log scale. Predictions using \code{\link{predict.gam}} will also produce 2 column matrices for \code{type} \code{"link"} and \code{"response"}. The first column is on the original data scale when \code{type="response"} and on the log mean scale of the linear predictor when \code{type="link"}. The second column when \code{type="response"} is again the log scale parameter, but is on the linear predictor when \code{type="link"}.
 
 The null deviance reported for this family computed by setting the fitted values to the mean response, but using the model estimated scale. 
 
@@ -34,7 +34,7 @@ The null deviance reported for this family computed by setting the fitted values
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
-\url{http://dx.doi.org/10.1080/01621459.2016.1180986}
+\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
 }
 
 

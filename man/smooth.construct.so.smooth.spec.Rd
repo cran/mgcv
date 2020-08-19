@@ -127,7 +127,7 @@ In addition there are all the elements usually added by \code{smooth.construct} 
 
 Wood, S.N., M.V. Bravington and S.L. Hedley (2008) "Soap film smoothing", J.R.Statist.Soc.B 70(5), 931-955.
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 
 }
 \section{WARNINGS }{

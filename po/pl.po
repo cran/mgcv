@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-04 12:37+0100\n"
+"POT-Creation-Date: 2020-08-07 10:53+0100\n"
 "PO-Revision-Date: 2014-03-24 17:59+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -17,7 +17,7 @@ msgstr ""
 
 # mgcv/src/magic.c: 440
 # error(_("magic requires smoothing parameter starting values if L supplied"))
-#: magic.c:444
+#: magic.c:445
 msgid "magic requires smoothing parameter starting values if L supplied"
 msgstr ""
 "'magic' wymaga wartości startowych dla parametru wygładzającego jeśli L "
@@ -25,7 +25,7 @@ msgstr ""
 
 # mgcv/src/magic.c: 558
 # error(_("magic, the gcv/ubre optimizer, failed to converge after 400 iterations."))
-#: magic.c:562
+#: magic.c:563
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr ""
 "'magic', omptymalizator gcv/ubre, nie zdodał uzbieżnić się po 400 iteracjach."
@@ -102,7 +102,7 @@ msgstr "QPCLS - Niedobór rang w modelu"
 # (_("You must have 2m>d for a thin plate spline."),1)
 # mgcv/src/tprs.c: 81
 # (_("You must have 2m>d for a thin plate spline."),1)
-#: tprs.c:42
+#: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
 msgstr "Musisz mieć 2m>d dla cienkiej płyty splajnu."
 
@@ -113,7 +113,7 @@ msgstr "Musisz mieć 2m>d dla cienkiej płyty splajnu."
 # mgcv/R/smooth.r: 2518
 # stop(
 #    "A term has fewer unique covariate combinations than specified maximum degrees of freedom")
-#: tprs.c:377 tprs.c:385
+#: tprs.c:375 tprs.c:383
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"

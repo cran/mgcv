@@ -59,7 +59,7 @@ Wood, S.N. (2011) Fast stable restricted maximum likelihood
 and marginal likelihood estimation of semiparametric generalized linear 
 models. Journal of the Royal Statistical Society (B) 73(1):3-36
 
-\url{http://www.maths.bris.ac.uk/~sw15190/}
+\url{https://www.maths.ed.ac.uk/~swood34/}
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}

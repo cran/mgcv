@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.10.0 / mgcv 1.5-5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-04 12:37+0100\n"
+"POT-Creation-Date: 2020-08-07 10:53+0100\n"
 "PO-Revision-Date: 2009-10-08 16:16+0200\n"
 "Last-Translator: Chris Leick <c.leick@vollbio.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: magic.c:444
+#: magic.c:445
 msgid "magic requires smoothing parameter starting values if L supplied"
 msgstr "magic benötigt Glättungsparameter-Startwerte, wenn L angegeben"
 
-#: magic.c:562
+#: magic.c:563
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr ""
 "magic, der gcv/ubre-Optimierer, konvergierte nach 400 Iterationen noch nicht."
@@ -68,11 +68,11 @@ msgstr "FEHLER in addconQT."
 msgid "QPCLS - Rank deficiency in model"
 msgstr "QPCLS - Rang-Defizit im Modell"
 
-#: tprs.c:42
+#: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
 msgstr "Es muss 2m>d für einen dünnwandige Spline gelten."
 
-#: tprs.c:377 tprs.c:385
+#: tprs.c:375 tprs.c:383
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mgcv 1.7-28\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
-"POT-Creation-Date: 2019-04-29 12:44\n"
+"POT-Creation-Date: 2020-08-07 10:53\n"
 "PO-Revision-Date: 2014-03-25 17:39+0100\n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -102,7 +102,7 @@ msgstr ""
 msgid "iterms reset to terms"
 msgstr "Nieznany typ, resetowanie do 'terms'"
 
-msgid "exclude ignored by discrete prediction at present"
+msgid "requires a terms or formula object as first argument"
 msgstr ""
 
 # mgcv/R/gamm.r: 1433
@@ -162,6 +162,9 @@ msgstr ""
 #, fuzzy
 msgid "unknown tensor constraint type"
 msgstr "zażądano niezaimplementowanego typu rzadkiego więzu"
+
+msgid "constraints for sub blocked tensor products un-tested"
+msgstr ""
 
 # mgcv/R/bam.r: 1153
 # stop("Model has more coefficients than data")
@@ -331,6 +334,9 @@ msgid "Non-integer response variables are not allowed with ziP"
 msgstr ""
 
 msgid "Using ziP for binary data makes no sense"
+msgstr ""
+
+msgid "second derivs not available for non-linear penalties"
 msgstr ""
 
 msgid "Possible divergence detected in fast.REML.fit"
@@ -812,6 +818,37 @@ msgstr ""
 "połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
 "poissona"
 
+msgid "gumbls requires 2 links specified as character strings"
+msgstr ""
+
+msgid "shash requires 4 links specified as character strings"
+msgstr ""
+
+msgid "parameter of shashlss"
+msgstr ""
+
+# mgcv/R/gam.fit3.r: 2300
+# stop(gettextf("link \"%s\" is not available for Tweedie family.", linktemp), domain = "R-mgcv")
+#, fuzzy
+msgid "link not available for scale parameter of shash"
+msgstr ""
+"połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
+"poissona"
+
+# mgcv/R/mgcv.r: 32
+# stop("argument 'k' must be positive.")
+#, fuzzy
+msgid "'a' has to be positive"
+msgstr "argument 'k' musi być dodatni"
+
+# mgcv/R/gam.fit3.r: 2300
+# stop(gettextf("link \"%s\" is not available for Tweedie family.", linktemp), domain = "R-mgcv")
+#, fuzzy
+msgid "offset not still available for this family"
+msgstr ""
+"połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
+"poissona"
+
 # mgcv/R/gamm.r: 115
 # stop(gettextf("An object of length %d does not match the required parameter size", aux))
 # mgcv/R/gamm.r: 243
@@ -1082,6 +1119,9 @@ msgstr "argument 'test' został zignorowany"
 #, fuzzy
 msgid "all.terms argument not supported"
 msgstr "argument 'test' został zignorowany"
+
+msgid "not usable with bam fits"
+msgstr ""
 
 # mgcv/R/mgcv.r: 30
 # stop("silly tolerance supplied")
@@ -1480,6 +1520,30 @@ msgid ""
 "residuals"
 msgstr ""
 
+# mgcv/R/plots.r: 581
+# stop("names of 'z' and 'pc' must match")
+#, fuzzy
+msgid "lengths of lb, df and nc must match"
+msgstr "nazwy 'z' oraz 'pc' muszą się zgadzać"
+
+# mgcv/R/mgcv.r: 32
+# stop("argument 'k' must be positive.")
+#, fuzzy
+msgid "df must be positive integers"
+msgstr "argument 'k' musi być dodatni"
+
+# mgcv/R/gamm.r: 1367
+# stop("all elements of random list must be named")
+#, fuzzy
+msgid "at least one element of lb must be non-zero"
+msgstr "wszystkie elementy listy 'random' muszą być nazwane"
+
+msgid "danger of round-off error"
+msgstr ""
+
+msgid "failure of Davies method, falling back on Liu et al approximtion"
+msgstr ""
+
 # mgcv/R/mgcv.r: 2494
 # stop("'lambda' and 'h' arguments should have the same length!")
 msgid "lambda and h should have the same length!"
@@ -1594,6 +1658,17 @@ msgstr ""
 msgid "sd should have exactly one less entry than ld"
 msgstr ""
 
+# mgcv/R/gam.fit3.r: 2300
+# stop(gettextf("link \"%s\" is not available for Tweedie family.", linktemp), domain = "R-mgcv")
+#, fuzzy
+msgid "AR not available with sparse marginals"
+msgstr ""
+"połączenie \"%s\" nie jest dostępne dla rozkładów z rodziny rozkładów "
+"poissona"
+
+msgid "reverse indices missing from sparse discrete marginals"
+msgstr ""
+
 # mgcv/R/mgcv.r: 3463
 # stop(gettextf("S[[%d]] matrix is not +ve definite.", i))
 #, fuzzy
@@ -1604,6 +1679,9 @@ msgid "internal error in vcorr, please report to simon.wood@r-project.org"
 msgstr ""
 
 msgid "a has wrong number of rows"
+msgstr ""
+
+msgid "isa requires a dg/tCMatrix"
 msgstr ""
 
 msgid "mvn requires 2 or more dimensional data"
@@ -1876,6 +1954,9 @@ msgid "argument k of s() should be integer and has been rounded"
 msgstr ""
 "argument 'k' w funkcji 's()' powinie być liczbą calkowitą więc został "
 "zaokrąglony"
+
+msgid "matrices must be all class dgCMatrix or all class matrix"
+msgstr ""
 
 # mgcv/R/smooth.r: 568
 # stop("attempt to use unsuitable marginal smooth class")
@@ -2375,6 +2456,9 @@ msgstr "nie można wygładzić 'soap' bez granicy"
 msgid "bnd must be a list of boundary loops"
 msgstr "'bnd' musi być listą pętel granic"
 
+msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
+msgstr ""
+
 # mgcv/R/soap.r: 435
 # stop("faulty bnd")
 # mgcv/R/soap.r: 438
@@ -2407,6 +2491,9 @@ msgstr "długości 'k' oraz 'bnd' są niezgodne"
 # stop("data outside soap boundary")
 msgid "data outside soap boundary"
 msgstr "dane poza granicami 'soap'"
+
+msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
+msgstr ""
 
 # mgcv/R/soap.r: 561
 # stop("no free coefs in sf smooth")

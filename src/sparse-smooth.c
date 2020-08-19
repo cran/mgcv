@@ -993,7 +993,8 @@ SEXP Rkdnearest(SEXP kdr,SEXP Xr,SEXP xr,SEXP kr) {
   int *dim,n,m,d,*k,*nei,*idat,nprot=2;
   SEXP DIM,ptr,neir,dir,IDAT;
   static SEXP kd_symb = NULL, dim_sym = NULL,dist_sym = NULL,kd_symbi=NULL;
-  if (!dim_sym) dim_sym = install("dim");if (!dist_sym) dist_sym = install("dist");
+  if (!dim_sym) dim_sym = install("dim");
+  if (!dist_sym) dist_sym = install("dist");
   if (!kd_symb) kd_symb = install("kd_ptr"); /* register symbol for attribute */
   if (!kd_symbi) kd_symbi = install("kd_ind");
   DIM = getAttrib(Xr, dim_sym);

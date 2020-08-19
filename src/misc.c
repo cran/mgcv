@@ -1,4 +1,4 @@
-/* Copyright (C) 2008-2014 Simon N. Wood  simon.wood@r-project.org
+/* Copyright (C) 2008-2019 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -318,7 +318,8 @@ void tweedious(double *w,double *w1,double *w2,double *w1p,double *w2p,
        values from the initialized set to j_max, so we might as well reset j_max 
        to the appropriate buffer edge.
     */
-    if (j_max>j_hi) j_max = j_hi; if (j_max<j_lo) j_max = j_lo;
+    if (j_max>j_hi) j_max = j_hi;
+    if (j_max<j_lo) j_max = j_lo;
     wmax = wb[j_max] - jalogy;wmin = wmax + log_eps; 
     //  w1max = wb1[j_max] - jalogy;w1min = w1max + log_eps;    
     // w2max = wb2[j_max] - jalogy;w2min = w2max + log_eps;

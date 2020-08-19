@@ -1269,9 +1269,9 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
           meanL1 <- x$smooth[[i]]$meanL1
           if (!is.null(meanL1)) X1 <- X1 / meanL1
           X1[,first:last] <- P$X
-          se.fit <- sqrt(pmax(0,rowSums((X1%*%x$Vp)*X1)))
+          se.fit <- sqrt(pmax(0,rowSums(as(X1%*%x$Vp,"matrix")*X1)))
         } else se.fit <- ## se in centred (or anyway unconstained) space only
-        sqrt(pmax(0,rowSums((P$X%*%x$Vp[first:last,first:last,drop=FALSE])*P$X)))
+        sqrt(pmax(0,rowSums(as(P$X%*%x$Vp[first:last,first:last,drop=FALSE],"matrix")*P$X)))
         if (!is.null(P$exclude)) se.fit[P$exclude] <- NA
       } ## standard errors for fit completed
       if (partial.resids) { P$p.resid <- fv.terms[,length(order)+i] + w.resid }

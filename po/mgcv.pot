@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: mgcv 1.8-29\n"
+"Project-Id-Version: mgcv 1.8-32\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-04 12:37+0100\n"
+"POT-Creation-Date: 2020-08-07 10:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: magic.c:444
+#: magic.c:445
 msgid "magic requires smoothing parameter starting values if L supplied"
 msgstr ""
 
-#: magic.c:562
+#: magic.c:563
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
 msgstr ""
 
@@ -65,11 +65,11 @@ msgstr ""
 msgid "QPCLS - Rank deficiency in model"
 msgstr ""
 
-#: tprs.c:42
+#: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
 msgstr ""
 
-#: tprs.c:377 tprs.c:385
+#: tprs.c:375 tprs.c:383
 msgid ""
 "A term has fewer unique covariate combinations than specified maximum "
 "degrees of freedom"

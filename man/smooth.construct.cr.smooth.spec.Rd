@@ -42,6 +42,8 @@ Default \code{k} is 10.
  In addition to the usual elements of a smooth class documented under \code{\link{smooth.construct}}, 
 this object will contain:
 \item{xp}{giving the knot locations used to generate the basis.}
+\item{F}{ For class \code{"cr.smooth"} and \code{"cs.smooth"} objects  \code{t(F)} transforms function values 
+          at the knots to second derivatives at the knots.}
 \item{BD}{class \code{"cyclic.smooth"} objects include matrix \code{BD} which transforms function values 
           at the knots to second derivatives at the knots.}
 }

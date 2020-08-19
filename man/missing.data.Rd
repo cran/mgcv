@@ -56,11 +56,11 @@ for (sim in c(1,7)) { ## cycle over uncorrelated and correlated covariates
   ## zero when x0 is non-missing, so that we can set idx0 to any 
   ## existing level for these cases.   
 
-  b <- gam(y~s(x0,by=ordered(!mx0))+s(x1,by=ordered(!mx1))+
+  b <- bam(y~s(x0,by=ordered(!mx0))+s(x1,by=ordered(!mx1))+
              s(x2,by=ordered(!mx2))+s(x3,by=ordered(!mx3))+
              s(idx0,bs="re",by=mx0)+s(idx1,bs="re",by=mx1)+
              s(idx2,bs="re",by=mx2)+s(idx3,bs="re",by=mx3)
-             ,data=dat1,method="REML")
+             ,data=dat1,discrete=TRUE)
 
   for (i in 1:4) plot(b,select=i) ## plot the smooth effects from b
 

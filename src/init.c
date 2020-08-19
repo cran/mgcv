@@ -23,11 +23,19 @@ R_CallMethodDef CallMethods[] = {
   { "Rkdtree",(DL_FUNC)&Rkdtree,1},
   {"Rkdnearest",(DL_FUNC)&Rkdnearest,4},
   {"Rkradius",(DL_FUNC)&Rkradius,5},
+  {"sXWXd",(DL_FUNC)&sXWXd,5},
+  {"sXbd",(DL_FUNC)&sXbd,3},
+  {"sXyd",(DL_FUNC)&sXyd,3},
+  {"sdiagXVXt",(DL_FUNC)&sdiagXVXt,4},
+  {"stmm",(DL_FUNC)&stmm,1},
+  {"AddBVB",(DL_FUNC)&AddBVB,3},
+  {"isa1p",(DL_FUNC)&isa1p,3},
   {NULL, NULL, 0}
 };
 
 R_CMethodDef CEntries[] = { 
     {"band_chol",(DL_FUNC) band_chol,4},
+    {"davies",(DL_FUNC) davies,10},
     {"tri_chol",(DL_FUNC) tri_chol,4},
     {"diagXVXt", (DL_FUNC) &diagXVXt,21},
     {"XWXd", (DL_FUNC) &XWXd,18},
@@ -65,6 +73,7 @@ R_CMethodDef CEntries[] = {
     {"mgcv_tri_diag",(DL_FUNC)&mgcv_tri_diag,3},
     {"mgcv_td_qy",(DL_FUNC)&mgcv_td_qy,7},
     {"mgcv_symeig",(DL_FUNC)&mgcv_symeig,6},
+    {"mgcv_trisymeig",(DL_FUNC)&mgcv_trisymeig,6},
     {"read_mat",(DL_FUNC)&read_mat,4},
     {"rwMatrix",(DL_FUNC)&rwMatrix,8},
     {"in_out",(DL_FUNC)&in_out,8},

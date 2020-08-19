@@ -660,7 +660,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
 
    if (!scale.known&&deriv) { ## need derivatives wrt log scale, too 
       Dp <- dev + oo$P
-      dlr.dlphi <- (-Dp/(2 *scale) - ls$lsth1[nt+1])/gamma - Mp/2
+      dlr.dlphi <- (-Dp/(2 *scale) - ls$lsth1[nt+1])/gamma - as.numeric(scoreType=="REML") * Mp/2
       d2lr.d2lphi <- (Dp/(2*scale) - ls$lsth2[nt+1,nt+1])/gamma 
       d2lr.dspphi <- -(oo$D1+oo$P1)/(2*scale*gamma) 
       d2lr.dspphi[1:nt] <- d2lr.dspphi[1:nt] - ls$lsth2[nt+1,1:nt]/gamma
@@ -833,7 +833,7 @@ efsudr <- function(x,y,lsp,Eb,UrS,weights,family,offset=0,start=NULL,etastart=NU
     }
   }
   fit$sp <- exp(lsp)
-  fit$niter <- iter
+  fit$iter <- iter
   fit$outer.info <- list(iter = iter,score.hist=score.hist[1:iter])
   fit$outer.info$conv <- if (iter==200) "iteration limit reached" else "full convergence"
   fit
@@ -1261,7 +1261,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
        #S=rp$ldetS,S1=rp$ldet1,S2=rp$ldet2,
        #Hp=ldetHp,Hp1=d1ldetH,Hp2=d2ldetH,
        #b2 = d2b,
-       niter=iter,H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
+       iter=iter,H = ll$lbb,dH = ll$d1H,dVkk=dVkk)#,d2H=llr$d2H)
     ## debugging code to allow components of 2nd deriv of hessian w.r.t. sp.s 
     ## to be passed to deriv.check.... 
     #if (!is.null(ll$ghost1)&&!is.null(ll$ghost2)) { 
@@ -1354,7 +1354,7 @@ efsud <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,family,
     }
   }
   fit$sp <- exp(lsp)
-  fit$niter <- iter
+  fit$iter <- iter
   fit$outer.info <- list(iter = iter,score.hist=score.hist[1:iter])
   fit$outer.info$conv <- if (iter==200) "iteration limit reached" else "full convergence"
   fit
@@ -1452,6 +1452,7 @@ gam.fit5.post.proc <- function(object,Sl,L,lsp0,S,off) {
       ev <- eigen(hess,symmetric=TRUE)
       d <- ev$values;ind <- d <= 0
       d[ind] <- 0;d[!ind] <- 1/sqrt(d[!ind])
+      db.drho <- Sl.inirep(Sl,db.drho,1,0)
       Vc <- crossprod((d*t(ev$vectors))%*%t(db.drho)) ## first correction
    
       d <- ev$values; d[ind] <- 0;
@@ -1465,9 +1466,13 @@ gam.fit5.post.proc <- function(object,Sl,L,lsp0,S,off) {
       ## reverse the various re-parameterizations...
     }
     rp <- if (edge.correct) attr(object$outer.info$hess,"rp") else object$rp
-    Vc <- Sl.repara(rp,Vc,inverse=TRUE) 
-    Vc <-  Sl.initial.repara(Sl,Vc,inverse=TRUE)
-  } else Vc <- 0
+    #Vc <- Sl.repara(rp,Vc,inverse=TRUE) ## BUG: appears to be double correction - db already corrected??
+    #Vc <-  Sl.initial.repara(Sl,Vc,inverse=TRUE)
+    V.sp <- Vr;attr(V.sp,"L") <- L
+  } else {
+    Vc <- 0; db.drho <- object$db.drho
+    V.sp <- NULL
+  }  
   Vb <- Sl.repara(object$rp,Vb,inverse=TRUE)
   Vb <-  Sl.initial.repara(Sl,Vb,inverse=TRUE)
   Vc <- Vb + Vc
@@ -1497,7 +1502,8 @@ gam.fit5.post.proc <- function(object,Sl,L,lsp0,S,off) {
   edf2 <- if (edge.correct) rowSums(Vc1*crossprod(R)) else rowSums(Vc*crossprod(R))
   if (sum(edf2)>sum(edf1)) edf2 <- edf1 
   ## note hat not possible here...
-  list(Vc=Vc,Vb=Vb,Ve=Ve,edf=edf,edf1=edf1,edf2=edf2,F=F,R=R)
+  list(Vc=Vc,Vp=Vb,Ve=Ve,V.sp=V.sp,edf=edf,edf1=edf1,edf2=edf2,#F=F,
+       R=R,db.drho=db.drho)
 } ## gam.fit5.post.proc
 
 

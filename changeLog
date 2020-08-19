@@ -8,20 +8,71 @@ Liable to change in future release:
 Currently deprecated and liable to be removed:
 - gam performance iteration (1.8-19, Sept 2017)
 - argument 'pers' in plot.gam (1.8-23, Nov 2017)
+- discrete method prediction from discrete bam objects fitted before 1.8-32 
 
 Issues: 
 
 ** openblas 0.3.x x<7 is not thread safe if itself compiled for single thread 
    use and then called from multiple threads (unlike the reference BLAS, say).
    0.2.20 appears to be OK. For 0.3.x x>6 make USE_THREAD=0 USE_LOCKING=1
-   to make openblas ensures thread safety (currently unclear if USE_LOCKING
-   will be default from 0.3.7).      
+   to make openblas ensures thread safety.
 
 * t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
 present, and reparameterization needs checking (also for bam). 
 
 * bam(...,discrete=TRUE) does not currently deal with the corner case in 
   which no smoother is penalized.
+
+1.8-32
+
+** bam(...,discrete=TRUE) now uses discretization on the parametric model
+   components as well as the smooths. 
+
+* 'gumbls' family added for Gumbel location scale models.
+
+* 'shash' location scale and shape family added.
+
+* psum.chisq function added to compute c.d.f. of weighted sums of chi-squared
+  r.v.s using method of Davies, 1980. This is now used for computing p-values 
+  in summary.gam in place of the Liu et al, 2009 approximation.  
+
+* score and Schoenfeld residuals added for cox.ph to facilitate PH assumption
+  checking (see ?cox.ph).
+
+* added 'gam.mh' for posterior dampling from models fitted with 'gam'.
+
+* 'ocat' upgraded to not ignore weights.
+
+* added multivariate t and Gaussian densities and multivariate t generation. 
+
+* fix to predict.bamd to correct handling of `terms' and `exclude' arguments.
+
+* A recent lme change broke gamm offset handling. Fixed. 
+  Thanks Aaron Benjamin Shev.
+
+* dgesvd LAPACK calls replaced by faster dgesdd, as some versions of MKL
+  BLAS/LAPACK have broken dgesvd.
+
+* Fix to derivative w.r.t. scale parameter calculation for extended families 
+  ('tw' is the only one at present) when using 'ML' smoothing parameter
+  estimation. Could lead to step failure with 'tw'. Thanks Kevin Hawkshaw. 
+
+* Fix to prediction/fake formula environment that could cause failure of
+  gam/bam called from a function. Thanks to Duncan Murdoch.
+
+* Fix to smoothing parameter uncertainy correction for general families.
+
+* Much cleaner design for the discretization of covariates and associated 
+  discretization index matching in bam (predict.bamd and discrete.mf). 
+
+* Fix to jagam logic for identifying separable penalties which led to 
+  wrong partioning of penalties for 'fs' smooths used with jagam. Thanks to
+  Chris Jackson for spotting the problem.
+
+* Internal Sl list handling changes.
+
+* tensor.prod.model.matrix now also works with sparse matrices of class 
+  "dgCMatrix".
 
 1.8-31
 
@@ -37,7 +88,7 @@ present, and reparameterization needs checking (also for bam).
 * Fix to bug in bam(...,discrete=TRUE) offset handling introduced in 1.8-29, 
   which corrupted offset (and generated numerous warnings). Also fixes a 
   less obvious bug introduced at the same time in predict.gam which could get 
-  the offset wrong when prediciting with such models. Thanks to Brian 
+  the offset wrong when predicting with such models. Thanks to Brian 
   Montgomery and Sean Wilson.
 
 * Fix to problem in pen.reg (used to initialize location scale models in 
