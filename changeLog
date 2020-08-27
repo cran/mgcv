@@ -23,6 +23,11 @@ present, and reparameterization needs checking (also for bam).
 * bam(...,discrete=TRUE) does not currently deal with the corner case in 
   which no smoother is penalized.
 
+1.8-33
+
+* 'inline' -> 'statc inline' error fix - caused installation failure on some 
+   platforms.  
+
 1.8-32
 
 ** bam(...,discrete=TRUE) now uses discretization on the parametric model

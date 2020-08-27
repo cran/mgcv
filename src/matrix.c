@@ -711,7 +711,7 @@ int QR(matrix *Q,matrix *R)
 
 
 int real_elemcmp(const void *a,const void *b,int el)
-/* declaring this inline static slows it down!! */
+/* declaring this static inline slows it down!! */
 { static int k=0;
   double *na,*nb,*nak;
   if (el>0) { k=el;return(0);}

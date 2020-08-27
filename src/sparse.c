@@ -1885,7 +1885,7 @@ SEXP AddBVB(SEXP A,SEXP bt, SEXP vbt) {
 
 /*** inverse subset algorithm ***/
 
-inline int kij(int *Ap,int *Ai,int i, int j) {
+static inline int kij(int *Ap,int *Ai,int i, int j) {
 /* find location of A[i,j] in Ax */ 
   int k0,k1,kt;
   k0 = Ap[j];k1 = Ap[j+1]-1;

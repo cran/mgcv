@@ -1,5 +1,5 @@
-950d4d2ff77a80a54d9388ad39844cac *ChangeLog
-3cf899493b3c2a8a33463d441526f6d7 *DESCRIPTION
+dba1d86e5c85526beaaf03f998961cbd *ChangeLog
+b3a8a7f5db4f95bac9689635b9362134 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 7a6e845a718a66d570d88940cfe80c19 *NAMESPACE
 ed73834b83afa35376d043fd706d81e1 *R/bam.r
@@ -205,8 +205,8 @@ c390a215a6a4b29455abc9d86acec55c *src/gdi.c
 2436f9b328e80370ce2203dbf1dd813c *src/general.h
 a958d9a8e9695186ff1976b20fc04851 *src/init.c
 775b38bdb7e877143a82d53dab1bf0af *src/magic.c
-180a20ba151838ee7dfa03a5e04a7dcc *src/mat.c
-e4cef7f1753153fbab242d1c4d4f7e7f *src/matrix.c
+147f1e7263949163315bbe1fcacf2776 *src/mat.c
+bb75d10bb56dc479f207325e97f6a935 *src/matrix.c
 de37b0972199b796654405efc007f25b *src/matrix.h
 5dbce5b588a13a57c06fdece4c5bb76e *src/mgcv.c
 9f0c3409fbd8f76c4de9716c231283bc *src/mgcv.h
@@ -216,7 +216,7 @@ de37b0972199b796654405efc007f25b *src/matrix.h
 073a4b5b0bc6e869c5b35478c47facf1 *src/qp.h
 d5673b88f6f3d85c62a1337f49abba24 *src/soap.c
 c4e0f0bd5a90402d3758572c8ca980d3 *src/sparse-smooth.c
-f4b77d89909377f96827c68b1b07fe46 *src/sparse.c
+528560c48b45bab3760808bca13c72db *src/sparse.c
 0453fd7fb62c7ea7329a419ae688c739 *src/tprs.c
 5bd85bf0319a7b7c755cf49c91a7cd94 *src/tprs.h
 38e593a85a6fd0bb4fbed836f3361406 *tests/bam.R

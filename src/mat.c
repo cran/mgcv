@@ -1727,14 +1727,14 @@ SEXP mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT) {
   return(R_NilValue);
 }
 
-inline double hypot(double x, double y) {
+static inline double hypote(double x, double y) {
 /* stable computation of sqrt(x^2 + y^2) */  
   double t;
   x = fabs(x);y=fabs(y);
   if (y>x) { t = x;x = y; y = t;}
   if (x==0) return(y); else t = y/x;
   return(x*sqrt(1+t*t));
-} /* hypot */   
+} /* hypote */   
 
 void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
 /* R is an n by n choleski factor of an n by n matrix A. We want the downdated
@@ -1795,7 +1795,7 @@ void chol_down(double *R,double *Rup, int *n,int *k,int *ut) {
       Ri = Rup + i  + i * n1; /* rotate into here */
       Rj = R + (i+1) + (i+1) * *n;  /* zeroing this */
       /* x = sqrt(*Ri * *Ri + *Rj * *Rj);*/
-      x = hypot(*Ri,*Rj);
+      x = hypote(*Ri,*Rj);
       c = *Ri / x; s = *Rj / x;*Ri = x;
       Rj++;Ri++;Ri1=Ri+n1;Re = Rup + (i+1) * n1;
       for (;Ri<Re;Rj++,Ri++,Ri1++) {
@@ -1848,7 +1848,7 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps) {
     }  
     
     /* now construct the next rotation u[j] <-> R[j,j] */
-    z0 = hypot(z,*x); /* sqrt(z^2+R[j,j]^2) */
+    z0 = hypote(z,*x); /* sqrt(z^2+R[j,j]^2) */
     c0 = *x/z0; s0 = z/z0;  /* need to zero z */
     /* now apply this rotation and this column is finished (so no need to update z) */
     *x = s0 * z + c0 * *x;
