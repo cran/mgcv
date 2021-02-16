@@ -21,7 +21,7 @@ Linear functionals of smooths can also be included in models.
 For an overview of the smooths available see \code{\link{smooth.terms}}. 
 For more on specifying models see \code{\link{gam.models}}, \code{\link{random.effects}} and \code{\link{linear.functional.terms}}. For more on model selection see \code{\link{gam.selection}}. Do read \code{\link{gam.check}} and \code{\link{choose.k}}.
 
-See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach (see details for differences to this implementation).
+See package \code{gam}, for GAMs via the original Hastie and Tibshirani approach (see details for differences to this implementation).
 
 For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gamm}} and \code{\link{random.effects}}.
 }
@@ -257,7 +257,7 @@ and the exponential family.
 Details of the default underlying fitting methods are given in Wood (2011
 and 2004). Some alternative methods are discussed in Wood (2000 and 2006). 
 
-\code{gam()} is not a clone of Trevor Hastie's original (as supplied in S-PLUS or package \link[gam]{gam}). The major
+\code{gam()} is not a clone of Trevor Hastie's original (as supplied in S-PLUS or package \code{gam}). The major
 differences are (i) that by default estimation of the
 degree of smoothness of model terms is part of model fitting, (ii) a
 Bayesian approach to variance estimation is employed that makes for easier
@@ -271,7 +271,7 @@ terms can have more than one argument, implying an isotropic smooth and (b) \cod
 provided as an effective means for modelling smooth interactions of any
 number of variables via scale invariant tensor product smooths. Splines on the sphere, Duchon splines 
 and Gaussian Markov Random Fields are also available. (vii) Models beyond the exponential family are available. 
-See \link[gam]{gam} from package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
+See package \code{gam}, for GAMs via the original Hastie and Tibshirani approach.
 }
 
 
@@ -282,7 +282,7 @@ Key References on this implementation:
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models (with discussion).
 Journal of the American Statistical Association 111, 1548-1575
-\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
+\doi{10.1080/01621459.2016.1180986}
 
 Wood, S.N. (2011) Fast stable restricted maximum likelihood 
 and marginal likelihood estimation of semiparametric generalized linear 

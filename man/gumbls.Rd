@@ -35,7 +35,7 @@ The fitted values for this family will be a two column matrix. The first column 
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
-\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
+\doi{10.1080/01621459.2016.1180986}
 }
 
 

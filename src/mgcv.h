@@ -71,6 +71,7 @@
 //#define CALLOC calloc
 //#define FREE free
 //#define REALLOC realloc
+
 void *R_chk_calloc1(size_t nmemb,size_t size);
 
 void magic(double *y,double *X,double *sp0,double *def_sp,double *S,double *H,double *L,

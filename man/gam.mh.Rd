@@ -61,7 +61,7 @@ par(mfrow=c(2,2))
 for(i in 1:4) {
   plot(b,select=i,scale=0,scheme=1)
   ii <- b$smooth[[i]]$first.para:b$smooth[[i]]$last.para
-  ff <- X[,ii]%*%t(br[,ii]) ## posterior curve sample
+  ff <- X[,ii]\%*\%t(br[,ii]) ## posterior curve sample
   fq <- apply(ff,1,quantile,probs=c(.025,.16,.84,.975))
   lines(x,fq[1,],col=2,lty=2);lines(x,fq[4,],col=2,lty=2)
   lines(x,fq[2,],col=2);lines(x,fq[3,],col=2)
@@ -81,7 +81,7 @@ br <- gam.mh(b,thin=2,ns=2000,rw.scale=.4)$bs
 X <- model.matrix(b)
 par(mfrow=c(1,1))
 plot(x, y, col = rgb(0,0,0,0.25), ylim = c(0,1))
-ff <- X%*%t(br) ## posterior curve sample
+ff <- X\%*\%t(br) ## posterior curve sample
 linv <- b$family$linkinv
 ## Get intervals for the curve on the response scale...
 fq <- linv(apply(ff,1,quantile,probs=c(.025,.16,.5,.84,.975)))

@@ -47,11 +47,10 @@ out duplicate locations).}
 (there is a correction of table 1 in 1982, but the correction has a misprint in the definition of A --- the A
 given in the 1981 paper is correct). For \code{m=0} (default) then a second order spline on the sphere is used which is the 
 analogue of a second order thin plate spline in 2D: the computation is based on Chapter 4 of Wendelberger, 1981. 
-Optimal low rank approximations are obtained using exactly the approach given in Wood (2003). For \code{m = -1} a smooth of the 
-general type discussed in Duchon (1977) is used: the sphere is embedded in a 3D Euclidean space, but 
+Optimal low rank approximations are obtained using exactly the approach given in Wood (2003). For \code{m = -1} a smooth of the general type discussed in Duchon (1977) is used: the sphere is embedded in a 3D Euclidean space, but 
 smoothing employs a penalty based on second derivatives (so that locally as the smoothing parameter tends 
 to zero we recover a "normal" thin plate spline on the tangent space). This is an unpublished suggestion of Jean
-Duchon.
+Duchon.  \code{m = -2} is the same but with first derivative penalization.
 
 Note that the null space of the penalty is always the space of constant functions on the sphere, whatever the order of penalty. 
 

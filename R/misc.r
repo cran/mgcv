@@ -173,7 +173,7 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
 ## if drop is non-NULL it contains index of rows/cols to drop from result
 ## * lt is array of terms to include in left matrix (assumed in ascending coef index order)
 ## * rt is array of terms to include in right matrix (assumed in ascending coef index order)
-## * if both NULL all are terms are included, if only one is NULL then used for left and right. 
+## * if both NULL all terms are included, if only one is NULL then used for left and right. 
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
   n <- length(w);pt <- 0;
@@ -207,9 +207,14 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
       ldrop <- which(lpi %in% drop)
       rdrop <- which(lpi %in% drop)
     } else rdrop <- ldrop <- drop 
-    
-    lt <- if (is.null(lt)) as.integer(1:nt-1) else as.integer(lt-1)
-    rt <- if (is.null(rt)) as.integer(1:nt-1) else as.integer(rt-1)
+
+    if (is.null(lt)&&is.null(rt)) {
+      lt <- rt <- 1:nt
+    } else if (is.null(lt)) {
+      lt <- rt
+    } else if (is.null(rt)) rt <- lt;
+    lt <- as.integer(lt-1)
+    rt <- as.integer(rt-1)
     XWX <- .Call(C_sXWXd,m,w,lt,rt,nthreads)
     if (!is.null(drop)) {
       Dl <- Diagonal(ncol(XWX),1)
@@ -333,8 +338,14 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
   if (is.null(lt)) lt <- 1:nt
  
   bc <- if (is.matrix(beta)) ncol(beta) else 1 ## number of columns in beta
+  ## The C code mechanism for dealing with lt is very basic, and requires that beta is re-ordered and
+  ## truncated to relate only to the selected terms, in the order they are selected.  
+  lpip <- attr(X,"lpip")
+  if (!is.null(lpip)) { ## then X list may not be in coef order...
+    lpip <- unlist(lpip[lt])
+    beta <- if (is.matrix(beta)) beta[lpip,] else beta[lpip] ## select params required in correct order
+  }
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
-    ##if (bc>1) stop("sparse Xbd with matrix beta not coded") ## just loop for this?    
     ## create list for passing to C
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
@@ -348,13 +359,7 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
     Xb <- .Call(C_sXbd,m,beta,lt)
     if (bc>1) Xb <- matrix(Xb,ncol=bc)
   } else { ## dense marginals case
-    ## The C code mechanism for dealing with lt is very basic, and requires that beta is re-ordered and
-    ## truncated to relate only to the selected terms, in the order they are selected.  
-    lpip <- attr(X,"lpip")
-    if (!is.null(lpip)) { ## then X list may not be in coef order...
-      lpip <- unlist(lpip[lt])
-      beta <- if (is.matrix(beta)) beta[lpip,] else beta[lpip] ## select params required in correct order
-    }
+  
     oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1),
            ks = as.integer(ks-1), 
            m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
@@ -370,7 +375,9 @@ diagXVXd <- function(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL) {
   n <- if (is.matrix(k)) nrow(k) else length(k)
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
-  if (is.null(lt)) lt <- 1:nt
+  if (is.null(lt)&&is.null(rt)) rt <- lt <- 1:nt else {
+    if (is.null(rt)) rt <- lt else if (is.null(lt)) lt <- rt
+  }  
   if (is.null(rt)) rt <- 1:nt
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
     ## create list for passing to C
@@ -381,11 +388,20 @@ diagXVXd <- function(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL) {
     m$off <- unlist(m$off)
     ## Now C base all indices...
     m$ks <- m$ks - 1; m$kd <- m$kd - 1; m$r <- m$r - 1; m$ts <- m$ts-1
-    lt <- as.integer(lt-1);rt <- as.integer(rt-1)
+    
     if (!is.null(drop)) {
       D <- Diagonal(ncol(V)+length(drop),1)[-drop,]
       V <- t(D) %*% V %*% D
     }
+    ## The C code mechanism for dealing with rt and lt is very basic, and requires that V is
+    ## re-ordered and truncated to relate only to the selected terms, in the order they are selected.  
+    lpip <- attr(X,"lpip")
+    if (!is.null(lpip)) { ## then X list may not be in coef order...
+      lpi <- unlist(lpip[lt])
+      rpi <- unlist(lpip[rt])
+      V <- V[lpi,rpi,drop=FALSE] ## select part of V required in correct order
+    }
+    lt <- as.integer(lt-1);rt <- as.integer(rt-1)
     D <- .Call(C_sdiagXVXt,m , V, lt, rt)
   } else { ## dense marginals
     if (!is.null(drop)) { 
@@ -400,7 +416,7 @@ diagXVXd <- function(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL) {
     if (!is.null(lpip)) { ## then X list may not be in coef order...
       lpi <- unlist(lpip[lt])
       rpi <- unlist(lpip[rt])
-      V <- V[lpi,rpi] ## select part of V required in correct order
+      V <- V[lpi,rpi,drop=FALSE] ## select part of V required in correct order
     }
     oo <- .C(C_diagXVXt,diag=as.double(rep(0,n)),V=as.double(V),X=as.double(unlist(X)),k=as.integer(k-1), 
            ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx),

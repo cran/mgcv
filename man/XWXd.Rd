@@ -33,8 +33,8 @@ diagXVXd(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
 \item{ar.stop}{Negative to ignore. Otherwise sum rows \code{(ar.stop[i-1]+1):ar.stop[i]} of the rows selected by \code{ar.row} and weighted by \code{ar.w} to get ith row of model matrix to use.}
 \item{ar.row}{extract these rows...}
 \item{ar.w}{weight by these weights, and sum up according to \code{ar.stop}. Used to implement AR models.}
-\item{lt}{use only columns of X corresponding to these model matrix terms (for left hand \code{X} in \code{XWXd}).}
-\item{rt}{as \code{lt} for right hand \code{X}.}
+\item{lt}{use only columns of X corresponding to these model matrix terms (for left hand \code{X} in \code{XWXd}). If \code{NULL} set to \code{rt}.}
+\item{rt}{as \code{lt} for right hand \code{X}. If \code{NULL} set to \code{lt}. If \code{lt} and \code{rt} are \code{NULL} use all columns.}
 \item{V}{Coefficient covariance matrix.}
 }
 
@@ -48,10 +48,10 @@ The \code{"lpip"} attribute of \code{X} is a list of the coefficient indices for
 
 \references{
 Wood, S.N., Li, Z., Shaddick, G. & Augustin N.H. (2017) Generalized additive models for gigadata: modelling the UK black smoke network daily data. Journal of the American Statistical Association. 112(519):1199-1210
-\url{https://dx.doi.org/10.1080/01621459.2016.1195744}
+\doi{10.1080/01621459.2016.1195744}
 
 Li, Z & S.N. Wood (2019) Faster model matrix crossproducts for large generalized linear models with discretized covariates. Statistics and Computing.
-\url{https://doi.org/10.1007/s11222-019-09864-2}
+\doi{10.1007/s11222-019-09864-2}
 
 }
 

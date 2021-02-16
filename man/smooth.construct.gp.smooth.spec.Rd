@@ -7,7 +7,8 @@
 
 \description{Gaussian process/kriging models based on simple covariance functions can be written in a very similar form to thin plate and Duchon spline models (e.g. Handcock, Meier, Nychka, 1994), and low rank versions produced by the eigen approximation method of Wood (2003). Kammann and Wand (2003) suggest a particularly simple form of the Matern covariance function with only a single smoothing parameter to estimate, and this class implements this and other similar models.  
 
-Usually invoked by an \code{s(...,bs="gp")} term in a \code{gam} formula. Argument \code{m} selects the covariance function, sets the range parameter and any power parameter. If \code{m} is not supplied then it defaults to \code{NA} and the covariance function suggested by Kammann and Wand (2003) along with their suggested range parameter is used. Otherwise \code{m[1]} between 1 and 5 selects the correlation function from respectively, spherical, power exponential, and Matern with kappa = 1.5, 2.5 or 3.5. \code{m[2]} if present specifies the range parameter, with non-positive or absent indicating that the Kammann and Wand estimate should be used. \code{m[3]} can be used to specify the power for the power exponential which otherwise defaults to 1. 
+Usually invoked by an \code{s(...,bs="gp")} term in a \code{gam} formula. Argument \code{m} selects the covariance function, sets the range parameter and any power parameter. If \code{m} is not supplied then it defaults to \code{NA} and the covariance function suggested by Kammann and Wand (2003) along with their suggested range parameter is used. Otherwise \code{abs(m[1])} between 1 and 5 selects the correlation function from respectively, spherical, power exponential, and Matern with kappa = 1.5, 2.5 or 3.5. The sign of \code{m[1]} determines whether a linear trend in the covariates is added to the Guassian process (positive), or not (negative). The latter ensures stationarity. 
+\code{m[2]}, if present, specifies the range parameter, with non-positive or absent indicating that the Kammann and Wand estimate should be used. \code{m[3]} can be used to specify the power for the power exponential which otherwise defaults to 1. 
 }
 
 \usage{
@@ -88,6 +89,8 @@ Handcock, M. S., K. Meier and D. Nychka (1994) Journal of the American Statistic
 
 Kammann, E. E. and M.P. Wand (2003) Geoadditive Models. Applied Statistics 52(1):1-18.
 
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+
 Wood, S.N. (2017) Generalized Additive Models: an introduction with R (2nd ed). CRC/Taylor and Francis
 }
 
@@ -106,6 +109,15 @@ persp(truth$x,truth$z,truth$f,theta=30) ## truth
 vis.gam(b0,theta=30)
 vis.gam(b,theta=30)
 vis.gam(b1,theta=30)
+
+## compare non-stationary (b1) and stationary (b2)
+b2 <- gam(y~s(x,z,bs="gp",k=50,m=c(-1,.5)),data=data)  ## sph stationary 
+vis.gam(b1,theta=30);vis.gam(b2,theta=30)
+x <- seq(-1,2,length=200); z <- rep(.5,200)
+pd <- data.frame(x=x,z=z)
+plot(x,predict(b1,pd),type="l");lines(x,predict(b2,pd),col=2)
+abline(v=c(0,1))
+plot(predict(b1),predict(b2))
 
 detach(eg)
 

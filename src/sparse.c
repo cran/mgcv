@@ -612,7 +612,7 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
   spMat *Xs,*Xt,*xwx,*V1,*W1,*Mp;
   int mx,i,j,k,b,i1,j1,*dim,n,*kd,*ks,*r,*off_start,*off,nt,*ts,*dt,*qc,*lt,*rt,nlt,nrt,nb,nr,nc,nrc,ncc,
     brs0,brs1,bcs0,bcs1=0,is,js,ic,jc,is0,ic0,js0,jc0,init=1,p,ii,jj,*str,*stc,symmetric,*sub_blocks,*block_size,
-    rcum=0,ccum=0,is1,rcum0,ccum0,*dn,*iwork,*XWXi,*XWXp,nzmax=0,rb,cb,*ip,n_threads,tid,*B;
+    rcum=0,ccum=0,is1,rcum0,ccum0,*dn,*iwork,*XWXi,*XWXp,nzmax=0,rb,cb,*ip,n_threads,tid,*B,nprot=0;
   SEXP Xd,M, i_sym,x_sym,dim_sym,p_sym,ul_sym,KD,R,KS,OFF,TS,DT,QC,V,XWX,OFFS;
   double **v,*w,*d,*xwork,*XWXx,*xp,*xp1,*cost;
   XWXblock *block,*blp;
@@ -626,20 +626,20 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
   KD = getListEl(X,"kd"); /* the matrix of index vectors */
   n = nrows(KD); /* number of data */
   /* get the row indices (forward then reverse) */
-  KD = PROTECT(coerceVector(KD,INTSXP));
+  KD = PROTECT(coerceVector(KD,INTSXP));nprot++;
   kd = INTEGER(KD);
   R = getListEl(X,"r");
-  R = PROTECT(coerceVector(R,INTSXP));
+  R = PROTECT(coerceVector(R,INTSXP));nprot++;
   r = INTEGER(R);
   OFF =  getListEl(X,"off"); /* the offset list for the reverse indices */
-  OFF = PROTECT(coerceVector(OFF,INTSXP));
+  OFF = PROTECT(coerceVector(OFF,INTSXP));nprot++;
   off = INTEGER(OFF);
   OFFS =  getListEl(X,"offstart"); /* the start points in the offset array */
-  OFFS = PROTECT(coerceVector(OFFS,INTSXP));
+  OFFS = PROTECT(coerceVector(OFFS,INTSXP));nprot++;
   off_start = INTEGER(OFFS);
   /* get the matrix defining the range of k vectors for each matrix */
   KS = getListEl(X,"ks");
-  KS = PROTECT(coerceVector(KS,INTSXP));
+  KS = PROTECT(coerceVector(KS,INTSXP));nprot++;
   ks = INTEGER(KS);
   
   mx = length(Xd); /* list length */
@@ -671,13 +671,13 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
   /* now deal with the smooth term information... */
   TS = getListEl(X,"ts");
   nt = length(TS); /* number of smooth terms */
-  TS = PROTECT(coerceVector(TS,INTSXP));
+  TS = PROTECT(coerceVector(TS,INTSXP));nprot++;
   ts = INTEGER(TS); /* term starts in matrix array */
   DT = getListEl(X,"dt");
-  DT = PROTECT(coerceVector(DT,INTSXP));
+  DT = PROTECT(coerceVector(DT,INTSXP));nprot++;
   dt= INTEGER(DT); /* number of marginal matrices for this term. */
   QC = getListEl(X,"qc");
-  QC = PROTECT(coerceVector(QC,INTSXP));
+  QC = PROTECT(coerceVector(QC,INTSXP));nprot++;
   qc= INTEGER(QC); /* the constraint indicator nt-vector */
   V = getListEl(X,"v");
   v = (double **) CALLOC((size_t)nt,sizeof(double *));
@@ -927,6 +927,7 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
       
     } // i loop  (term block rows)
     /* now run through stc enforcing consistency of block starts */
+    k = stc[0];
     for (i=1;i<nrc;i++) {
       /* set r_start to correct value for first block on each row (first row always ok)... */
       b = stc[i-1];k = stc[i];
@@ -958,9 +959,9 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
   /* write out results to a sparse matrix for return */
   
   if (symmetric) {
-    XWX = PROTECT(R_do_new_object(R_getClassDef("dsCMatrix"))); // create symmetric sparse matrix
-    SET_STRING_ELT(R_do_slot(XWX,ul_sym),0,mkChar("L")); // set to lower triangle storage - note charecter setting special
-  } else XWX = PROTECT(R_do_new_object(R_getClassDef("dgCMatrix")));
+    XWX = PROTECT(R_do_new_object(PROTECT(R_getClassDef("dsCMatrix"))));nprot++;nprot++; // create symmetric sparse matrix
+    SET_STRING_ELT(PROTECT(R_do_slot(XWX,ul_sym)),0,PROTECT(mkChar("L")));nprot++;nprot++; // set to lower triangle storage - note charecter setting special
+  } else { XWX = PROTECT(R_do_new_object(PROTECT(R_getClassDef("dgCMatrix"))));nprot++;nprot++;}
   dim = INTEGER(R_do_slot(XWX,dim_sym));
   dim[0] = rcum;dim[1] = ccum;
   if (symmetric) { /* don't know exact size yet - make temporary over-sized storage */
@@ -1017,7 +1018,7 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
   FREE(iwork); FREE(xwork);FREE(dn);FREE(d); FREE(str);FREE(sub_blocks);FREE(block_size);
   FREE(Xs); // free the sparse matrix array
   FREE(v);
-  UNPROTECT(9);
+  UNPROTECT(nprot);
   return(XWX);
 } /* sXWXd */  
 
@@ -1242,7 +1243,7 @@ int spac(int *i,int i0,int j0,int j1,int r,int c,int *ii,int *q) {
 } /* spac */  
 
 void sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int *qc,int nt,
-	      int *ts,int *dt,int *lt,int nlt,int n,double *work,int *worki,int unit_a) {
+	       int *ts,int *dt,int *lt,int nlt,int n,double *work,int *worki,int unit_a) {
 /* Sparse beta0/b version of routine that actually does the work of forming Xb for sXbd and sdiagXVX. 
    Note that Xb is not cleared to zero in this function, and the result is added to its initial value.
    This version uses a partial product approach to reduce workload on tensor products.
@@ -1263,7 +1264,7 @@ void sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int 
 */
   spMat *Xj,beta,bsub,C; 
   int nc,i,j,k,k0,q,bb,*dim,maxd,maxdim,//*ki,
-    *dn,*c,*c0,*p,P,s,l,ii,b,qq,*tps,m,/*mx,*/ j0,j1,*ri;
+    *dn,*c,*c0,*tps,*p,P,s,l,ii,b,qq,m,/*mx,*/ j0,j1,*ri;
   double *d;
   for (nc=i=0;i<nt;i++) if (qc[i]) nc++; // count constraints
   beta.x = work;work += bp+nc;
@@ -1272,23 +1273,31 @@ void sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int 
   dim = worki;worki += nt; // smooth term dimensions
   tps = worki;worki += nt; // smooth term start in param vector
   dn = worki;worki += n;
-  for (maxdim=maxd=0,i=0;i<nt;i++) { // compute smooth term sizes 
+  /*for (maxdim=maxd=0,i=0;i<nt;i++) { // compute smooth term sizes 
     b = ts[i];
     for (dim[i]=1,j=0;j<dt[i];j++) dim[i] *= Xs[b+j].c;
     if (i) tps[i] = tps[i-1] + dim[i-1];
     if (dt[i] > maxd) maxd = dt[i];
     if (dim[i] > maxdim) maxdim = dim[i];
+    }*/
+  for (maxdim=maxd=k=0,bb=0;bb<nlt;bb++) { // compute smooth term sizes 
+    i = lt[bb];
+    b = ts[i];
+    for (dim[i]=1,j=0;j<dt[i];j++) dim[i] *= Xs[b+j].c;
+    tps[i] = k; k += dim[i];
+    if (dt[i] > maxd) maxd = dt[i];
+    if (dim[i] > maxdim) maxdim = dim[i];
   }
   /* constraint handling q is start row for beta0, k start row for beta, j0 is current start element of 
      sparse beta0, j1 start element in beta... */
-  for (j0=j1=q=k=i=0;i<nt;i++) { 
-    if (qc[i]) { /* constraints make that subsection of beta dense */ 
-      /* copy relevant sections of beta0 to a dense vector */
+  /*for (j0=j1=q=k=i=0;i<nt;i++) { 
+    if (qc[i]) { // constraints make that subsection of beta dense  
+      // copy relevant sections of beta0 to a dense vector 
       for (j=0;j<dim[i];j++) work[j] = 0.0; // This is re-cycled below - sizing ok as require bp sized allocation later 
       while (j0<beta0.p[1] && beta0.i[j0]<q+dim[i]-1) {
 	work[beta0.i[j0]-q] = beta0.x[j0];j0++; 
       }
-      left_con_vec(work,v[i],beta.x+j1,dim[i],1); /* undo constraint */ 
+      left_con_vec(work,v[i],beta.x+j1,dim[i],1); // undo constraint  
       for (j=k+dim[i];k<j;k++,j1++) { beta.i[j1] = k;}
       q += dim[i]-1;// note k updated in above loop
     } else { // no constraint
@@ -1299,7 +1308,28 @@ void sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int 
       }
       q += dim[i];k += dim[i];
     }
-  }  
+    } */
+  for (j0=j1=q=k=bb=0;bb<nlt;bb++) {
+    i = lt[bb];
+    if (qc[i]) { // constraints make that subsection of beta dense  
+      // copy relevant sections of beta0 to a dense vector 
+      for (j=0;j<dim[i];j++) work[j] = 0.0; // This is re-cycled below - sizing ok as require bp sized allocation later 
+      while (j0<beta0.p[1] && beta0.i[j0]<q+dim[i]-1) {
+	work[beta0.i[j0]-q] = beta0.x[j0];j0++; 
+      }
+      left_con_vec(work,v[i],beta.x+j1,dim[i],1); // undo constraint  
+      for (j=k+dim[i];k<j;k++,j1++) { beta.i[j1] = k;}
+      q += dim[i]-1;// note k updated in above loop
+    } else { // no constraint
+      while (j0<beta0.p[1] && beta0.i[j0]<q+dim[i]) {
+        beta.i[j1] = beta0.i[j0] + k - q; 
+	beta.x[j1] = beta0.x[j0];
+	j1++;j0++;
+      }
+      q += dim[i];k += dim[i];
+    }
+  }
+  
   beta.p[1] = j1;beta.p[0]=0;  
  
   d = work; work += n*maxd; /* partial product array */
@@ -1309,7 +1339,7 @@ void sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int 
   c0 = worki;worki += maxd; 
   bsub.i = worki; worki += bp + nc; 
   bsub.x = work; work += bp + nc; 
-  bsub.p = worki;worki += maxdim; 
+  bsub.p = worki;worki += maxdim + 1; 
   spalloc(&C,maxdim,1000);
   j0 = 0; /* starting entry in beta */
   for (bb=0;bb<nlt;bb++) { // now actually do the multiplying.
@@ -1420,29 +1450,44 @@ void sXbdwork(double *Xb,double *a,double *beta0,int bp,spMat *Xs,double **v,int
    * unit_a=0 to use a and 1 not to (treat as 1).
 */
   spMat *Xj;
-  int nc,i,j,k,q,bb,*dim,maxd,ok,
-    *dn,*ki,*c,*p,P,s,l,ii,b,qq,*tps,m,mx;
+  int nc,i,j,k,q,bb,*dim,maxd,ok,*tps,
+    *dn,*ki,*c,*p,P,s,l,ii,b,qq,m,mx;
   double *beta,*C,*d;
   for (nc=i=0;i<nt;i++) if (qc[i]) nc++; // count constraints
   beta = work;work += bp+nc;//(double *)CALLOC((size_t)bp+nc,sizeof(double));
   dim = worki;worki += nt;//(int *)CALLOC((size_t)nt,sizeof(int)); // smooth term dimensions
   tps = worki;worki += nt;//(int *)CALLOC((size_t)nt,sizeof(int)); // smooth term start in param vector
   dn = worki;worki += n;//(int *)CALLOC((size_t)n,sizeof(int));
-  for (maxd=0,i=0;i<nt;i++) { // compute smooth term sizes 
+  /*  for (maxd=0,i=0;i<nt;i++) { // compute smooth term sizes 
     b = ts[i];
     for (dim[i]=1,j=0;j<dt[i];j++) dim[i] *= Xs[b+j].c;
     if (i) tps[i] = tps[i-1] + dim[i-1];
     if (dt[i] > maxd) maxd = dt[i];
   }
-  for (q=k=i=0;i<nt;i++) { /* constraint handling */
+  for (q=k=i=0;i<nt;i++) { // constraint handling 
     if (qc[i]) {
-      left_con_vec(beta0+q,v[i],beta+k,dim[i],1); /* undo constraint */
+      left_con_vec(beta0+q,v[i],beta+k,dim[i],1); // undo constraint 
       q += dim[i]-1;k += dim[i];
     } else { // no constraint
       for (j=0;j<dim[i];j++,k++,q++) beta[k] = beta0[q];
     }  
-  }  
- 
+  } */ 
+  for (k=maxd=0,bb=0;bb<nlt;bb++) { // compute smooth term sizes 
+    i = lt[bb]; // selected term
+    b = ts[i];
+    for (dim[i]=1,j=0;j<dt[i];j++) dim[i] *= Xs[b+j].c;
+    tps[i] = k; k += dim[i];
+    if (dt[i] > maxd) maxd = dt[i];
+  }
+  for (q=k=bb=0;bb<nlt;bb++) { // constraint handling
+    i = lt[bb];
+    if (qc[i]) {
+      left_con_vec(beta0+q,v[i],beta+k,dim[i],1); // undo constraint 
+      q += dim[i]-1;k += dim[i];
+    } else { // no constraint
+      for (j=0;j<dim[i];j++,k++,q++) beta[k] = beta0[q];
+    }  
+  }
   d = work;//(double *)CALLOC((size_t) n*maxd, sizeof(double)); /* partial product array */
   
   p = worki;worki += maxd;//(int *)CALLOC((size_t)maxd,sizeof(int));
@@ -1510,7 +1555,7 @@ void sXbdwork(double *Xb,double *a,double *beta0,int bp,spMat *Xs,double **v,int
 
 
 SEXP sXbd(SEXP X,SEXP BETA,SEXP LT) {
-/* Form X beta */
+/* Form X beta (beta dense) */
   spMat *Xs/*,sbeta0*/;
   int bp,mx,i,j,k,n,nzmax=0,*dim,*kd,*ks,*r,*off_start,*off,nt,
     *ts,*dt,*qc,*lt,nlt,maxd,nc,*worki,maxm=0,bc;
@@ -1537,6 +1582,7 @@ SEXP sXbd(SEXP X,SEXP BETA,SEXP LT) {
   OFFS =  getListEl(X,"offstart"); /* the start points in the offset array */
   OFFS = PROTECT(coerceVector(OFFS,INTSXP));
   off_start = INTEGER(OFFS);
+ 
   /* get the matrix defining the range of k vectors for each matrix */
   KS = getListEl(X,"ks");
   KS = PROTECT(coerceVector(KS,INTSXP));
@@ -1603,7 +1649,7 @@ SEXP sXbd(SEXP X,SEXP BETA,SEXP LT) {
     sbeta0.x[k] = beta0[i];sbeta0.i[k]=i;k++;
   }
   sbeta0.p[1] = k;
-  sXbsdwork(Xb,&a,sbeta0,bp,Xs,v,qc,nt,ts,dt,lt,nlt,n,work,worki,1);
+  sXbsdwork(Xb,&a,sbeta0,bp,Xs,v,qc,nt,ts,dt,tps,lt,nlt,n,work,worki,1);
   spfree(&sbeta0,1);
   */
   for (j=0;j<bc;j++,beta0 += bp,Xb += n) 
@@ -1704,7 +1750,7 @@ SEXP sdiagXVXt(SEXP X, SEXP V, SEXP LT, SEXP RT) {
   spalloc(&Ii,1,1);Ii.x[0]=1.0;Ii.p[0]=0;Ii.p[1]=1;
   k = n*maxd+2*(p+nc) + maxm;
   work = (double *)CALLOC((size_t) k,sizeof(double));
-  k = 3*maxd+p+2*(p+nc+nt+1) + maxm + n;
+  k = 3*maxd+p+1+2*(p+nc+nt+1) + maxm + n +1; /* p+1 is upper bound on max coefs per term (single tp with constraint could be p+1) */ 
   worki = (int *)CALLOC((size_t) k,sizeof(int));
   for (i=0;i<p;i++) { /* work through the columns */
     /* extract XV[:,i] ... */
@@ -1783,7 +1829,7 @@ SEXP stmm(SEXP X) {
   c = (int *)CALLOC((size_t)mx,sizeof(int)); /* c[i] indexes which col of Xs[i] is corrently being processed */
   pp = (double *)CALLOC((size_t)mx*n,sizeof(double)); /* partial column products */
   dn = (int *)CALLOC((size_t)n,sizeof(int)); /* the non-zero tracker */
-  R =  PROTECT(R_do_new_object(R_getClassDef("dgCMatrix"))); /* the result sparse matrix */
+  R =  PROTECT(R_do_new_object(PROTECT(R_getClassDef("dgCMatrix")))); /* the result sparse matrix */
   dim = INTEGER(R_do_slot(R,dim_sym));dim[0] = n;dim[1] = p; /* set dimensions to n by p */
   R_do_slot_assign(R,p_sym,allocVector(INTSXP,p+1)); /* column starts vector */
   Rp = INTEGER(R_do_slot(R,p_sym));
@@ -1845,7 +1891,7 @@ SEXP stmm(SEXP X) {
     Rp[l] = rj;
   } /* op loop */
   FREE(Xs);FREE(pp);FREE(dn);FREE(c);
-  UNPROTECT(1);
+  UNPROTECT(2);
   return(R);
 } /* stmm */
 

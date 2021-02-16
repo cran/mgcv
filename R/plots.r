@@ -72,19 +72,19 @@ fix.family.rd <- function(fam) {
     }
   } else if (family=="binomial") {
     fam$rd <- function(mu,wt,scale) {
-      rbinom(mu,wt,mu)/(wt + as.numeric(wt==0))
+      rbinom(length(mu),wt,mu)/(wt + as.numeric(wt==0))
     }
   } else if (family=="Gamma") {
     fam$rd <- function(mu,wt,scale) {
-      rgamma(mu,shape=1/scale,scale=mu*scale)
+      rgamma(length(mu),shape=1/scale,scale=mu*scale)
     }    
   } else if (family=="gaussian") {
     fam$rd <- function(mu,wt,scale) {
-      rnorm(mu,mean=mu,sd=sqrt(scale/wt))
+      rnorm(length(mu),mean=mu,sd=sqrt(scale/wt))
     }
   } else if (family=="inverse.gaussian") {
     fam$rd <- function(mu,wt,scale) {
-      rig(mu,mu,scale)
+      rig(length(mu),mu,scale)
     }
   } 
   fam

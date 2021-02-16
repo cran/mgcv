@@ -57,7 +57,7 @@ Conditional AIC in Linear Mixed Models, Biometrika, 97, 773-789.
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models (with discussion).
 Journal of the American Statistical Association 111, 1548-1575
-\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
+\doi{10.1080/01621459.2016.1180986}
 
 Wood S.N. (2017) Generalized Additive Models: An Introduction with R
 (2nd edition). Chapman and Hall/CRC Press.

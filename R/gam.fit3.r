@@ -2633,7 +2633,7 @@ negbin <- function (theta = stop("'theta' must be specified"), link = "log") {
 
     rd <- function(mu,wt,scale) {
       Theta <- get(".Theta")[1]
-      rnbinom(mu,size=Theta,mu=mu)
+      rnbinom(n=length(mu),size=Theta,mu=mu)
     }
 
     qf <- function(p,mu,wt,scale) {

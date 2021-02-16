@@ -2441,7 +2441,6 @@ Predict.matrix.random.effect <- function(object,data) {
 ########################################################
 # Markov random fields start here. Plot method in plot.r
 ########################################################
-
 pol2nb <- function(pc) {
 ## pc is a list of polygons. i.e. 
 ## pc[[i]] is 2 column matrix defining 
@@ -2685,6 +2684,15 @@ makeR <- function(la,lo,lak,lok,m=2) {
   v <- sin(ag$la)*sin(ag$lak)+cos(ag$la)*cos(ag$lak)*cos(og$lo-og$lok)
   v[v > 1] <- 1;v[v < -1] <- -1
   gamma <- acos(v)
+  if (m == -2) { ## First derivative version of Jean Duchon's unpublished proposal...
+    z <- 2*sin(gamma/2) ## Euclidean 3 - distance between points
+    eps <- .Machine$double.xmin*10
+    z[z<eps] <- eps
+    R <- matrix(-z,length(la),length(lak)) ## m=1, d=3, s=1 Duchon semi-kernel
+    attr(R,"T") <- matrix(c(la*0+1),nrow(R),1) ## null space      
+    attr(R,"Tc") <- matrix(c(lak*0+1),ncol(R),1) ## constraint    
+    return(R)
+  }
 
   if (m == -1) { ## Jean Duchon's unpublished proposal...
     z <- 2*sin(gamma/2) ## Euclidean 3 - distance between points
@@ -2827,7 +2835,7 @@ smooth.construct.sos.smooth.spec<-function(object,data,knots)
 
   if (is.na(object$p.order)) object$p.order <- 0
   object$p.order <- round(object$p.order)
-  if (object$p.order< -1) object$p.order <- -1
+  if (object$p.order< -2) object$p.order <- -1
   if (object$p.order>4) object$p.order <- 4
 
   R <- makeR(la=knt[1:nk],lo=knt[-(1:nk)],lak=knt[1:nk],lok=knt[-(1:nk)],m=object$p.order)
@@ -3169,9 +3177,10 @@ Predict.matrix.duchon.spline <- function(object,data)
 ##################################################
 
 
-gpT <- function(x) {
+gpT <- function(x,defn) {
 ## T matrix for Kamman and Wand Matern Spline...
-  cbind(x[,1]*0+1,x)
+## defn[1] < 0 signals no linear terms
+  if (defn[1]<0) x[,1]*0+1 else cbind(x[,1]*0+1,x)
 } ## gpT
 
 gpE <- function(x,xk,defn = NA) {
@@ -3181,8 +3190,12 @@ gpE <- function(x,xk,defn = NA) {
   ## get d[i,j] the Euclidian distance from x[i] to xk[j]... 
   E <- matrix(sqrt(rowSums((x[ind$x,,drop=FALSE]-xk[ind$xk,,drop=FALSE])^2)),nrow(x),nrow(xk))
   rho <- -1; k <- 1
+  sign.type <- 1
   if ((length(defn)==1&&is.na(defn))||length(defn)<1) { type <- 3 } else
-  if (length(defn)>0) type <- round(defn[1])
+  if (length(defn)>0) {
+    type <- abs(round(defn[1]))
+    sign.type <- sign(defn[1])
+  } 
   if (length(defn)>1) rho <- defn[2]
   if (length(defn)>2) k <- defn[3]
 
@@ -3197,7 +3210,7 @@ gpE <- function(x,xk,defn = NA) {
 	      eE + (E*eE)*(1+E/3), ## 4 Matern k = 2.5
 	      eE + (E*eE)*(1+.4*E+E^2/15) ## 5 Matern k = 3.5
 	     )
-  attr(E,"defn") <- c(type,rho,k)
+  attr(E,"defn") <- c(sign.type*type,rho,k)
   E
 } ## gpE
 
@@ -3206,6 +3219,13 @@ smooth.construct.gp.smooth.spec <- function(object,data,knots)
 ## See also Handcock, Meier and Nychka (1994), and Handcock and Stein (1993).
 { ## deal with possible extra arguments of "gp" type smooth
   xtra <- list()
+
+  ## object$p.order[1] < 0 signals stationary version
+  if ((length(object$p.order)==1&&is.na(object$p.order))||length(object$p.order)<1) {
+    stationary <- FALSE
+  } else {
+    stationary <- object$p.order[1] < 0
+  }
 
   if (is.null(object$xt$max.knots)) xtra$max.knots <- 2000 
   else xtra$max.knots <- object$xt$max.knots 
@@ -3289,7 +3309,7 @@ smooth.construct.gp.smooth.spec <- function(object,data,knots)
     object$bs.dim <- ncol(knt)+2
     warning("basis dimension reset to minimum possible")
   }
-  object$null.space.dim <- ncol(knt) + 1
+  object$null.space.dim <- if (stationary) 1 else ncol(knt) + 1
   
   k <- object$bs.dim - object$null.space.dim   
 
@@ -3337,22 +3357,25 @@ Predict.matrix.gp.smooth <- function(object,data)
  
   if (n > nk) { ## split into chunks to save memory
     n.chunk <- n %/% nk
+    k0 <- 1
     for (i in 1:n.chunk) { ## build predict matrix in chunks
       ind <- 1:nk + (i-1)*nk
       Xc <- gpE(x=x[ind,,drop=FALSE],xk=object$knt,object$gp.defn)
-      Xc <- cbind(Xc%*%object$UZ,gpT(x=x[ind,,drop=FALSE]))
-      if (i == 1) X <- Xc else { X <- rbind(X,Xc);rm(Xc)}
+      Xc <- cbind(Xc%*%object$UZ,gpT(x=x[ind,,drop=FALSE],object$gp.defn))
+      if (i == 1) X <- matrix(0,n,ncol(Xc))
+      X[ind,] <- Xc
     } ## finished size nk chunks
 
     if (n > ind[nk]) { ## still some left over
       ind <- (ind[nk]+1):n ## last chunk
       Xc <- gpE(x=x[ind,,drop=FALSE],xk=object$knt,object$gp.defn)
-      Xc <- cbind(Xc%*%object$UZ,gpT(x=x[ind,,drop=FALSE]))
-      X <- rbind(X,Xc);rm(Xc)
+      Xc <- cbind(Xc%*%object$UZ,gpT(x=x[ind,,drop=FALSE],object$gp.defn))
+      X[ind,] <- Xc
+      #X <- rbind(X,Xc);rm(Xc)
     }
   } else {
     X <- gpE(x=x,xk=object$knt,object$gp.defn)
-    X <- cbind(X%*%object$UZ,gpT(x=x))
+    X <- cbind(X%*%object$UZ,gpT(x=x,object$gp.defn))
   }
   X 
 } ## end of Predict.matrix.gp.smooth

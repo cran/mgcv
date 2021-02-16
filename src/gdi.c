@@ -416,13 +416,8 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
 
     /* ...  r is the rank of Sb, or any other positively weighted sum over alpha */
 
-    /*  printf("\n iter = %d,  rank = %d,   Q = %d",iter,r,Q);
-    printf("\n gamma = ");for (i=0;i<Mf;i++) printf(" %d",gamma[i]);
-    printf("\n alpha = ");for (i=0;i<Mf;i++) printf(" %d",alpha[i]);
-    printf("\n gamma1 = ");for (i=0;i<Mf;i++) printf(" %d",gamma1[i]);*/
-   
 
-  /* If Q==r then terminate (form S first if it's the first iteration) */
+    /* If Q==r then terminate (form S first if it's the first iteration) */
     
     if (Q==r) { 
       if (iter==1 ) { /* form S */
@@ -447,11 +442,7 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
     for (p=R,p1=R + *q * r;p<p1;p++) *p=0.0; /* clear R */
     for (i=0;i<r;i++) for (j=i;j<*q;j++) R[i + pivot[j] * r] = Sb[i + j * Q]; 
 
-   /* DEBUG ONLY... */
-    /*  printf("\npivot = ");for (j=0;j<*q;j++) printf("%d ",pivot[j]);
-    printf("Current R...\n");
-    for (i=0;i<r;i++) { for (j=0;j<*q;j++) printf("%7.2g  ",Sb[i + Q *j]); printf("\n");} */
-
+ 
   /* Form the sum over the elements in gamma1, Sg */
 
     for (p=Sg,p1=p + *q * Q;p<p1;p++) *p=0.0; /* clear Sg */
@@ -497,10 +488,6 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
       }
     }
 
-
-    /* DEBUG ONLY... */
-    /* printf("Current S...\n");
-       for (i=0;i<*q;i++) { for (j=0;j<*q;j++) printf("%7.2g  ",S[i + *q *j]); printf("\n");}*/
  
   /* Update K, Q and gamma */   
     K = K + r; Q = Qr;
@@ -509,10 +496,6 @@ void get_detS2(double *sp,double *sqrtS, int *rSncol, int *q,int *M, int * deriv
 
   /* transpose S */
   for (i=0;i<*q;i++) for (j=0;j<*q;j++) R[i + *q * j] = S[j + *q * i]; 
-
-  /* DEBUG ONLY... */
-  /* printf("Final S...\n");
-     for (i=0;i<*q;i++) { for (j=0;j<*q;j++) printf("%7.2g  ",S[i + *q *j]); printf("\n");}*/
 
   /* Now get the determinant and inverse of the transformed S (stored in B) */
   *det = qr_ldet_inv(R,q,B,deriv); /* R=S' here */

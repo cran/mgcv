@@ -749,7 +749,7 @@ nb <- function (theta = NULL, link = "log") {
 
     rd <- function(mu,wt,scale) {
       Theta <- exp(get(".Theta"))
-      rnbinom(mu,size=Theta,mu=mu)
+      rnbinom(n=length(mu),size=Theta,mu=mu)
     }
 
     qf <- function(p,mu,wt,scale) {
@@ -935,7 +935,7 @@ tw <- function (theta = NULL, link = "log",a=1.01,b=1.99) {
      p <- if (th>0) (b+a*exp(-th))/(1+exp(-th)) else (b*exp(th)+a)/(exp(th)+1)
 
      if (p == 2) 
-            rgamma(mu, shape = 1/scale, scale = mu * scale)
+            rgamma(n=length(mu), shape = 1/scale, scale = mu * scale)
      else
             rTweedie(mu, p = p, phi = scale)
     }
@@ -1211,7 +1211,7 @@ betar <- function (theta = NULL, link = "logit",eps=.Machine$double.eps*100) {
     rd <- function(mu,wt,scale) {
      ## simulate data given fitted latent variable in mu 
       Theta <- exp(get(".Theta"))
-      r <- rbeta(mu,shape1=Theta*mu,shape2=Theta*(1-mu))
+      r <- rbeta(n=length(mu),shape1=Theta*mu,shape2=Theta*(1-mu))
       eps <- get(".betarEps")
       r[r>=1-eps] <- 1 - eps
       r[r<eps] <- eps

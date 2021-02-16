@@ -27,7 +27,7 @@ dmvn <- function(x,mu,V,R=NULL) {
 ## multivariate normal density mgcv:::rmvn can be used for generation 
   if (is.null(R)) R <- chol(V)
   z <- forwardsolve(t(R),x-mu)
-  -colSums(z^2)/2-sum(log(diag(R))) - log(2*pi)*length(mu)/2
+  -sum(log(diag(R))) - log(2*pi)*length(mu)/2 - if (is.matrix(z)) colSums(z^2)/2 else sum(z^2)/2
 }
 
 ## some functions to extract important components of joint density from
@@ -102,7 +102,7 @@ gam.mh <- function(b,ns=10000,burn=1000,t.df=40,rw.scale=.25,thin=1) {
         lpl0 <- lpl1;j <- i
         bs[i,] <- bs[i,] + step[i,]
 	rw.accept <- rw.accept+1 
-        lfp[i] <- dmvt(bs[i,],beta,Vb,df=4,R=R) ## have to update static proposal density
+        lfp[i] <- dmvt(bs[i,],beta,Vb,df=t.df,R=R) ## have to update static proposal density
       }
     }  
     if (i==burn) accept <- rw.accept <- 0

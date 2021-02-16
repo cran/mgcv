@@ -36,10 +36,10 @@ nonregular cases. Biometrika 72(1):67-90
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
-\url{https://dx.doi.org/10.1080/01621459.2016.1180986}
+\doi{10.1080/01621459.2016.1180986}
 
 Wood, S.N. and M. Fasiolo (2017) A generalized Fellner-Schall method for smoothing parameter optimization with application to Tweedie location, scale and shape models. Biometrics 73(4): 1071-1081.
-\url{https://dx.doi.org/10.1111/biom.12666}
+\doi{10.1111/biom.12666}
 }
 
 

@@ -13,7 +13,7 @@ coefficients. The routine can optionally return the matrix by which the model
 coefficients must be pre-multiplied in order to yield the values of the linear predictor at
 the supplied covariate values: this is useful for obtaining credible regions
 for quantities derived from the model (e.g. derivatives of smooths), and for lookup table prediction outside
-\code{R} (see example code below).}
+\code{R}.}
 
 \usage{
 \method{predict}{bam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
@@ -79,7 +79,7 @@ from the \code{parallel} package, if it is supplied with a cluster on which to d
 single machine). See details and example code for \code{\link{bam}}. 
 }
 
-\item{discrete}{if \code{TRUE} then discrete prediction methods used with model fitted by discrete methods. \code{FALSE} for regular prediction.}
+\item{discrete}{if \code{TRUE} then discrete prediction methods used with model fitted by discrete methods. \code{FALSE} for regular prediction. See details.}
 
 \item{n.threads}{if \code{se.fit=TRUE} and discrete prediction is used then parallel computation can be used to speed up se calcualtion. This specifies number of htreads to use.}
 
@@ -112,11 +112,14 @@ an attribute \code{"para.only"} and \code{type=="terms"} then only parametric
 terms of order 1 are returned (i.e. those that \code{termplot} can handle).
 
 Note that, in common with other prediction functions, any offset supplied to
-\code{\link{gam}} as an argument is always ignored when predicting, unlike
-offsets specified in the gam model formula.
+\code{\link{bam}} as an argument is always ignored when predicting, unlike
+offsets specified in the bam model formula.
 
 See the examples in \code{\link{predict.gam}} for how to use the \code{lpmatrix} for obtaining credible
-regions for quantities derived from the model. 
+regions for quantities derived from the model.
+
+When \code{discrete=TRUE} the prediction data in \code{newdata} is discretized in the same way as is done when using discrete fitting methods with \code{bam}. However the discretization grids are not currently identical to those used during fitting. Instead, discretization is done afresh for the prediction data. This means that if you are predicting for a relatively small set of prediction data, or on a regular grid, then the results may in fact be identical to those obtained without discretization. The disadvantage to this approach is that if you make predictions with a large data frame, and then split it into smaller data frames to make the predictions again, the results may differ slightly, because of slightly different discretization errors.    
+
 }
 
 \references{

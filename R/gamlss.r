@@ -213,8 +213,9 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   if (is.list(X)) {
     discrete <- TRUE
     p <- X$p;n <- nrow(X$kd)
+    sparse <- !inherits(X$Xd[[1]],"matrix")
   } else {
-    discrete <- FALSE
+    sparse <- discrete <- FALSE
     p <- ncol(X);n <- nrow(X)
   }  
   trHid2H <- d1H <- d2H <- NULL ## defaults
@@ -227,7 +228,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   }
   
   ## the Hessian...
-  lbb <- matrix(0,p,p)
+  lbb <- if (sparse) Matrix(0,p,p) else matrix(0,p,p)
   for (i in 1:K) for (j in i:K) {
     ## A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
     A <- if (discrete) XWXd(X$Xd,w=l2[,i2[i,j]],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
@@ -268,6 +269,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
    if (!is.null(g.index)) { ## then several transform related quantities are required 
      beta <- attr(d1b,"beta") ##  regression coefficients 
      d1g <- d1b; d1g[g.index,] <- d1g[g.index,]/beta[g.index] ## derivartive w.r.t. working parameters
+     hess.diag <- attr(d1b,"hess.diag") ## should diagonal correction terms be included?
    }
    d1H <- rep(0,m)
    if (discrete) {
@@ -293,7 +295,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
 	     XWX <- t(beta[jj[[j]]][gj]*d1g[jj[[j]],l][gj]*t(lbb[jj[[i]],jj[[j]]][,gj]))
 	     if (any(gi)) XWX[gi,] <- beta[jj[[i]]][gi]*XWX[gi,]
 	     XVX[,gj] <- XVX[,gj] + XWX
-	     if (i==j) { ## add diagonal corrections
+	     if (i==j&&hess.diag) { ## add diagonal corrections
 	       dd <- beta[jj[[i]]][gi]*(lbb[jj[[i]][gi],] %*% d1b[,l] + lb[jj[[i]]][gi]*d1g[jj[[i]],l][gi])
 	       XVX[gi,gj] <- XVX[gi,gj] + diag(drop(dd),nrow=sum(gi))
              }
@@ -319,7 +321,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
 	    XWX <- t(beta[jj[[j]]][gj]*d1g[jj[[j]],l][gj]*t(lbb[jj[[i]],jj[[j]]][,gj]))
 	    if (any(gi)) XWX[gi,] <- beta[jj[[i]]][gi]*XWX[gi,]
 	    dcor <- dcor + sum(XWX * Hpi[,gj])
-	    if (i==j) { ## diagonal correction
+	    if (i==j&&hess.diag) { ## diagonal correction
                dd <- beta[jj[[i]]][gi]*(lbb[jj[[i]][gi],] %*% d1b[,l] + lb[jj[[i]]][gi]*d1g[jj[[i]],l][gi])
 	       dcor <- dcor + sum(dd*diag(Hpi)[gi])
             }
@@ -900,7 +902,8 @@ multinom <- function(K=1) {
           for (k in 1:length(jj)) { ## loop over the linear predictors
             yt1 <- 6*as.numeric(y==k)-3
 	    R <- suppressWarnings(chol(XWXd(x$Xd,w=rep(1,length(y)),k=x$kd,ks=x$ks,ts=x$ts,dt=x$dt,
-	         v=x$v,qc=x$qc,nthreads=1,drop=x$drop,lt=x$lpid[[k]])+crossprod(E[,jj[[k]]]),pivot=TRUE))
+	         v=x$v,qc=x$qc,nthreads=1,drop=x$drop,lt=x$lpid[[k]])+crossprod(E[,jj[[k]]]),
+		 pivot=TRUE))
 	    Xty <- XWyd(x$Xd,rep(1,length(y)),yt1,x$kd,x$ks,x$ts,x$dt,x$v,x$qc,x$drop,lt=x$lpid[[k]])
 	    piv <- attr(R,"pivot")
 	    rrank <- attr(R,"rank")

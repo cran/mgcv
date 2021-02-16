@@ -2736,17 +2736,18 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
     for (i in 1:length(newdata)) 
     if (nn[i]%in%mn && is.factor(object$model[,nn[i]])) { # then so should newdata[[i]] be 
       levm <- levels(object$model[,nn[i]]) ## original levels
-      levn <- levels(factor(newdata[[i]])) ## new levels
+      ## need to avoid dropping NAs if they are a factor level in origianl model
+      levn <- if (any(is.na(levm))) levels(factor(newdata[[i]],exclude=NULL)) else levels(factor(newdata[[i]])) ## new levels
       if (sum(!levn%in%levm)>0) { ## check not trying to sneak in new levels 
         msg <- paste("factor levels",paste(levn[!levn%in%levm],collapse=", "),"not in original fit",collapse="")
         warning(msg)
       }
       ## set prediction levels to fit levels...
       if (is.matrix(newdata[[i]])) {
-        dum <- factor(newdata[[i]],levels=levm)
+        dum <- factor(newdata[[i]],levels=levm,exclude=NULL)
 	dim(dum) <- dim(newdata[[i]])
 	newdata[[i]] <- dum
-      } else newdata[[i]] <- factor(newdata[[i]],levels=levm)
+      } else newdata[[i]] <- factor(newdata[[i]],levels=levm,exclude=NULL)
     }
     if (type=="newdata") return(newdata)
 
@@ -2871,7 +2872,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
         }
 	## next line is just a work around to prevent a spurious warning (e.g. R 3.6) from
 	## model.matrix if contrast relates to a term in mf which is not
-	## part of Terms[[i]] (mode.matrix doc actually defines contrast w.r.t. mf,
+	## part of Terms[[i]] (model.matrix doc actually defines contrast w.r.t. mf,
 	## not Terms[[i]])...
 	oc <- if (length(object$contrasts)==0) object$contrasts else
 	      object$contrasts[names(object$contrasts)%in%attr(Terms[[i]],"term.labels")]
@@ -3166,7 +3167,7 @@ concurvity <- function(b,full=TRUE) {
       R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
        
       ##u worst case...
-      Rt <- qr.R(qr(R)) 
+      Rt <- qr.R(qr(R,tol=0)) 
       conc[1,i] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
        
       ## observed...
@@ -3189,7 +3190,7 @@ concurvity <- function(b,full=TRUE) {
         R <- qr.R(qr(cbind(Xi,Xj),LAPACK=FALSE,tol=0))[,-(1:r),drop=FALSE] ## No pivoting!!  
         
         ## worst case...
-        Rt <- qr.R(qr(R)) 
+        Rt <- qr.R(qr(R,tol=0)) 
         conc[[1]][i,j] <- svd(forwardsolve(t(Rt),t(R[1:r,,drop=FALSE])))$d[1]^2
        
         ## observed...

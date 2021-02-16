@@ -1915,9 +1915,16 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
 
   newterms <- attr(newdata,"terms") ## non NULL for model frame
 
-  newdata <- predict.gam(object,newdata=newdata,type="newdata",se.fit=se.fit,terms=terms,exclude=exclude,
+  newd <- predict.gam(object,newdata=newdata,type="newdata",se.fit=se.fit,terms=terms,exclude=exclude,
             block.size=block.size,newdata.guaranteed=newdata.guaranteed,
             na.action=na.action,...) 
+  if (nrow(newd)>0) {
+    newdata <- newd;rm(newd)
+  } else { ## no non NA data, might as well call predict.gam
+    return(predict.gam(object,newdata=newdata,type=type,se.fit=se.fit,terms=terms,exclude=exclude,
+            block.size=block.size,newdata.guaranteed=newdata.guaranteed,
+            na.action=na.action,...))
+  }
 
   ## Next line needed to avoid treating newdata as a model frame if it was supplied not as a model frame.
   ## Otherwise names of e.g. offset are messed up (as they will also be if it was supplied as a model frame
@@ -1972,7 +1979,7 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
     }
   } else {
     pp <- if (se.fit) list(fit=rep(0,0),se.fit=rep(0,0)) else rep(0,0) ## note: needed in terms branch below
-  } ## parametric component dealt with
+  } ## parametric component dealt with in non-discrete case
 
   ## now discretize covariates...
   if (convert2mf) newdata <- model.frame(object$dinfo$gp$fake.formula[-2],newdata)
@@ -1984,9 +1991,9 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
   ks <- matrix(0,0,2) ## NOTE: slightly more efficient not to repeatedly extend
   if (para.discrete) { 
     for (j in 1:nlp) { ## loop over parametric components of linear predictors
-      ## get discretized marginal matrices for the parametric model
-      ptens <- if (nlp==1&&!is.list(object$pterms)) terms2tensor(object$pterms,dk$mf) else
-	             terms2tensor(object$pterms[[j]],dk$mf)
+      ## get discretized marginal matrices for the parametric model (if contrast warnings see predict.gam fix)
+      ptens <- if (nlp==1&&!is.list(object$pterms)) terms2tensor(object$pterms,dk$mf,object$contrasts) else
+	             terms2tensor(object$pterms[[j]],dk$mf,object$contrasts)
       offi <- if (nlp==1&&!is.list(object$pterms)) attr(object$pterms,"offset") else attr(object$pterms[[j]],"offset")
       if (!is.null(offi)) {
         #offname <- if (nlp==1&&!is.list(object$pterms)) attr(object$pterms,"factor") else attr(object$pterms[[j]],"factor")
@@ -2291,7 +2298,7 @@ tens2matrix <- function(X,ts,dt) {
 } ## tens2matrix
 
 
-terms2tensor <- function(terms,data=NULL,drop.intercept=FALSE,identify=TRUE,sparse=FALSE) {
+terms2tensor <- function(terms,data=NULL,contrasts.arg=NULL,drop.intercept=FALSE,identify=TRUE,sparse=FALSE) {
 ## takes a terms object or formula and converts it into a sequence of marginal model matrices, X
 ## and associated indices ts and dt, using the data in 'data'. drops the intercept if needed.
 ## If 'identify' then identifiability constraints/contrasts imposed, otherwise not. 
@@ -2334,11 +2341,11 @@ terms2tensor <- function(terms,data=NULL,drop.intercept=FALSE,identify=TRUE,spar
       vn <- varn[as.logical(fac[,i])]
       if (no.int||!identify) {
         fm <- as.formula(paste("~",vn,"-1"))
-        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data) else model.matrix(fm,data)
+        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else model.matrix(fm,data,contrasts.arg)
         no.int <- FALSE
       } else {
         fm <- as.formula(paste("~",vn))
-        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data)[,-1,drop=FALSE] else model.matrix(fm,data)[,-1,drop=FALSE]
+        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE]
       }
       xname[k] <- if (!dummy && vn %in% names(data)) vn else all.vars(fm)
       form[[k]] <- fm; environment(form[[k]]) <- NULL
@@ -2350,10 +2357,10 @@ terms2tensor <- function(terms,data=NULL,drop.intercept=FALSE,identify=TRUE,spar
         vn <- varn[m[j]]
         if (fac[m[j],i]==2||!identify) { ## no contrast
 	  fm <- as.formula(paste("~",vn,"-1"))
-	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data) else model.matrix(fm,data)
+	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else model.matrix(fm,data,contrasts.arg)
 	} else { ## with contrast
           fm <- as.formula(paste("~",vn))
-	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data)[,-1,drop=FALSE] else model.matrix(fm,data)[,-1,drop=FALSE]
+	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE]
         }
 	xname[k] <- if (!dummy && vn %in% names(data)) vn else all.vars(fm)
 	form[[k]] <- fm; environment(form[[k]]) <- NULL
@@ -2588,8 +2595,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
       for (j in 1:npt) { ## loop over parametric terms in each formula
         paratens <- TRUE
         ## get the parametric model split into tensor components...
-        ptens <- if (nlp==1&&!is.list(G$pterms)) terms2tensor(G$pterms,mf0,drop.intercept[j]) else
-	             terms2tensor(G$pterms[[j]],mf0,drop.intercept[j])
+        ptens <- if (nlp==1&&!is.list(G$pterms)) terms2tensor(G$pterms,mf0,drop.intercept=drop.intercept[j]) else
+	             terms2tensor(G$pterms[[j]],mf0,drop.intercept=drop.intercept[j])
         if (j>1) ptens$term.labels <- paste(ptens$term.labels,".",j-1,sep="")		     
         ## now locate the index vectors for each parametric marginal discrete matrix ptens$X		     
         if (!is.null(ptens)) {

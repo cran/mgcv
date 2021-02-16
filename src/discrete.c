@@ -1157,16 +1157,16 @@ void XWXijs(double *XWX,int i,int j,int r,int c, double *X,int *k, int *ks, int 
     Xt = X + off[im]; /* final marginal model matrix */
     pim = p[im]; /* cols of Xt */
     if (r!=c)  for (jj=0;jj<pim;jj++) for (ii=0;ii<pim;ii++) { /* block need not be symmetric */
-      Xi = Xt + mim * ii; /* iith col of Xt */
-      Xj = Xt + mim * jj; /* jjth col of Xt */
-      for (x=0.0,kk=0;kk<mim;kk++) x += wb[kk]*Xj[kk]*Xi[kk];
-      XWX[c*pim+jj+(r*pim +ii)* (ptrdiff_t) nxwx] = XWX[r*pim+ii+(c*pim +jj)*(ptrdiff_t)nxwx] = x; 
+        Xi = Xt + mim * ii; /* iith col of Xt */
+        Xj = Xt + mim * jj; /* jjth col of Xt */
+        for (x=0.0,kk=0;kk<mim;kk++) x += wb[kk]*Xj[kk]*Xi[kk];
+        XWX[c*pim+jj+(r*pim +ii)* (ptrdiff_t) nxwx] = XWX[r*pim+ii+(c*pim +jj)*(ptrdiff_t)nxwx] = x; 
     } else for (ii=0;ii<pim;ii++) for (jj=ii;jj<pim;jj++) { /* diagonal and symmetric */ 
-      Xi = Xt + mim * ii; /* iith col of Xt */
-      Xj = Xt + mim * jj; /* jjth col of Xt */
-      for (x=0.0,kk=0;kk<mim;kk++) x += wb[kk]*Xj[kk]*Xi[kk];
-      XWX[r*pim+ ii + (c*pim+jj)*(ptrdiff_t)nxwx] = XWX[r*pim + jj + (c*pim + ii)*(ptrdiff_t)nxwx] =
-      XWX[(r*pim+ ii)*(ptrdiff_t)nxwx + c*pim+jj] = XWX[(r*pim + jj)*(ptrdiff_t)nxwx + c*pim + ii] = x;
+        Xi = Xt + mim * ii; /* iith col of Xt */
+        Xj = Xt + mim * jj; /* jjth col of Xt */
+        for (x=0.0,kk=0;kk<mim;kk++) x += wb[kk]*Xj[kk]*Xi[kk];
+        XWX[r*pim+ ii + (c*pim+jj)*(ptrdiff_t)nxwx] = XWX[r*pim + jj + (c*pim + ii)*(ptrdiff_t)nxwx] =
+        XWX[(r*pim+ ii)*(ptrdiff_t)nxwx + c*pim+jj] = XWX[(r*pim + jj)*(ptrdiff_t)nxwx + c*pim + ii] = x;
     }					  
   } else { /* general case */
     sj = ks[ts[j]+nx]-ks[ts[j]]; /* number of terms in summation convention for j */
