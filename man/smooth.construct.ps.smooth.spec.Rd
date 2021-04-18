@@ -12,7 +12,7 @@ penalized by discrete penalties applied directly to
 the basis coefficients. Cyclic P-splines are specified by model terms like \code{s(x,bs="cp",...)}. 
 These bases can be used in tensor product smooths (see \code{\link{te}}).
 
-The advantage of P-splines is the flexible way that penalty and basis order can be mixed. This often provides a useful way of `taming' an otherwise poorly behave smooth. However, in regular use, splines with derivative based penalties (e.g. \code{"tp"} or \code{"cr"} bases) tend to result in slightly better MSE performance, presumably because the good approximation theoretic properties of splines are rather closely connected to the use of derivative penalties.  
+The advantage of P-splines is the flexible way that penalty and basis order can be mixed (but see also \code{\link{d.spline}}). This often provides a useful way of `taming' an otherwise poorly behave smooth. However, in regular use, splines with derivative based penalties (e.g. \code{"tp"} or \code{"cr"} bases) tend to result in slightly better MSE performance, presumably because the good approximation theoretic properties of splines are rather closely connected to the use of derivative penalties. 
 
 }
 
@@ -72,7 +72,7 @@ Pya, N., and Wood, S.N. (2015). Shape constrained additive models. Statistics an
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
-\seealso{\code{\link{cSplineDes}}, \code{\link{adaptive.smooth}}}
+\seealso{\code{\link{cSplineDes}}, \code{\link{adaptive.smooth}}, \code{\link{d.spline}}}
 
 \examples{
 ## see ?gam

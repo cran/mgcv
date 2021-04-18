@@ -26,7 +26,7 @@ This family does not produce a null deviance. Note that the distribution for \eq
 
 The derivative system code for this family is mostly auto-generated, and the family is still somewhat experimental.
 
-The GEV distribution is rather challenging numerically, and for small datasets or poorly fitting models imporoved numerical robustness may be obtained by using the extended Fellner-Schall method of Wood and Fasiolo (2017) for smoothing parameter estimation. See examples.
+The GEV distribution is rather challenging numerically, and for small datasets or poorly fitting models improved numerical robustness may be obtained by using the extended Fellner-Schall method of Wood and Fasiolo (2017) for smoothing parameter estimation. See examples.
 }
 
 \references{

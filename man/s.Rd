@@ -50,7 +50,8 @@ if covariates are matrices: in this case implements linear functional of a smoot
 }
 
 \item{xt}{Any extra information required to set up a particular basis. Used
-  e.g. to set large data set handling behaviour for \code{"tp"} basis.}
+  e.g. to set large data set handling behaviour for \code{"tp"} basis. If \code{xt$sumConv}
+  exists and is \code{FALSE} then the summation convention for matrix arguments is turned off. }
 
 \item{id}{A label or integer identifying this term in order to link its smoothing
           parameters to others of the same type. If two or more terms have the same 

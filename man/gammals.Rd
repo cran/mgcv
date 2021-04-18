@@ -17,7 +17,7 @@ gammals(link=list("identity","log"),b=-7)
  An object inheriting from class \code{general.family}.
 }
 
-\details{Used with \code{\link{gam}} to fit gamma location - scale models parameterized in terms of the log mean and the log scale parameter (the response variance is the mean multiplied by the scale parameter). Note that \code{identity} links mean that the linear predictors give the log mean and scale directly. By default the \code{log} link for the scale parameter simply forces the log scale parameter to have a lower limit given by argument \code{b}: if \eqn{\eta}{l} is the linear predictor for the log scale parameter, \eqn{\phi}{s}, then \eqn{\log \phi = b + \log(1+e^\eta)}{log(s) = b + log(1+e^l)}. 
+\details{Used with \code{\link{gam}} to fit gamma location - scale models parameterized in terms of the log mean and the log scale parameter (the response variance is the squared mean multiplied by the scale parameter). Note that \code{identity} links mean that the linear predictors give the log mean and log scale directly. By default the \code{log} link for the scale parameter simply forces the log scale parameter to have a lower limit given by argument \code{b}: if \eqn{\eta}{l} is the linear predictor for the log scale parameter, \eqn{\phi}{s}, then \eqn{\log \phi = b + \log(1+e^\eta)}{log(s) = b + log(1+e^l)}. 
 
 
 \code{gam} is called with 

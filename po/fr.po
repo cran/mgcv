@@ -8,40 +8,39 @@ msgstr ""
 "Project-Id-Version: mgcv 1.3-10\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2020-08-07 10:53+0100\n"
-"PO-Revision-Date: 2005-12-08 00:40+0100\n"
+"PO-Revision-Date: 2021-02-06 16:28+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 2.4.2\n"
 
 #: magic.c:445
 msgid "magic requires smoothing parameter starting values if L supplied"
-msgstr ""
+msgstr "magic nÃ©cessite des valeurs de dÃ©part pour les paramÃ¨tres de lissage si L est fourni"
 
 #: magic.c:563
 msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
-msgstr "magic, l'optimisateur gcv/ubre, n'a pas convergé après 400 itérations."
+msgstr "magic, l'optimiseur gcv/ubre, n'a pas convergÃ© aprÃ¨s 400 itÃ©rations."
 
 #: matrix.c:82
 msgid "Failed to initialize memory for matrix."
-msgstr "L'initialisation de la mémoire pour une matrice a échoué."
+msgstr "L'initialisation de la mÃ©moire pour une matrice a Ã©chouÃ©."
 
 #: matrix.c:144 matrix.c:202
 msgid "An out of bound write to matrix has occurred!"
-msgstr "Une écrite hors des limites de la matrice s'est produite !"
+msgstr "Une Ã©crite hors des limites de la matrice s'est produite !"
 
 #: matrix.c:150
 msgid "INTEGRITY PROBLEM in the extant matrix list."
-msgstr "PROBLEME D'INTEGRITE dans la liste de la matrice étendue."
+msgstr "PROBLEME D'INTEGRITE dans la liste de la matrice Ã©tendue."
 
 #: matrix.c:182
 msgid "You are trying to check matrix integrity without defining RANGECHECK."
-msgstr ""
-"Vous essayez de vérifier l'intégrité de la matrice sans avoir défini "
-"RANGECHECK."
+msgstr "Vous essayez de vÃ©rifier l'intÃ©gritÃ© de la matrice sans avoir dÃ©fini RANGECHECK."
 
 #: matrix.c:240
 msgid "Target matrix too small in mcopy"
@@ -53,11 +52,11 @@ msgstr "Matrices incompatibles dans matmult."
 
 #: matrix.c:313
 msgid "Attempt to invert() non-square matrix"
-msgstr "Tentative d'inversion d'une matrice non carrée"
+msgstr "Tentative d'inversion d'une matrice non carrÃ©e"
 
 #: matrix.c:335
 msgid "Singular Matrix passed to invert()"
-msgstr "Matrice singulière passée à invert()"
+msgstr "Matrice singuliÃ¨re passÃ©e Ã  invert()"
 
 #: qp.c:59
 msgid "ERROR in addconQT."
@@ -65,25 +64,21 @@ msgstr "ERREUR dans addconQT."
 
 #: qp.c:465
 msgid "QPCLS - Rank deficiency in model"
-msgstr "QPCLS - Déficience de rang dans le modèle"
+msgstr "QPCLS - DÃ©ficience de rang dans le modÃ¨le"
 
 #: tprs.c:40
 msgid "You must have 2m>d for a thin plate spline."
-msgstr "Vous devez avoir 2m > d pour une 'thin plate spline'"
+msgstr "Vous devez avoir 2m > d pour une 'thin plate splineâ€™."
 
 #: tprs.c:375 tprs.c:383
-msgid ""
-"A term has fewer unique covariate combinations than specified maximum "
-"degrees of freedom"
-msgstr ""
-"Un terme a moins de combinaisons de covariables uniques que le degré de "
-"liberté maximum spécifié"
+msgid "A term has fewer unique covariate combinations than specified maximum degrees of freedom"
+msgstr "Un terme a moins de combinaisons de covariables uniques que le degrÃ© de libertÃ© maximum spÃ©cifiÃ©"
 
 #~ msgid "svd() not converged"
-#~ msgstr "svd() n'a pas convergé"
+#~ msgstr "svd() n'a pas convergÃ©"
 
 #~ msgid "svdroot matrix not +ve semi def. %g"
 #~ msgstr "la matrice svdroot n'est pas +ve semi def. %g"
 
 #~ msgid "Sort failed"
-#~ msgstr "Le tri a échoué"
+#~ msgstr "Le tri a Ã©chouÃ©"

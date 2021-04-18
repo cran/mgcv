@@ -149,7 +149,8 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE) {
       ## if the smooth has a g.index field it indicates non-linear params,
       ## in which case re-parameterization will usually break the model.
       ## Or global supression of reparameterization may be requested...
-      Sl[[b]]$repara <- if (is.null(G$smooth[[i]]$g.index) && !no.repara) TRUE else FALSE
+      # Sl[[b]]$repara <- if (is.null(G$smooth[[i]]$g.index) && !no.repara) TRUE else FALSE
+      Sl[[b]]$repara <- G$smooth[[i]]$repara && !no.repara  
       if (!is.null(G$smooth[[i]]$updateS)) { ## then this block is nonlinear in smoothing parameters
         Sl[[b]]$repara <-FALSE
 	Sl[[b]]$linear <- FALSE
@@ -282,14 +283,14 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE) {
           }
 	  ## non-cholesky stabilized method code ignores the log det
 	  ## of transform as it cancels between the two log det terms...
-	  Sl[[b]]$ldet <- 0 ## sum(log(D[1:Sl[[b]]$rank])) 
+	  Sl[[b]]$ldet <- 0 ## sum(log(D[1:Sl[[b]]$rank]))
+	  ind <- rep(FALSE,length(D))
+          ind[1:Sl[[b]]$rank] <- TRUE ## index penalized elements
           if (is.null(Sl[[b]]$nl.reg)) {
-            ind <- rep(FALSE,length(D))
-            ind[1:Sl[[b]]$rank] <- TRUE ## index penalized elements
             D[ind] <- 1/sqrt(D[ind]);D[!ind] <- 1
             Sl[[b]]$D <- t(D*t(U)) ## D <- U%*%diag(D)
             Sl[[b]]$Di <- t(U)/D
-	  } else { 
+	  } else {
             Sl[[b]]$repara <- FALSE ## should be FALSE anyway to get here
 	    Sl[[b]]$ev <- D ## store the penalty eigenvalues to allow penalized ldet computation
 	    Sl[[b]]$U <- U ## store the eigen-vectors to allow computation of regularized penalty square root

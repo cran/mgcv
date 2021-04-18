@@ -52,7 +52,7 @@ sigma =  .5+0.4*(x+4)*.5            # Scale
 eps = 2*sin(x)                      # Skewness
 del = 1 + 0.2*cos(3*x)              # Kurtosis
 
-dat <-  mu + (del * sigma) * sinh((1/del) * asinh(qnorm(runif(n))) + (eps/del))
+dat <-  mu + (del*sigma)*sinh((1/del)*asinh(qnorm(runif(n))) + (eps/del))
 dataf <- data.frame(cbind(dat, x))
 names(dataf) <- c("y", "x")
 plot(x, dat, xlab = "x", ylab = "y")
@@ -105,11 +105,12 @@ legend("topleft", c("estimated", "truth"), col = 1:2, lty = 1:2, lwd = 2)
 # to what we would get with mgcv::gaulss
 library(MASS)
 
-b <- gam(list(accel~s(times, k=20, bs = "ad"), ~ s(times, k = 10), ~ 1, ~ 1),
+b <- gam(list(accel~s(times, k=20, bs = "ad"), ~s(times, k = 10), ~1, ~1),
          data=mcycle, family=shash)
 
 par(mfrow = c(1, 1))
-xSeq <- data.frame(cbind("accel" = rep(0, 1e3), "times" = seq(2, 58, length.out = 1e3)))
+xSeq <- data.frame(cbind("accel" = rep(0, 1e3),
+                   "times" = seq(2, 58, length.out = 1e3)))
 pred <- predict(b, newdata = xSeq)
 plot(mcycle$times, mcycle$accel, ylim = c(-180, 100))
 for(qq in c(0.1, 0.3, 0.5, 0.7, 0.9)){

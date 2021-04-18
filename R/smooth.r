@@ -3469,13 +3469,15 @@ ExtractData <- function(object,data,knots) {
 ## and if so only the unique evaluation points are returned in data, along 
 ## with the `index' attribute required to re-assemble the full dataset.
    knt <- dat <- list()
+   ## should data be processed as for summation convention with matrix arguments?
+   vecMat <- if (is.null(object$xt$sumConv)) TRUE else object$xt$sumConv
    for (i in 1:length(object$term)) { 
-     dat[[object$term[i]]] <- get.var(object$term[i],data)
-     knt[[object$term[i]]] <- get.var(object$term[i],knots)
+     dat[[object$term[i]]] <- get.var(object$term[i],data,vecMat=vecMat)
+     knt[[object$term[i]]] <- get.var(object$term[i],knots,vecMat=vecMat)
 
    }
    names(dat) <- object$term; m <- length(object$term)
-   if (!is.null(attr(dat[[1]],"matrix"))) { ## strip down to unique covariate combinations
+   if (!is.null(attr(dat[[1]],"matrix")) && vecMat) { ## strip down to unique covariate combinations
      n <- length(dat[[1]])
      X <- matrix(unlist(dat),n,m)
      if (is.numeric(X)) {
@@ -3508,10 +3510,12 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
 ## wrapper function which calls smooth.construct methods, but can then modify
 ## the parameterization used. If absorb.cons==TRUE then a constraint free
 ## parameterization is used. 
-## Handles `by' variables, and summation convention. apply.by==FALSE causes by variable
-## handling to proceed as for apply.by==TRUE except that a copy of the model matrix X0 is 
-## stored for which the by variable (or dummy) is never actually multiplied into the model 
-## matrix. This facilitates
+## Handles `by' variables, and summation convention.
+## If a smooth has an entry 'sumConv' and it is set to FALSE, then the summation convention is
+## not applied to matrix arguments. 
+## apply.by==FALSE causes by variable handling to proceed as for apply.by==TRUE except that
+## a copy of the model matrix X0 is stored for which the by variable (or dummy) is never
+## actually multiplied into the model matrix. This facilitates
 ## discretized fitting setup, where such multiplication needs to be handled `on-the-fly'.
 ## Note that `data' must be a data.frame or model.frame, unless n is provided explicitly, 
 ## in which case a list will do.
@@ -3546,6 +3550,9 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
     } else drop <- 1
     sm$g.index <- sm$g.index[-drop]
   } else drop <- -1 ## signals not to use sweep and drop (may be modified below)
+
+  ## can this term be safely re-parameterized?
+  if (is.null(sm$repara)) sm$repara <- if (is.null(sm$g.index)) TRUE else FALSE
 
   if (is.null(sm$C)) {
     if (sparse.cons<=0) {

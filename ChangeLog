@@ -27,6 +27,27 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+1.8-35
+
+* Fix to bug in Fletcher scale parameter estimate with weighted data (e.g. 
+  quasibinomial with n>1). Gaussian case not affected. Thanks to John 
+  Maindonald.
+
+* Italian translation updated thanks to Daniele Medri
+
+* German translation updated thanks to Detlef Steuer
+
+* French translation updated thanks to Philippe Grosjean
+
+* gumbls initialization improved.
+
+* Modification so that smooths can insist on not being reparameterized when 
+  called using default bam methods, by having a 'repara' element set to FALSE 
+  in the object returned by the smooth constructor.
+
+* Modification so that smooths can have the summation convention for matrix
+  arguments turned off, by having an 'xt$sumConv' element set to FALSE in the 
+  'xt' argument of 's'.
 
 1.8-34
 

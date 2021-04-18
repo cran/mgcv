@@ -1890,12 +1890,22 @@ gevlss <- function(link=list("identity","identity","logit")) {
       }	
   }) ## initialize gevlss
 
+  rd <- function(mu,wt,scale) {
+    Fi.gev <- function(z,mu,sigma,xi) {
+      ## GEV inverse cdf.
+      xi[abs(xi)<1e-8] <- 1e-8 ## approximate xi=0, by small xi
+      x <- mu + ((-log(z))^-xi-1)*sigma/xi
+    }
+    Fi.gev(runif(nrow(mu)),mu[,1],exp(mu[,2]),mu[,3])
+  } ## gevlss rd
+
   structure(list(family="gevlss",ll=ll,link=paste(link),nlp=3,
     tri = trind.generator(3), ## symmetric indices for accessing derivative arrays
     initialize=initialize,postproc=postproc,residuals=residuals,
     linfo = stats, ## link information list
     d2link=1,d3link=1,d4link=1, ## signals to fix.family.link that all done    
     ls=1, ## signals that ls not needed here
+    rd=rd,
     available.derivs = 2, ## can use full Newton here
     discrete.ok = TRUE
     ),class = c("general.family","extended.family","family"))
@@ -2374,8 +2384,8 @@ gammals <- function(link=list("identity","log"),b=-7) {
 
   rd <- function(mu,wt,scale) {
     ## simulate responses
-    scale <- exp(mu[,2])
-    rgamma(nrow(mu),shape=1/scale,scale=mu[,1]*scale)
+    phi <- exp(mu[,2])
+    rgamma(nrow(mu),shape=1/phi,scale=mu[,1]*phi)
   } ## rd
 
   predict <- function(family,se=FALSE,eta=NULL,y=NULL,X=NULL,
@@ -2651,6 +2661,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
 	  eta1 <- Xbd(x$Xd,start,k=x$kd,ks=x$ks,ts=x$ts,dt=x$dt,v=x$v,qc=x$qc,drop=x$drop,lt=x$lpid[[1]])
 	  lres1 <- log((y-family$linfo[[1]]$linkinv(eta1))^2)/2 - .25
 	  if (!is.null(offset[[2]])) lres1 <- lres1 - offset[[2]]
+	  lres1 <- family$linfo[[2]]$linkfun(lres1)
 	  R <- suppressWarnings(chol(XWXd(x$Xd,w=rep(1,length(y)),k=x$kd,ks=x$ks,ts=x$ts,dt=x$dt,v=x$v,
 	            qc=x$qc,nthreads=1,drop=x$drop,lt=x$lpid[[2]])+crossprod(E[,jj[[2]]]),pivot=TRUE))
 	  Xty <- XWyd(x$Xd,rep(1,length(y)),lres1,x$kd,x$ks,x$ts,x$dt,x$v,x$qc,x$drop,lt=x$lpid[[2]])
@@ -2674,6 +2685,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
           start[jj[[1]]] <- startji
           lres1 <- family$linfo[[2]]$linkfun(log((y-family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]]))^2)/2 - .25)
 	  if (!is.null(offset[[2]])) lres1 <- lres1 - offset[[2]]
+	  lres1 <- family$linfo[[2]]$linkfun(lres1)
           x1 <-  x[,jj[[2]],drop=FALSE];e1 <- E[,jj[[2]],drop=FALSE]
           if (use.unscaled) {
             x1 <- rbind(x1,e1)

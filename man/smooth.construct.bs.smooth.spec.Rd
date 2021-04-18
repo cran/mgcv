@@ -2,6 +2,7 @@
 \alias{smooth.construct.bs.smooth.spec}
 \alias{Predict.matrix.Bspline.smooth}
 \alias{b.spline}
+\alias{d.spline}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Penalized B-splines in GAMs}
 
