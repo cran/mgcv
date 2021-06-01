@@ -21,7 +21,7 @@ bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,
     paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-    cluster=NULL,nthreads=1,gc.level=1,use.chol=FALSE,samfrac=1,
+    cluster=NULL,nthreads=1,gc.level=0,use.chol=FALSE,samfrac=1,
     coef=NULL,drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
@@ -134,8 +134,9 @@ single machine). See details and example code.
 \item{nthreads}{Number of threads to use for non-cluster computation (e.g. combining results from cluster nodes).
 If \code{NA} set to \code{max(1,length(cluster))}. See details.}
 
-\item{gc.level}{to keep the memory footprint down, it helps to call the garbage collector often, but this takes 
-a substatial amount of time. Setting this to zero means that garbage collection only happens when R decides it should. Setting to 2 gives frequent garbage collection. 1 is in between.}
+\item{gc.level}{to keep the memory footprint down, it can help to call the garbage collector often, but this takes 
+a substatial amount of time. Setting this to zero means that garbage collection only happens when R decides it should. Setting to 2 gives frequent garbage collection. 1 is in between. Not as much of a problem as it used to be.
+}
 
 \item{use.chol}{By default \code{bam} uses a very stable QR update approach to obtaining the QR decomposition
 of the model matrix. For well conditioned models an alternative accumulates the crossproduct of the model matrix

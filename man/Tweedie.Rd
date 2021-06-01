@@ -49,8 +49,7 @@ distribution begins to converge on the discretely supported limit at p=1, and is
 See \code{\link{ldTweedie}} for more on this behaviour.
 
 \code{Tweedie} is based partly on the \code{\link{poisson}} family, and partly on \code{tweedie} from the 
-\code{statmod} package. It includes extra components to work with all \code{mgcv} GAM fitting methods as well as 
-an \code{aic} function. 
+\code{statmod} package. It includes extra components to work with all \code{mgcv} GAM fitting methods as well as an \code{aic} function. 
 
 The Tweedie density involves a normalizing constant with no closed form, so this is evaluated using the series 
 evaluation method of Dunn and Smyth (2005), with extensions to also compute the derivatives w.r.t. \code{p} and the scale parameter. 

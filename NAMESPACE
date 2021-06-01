@@ -77,7 +77,7 @@ export("%.%",anova.gam, bam, bam.update,bandchol, betar,
        totalPenaltySpace,trichol,trind.generator,
        Tweedie,tw,twlss,uniquecombs, vcov.gam, vis.gam, 
        XWXd,XWyd,Xbd,diagXVXd,
-       ziP, ziplss)
+       ziP, ziplss,zipll)
 
 importFrom(grDevices,cm.colors,dev.interactive,devAskNewPage,gray,grey,
            heat.colors,terrain.colors,topo.colors,axisTicks)

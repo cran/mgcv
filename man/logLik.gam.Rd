@@ -24,6 +24,9 @@ The function is provided so that \code{\link{AIC}} functions correctly with
 for penalization). See e.g. Wood, Pya and Saefken (2016) for a derivation of
 an appropriate AIC.
 
+For \code{\link{gaussian}} family models the MLE of the scale parameter is used. For other families
+with a scale parameter the estimated scale parameter is used. This is usually not exactly the MLE, and is not the simple deviance based estimator used with \code{\link{glm}} models. This is because the simple deviance based estimator can be badly biased in some cases, for example when a Tweedie distribution is employed with low count data. 
+
 There are two possibile AIC's that might be considered for use with GAMs. Marginal
 AIC is based on the marginal likelihood of the GAM, that is the likelihood based on
 treating penalized (e.g. spline) coefficients as random and integrating them out. The

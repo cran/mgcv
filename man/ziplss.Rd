@@ -1,5 +1,6 @@
 \name{ziplss}
 \alias{ziplss}
+\alias{zipll}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Zero inflated (hurdle) Poisson location-scale model family}
 \description{The \code{ziplss} family implements a zero inflated (hurdle) Poisson model in which one linear predictor 
@@ -12,16 +13,21 @@ Requires integer count data.
 
 \usage{
 ziplss(link=list("identity","identity"))
+zipll(y,g,eta,deriv=0)
 }
 \arguments{
 \item{link}{two item list specifying the link - currently only identity links are possible, as 
 parameterization is directly in terms of log of Poisson response and logit of probability of presence.}
+\item{y}{response}
+\item{g}{gamma vector}
+\item{eta}{eta vector}
+\item{deriv}{number of derivatives to compute}
 }
 \value{
- An object inheriting from class \code{general.family}.
+ For \code{ziplss} An object inheriting from class \code{general.family}.
 }
 
-\details{Used with \code{\link{gam}} to fit 2 stage zero inflated Poisson models. \code{gam} is called with 
+\details{ \code{ziplss} is used with \code{\link{gam}} to fit 2 stage zero inflated Poisson models. \code{gam} is called with 
 a list containing 2 formulae, the first specifies the response on the left hand side and the structure of the linear predictor for the Poisson parameter on the right hand side. The second is one sided, specifying the linear predictor for the probability of presence on the right hand side. 
 
 The fitted values for this family will be a two column matrix. The first column is the log of the Poisson parameter, 
@@ -34,6 +40,8 @@ are estimated.
 
 For data with large areas of covariate space over which the response is zero it may be advisable to use low order penalties to 
 avoid problems. For 1D smooths uses e.g. \code{s(x,m=1)} and for isotropic smooths use \code{\link{Duchon.spline}}s in place of thin plaste terms with order 1 penalties, e.g \code{s(x,z,m=c(1,.5))} --- such smooths penalize towards constants, thereby avoiding extreme estimates when the data are uninformative.
+
+\code{zipll} is a function used by \code{ziplss}, exported only to allow external use of the \code{ziplss} family. It is not usually called directly. 
 
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org}

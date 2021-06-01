@@ -642,7 +642,7 @@ ldetSt <- function(S,lam,deriv=0,repara=TRUE) {
     #j <- min(which(nos==max(nos))) ## single selector
     j <- which(nos>max(nos)*1e-5)
     D <- nD[j]; nD <- nD[-j]
-    cat("Dset =",j,"\n")
+   # cat("Dset =",j,"\n")
     return(list(D=D,nD=nD))
   } ## dominant.set
 

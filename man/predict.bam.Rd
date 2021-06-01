@@ -18,7 +18,7 @@ for quantities derived from the model (e.g. derivatives of smooths), and for loo
 \usage{
 \method{predict}{bam}(object,newdata,type="link",se.fit=FALSE,terms=NULL,
         exclude=NULL,block.size=50000,newdata.guaranteed=FALSE,
-        na.action=na.pass,cluster=NULL,discrete=TRUE,n.threads=1,...)
+        na.action=na.pass,cluster=NULL,discrete=TRUE,n.threads=1,gc.level=0,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -82,6 +82,8 @@ single machine). See details and example code for \code{\link{bam}}.
 \item{discrete}{if \code{TRUE} then discrete prediction methods used with model fitted by discrete methods. \code{FALSE} for regular prediction. See details.}
 
 \item{n.threads}{if \code{se.fit=TRUE} and discrete prediction is used then parallel computation can be used to speed up se calcualtion. This specifies number of htreads to use.}
+
+\item{gc.level}{increase from 0 to up the level of garbage collection if default does not give enough.}
 
 \item{...}{ other arguments.}
 

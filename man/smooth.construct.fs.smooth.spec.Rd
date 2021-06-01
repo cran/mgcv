@@ -47,7 +47,7 @@ of the smooth factor interaction. To facilitate this the constructor is called f
 not done. 
 
 Note that \code{gamm4} from the {\code{gamm4}} package suffers from none of the restrictions that apply to \code{gamm}, and
-\code{"fs"} terms can be used without side-effects. Construcor is still called with a smooth specification object having a
+\code{"fs"} terms can be used without side-effects. Constructor is still called with a smooth specification object having a
 \code{"gamm"} attribute.
 
 Any singly penalized basis can be used to smooth at each factor level. The default is \code{"tp"}, but alternatives can 
@@ -64,7 +64,7 @@ The plot method for this class has two schemes. \code{scheme==0} is in colour, w
 }
 
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org} with input from Matteo Fasiolo.}
 
 \seealso{\code{\link{gam.models}}, \code{\link{gamm}}}
 

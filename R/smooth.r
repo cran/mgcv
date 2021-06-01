@@ -2036,8 +2036,11 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
                       rank=object$rank,null.space.dim=object$null.space.dim,
                       term=object$term)
   object$term <- oterm ## restore original term list
-  ## Re-parameterize to separate out null space.  
-  rp <- nat.param(object$X,object$S[[1]],rank=object$rank,type=3)
+  ## Re-parameterize to separate out null space. It is more natural for the
+  ## smoothing penalty penalized and unpenalzed spaces to be at least approximately
+  ## orthogonal, given that the associated variance components are treated as
+  ## independent. This suggests using type=1 below. 
+  rp <- nat.param(object$X,object$S[[1]],rank=object$rank,type=1) ## was type=3
   
   ## copy range penalty and create null space penalties...
   null.d <- ncol(object$X) - object$rank ## null space dim
@@ -2068,10 +2071,16 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
     object$Xb <- rp$X
     object$base$S <- object$S
     ## creating the model matrix...
-    object$X <- rp$X * as.numeric(fac==object$flev[1])
-    if (nf>1) for (i in 2:nf) { 
-      object$X <- cbind(object$X,rp$X * as.numeric(fac==object$flev[i]))
-    } 
+    #object$X <- rp$X * as.numeric(fac==object$flev[1])
+    #if (nf>1) for (i in 2:nf) { 
+    #  object$X <- cbind(object$X,rp$X * as.numeric(fac==object$flev[i]))
+    #}
+    object$X <- matrix(0,nrow(rp$X),ncol(rp$X)*length(object$flev))
+    ind <- 1:ncol(rp$X)
+    for (i in 1:nf) {
+      object$X[,ind] <- rp$X * as.numeric(fac==object$flev[i])
+      ind <- ind + ncol(rp$X)
+    }
     ## now penalties...
     #object$S <- fullS
     object$S[[1]] <- diag(rep(c(rp$D,rep(0,null.d)),nf)) ## range space penalties
@@ -2131,9 +2140,11 @@ Predict.matrix.fs.interaction <- function(object,data)
   object$term <- object$base$term
   Xb <- Predict.matrix(object,data)%*%object$P
   if (!is.null(object$margin.only)) return(Xb)
-  X <- matrix(0,nrow(Xb),0)
+  X <- matrix(0,nrow(Xb),ncol(Xb)*length(object$flev))
+  ind <- 1:ncol(Xb)
   for (i in 1:length(object$flev)) {
-    X <- cbind(X,Xb * as.numeric(fac==object$flev[i]))
+    X[,ind] <- Xb * as.numeric(fac==object$flev[i])
+    ind <- ind + ncol(Xb)
   }
   X
 } ## Predict.matrix.fs.interaction

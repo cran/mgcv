@@ -3,10 +3,10 @@
 # This file is distributed under the same license as the mgcv package.
 msgid ""
 msgstr ""
-"Project-Id-Version: R 4.0.0 / mgcv 1.8-31\n"
+"Project-Id-Version: R 4.1.0 / mgcv 1.8-35\n"
 "Report-Msgid-Bugs-To: bugs@r-project.org\n"
 "POT-Creation-Date: 2021-04-16 14:36\n"
-"PO-Revision-Date: 2020-04-01 15:43+0200\n"
+"PO-Revision-Date: 2021-05-04 16:01+0200\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-Core <r-core@r-project.org>\n"
 "Language: de\n"
@@ -55,7 +55,7 @@ msgid "iterms reset to terms"
 msgstr "iterms auf terms zurückgesetzt."
 
 msgid "requires a terms or formula object as first argument"
-msgstr ""
+msgstr "benötigt ein Term- oder Formelobjekt als erstes Argument"
 
 msgid "family not recognized"
 msgstr "family nicht erkannt"
@@ -93,7 +93,7 @@ msgid "unknown tensor constraint type"
 msgstr "unbekannte Typ von Tensor-Einschränkungen"
 
 msgid "constraints for sub blocked tensor products un-tested"
-msgstr ""
+msgstr "Bedingungen für teil-geblockte Tensorprodukte ungetestet"
 
 msgid "Model has more coefficients than data"
 msgstr "Modell hat mehr Koeffizienten als Daten"
@@ -211,9 +211,8 @@ msgstr ""
 "Für binäre Daten macht Gebrauch null-inflationierter Poisson-Verteilung "
 "keinen Sinn"
 
-#, fuzzy
 msgid "second derivs not available for non-linear penalties"
-msgstr "Typ iterms ist für den Fall multipler Prädiktoren nicht verfügbar"
+msgstr "zweite Ableitungen nicht für nicht-lineare Strafterme verfügbar"
 
 msgid "Possible divergence detected in fast.REML.fit"
 msgstr "Mögliche Divergenz entdeckt in fast.REML.fit"
@@ -479,29 +478,23 @@ msgstr "gammals verlangt 2 Links, angegeben als Zeichenketten"
 msgid "link not available for mu parameter of gammals"
 msgstr "Link nicht verfügbar für den Parameter mu von gammals"
 
-#, fuzzy
 msgid "gumbls requires 2 links specified as character strings"
-msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
+msgstr "gumbls verlangt 2 Links, angegeben als Zeichenketten"
 
-#, fuzzy
 msgid "shash requires 4 links specified as character strings"
-msgstr "gaulss verlangt 2 Links, angegeben als Zeichenketten"
+msgstr "shash verlangt 4 Links, angegeben als Zeichenketten"
 
-#, fuzzy
 msgid "parameter of shashlss"
-msgstr "Parameter von ziplss"
+msgstr "Parameter von shashlss"
 
-#, fuzzy
 msgid "link not available for scale parameter of shash"
-msgstr "Link nicht verfügbar für den Parameter mu von twlss"
+msgstr "Link nicht verfügbar für den Parameter scale von shash"
 
-#, fuzzy
 msgid "'a' has to be positive"
-msgstr "Argument k muss positiv sein"
+msgstr "'a' muss positiv sein"
 
-#, fuzzy
 msgid "offset not still available for this family"
-msgstr "Link \"%s\" nicht verfügbar für die Tweedie-Familie"
+msgstr "offset für diese Familie noch nicht verfügbar"
 
 msgid "An object of length %d does not match the required parameter size"
 msgstr ""
@@ -680,9 +673,8 @@ msgstr "by.resids Argument wird nicht unterstützt"
 msgid "all.terms argument not supported"
 msgstr "all.terms Argument wird nicht unterstützt"
 
-#, fuzzy
 msgid "not usable with bam fits"
-msgstr "Basis nicht nutzbar mit reduziertem te"
+msgstr "nicht nutzbar mit bam Anpassungen"
 
 msgid "silly tolerance supplied"
 msgstr "unangemessene Toleranz angegeben"
@@ -941,23 +933,20 @@ msgstr ""
 "Pearson-Residuen für diese Familie nicht verfügbar - geben Devianz-Residuen "
 "zurück"
 
-#, fuzzy
 msgid "lengths of lb, df and nc must match"
-msgstr "Namen von z und pc müssen übereinstimmen"
+msgstr "Längen von lb, df und nc müssen passen"
 
-#, fuzzy
 msgid "df must be positive integers"
-msgstr "nthreads muss eine positive, ganze Zahl sein"
+msgstr "df muss eine positive, ganze Zahl sein"
 
-#, fuzzy
 msgid "at least one element of lb must be non-zero"
-msgstr "alle Elemente der random-Liste müssen benannt sein"
+msgstr "mindestens ein Element von lb darf nicht 0 sein"
 
 msgid "danger of round-off error"
-msgstr ""
+msgstr "Gefahr eines Rundungsfehler"
 
 msgid "failure of Davies method, falling back on Liu et al approximtion"
-msgstr ""
+msgstr "Fehler der Methode von Davies, falle auf Liu et al Approximation zurück "
 
 msgid "lambda and h should have the same length!"
 msgstr "lambda und h sollten die selbe Länge haben!"
@@ -1039,12 +1028,11 @@ msgstr "sei nicht dumm"
 msgid "sd should have exactly one less entry than ld"
 msgstr "sd sollte genau eins kleiner sein als ld"
 
-#, fuzzy
 msgid "AR not available with sparse marginals"
-msgstr "Link nicht verfügbar für den Parameter mu von gaulss"
+msgstr "AR nicht verfügbar mit dünnbestzten Rändern"
 
 msgid "reverse indices missing from sparse discrete marginals"
-msgstr ""
+msgstr "inverse Indizes fehlen von dünnbesetzten, diskreten Rändern"
 
 msgid "update not positive definite"
 msgstr "update nicht positiv definit"
@@ -1056,7 +1044,7 @@ msgid "a has wrong number of rows"
 msgstr "a hat die falsche Zeilenzahl"
 
 msgid "isa requires a dg/tCMatrix"
-msgstr ""
+msgstr "isa benötigt eine dg/tCMatrix"
 
 msgid "mvn requires 2 or more dimensional data"
 msgstr "mvn benötigt zwei- oder höherdimensionale Daten"
@@ -1211,7 +1199,7 @@ msgid "argument k of s() should be integer and has been rounded"
 msgstr "Argument k von s() sollte ganzzahlig sein und wurde gerundet"
 
 msgid "matrices must be all class dgCMatrix or all class matrix"
-msgstr ""
+msgstr "Matrizen müssen alle aus der Klasse dgCMatrix oder alle aus der Klasse Matrix sein"
 
 msgid "attempt to use unsuitable marginal smooth class"
 msgstr "Versuch unpassende Randglätterklasse zu nutzen"
@@ -1493,7 +1481,7 @@ msgid "bnd must be a list of boundary loops"
 msgstr "bnd muss eine Liste von Grenz-Schleifen sein"
 
 msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
-msgstr ""
+msgstr "tropfende Soap Knoten nicht innerhalb der Grenzen - nutze 'in.out' zur Untersuchung"
 
 msgid "faulty bnd"
 msgstr "fehlerhaftes bnd"
@@ -1505,7 +1493,7 @@ msgid "data outside soap boundary"
 msgstr "Daten außerhalb der soap Grenze"
 
 msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
-msgstr ""
+msgstr "Soap Basis ist fehlkonditioniert - ändern von 'xf$nmax' hilft vielleicht"
 
 msgid "no free coefs in sf smooth"
 msgstr "keine freien Koeffizienten in sf-Glättung"

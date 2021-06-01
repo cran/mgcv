@@ -385,8 +385,10 @@ smooth2random.fs.interaction <- function(object,vnames,type=1) {
     if (type==1) { ## gamm form for use with lme 
       ## env set to avoid 'save' saving whole environment to file...
       form <- as.formula(paste("~",term.name,"-1",sep=""),env=.GlobalEnv)
+      fname <- new.name(object$fterm,vnames)
+      vnames <- c(vnames,fname)
       random[[i]] <- pdIdnot(form)
-      names(random)[i] <- object$fterm         ## supplied factor name
+      names(random)[i] <- fname        ## supplied factor name
       attr(random[[i]],"group") <- object$fac  ## factor supplied as part of term 
       attr(random[[i]],"Xr.name") <- term.name
       attr(random[[i]],"Xr") <- X
@@ -808,11 +810,10 @@ extract.lme.cov2<-function(b,data=NULL,start.level=1)
   }
   grps <- nlme::getGroups(b) # labels of the innermost groupings - in data frame order
   n <- length(grps)    # number of data
-  n.levels <- length(b$groups) # number of levels of grouping (random effects only)
+  n.levels <- length(b$groups) # number of nested grouping factors (random effects only)
 #  if (n.levels<start.level) { ## then examine correlation groups
-    if (is.null(b$modelStruct$corStruct)) n.corlevels <- 0 else
-    n.corlevels <-
-    length(all.vars(nlme::getGroupsFormula(b$modelStruct$corStruct)))
+    n.corlevels <- if (is.null(b$modelStruct$corStruct)) 0 else
+                   length(all.vars(nlme::getGroupsFormula(b$modelStruct$corStruct)))
 #  } else n.corlevels <- 0 ## used only to signal irrelevance
   ## so at this stage n.corlevels > 0 iff it determines the coarsest grouping
   ## level if > start.level. 
@@ -839,8 +840,8 @@ extract.lme.cov2<-function(b,data=NULL,start.level=1)
     }
     grps <- factor(lab)
   }
-  if (n.levels >= start.level||n.corlevels >= start.level)
-  { if (n.levels >= start.level)
+  if (n.levels >= start.level||n.corlevels >= start.level) {
+    if (n.levels >= start.level)
     Cgrps <- nlme::getGroups(b,level=start.level) # outer grouping labels (dforder) 
     else Cgrps <- grps
     #Cgrps <- nlme::getGroups(b$modelStruct$corStruct) # ditto
@@ -855,10 +856,10 @@ extract.lme.cov2<-function(b,data=NULL,start.level=1)
     for (i in 1:n.cg) size.cg[i] <- sum(Cgrps==Clevel[i]) # size of each coarse group
     ## Cgrps[Cind] is sorted by coarsest grouping factor level
     ## so e.g. y[Cind] would be data in c.g.f. order
-  } else {n.cg <- 1;Cind<-1:n}
+  } else { n.cg <- 1; Cind<-1:n }
   if (is.null(b$modelStruct$varStruct)) w<-rep(b$sigma,n) ### 
-  else 
-  { w <- 1/nlme::varWeights(b$modelStruct$varStruct) 
+  else {
+    w <- 1/nlme::varWeights(b$modelStruct$varStruct) 
     # w is not in data.frame order - it's in inner grouping level order
     group.name<-names(b$groups) # b$groups[[i]] doesn't always retain factor ordering
     order.txt <- paste("ind<-order(data[[\"",group.name[1],"\"]]",sep="")
@@ -870,9 +871,9 @@ extract.lme.cov2<-function(b,data=NULL,start.level=1)
     w <- w*b$sigma
   }
   w <- w[Cind] # re-order in coarse group order
-  if (is.null(b$modelStruct$corStruct)) V<-array(1,n) 
-  else
-  { c.m<-nlme::corMatrix(b$modelStruct$corStruct) # correlation matrices for each innermost group
+  if (is.null(b$modelStruct$corStruct)) V <- array(1,n) 
+  else {
+    c.m <- nlme::corMatrix(b$modelStruct$corStruct) # correlation matrices for each innermost group
     if (!is.list(c.m)) { # copy and re-order into coarse group order
       V <- c.m;V[Cind,] -> V;V[,Cind] -> V 
     } else { 

@@ -762,15 +762,19 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
       dw.drho[good,] <- w1
     }
     
-
+    sumw <- sum(weights)
     wtdmu <- if (intercept) 
-        sum(weights * y)/sum(weights)
+        sum(weights * y)/sumw
     else linkinv(offset)
     nulldev <- sum(dev.resids(y, wtdmu, weights))
     n.ok <- nobs - sum(weights == 0)
     nulldf <- n.ok - as.integer(intercept)
-   
-    aic.model <- aic(y, n, mu, weights, dev) # note: incomplete 2*edf needs to be added
+
+    ## use exact MLE scale param for aic in gaussian case, otherwise scale.est (unless known)
+    
+    dev1 <- if (scale.known) scale*sumw else if (family$family=="gaussian") dev else if (is.na(reml.scale)) scale.est*sumw else reml.scale*sumw  
+
+    aic.model <- aic(y, n, mu, weights, dev1) # note: incomplete 2*edf needs to be added
     if (control$trace) {
       t1 <- proc.time()
       at <- sum((t1-t0)[c(1,4)])
@@ -779,7 +783,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
    
     list(coefficients = coef, residuals = residuals, fitted.values = mu, 
          family = family, linear.predictors = eta, deviance = dev, 
-        null.deviance = nulldev, iter = iter, weights = wt, working.weights=ww,prior.weights = weights, 
+        null.deviance = nulldev, iter = iter, weights = wt, working.weights=ww,prior.weights = weights, z=z,
         df.null = nulldf, y = y, converged = conv,##pearson.warning = pearson.warning,
         boundary = boundary,D1=D1,D2=D2,P=P,P1=P1,P2=P2,trA=trA,trA1=trA1,trA2=trA2,
         GCV=GCV,GCV1=GCV1,GCV2=GCV2,GACV=GACV,GACV1=GACV1,GACV2=GACV2,UBRE=UBRE,
@@ -879,6 +883,7 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object) {
 ## X is original model matrix, L the mapping from working to full sp
   scale <- if (object$scale.estimated) object$scale.est else object$scale
   Vb <- object$rV%*%t(object$rV)*scale ## Bayesian cov.
+
   # PKt <- object$rV%*%t(object$K)
   PKt <- .Call(C_mgcv_pmmult2,object$rV,object$K,0,1,object$control$nthreads)
   # F <- PKt%*%(sqrt(object$weights)*X)
@@ -946,7 +951,29 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object) {
         }
       }
     } ## k loop
-    V.sp <- Vr;attr(V.sp,"L") <- L;attr(V.sp,"spind") <- (nth+1):M
+    V.sp <- Vr;attr(V.sp,"L") <- L;attr(V.sp,"spind") <- spind <- (nth+1):M
+    ## EXPERIMENTAL ## NOTE: no L handling - what about incomplete z/w??
+    #P <- Vb %*% X/scale
+    if (FALSE) {
+      sp <- object$sp[spind]
+      beta <- object$coefficients
+      w <- object$weights
+      m <- length(off)
+      M <- K <- matrix(0,length(w),m)
+      for (i in 1:m) {
+        ii <- 1:ncol(S[[i]])+off[i]-1
+        Sb <- S[[i]] %*% beta[ii]*sp[i]/object$scale
+	## don't forget Vb is inverse hessian times scale!
+        K[,i] <- w * drop(X %*% (Vb[,ii] %*% Sb))/object$scale
+        B <- Vb%*%drop(t(w*object$z) %*% X)
+        M[,i] <- X%*% (Vb[,ii] %*% (S[[i]]%*%B[ii]))*sp[i]/object$scale^2
+      }
+      ## Should following really just drop scale term?
+      K <- K %*% Vr[spind,spind]
+      edf3 <- sum(K*M)
+      attr(edf2,"edf3") <- edf3
+    }
+    ## END EXPERIMENTAL
   } else V.sp <- edf2 <- Vc <- NULL
   list(Vc=Vc,Vp=Vb,Ve=Ve,V.sp=V.sp,edf=edf,edf1=edf1,edf2=edf2,hat=hat,F=F,R=R)
 } ## gam.fit3.post.proc

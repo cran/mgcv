@@ -38,7 +38,8 @@ Johns Hopkins University Press, Baltimore.
 \examples{
   set.seed(0)
   n <- 10;p <- 5
-  X <- matrix(runif(n*(p-1)),n,p)
+  x <- runif(n*(p-1))
+  X <- matrix(c(x,x[1:n]),n,p)
   qrx <- qr(X,LAPACK=TRUE)
   Rrank(qr.R(qrx))
 }

@@ -955,14 +955,14 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
   object$fitted.values <- family$linkinv(object$linear.predictors)
   if (efam) { ## deal with any post processing
      if (!is.null(family$postproc)) {
-      posr <- family$postproc(family=object$family,y=y,prior.weights=G$w,
+      posr <- family$postproc(family=object$family,y=G$y,prior.weights=G$w,
               fitted=object$fitted.values,linear.predictors=object$linear.predictors,offset=G$offset,
 	      intercept=G$intercept)
       if (!is.null(posr$family)) object$family$family <- posr$family
       if (!is.null(posr$deviance)) object$deviance <- posr$deviance
       if (!is.null(posr$null.deviance)) object$null.deviance <- posr$null.deviance
     }
-    if (is.null(object$null.deviance)) object$null.deviance <- sum(family$dev.resids(y,weighted.mean(y,G$w),G$w,theta))   
+    if (is.null(object$null.deviance)) object$null.deviance <- sum(family$dev.resids(G$y,weighted.mean(G$y,G$w),G$w,theta))   
   }
 
   PP <- Sl.initial.repara(Sl,prop$PP,inverse=TRUE,both.sides=TRUE,cov=TRUE,nt=npt[1])
@@ -1430,7 +1430,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
     if (efam) { ## deal with any post processing
        if (!is.null(family$postproc)) {
          object$family <- family
-         posr <- family$postproc(family=family,y=y,prior.weights=G$w,
+         posr <- family$postproc(family=family,y=G$y,prior.weights=G$w,
               fitted=linkinv(eta),linear.predictors=eta,offset=G$offset,
 	      intercept=G$intercept)
          if (!is.null(posr$family)) object$family$family <- posr$family
@@ -1524,19 +1524,19 @@ pabapr <- function(arg) {
 
 predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
                         block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,
-                        cluster=NULL,discrete=TRUE,n.threads=1,...) {
+                        cluster=NULL,discrete=TRUE,n.threads=1,gc.level=0,...) {
 ## function for prediction from a bam object, possibly in parallel
   
   #if (is.function(na.action)) na.action <- deparse(substitute(na.action)) ## otherwise predict.gam can't detect type
   if (discrete && !is.null(object$dinfo)) {
     return(predict.bamd(object,newdata,type,se.fit,terms,exclude,
-                        block.size,newdata.guaranteed,na.action,n.threads,...))
+                        block.size,newdata.guaranteed,na.action,n.threads,gc.level=gc.level,...))
   }
   ## remove some un-needed stuff from object
   object$Sl <- object$qrx <- object$R <- object$F <- object$Ve <-
   object$Vc <- object$G <- object$residuals <- object$fitted.values <-
   object$linear.predictors <- NULL
-  gc()
+  if (gc.level>0) gc()
   if (!is.null(cluster)&&inherits(cluster,"cluster")) { 
      ## require(parallel)
      n.threads <- length(cluster)
@@ -1575,9 +1575,9 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
     ## newdata and object no longer needed - all info in thread lists...
     if (!missing(newdata)) rm(newdata)
     rm(object)
-    gc()
+    if (gc.level>0) gc()
     res <- parallel::parLapply(cluster,arg,pabapr) ## perform parallel prediction
-    gc()
+    if (gc.level>0) gc()
     ## and splice results back together...
     if (type=="lpmatrix") {
       X <- res[[1]]
@@ -1890,13 +1890,13 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
 } # end of bam.fit
 
 predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
-                        block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,n.threads=1,...) {
+                        block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,n.threads=1,gc.level=0,...) {
 ## function for prediction from a bam object, by discrete methods
 ## remove some un-needed stuff from object
   object$Sl <- object$qrx <- object$R <- object$F <- object$Ve <-
   object$Vc <- object$G <- object$residuals <- object$fitted.values <-
   object$linear.predictors <- NULL
-  gc()
+  if (gc.level>0) gc()
   if (missing(newdata)) newdata <- object$model
    
   convert2mf <- is.null(attr(newdata,"terms"))
@@ -1908,7 +1908,7 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
 
   lpi <- attr(object$formula,"lpi") ## lpi[[i]] indexes coefs for ith linear predoctor
   nlp <- if (is.null(lpi)) 1 else length(lpi) ## number of linear predictors
-  if (nlp>1) lpid <-  object$dinfo$lpid ## index of discrete terms involved in each linear predictor
+  lpid <- if (nlp>1) object$dinfo$lpid else NULL ## index of discrete terms involved in each linear predictor
  
   ## newdata has to be processed first to avoid, e.g. dropping different subsets of data
   ## for parametric and smooth components....
@@ -2382,7 +2382,7 @@ terms2tensor <- function(terms,data=NULL,contrasts.arg=NULL,drop.intercept=FALSE
 bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,na.action=na.omit,
                 offset=NULL,method="fREML",control=list(),select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,
                 min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-                cluster=NULL,nthreads=1,gc.level=1,use.chol=FALSE,samfrac=1,coef=NULL,
+                cluster=NULL,nthreads=1,gc.level=0,use.chol=FALSE,samfrac=1,coef=NULL,
                 drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
@@ -2528,7 +2528,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     if (!is.list(data)&&!is.data.frame(data)) data <- as.data.frame(data) 
 
     dl <- eval(inp, data, parent.frame())
-    if (!control$keepData) { rm(data);gc()} ## save space
+    if (!control$keepData) { rm(data);if (gc.level>0) gc()} ## save space
     names(dl) <- vars ## list of all variables needed
     var.summary <- variable.summary(gp$pf,dl,nrow(mf)) ## summarize the input data
     rm(dl); if (gc.level>0) gc() ## save space    
@@ -2936,7 +2936,10 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (rho!=0) object$std.rsd <- AR.resid(object$residuals,rho,object$model$"(AR.start)")
 
   if (!efam || is.null(object$deviance)) object$deviance <- sum(object$residuals^2)
-  dev <- object$deviance
+  ## 'dev' is used in family$aic to estimate scale. That's standard and fine for Gaussian data, but
+  ## can lead to badly biased estimates for e.g. low count data with the Tweedie (see Fletcher Biometrika paper)
+  ## So set dev to give object $sig2 estimate when divided by sum(prior.weights)... 
+  dev <- if (family$family!="gaussian"&&!is.null(object$sig2)) object$sig2*sum(object$prior.weights) else object$deviance ## used to give scale in family$aic
   if (rho!=0&&family$family=="gaussian") dev <- sum(object$std.rsd^2)
   object$aic <- if (efam) family$aic(object$y,object$fitted.values,family$getTheta(),object$prior.weights,dev) else
                 family$aic(object$y,1,object$fitted.values,object$prior.weights,dev)
@@ -2964,7 +2967,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 
 
 bam.update <- function(b,data,chunk.size=10000) {
-## update the strictly additive model `b' in the light of new data in `data'
+## update the strictly additive gaussian model `b' in the light of new data in `data'
 ## Need to update modelframe (b$model) 
   if (is.null(b$qrx)) { 
     stop("Model can not be updated")

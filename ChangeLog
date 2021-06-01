@@ -27,6 +27,31 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+1.8-36
+
+* 'fs' smooth construction modified to (approximately) orthogonalise 
+   smoothing penalty penalized and unpenalized bases. This makes the 
+   assumption that the associated variance components are independent 
+   more natural. Thanks to Matteo Fasiolo and Harald Bayaan for showing 
+   how the original construction could be problematic. 
+
+* correction to 'fs' smooth handling in gamm to allow correlation structures 
+  to be used in the same model without cuasing an error.
+
+* AIC calculation modified for non-Gaussian families with a scale parameter, 
+  so that the model estimated scale parameter is used, rather than the 
+  deviance estimator employed with glm exponential families. This matters for 
+  avoiding substantial bias with very low mean count data (particulalry 'tw' 
+  and 'Tweedie' families).   
+
+* ziP family response scale se fix for case when b>0 (thanks to Mark Donoghoe)
+
+* prediction on response scale could fail for models fitted by 
+  bam(...,discrete=TRUE) - fixed. 
+
+* bug fix to multi-model anova.gam code to deal properly with extended family 
+  scale parameters (still not the recommended way of testing!)
+
 1.8-35
 
 * Fix to bug in Fletcher scale parameter estimate with weighted data (e.g. 
