@@ -329,6 +329,7 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
   m <- unlist(lapply(X,nrow)) ## number of rows in each discrete model matrix
   p <- unlist(lapply(X,ncol)) ## number of cols in each discrete model matrix
   nx <- length(X) ## number of model matrices
+  if (length(p)!=nx) stop("something wrong with matrix list - not all matrices?")
   nt <- length(ts) ## number of terms
   if (!is.null(drop)) { 
     b <- if (is.matrix(beta)) matrix(0,nrow(beta)+length(drop),ncol(beta)) else rep(0,length(beta)+length(drop))

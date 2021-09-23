@@ -234,12 +234,7 @@ y <- f + rnorm(n)*0.2
 # tensor product of 2D Duchon spline and 1D cr spline
 m <- list(c(1,.5),rep(0,0)) ## example of list form of m
 b <- gam(y~te(v,w,u,k=c(30,5),d=c(2,1),bs=c("ds","cr"),m=m))
-op <- par(mfrow=c(2,2))
-vis.gam(b,cond=list(u=0),color="heat",zlim=c(-0.2,3.5))
-vis.gam(b,cond=list(u=.33),color="heat",zlim=c(-0.2,3.5))
-vis.gam(b,cond=list(u=.67),color="heat",zlim=c(-0.2,3.5))
-vis.gam(b,cond=list(u=1),color="heat",zlim=c(-0.2,3.5))
-par(op)
+plot(b)
 
 }
 

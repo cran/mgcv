@@ -14,11 +14,12 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "mgcv.h"
-#include <R.h>
-#ifdef OPENMP_ON
+#ifdef _OPENMP
 #include <omp.h>
 #endif
+
+#include "mgcv.h"
+#include <R.h>
 
 /* A sparse matrix structure useful for storing discrete sparse marginals */
 typedef struct {

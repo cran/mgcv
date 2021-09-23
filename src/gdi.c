@@ -19,12 +19,14 @@ USA. */
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <R.h>
 #include "mgcv.h"
 
-#ifdef OPENMP_ON
-#include <omp.h>
-#endif
 #define ANSI
 /*#define DEBUG*/
 

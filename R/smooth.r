@@ -4108,11 +4108,11 @@ PredictMat <- function(object,data,n=nrow(data))
           if (sum(is.na(X))) {
             ind <- !is.na(rowSums(X))
             if (nz>0) X[ind,indi[1:nz]]<-t(qr.qty(qrc,t(X[ind,indi,drop=FALSE]))[(nc+1):nx,])
-            X <- X[,-indi[(nz+1):nx]]
+            X <- X[,-indi[(nz+1):nx],drop=FALSE]
             X[!ind,] <- NA 
           } else { 
             if (nz>0) X[,indi[1:nz]]<-t(qr.qty(qrc,t(X[,indi,drop=FALSE]))[(nc+1):nx,,drop=FALSE])
-            X <- X[,-indi[(nz+1):nx]]
+            X <- X[,-indi[(nz+1):nx],drop=FALSE]
           }
         }
       } else if (inherits(qrc,"sweepDrop")) {
@@ -4121,7 +4121,7 @@ PredictMat <- function(object,data,n=nrow(data))
         ## Actually better handled first (see above)
         #X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
       } else if (qrc>0) { ## simple set to zero constraint
-        X <- X[,-qrc]
+        X <- X[,-qrc,drop=FALSE]
       } else if (qrc<0) { ## params sum to zero
         X <- t(diff(t(X)))
       }
@@ -4130,6 +4130,8 @@ PredictMat <- function(object,data,n=nrow(data))
   ## apply any reparameterization that resulted from diagonalizing penalties 
   ## in smoothCon ...
   if (!is.null(object$diagRP)) X <- X %*% object$diagRP
+ 
+  #if (!inherits(X,"matrix")) X <- as.matrix(t(X))
 
   ## drop columns eliminated by side-conditions...
   del.index <- attr(object,"del.index") 

@@ -19,12 +19,14 @@ USA. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "general.h"
 #include "mgcv.h"
 #include "matrix.h"
-#ifdef OPENMP_ON
-#include <omp.h>
-#endif
 
 
 double ***array3d(int ni,int nj,int nk)

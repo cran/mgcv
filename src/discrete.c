@@ -22,11 +22,12 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "mgcv.h"
-#include <R.h>
-#ifdef OPENMP_ON
+#ifdef _OPENMP
 #include <omp.h>
 #endif
+
+#include "mgcv.h"
+#include <R.h>
 
 struct SM_el { /* stores element of sparse matrix */
   int i,j; /* row and column */
