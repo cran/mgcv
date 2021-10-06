@@ -27,6 +27,10 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+1.8-38
+
+* uniquecombs fix to reduce memory footprint for text data.
+
 1.8-37
 
 * minor update for clang compatibility.

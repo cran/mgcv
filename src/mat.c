@@ -51,12 +51,13 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifdef _OPENMP
+#ifdef _OPENMP // needs to precede R.h (and mgcv.h)
 #include <omp.h>
 #endif
 
-#include <R.h>
 #include "mgcv.h"
+#include <R.h>
+
 /*#include <dmalloc.h>*/
 
 void mgcv_omp(int *a) {

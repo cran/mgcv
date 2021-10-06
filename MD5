@@ -1,5 +1,5 @@
-a6fc1a23cf9e989657071cd32d83ca35 *ChangeLog
-b8f6814487ae1b0795f893738e61b5fa *DESCRIPTION
+ba714286797ec389212ec4a96de6b193 *ChangeLog
+245341667f12db51e13308acd6be37b6 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 890c0621bebf0f64603c13bcf74a7c9c *NAMESPACE
 1f668b0b6c0ebf965e88a44c30234730 *R/bam.r
@@ -18,10 +18,10 @@ e080a05afb5c9cc787ec898712b61309 *R/mgcv.r
 c8688e5a317f38934eea689fdb51b895 *R/misc.r
 16affc004cd2b26024513647a50e01bd *R/mvam.r
 0ae2cbec76745cbefd0fa1b49d1b3a18 *R/plots.r
-31d906115ee7cdfe73b1f3d1af408ea2 *R/smooth.r
+f1dca4cdd3678aaf56f5455fcc690597 *R/smooth.r
 d869c9c2658860f7a23e4590100939b2 *R/soap.r
 bde1774ce7903cabc57b3196f8872ea8 *R/sparse.r
-6abc2c41af0be068075e315ff31d77e4 *build/partial.rdb
+dcff3db5f628f74db64953b20cc1c1b1 *build/partial.rdb
 e468195a83fab90da8e760c2c3884bd3 *data/columb.polys.rda
 40874e3ced720a596750f499ded8a60a *data/columb.rda
 e70536903ca327ade1496529ab817b60 *inst/CITATION
@@ -31,6 +31,8 @@ f7a9b34251a6fa9db860fe6c4a8f535c *inst/po/en@quot/LC_MESSAGES/R-mgcv.mo
 618da9b95f8051d9a87e59d63e14b7e8 *inst/po/en@quot/LC_MESSAGES/mgcv.mo
 c38307e74a73cd8ecfe46144e4b0410b *inst/po/fr/LC_MESSAGES/R-mgcv.mo
 b89a4cf67d83fc27bfc4e43aa262de0a *inst/po/fr/LC_MESSAGES/mgcv.mo
+4881cafd29334f71c46bc9d0ac3bd756 *inst/po/it/LC_MESSAGES/R-mgcv.mo
+e21bd8e9224d5e3b5fd8bbbec6abc7bf *inst/po/it/LC_MESSAGES/mgcv.mo
 2ade92c013cf08bf0be6006d474ff781 *inst/po/ko/LC_MESSAGES/R-mgcv.mo
 bb3d9887daa22855407b54578f9fc656 *inst/po/ko/LC_MESSAGES/mgcv.mo
 01a4f2afe3a91c7d21ec6a8e3d7c178e *inst/po/pl/LC_MESSAGES/R-mgcv.mo
@@ -141,7 +143,7 @@ eb5a78dc0ceb7113d601042114856b2f *man/print.gam.Rd
 0a5f07356cdb5d0eb567ca709c5ca411 *man/psum.chisq.Rd
 515e24e5066c21a59b22c534212b1049 *man/qq.gam.Rd
 22b7dcbc8ff4096365fa98ce56b957c9 *man/rTweedie.Rd
-fa483bfadd374c32f624afe4d7a21082 *man/random.effects.Rd
+a4f463929098967c9b3b50d3c0e1f8c4 *man/random.effects.Rd
 c523210ae95cb9aaa0aaa1c37da1a4c5 *man/residuals.gam.Rd
 94d87fe62561bbe81918448e11119506 *man/rig.Rd
 07a0eb8b0fe5601256249461d83b8a16 *man/rmvn.Rd
@@ -160,7 +162,7 @@ c60df28c123e9fa9addc00cff2323bfa *man/smooth.construct.fs.smooth.spec.Rd
 732950d96f2fde5da2d5af869c5b54bb *man/smooth.construct.gp.smooth.spec.Rd
 656f9e77ad4564ab3cd610118780b8ac *man/smooth.construct.mrf.smooth.spec.Rd
 49e4a296f8243ae8749dc1f7954438ba *man/smooth.construct.ps.smooth.spec.Rd
-d8fb8b7ac102af3e0b3914fd9860522a *man/smooth.construct.re.smooth.spec.Rd
+f106ea5df761acde88ed479966b00bba *man/smooth.construct.re.smooth.spec.Rd
 324e810b271d53efeca8c9eadcd19b86 *man/smooth.construct.so.smooth.spec.Rd
 962ba22ac245e9de2c8e2618d000d5ad *man/smooth.construct.sos.smooth.spec.Rd
 3cb4e59f915c8d64b90754eaeeb5a86f *man/smooth.construct.t2.smooth.spec.Rd
@@ -189,12 +191,14 @@ dd807b69a490503d8ac5425150a83f48 *man/ziplss.Rd
 aa1bbd4ccea7effe3d28552d60badeb3 *po/R-de.po
 0bdfcf98961b0d52b60f806dc1dba77e *po/R-en@quot.po
 3beb1f4c201a1198126c78a8fe4442d3 *po/R-fr.po
+8e8807cbe2c774b3ca743be1f0efd6ce *po/R-it.po
 9a857554274c4ac756ce6edcb56cf81e *po/R-ko.po
 015e8d578b65acc2f80f123a263c2b3f *po/R-mgcv.pot
 5f0ce50c9670eb306808361fcd88fd5a *po/R-pl.po
 738512de05942e8e68652c2da6debe97 *po/de.po
 93f72334356fe6f05a64e567efd35c8e *po/en@quot.po
 48fbbfe032c5b0fa7bed40c8e21b3287 *po/fr.po
+2b634288b12de3abc4f86a775fa25df6 *po/it.po
 c43db22b7b523d11637edb6f007d546c *po/ko.po
 dfd5b0dfa421012bbc720f86be2705dc *po/mgcv.pot
 5c63c56297c786bd170b8951df4ca295 *po/pl.po
@@ -206,7 +210,7 @@ aa5b49d0137595304bb754de5192ae2a *src/gdi.c
 2436f9b328e80370ce2203dbf1dd813c *src/general.h
 a958d9a8e9695186ff1976b20fc04851 *src/init.c
 94cb9e030ded330bc3502502c5168f49 *src/magic.c
-8ad3c290230a31e5340fd735b02c13b1 *src/mat.c
+de7c4123cad65cae616941e92ea2859a *src/mat.c
 bb75d10bb56dc479f207325e97f6a935 *src/matrix.c
 de37b0972199b796654405efc007f25b *src/matrix.h
 5dbce5b588a13a57c06fdece4c5bb76e *src/mgcv.c

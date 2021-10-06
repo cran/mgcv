@@ -12,7 +12,7 @@ regression terms. This method can be used with \code{\link{gam}} by making use o
 random effect with model matrix given by \code{model.matrix(~x:z:g-1)} --- in principle such terms can take any number of arguments. This simple 
 approach is sufficient for implementing a wide range of commonly used random effect structures. For example if \code{g} is a factor then 
 \code{s(g,bs="re")} produces a random coefficient for each level of \code{g}, with the random coefficients all modelled as i.i.d. normal. If \code{g} is a factor and \code{x} is numeric, then \code{s(x,g,bs="re")} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then \code{s(h,g,bs="re")} produces the usual i.i.d. normal \code{g} - \code{h} interaction. Note that a rather useful approximate test for zero random effect is also implemented for such terms based on Wood (2013). If the precision
-matrix is known to within a multiplicative constant, then this can be supplied via the \code{xt} argument of \code{s}. See \link{smooth.construct.re.smooth.spec} for details and example. 
+matrix is known to within a multiplicative constant, then this can be supplied via the \code{xt} argument of \code{s}. See \link{smooth.construct.re.smooth.spec} for details and example. Some models require differences between different levels of the same random effect: these can be implemented as described in \code{\link{linear.functional.terms}}.
 
 Alternatively, but less straightforwardly, the \code{paraPen} argument to \code{\link{gam}} can be used: 
 see \code{\link{gam.models}}. If smoothing parameter estimation is by ML or REML (e.g. \code{gam(...,method="REML")}) then this approach is 

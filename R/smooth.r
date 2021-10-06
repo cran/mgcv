@@ -219,7 +219,9 @@ uniquecombs <- function(x,ordered=FALSE) {
         xoi <- levels(xo[,i])
         x[,i] <- if (is.ordered(xo[,i])) ordered(x[,i],levels=1:length(xoi),labels=xoi) else 
                  factor(x[,i],levels=1:length(xoi),labels=xoi)
-        contrasts(x[,i]) <- contrasts(xo[,i])
+	## only copy contrasts if it was really a factor to start with
+	## otherwise following can be very memory and time intensive
+        if (is.factor(xoo[,i])) contrasts(x[,i]) <- contrasts(xo[,i])
       }
       if (is.char[i]) x[,i] <- as.character(x[,i])
       if (is.logical(xo[,i])) x[,i] <- as.logical(x[,i])
