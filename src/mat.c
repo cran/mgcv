@@ -565,7 +565,7 @@ int mgcv_bchol0(double *A,int *piv,int *n,int *nt,int *nb) {
         x = *Aj - *pd; 
         if (x>xmax) { xmax = x;q=l;} /* find the pivot */
       } 
-      if (j==0) tol = *n * xmax * DOUBLE_EPS;
+      if (j==0) tol = *n * xmax * DBL_EPSILON;
       Aq = A + *n * q + q;
       // Rprintf("\n n = %d k = %d j = %d  q = %d,  A[q,q] = %g  ",*n,k,j,q,*Aq);
       if (*Aq - dots[q]<tol) {r = j;break;} /* note Lucas (2004) has 'dots[q]' missing */
@@ -691,7 +691,7 @@ int mgcv_bchol(double *A,int *piv,int *n,int *nt,int *nb) {
         x = *Aj - *pd; 
         if (x>xmax) { xmax = x;q=l;} /* find the pivot q >= j (leading diag only used)*/
       } 
-      if (j==0) tol = *n * xmax * DOUBLE_EPS;
+      if (j==0) tol = *n * xmax * DBL_EPSILON;
       Aq = A + *n * q + q; 
       if (*Aq - dots[q]<tol) {r = j;break;} /* note Lucas (2004) has 'dots[q]' missing */
       /* swap dots... */
@@ -818,7 +818,7 @@ int mgcv_pchol(double *A,int *piv,int *n,int *nt) {
     Ak = A + kn + k;x = *Ak;q=k;Ak+=n1;
     for (i=k+1;i < *n;i++,Ak+=n1) if (*Ak>x) {x = *Ak;q=i;}
     qn = q * *n;
-    if (k==0) thresh = *n * x * DOUBLE_EPS;
+    if (k==0) thresh = *n * x * DBL_EPSILON;
     if (x>thresh) { /* A[q,q] =x > 0 */
       r++;
       /* piv[k] <-> piv[q] */
@@ -956,7 +956,7 @@ int bpqr(double *A,int n,int p,double *tau,int *piv,int nb,int nt) {
 #ifdef OMP_REPORT
   Rprintf("bpqr...");
 #endif
-  tol = pow(DOUBLE_EPS,.8);
+  tol = pow(DBL_EPSILON,.8);
   mb = (int *)CALLOC((size_t) nt,sizeof(int));
   kb = (int *)CALLOC((size_t) nt,sizeof(int));  
   for (p0=piv,i=0;i<p;i++,p0++) *p0 = i; /* initialize pivot index */

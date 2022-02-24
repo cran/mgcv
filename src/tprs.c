@@ -355,7 +355,7 @@ void tprs_setup(double **x,double **knt,int m,int d,int n,int k,int constant,mat
 { matrix X1,E,U,v,TU,T,Z,p;
   const char trans='T'; 
   int l,i,j,M,*yxindex,pure_knot=0,nk,minus=-1,kk,one=1;
-  double w,*xc,*XMi,*Ea,*Ua,tol=DOUBLE_EPS,*b,*a,*uz,alpha=1.0,beta=0.0,*p0,*p1;
+  double w,*xc,*XMi,*Ea,*Ua,tol=DBL_EPSILON,*b,*a,*uz,alpha=1.0,beta=0.0,*p0,*p1;
   tol = pow(tol,.7);
 
   if (n_knots<k) /* then use the covariate points as knots */

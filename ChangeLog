@@ -27,6 +27,23 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+1.8-39
+
+* gam.fit5 convergence logic tightened up, to avoid pointlessly lengthy 
+  iterations when can't meet convergence tolerance. Faster, more reliable, 
+  but also generates more warnings when tolerances not met.
+
+* gam.fit3 convergence test modified to more reliable version.
+
+* Some modification of warning handling to only print inner optimization 
+  warnings if they occur at final call to inner optimizer.
+
+* newton and bfgs optimizers reset inner loop tolerance to 1e-2 of outer 
+  loop tolerance if it is larger than this, to avoid inner loop being too
+  inaccurate for out tolerance.
+
+* minor R 4.2.0 C compatibility change.
+
 1.8-38
 
 * uniquecombs fix to reduce memory footprint for text data.

@@ -104,9 +104,6 @@ manner described in \code{\link{tensor.prod.model.matrix}} and \code{\link{tenso
 a single model matrix for the smooth, but multiple penalties (one for each marginal basis). The basis dimension 
 of the whole smooth is the product of the basis dimensions of the marginal smooths.
  
-An option for operating with a single penalty (The Kronecker product of the marginal penalties) is provided, but 
-it is rarely of practical use, and is deprecated: the penalty is typically so rank deficient that 
-even the smoothest resulting model will have rather high estimated degrees of freedom. 
 
 Tensor product smooths are especially useful for representing functions of covariates measured in different units, 
 although they are typically not quite as nicely behaved as t.p.r.s. smooths for well scaled covariates.

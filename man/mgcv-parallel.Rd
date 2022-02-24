@@ -32,7 +32,7 @@ Because the computational burden in \code{mgcv} is all in the linear algebra, th
 Simon Wood <simon.wood@r-project.org>
 }
 \references{
-\url{https://hpc.llnl.gov/tuts/openMP/}
+\url{https://hpc-tutorials.llnl.gov/openmp/}
 }
 
 \keyword{ package }
