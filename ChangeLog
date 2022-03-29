@@ -27,6 +27,18 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+* bam(..., discrete=TRUE) te fixed sp ordering wrong.
+
+1.8-40
+
+* Small gam.fit5 convergence change to reduce chance of repeating step 
+  failures.
+
+* ExtractData fix avoiding assumption that 'xt' argument to a smooth is always
+  a list (could cause setup failure with e.g. fs smooth). Thanks Keith Woolner.
+
+* Minor changes to mat.c and tprs.c to allow DEFS = -DSTRICT_R_HEADERS build. 
+
 1.8-39
 
 * gam.fit5 convergence logic tightened up, to avoid pointlessly lengthy 
@@ -40,7 +52,7 @@ present, and reparameterization needs checking (also for bam).
 
 * newton and bfgs optimizers reset inner loop tolerance to 1e-2 of outer 
   loop tolerance if it is larger than this, to avoid inner loop being too
-  inaccurate for out tolerance.
+  inaccurate for outer tolerance.
 
 * minor R 4.2.0 C compatibility change.
 

@@ -3621,7 +3621,7 @@ ExtractData <- function(object,data,knots) {
 ## with the `index' attribute required to re-assemble the full dataset.
    knt <- dat <- list()
    ## should data be processed as for summation convention with matrix arguments?
-   vecMat <- if (is.null(object$xt$sumConv)) TRUE else object$xt$sumConv
+   vecMat <- if (!is.list(object$xt)||is.null(object$xt$sumConv)) TRUE else object$xt$sumConv
    for (i in 1:length(object$term)) { 
      dat[[object$term[i]]] <- get.var(object$term[i],data,vecMat=vecMat)
      knt[[object$term[i]]] <- get.var(object$term[i],knots,vecMat=vecMat)

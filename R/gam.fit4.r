@@ -1002,40 +1002,45 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
     ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1) 
     ll1 <- ll$l - drop(t(coef1)%*%St%*%coef1)/2
     khalf <- 0;fac <- 2
-    while ((!is.finite(ll1)||ll1 < ll0) && khalf < 25) { ## step halve until it succeeds...
+
+    ## with ll1 < ll0 in place of ll1 <= ll0 in next line than we can repeatedly accept
+    ## miniscule steps that do not actually improve anything. 
+    while ((!is.finite(ll1)||ll1 <= ll0) && khalf < 25) { ## step halve until it succeeds...
       step <- step/fac;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (is.finite(ll1)&&ll1>=ll0) { ## improvement, or at least no worse.
         ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
-      } else { ## abort if step has made no difference
-        if (max(abs(coef1-coef))==0) khalf <- 100
       }
+      ## abort if step has made no difference...
+      if (max(abs(coef-coef1))<max(abs(coef))*.Machine$double.eps) khalf <- 100
       khalf <- khalf + 1
       if (khalf>5) fac <- 5
     } ## end step halve
 
-    ## Following tries steepest ascent if Newton failed. Only do this if ll1 < ll0, not
-    ## if ll1 == ll0. Otherwise it is possible for SA to mess up when routine is called
+    ## Following tries steepest ascent if Newton failed. Only do this if not initially converged.
+    ## Otherwise it is possible for SA to mess up when routine is called
     ## with converged parameter values - takes a tiny step that leads to a machine noise
-    ## improvment, but pushes a gradient just over threshold, Newton then continues to fail
+    ## improvement, but pushes a gradient just over threshold, Newton then continues to fail
     ## and we get stuck with SA convergence rates.
+    ## One reason to try SA (if grad not already zero) is that Newton step can become
+    ## poor due to numerical conditioning problems, whereas SA is largely unaffected.
 
-    if (!is.finite(ll1) || ll1 < ll0) { ## switch to steepest ascent
+    if (!is.finite(ll1) || (ll1<=ll0 && !iconv)) { ## switch to steepest ascent
       #step <- 0.5*drop(grad)*mean(abs(coef))/mean(abs(grad))
       step <- drop(grad)*s.norm/sqrt(sum(grad^2)) ## scaled to initial Newton step length
       khalf <- 0
     }
 
-    while ((!is.finite(ll1)||ll1 < ll0) && khalf < 25) { ## step cut until it succeeds...
+    while ((!is.finite(ll1)||(ll1 <= ll0 && !iconv)) && khalf < 25) { ## step cut until it succeeds...
       step <- step/10;coef1 <- coef + step
       ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=0)
       ll1 <- ll$l - (t(coef1)%*%St%*%coef1)/2
       if (is.finite(ll1)&&ll1>=ll0) { ## improvement, or no worse
         ll <- llf(y,x,coef1,weights,family,offset=offset,deriv=1)
-      } else { ## abort if step has made no difference
-        if (max(abs(coef-coef1))<max(abs(coef))*.Machine$double.eps) khalf <- 100 ## step gone nowhere
       }
+      ## abort if step has made no difference...
+      if (max(abs(coef-coef1))<max(abs(coef))*.Machine$double.eps) khalf <- 100 ## step gone nowhere
       khalf <- khalf + 1
     }
 
@@ -1106,6 +1111,9 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,
 	coef <- start         ## converged, otherwise sp changes can lead to no sp objective change!
       } else {
         converged  <- FALSE
+	## NOTE: the threshold can be unrealistic if gradient can't be computed to this accuracy, e.g.
+	## because of very large smoothing parameters - could estimate grad accuracy from machine zero
+	## perturbation of grad calc, but perhaps too fussy. 
         warn[[length(warn)+1]] <- paste("gam.fit5 step failed: max magnitude relative grad =",max(abs(grad/drop(ll0))))
       }
       break ## no need to recompute L and D, so break now

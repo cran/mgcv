@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 
 #ifdef _OPENMP // needs to precede R.h (and mgcv.h)
 #include <omp.h>

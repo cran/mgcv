@@ -1703,7 +1703,8 @@ newton <- function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     attr(hess,"lsp1") <- lsp1
     attr(hess,"rp") <- b1$rp
   } ## if edge.correct
-  if (!is.null(b$warn)&&length(b$warn)>0) for (i in 1:length(b$warn)) warning(b$warn[[i]])
+  ## report any warnings from inner loop of outer not converged...
+  if (!is.null(b$warn)&&length(b$warn)>0&&ct!="full convergence") for (i in 1:length(b$warn)) warning(b$warn[[i]])
   list(score=score,lsp=lsp,lsp.full=L%*%lsp+lsp0,grad=grad,hess=hess,iter=i,
        conv =ct,score.hist = score.hist[!is.na(score.hist)],object=b)
 } ## newton
@@ -2171,7 +2172,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   ev$values[ind] <- 1/ev$values[ind]
   ev$values[!ind] <- 0
   B <- ev$vectors %*% (ev$values*t(ev$vectors))
-  if (!is.null(b$warn)&&length(b$warn)>0) for (j in 1:length(b$warn)) warning(b$warn[[j]])
+  if (!is.null(b$warn)&&length(b$warn)>0&&ct!="full convergence") for (j in 1:length(b$warn)) warning(b$warn[[j]])
   list(score=score,lsp=lsp,lsp.full=L%*%lsp+lsp0,grad=grad,hess=B,iter=i,conv =ct,
        score.hist=score.hist[!is.na(score.hist)],object=b)
 } ## end of bfgs

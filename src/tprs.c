@@ -19,6 +19,7 @@ USA.*/
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <float.h>
 #include "mgcv.h"
 #include "matrix.h"
 #include "general.h"
@@ -32,9 +33,10 @@ USA.*/
 
 double eta_const(int m,int d) {
   /* compute the irrelevant constant for TPS basis */
-  double pi=PI,Ghalf; 
+  double pi,Ghalf; 
   double f;
   int i,k,d2,m2;
+  pi=asin(1.0)*2;
   Ghalf = sqrt(pi); /* Gamma function of 0.5 = sqrt(pi) */
   d2 = d/2;m2 = 2*m;
   if (m2 <= d) error(_("You must have 2m>d for a thin plate spline."));
