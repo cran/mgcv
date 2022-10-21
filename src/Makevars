@@ -2,5 +2,8 @@ PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CFLAGS)
 PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS)
 ## *Both* the above must be *uncommented* for release
 
-#PKG_CFLAGS = -Wall -pedantic $(SHLIB_OPENMP_CFLAGS)
+#PKG_CFLAGS = -g -O0 -Wall -pedantic $(SHLIB_OPENMP_CFLAGS)
+## Actually it now seems that you need to reset optimization flag in
+## /usr/local/lib/R/etc/Makeconf
+## This file can add flags but not modify what's in the above!
 ## `#' out previous line for release (but not without uncommenting openMP)

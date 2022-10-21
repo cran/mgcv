@@ -49,12 +49,12 @@ outside \code{R} (see example code, below). }
 \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
 
 \item{terms}{if \code{type=="terms"} or \code{type="iterms"} then only results for the terms (smooth or parametric) named in this array
-will be returned. Otherwise any smooth terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
+will be returned. Otherwise any terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
 
-\item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
+\item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array will not be returned. Otherwise any terms named in this array will be set to zero. 
 If \code{NULL} then no terms are excluded. Note that this is the term names as it appears in the model summary, see example.
-You can avoid providing the covariates for the excluded terms by setting \code{newdata.guaranteed=TRUE}, which will avoid all
-checks on \code{newdata}.}
+You can avoid providing the covariates for excluded smooth terms by setting \code{newdata.guaranteed=TRUE}, which will avoid all
+checks on \code{newdata} (covariates for parametric terms can not be skipped).}
 
 \item{block.size}{maximum number of predictions to process per call to underlying
 code: larger is quicker, but more memory intensive. Set to < 1 to use total number
@@ -150,11 +150,11 @@ parametric model components.
 
 \examples{
 library(mgcv)
-n<-200
+n <- 200
 sig <- 2
 dat <- gamSim(1,n=n,scale=sig)
 
-b<-gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3),data=dat)
+b <- gam(y~s(x0)+s(I(x1^2))+s(x2)+offset(x3),data=dat)
 
 newd <- data.frame(x0=(0:30)/30,x1=(0:30)/30,x2=(0:30)/30,x3=(0:30)/30)
 pred <- predict.gam(b,newd)
@@ -162,6 +162,14 @@ pred0 <- predict(b,newd,exclude="s(x0)") ## prediction excluding a term
 ## ...and the same, but without needing to provide x0 prediction data...
 newd1 <- newd;newd1$x0 <- NULL ## remove x0 from `newd1'
 pred1 <- predict(b,newd1,exclude="s(x0)",newdata.guaranteed=TRUE)
+
+## custom perspective plot...
+
+m1 <- 20;m2 <- 30; n <- m1*m2
+x1 <- seq(.2,.8,length=m1);x2 <- seq(.2,.8,length=m2) ## marginal grid points
+df <- data.frame(x0=rep(.5,n),x1=rep(x1,m2),x2=rep(x2,each=m1),x3=rep(0,n))
+pf <- predict(b,newdata=df,type="terms")
+persp(x1,x2,matrix(pf[,2]+pf[,3],m1,m2),theta=-130,col="blue",zlab="")
 
 #############################################
 ## difference between "terms" and "iterms"

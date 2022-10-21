@@ -1,10 +1,29 @@
 ## (c) Simon N. Wood 2011-2019
 ## Many of the following are simple wrappers for C functions
 
+dpnorm <- function(x0,x1) {
+  ## Cancellation avoiding evaluation of pnorm(x1)-pnorm(x0) 
+  ## first avoid 1-1 problems by exchanging and changing sign of double +ve
+  ii <- x1>0&x0>0
+  d <- x0[ii];x0[ii] <- -x1[ii];x1[ii] <- -d
+  ## now deal with points that are so close that cancellation error
+  ## too large - might as well use density times interval width
+  ii <- abs(x1-x0) < sqrt(.Machine$double.eps)*dnorm((x1+x0)/2)
+  p <- x0; d <- x1[ii]-x0[ii]; m <- (x1[ii]+x0[ii])/2
+  p[ii] <- dnorm(m)*d
+  p[!ii] <- pnorm(x1[!ii]) - pnorm(x0[!ii])
+  p
+} ## dpnorm
+
+
 "%.%" <- function(a,b) {
   if (inherits(a,"dgCMatrix")||inherits(b,"dgCMatrix"))
-  tensor.prod.model.matrix(list(as(a,"dgCMatrix"),as(b,"dgCMatrix"))) else
-  tensor.prod.model.matrix(list(as.matrix(a),as.matrix(b)))
+  tensor.prod.model.matrix(list(
+  as(as(as(a, "dMatrix"), "generalMatrix"), "CsparseMatrix"),
+  as(as(as(b, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+  )) else tensor.prod.model.matrix(list(as.matrix(a),as.matrix(b)))
+#  tensor.prod.model.matrix(list(as(a,"dgCMatrix"),as(b,"dgCMatrix"))) else - deprecated
+#  tensor.prod.model.matrix(list(as.matrix(a),as.matrix(b)))
 }
 
 blas.thread.test <- function(n=1000,nt=4) {
@@ -176,12 +195,16 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
 ## * if both NULL all terms are included, if only one is NULL then used for left and right. 
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
-  n <- length(w);pt <- 0;
-  for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0)
- 
+  n <- length(w);ptfull <- pt <- 0;
+  for (i in 1:nt) {
+    fullsize <- prod(p[ts[i]:(ts[i]+dt[i]-1)])
+    ptfull <- ptfull + fullsize
+    pt <- pt + fullsize - if (qc[i]>0) 1 else if (qc[i]<0) v[[i]][v[[i]][1]+2] else 0
+  } 
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
     if (length(ar.stop)>1||ar.stop!=-1) warning("AR not available with sparse marginals")
     ## create list for passing to C
+    if (any(qc<0)) stop("sparse method for Kronecker product contrasts not implemented")
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
     if (is.null(m$off)||is.null(m$r)) stop("reverse indices missing from sparse discrete marginals")
@@ -224,8 +247,8 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
   }
   ## block oriented code...
   if (is.null(lt)&&is.null(lt)) {
-    #t0 <- system.time(
-    oo <- .C(C_XWXd0,XWX =as.double(rep(0,(pt+nt)^2)),X= as.double(unlist(X)),w=as.double(w),
+    #t0 <- system.time( ## BUG dodgy assumption about full sized XWX, based on one constraint per term!!!
+    oo <- .C(C_XWXd0,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
            k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
            ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
            v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
@@ -247,7 +270,7 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
       } else ncs <- length(rt)
     }  
     #t0 <- system.time(
-    oo <- .C(C_XWXd1,XWX =as.double(rep(0,(pt+nt)^2)),X= as.double(unlist(X)),w=as.double(w),
+    oo <- .C(C_XWXd1,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
            k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
            ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
            v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
@@ -285,7 +308,7 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
   ##for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0)
   if (is.null(lt)) {
     pt <- 0
-    for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0)
+    for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - if (qc[i]>0) 1 else if (qc[i]<0) v[[i]][v[[i]][1]+2] else 0
     lt <- 1:nt
   } else {
     lpip <- attr(X,"lpip") ## list of coefs for each term 
@@ -777,6 +800,17 @@ temp.seed <- function(x) {
   }  
 } ## temp.seed
 
+mat.rowsum <- function(X,m,k) {
+## Let X be n by p and m of length M. Produces an M by p matrix B
+## where the ith row of B is the sum of the rows X[k[j],] where
+## j = (m[i-1]+1):m[i]. m[0] is taken as 0.
+## n <- 10;p <- 5;X <- matrix(runif(n*p),n,p)
+## m <- c(3,5,8,11);k <- c(1,4,3,6,1,5,7,10,9,5,6)
+## mgcv:::mat.rowsum(X,m,k)
+  if (max(k)>nrow(X)||min(k)<1) stop("index vector has invalid entries")
+  k <- k - 1 ## R to C index conversion
+  .Call(C_mrow_sum,X,m,k)
+} ## mat.rowsum
 
 isa <- function(R,nt=1) {
 ## Finds the elements of (R'R)^{-1} on NZP(R+R').
@@ -797,3 +831,34 @@ AddBVB <- function(A,Bt,VBt) {
   A
 } ## AddBVB
 
+minres <- function(R,u,b) {
+## routine to solve (R'R-uu')x = b using minres algorithm.
+## set.seed(0);n <- 100;p <- 20;X <- matrix(runif(n*p)-.5,n,p);R <- chol(crossprod(X));b <- runif(p);k <- 1;
+## solve(crossprod(X[-k,]),b);mgcv:::minres(R,t(X[k,]),b)
+  x <- b; p <- length(b);
+  m <- if (is.matrix(u)) ncol(u) else 1
+  work <- rep(0,p*(m+7)+m)
+  oo <- .C(C_minres,R=as.double(R), u=as.double(u),b=as.double(b), x=as.double(x), p=as.integer(p),m=as.integer(m),work=as.double(work))
+  cat("\n niter : ",oo$m,"\n")
+  oo$x
+}
+
+## following are wrappers for KP STZ constraints - intended for testing only
+
+Zb <- function(b0,v,qc,p,w) {
+  b1 <- rep(0,p)
+  oo <- .C(C_Zb,b1=as.double(b1),as.double(b0),as.double(v),as.integer(qc),as.integer(p),as.double(w))
+  oo$b1
+}
+
+Ztb <- function(b0,v,qc,di,p,w) {
+  ## p is length(b0)/di
+  w <- rep(0,2*p)
+  M <- v[1]
+  pp <- p
+  for (i in 1:M) pp <- pp/v[i+1];
+  p0 <- prod(v[1+1:M]-1)*pp
+  b1 <- rep(0,p0*di)
+  oo <- .C(C_Ztb,b1=as.double(b1),as.double(b0),as.double(v),as.integer(qc),as.integer(di),as.integer(p),as.double(w))
+  oo$b1
+} 

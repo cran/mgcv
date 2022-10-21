@@ -58,7 +58,7 @@ Golub GH and CF Van Loan (2013) Matrix Computations (4th edition) Johns Hopkins
   ## Downdate - just going back from R to R0
   Rd <-  cholup(R,u,FALSE)
   R0;Rd
-  range(R-Ru)
+  range(R0-Rd)
   
 }
 

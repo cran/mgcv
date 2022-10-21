@@ -5,7 +5,7 @@
 \usage{
 vis.gam(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,
         color="heat",contour.col=NULL,se=-1,type="link",
-        plot.type="persp",zlim=NULL,nCol=50,...)
+        plot.type="persp",zlim=NULL,nCol=50,lp=1,...)
 }
 
 \arguments{
@@ -44,7 +44,7 @@ the predicted values plus \code{se} standard errors.}
 \item{zlim}{a two item array giving the lower and upper limits for the z-axis
 scale. \code{NULL} to choose automatically.}
 \item{nCol}{The number of colors to use in color schemes.}
-
+\item{lp}{selects the linear predictor for models with more than one.}
 \item{...}{other options to pass on to \code{\link{persp}},
 \code{\link{image}} or \code{\link{contour}}. In particular \code{ticktype="detailed"} will add proper axes 
 labelling to the plots. }

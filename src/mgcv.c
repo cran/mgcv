@@ -63,7 +63,7 @@ void RPackSarray(int m,matrix *S,double *RS)
 }
 
 
-matrix getD(h,nak) matrix h;int nak;
+matrix getD(matrix h,int nak)
 
 /* the matrix mapping the value of the spline to the gradients at the knots.
    nak is true for 'not-a-knot' end conditions at the early end, otherwise
@@ -165,7 +165,7 @@ void MonoCon(matrix *A,matrix *b,matrix *x,int control,double lower,double upper
   if (hi)
   { for (j=0;j<n+1;j++) A->M[4*n][j]=0.0;
     if (up) A->M[4*n+lo][n]=-1.0; else A->M[4*n+lo][0]=-1.0;
-    b->V[4*n+lo]=upper;
+    b->V[4*n+lo] = -upper;
   }
   freemat(D);
   freemat(h);

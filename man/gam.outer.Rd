@@ -21,7 +21,7 @@ Not normally called directly, but rather a service routine for \code{\link{gam}}
 }
 \usage{
 gam.outer(lsp,fscale,family,control,method,optimizer,
-          criterion,scale,gamma,G,start=NULL,...)
+          criterion,scale,gamma,G,start=NULL,nei=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -48,6 +48,7 @@ finite differencing is being used.}
 \item{G}{List produced by \code{mgcv:::gam.setup}, containing most of what's
 needed to actually fit a GAM.}
 \item{start}{starting parameter values.}
+\item{nei}{List specifying neighbourhood structure if NCV used. See \code{\link{gam}}.}
 \item{...}{other arguments, typically for passing on to \code{gam.fit3} (ultimately).}
 }
 \details{ 

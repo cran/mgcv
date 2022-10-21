@@ -12,7 +12,7 @@ typedef struct
 extern matrix null_mat;
 
 extern long matrallocd;
-
+#endif
 /* The user routines */
 
 void mcopy(matrix *A,matrix *B);
@@ -36,4 +36,4 @@ void RArrayFromMatrix(double *a,int r,matrix *M);
 matrix Rmatrix(double *A,int r,int c);
 matrix initvec(int rows);
 
-#endif
+

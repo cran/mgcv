@@ -2116,7 +2116,7 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
 ## to use for smooths. Only one smoothing parameter for the whole term.
 ## If called from gamm, is set up for efficient computation by nesting
 ## smooth within factor.
-## Unsuitable for tensor products. 
+## Unsuitable for tensor product margins. 
 
   if (!is.null(attr(object,"gamm"))) gamm <- TRUE else ## signals call from gamm
   gamm <- FALSE 
@@ -2288,6 +2288,190 @@ Predict.matrix.fs.interaction <- function(object,data)
   }
   X
 } ## Predict.matrix.fs.interaction
+
+#######################################################################
+# General smooth-factor interactions, constrained to be differences to
+# a main effect smooth. 
+#######################################################################
+
+smooth.info.sz.smooth.spec <- function(object) {
+  object$tensor.possible <- TRUE ## signal that a tensor product construction is  possible here
+  object
+}
+
+smooth.construct.sz.smooth.spec <- function(object,data,knots) {
+## Smooths in which one covariate is a factor. Generates a smooth
+## for each level of the factor. Let b_{jk} be the kth coefficient
+## of the jth smooth. Construction ensures that \sum_k b_{jk} = 0,
+## for all j. Hence the smooths can be estimated in addition to an
+## overall main effect.
+## xt element specifies basis to use for smooths.
+
+  if (is.null(object$xt)) object$base.bs <- "tp" ## default smooth class
+  else if (is.list(object$xt)) {
+    if (is.null(object$xt$bs)) object$base.bs <- "tp" else
+    object$base.bs <- object$xt$bs 
+  } else { 
+    object$base.bs <- object$xt
+    object$xt <- NULL ## avoid messing up call to base constructor
+  }
+  object$base.bs <- paste(object$base.bs,".smooth.spec",sep="")
+
+  fterm <- NULL ## identify the factor variables
+  for (i in 1:length(object$term)) if (is.factor(data[[object$term[i]]])) { 
+    if (is.null(fterm)) fterm <- object$term[i] else fterm[length(fterm)+1] <- object$term[i]
+  }
+  
+  ## deal with no factor case, just base smooth constructor
+  if (is.null(fterm)) {
+    class(object) <- object$base.bs
+    return(smooth.construct(object,data,knots))
+  }
+
+  ## deal with factor only case, just transfer to "re" class
+  if (length(object$term)==length(fterm)) {
+    class(object) <- "re.smooth.spec"
+    return(smooth.construct(object,data,knots))
+  } 
+
+  ## Now remove factor terms from data...
+  fac <- data[fterm] 
+  data[fterm] <- NULL
+  k <- 0
+  oterm <- object$term
+
+  ## and strip it from the terms...
+  for (i in 1:object$dim) if (!object$term[i]%in%fterm) {
+    k <- k + 1
+    object$term[k] <- object$term[i]
+  }
+  object$term <- object$term[1:k]
+  object$dim <- length(object$term)
+
+  
+  ## call base constructor...
+  spec.class <- class(object)
+  class(object) <- object$base.bs
+  object <- smooth.construct(object,data,knots)
+  if (length(object$S)>1) stop("\"sz\" smooth cannot use a multiply penalized basis (wrong basis in xt)")
+
+  ## save some base smooth information
+
+  object$base <- list(bs=class(object),bs.dim=object$bs.dim,
+                      rank=object$rank,null.space.dim=object$null.space.dim,
+                      term=object$term,dim=object$dim)
+  object$term <- oterm ## restore original term list
+  object$dim <- length(object$term)
+  object$fterm <- fterm ## the factor names...
+
+  ## Store the base model matrix/S in case user wants to convert to r.e.
+  object$Xb <- object$X
+  object$base$S <- object$S
+  
+  nf <- rep(0,length(fac))
+  object$flev <- list()
+
+  Xf <- list()
+  n <- nrow(object$X)
+  for (j in 1:length(fac)) {
+    object$flev[[j]] <- levels(fac[[j]])
+
+    ## construct the sum to zero contrast matrix, P, ... 
+    nf[j] <- length(object$flev[[j]])
+   
+    Xf[[j]] <- matrix(as.numeric(rep(object$flev[[j]],each=n)==fac[[j]]),n,nf[j]) ## factor matrix
+  }
+  Xf[[j+1]] <- object$X
+  ## duplicate model matrix columns, and penalties...
+    
+  p0 <- ncol(object$X)
+  p <- p0*prod(nf)
+
+  X <- tensor.prod.model.matrix(Xf)
+
+  ind <- 1:p0
+  S <- list()
+  object$null.space.dim <- object$null.space.dim*prod(nf-1)
+  if (is.null(object$id)) { ## one penalty and one sp per smooth
+    for (i in 1:prod(nf)) { 
+      S0 <- matrix(0,p,p)
+      S0[ind,ind] <- object$S[[1]]
+      S[[i]] <- S0
+      ind <- ind + p0
+    }
+    object$rank <- rep(object$rank,prod(nf))
+  } else { ## one penalty, one sp
+    S0 <- matrix(0,p,p)
+    for (i in 1:prod(nf)) {
+      S0[ind,ind] <- S0[ind,ind] + object$S[[1]]
+      ind <- ind + p0
+    }
+    S[[1]] <- S0
+    object$rank <- prod(nf-1)*object$bs.dim -object$null.space.dim
+  }
+  
+  object$S <- S
+  object$X <- X 
+  
+  object$bs.dim <-prod(nf-1)*object$bs.dim #ncol(object$X) 
+  object$te.ok <- 0
+  
+  
+  object$side.constrain <- FALSE ## don't apply side constraints - these are really random effects
+  
+  object$C <- c(0,nf)
+  object$plot.me <- TRUE
+  class(object) <- if ("tensor.smooth.spec"%in%spec.class) c("sz.interaction","tensor.smooth")  else 
+                   "sz.interaction"
+  if ("tensor.smooth.spec"%in%spec.class) { 
+    ## give object margins like a tensor product smooth...
+    ## need just enough for fitting and discrete prediction to work
+    object$margin <- list()
+    nf <- length(fterm)
+    for (i in 1:nf) { 
+      form1 <- as.formula(paste("~",object$fterm[i],"-1"))
+      object$margin[[i]] <- list(X=Xf[[i]],term=fterm[i],form=form1,by="NA")
+      class(object$margin[[i]]) <- "random.effect"
+    }
+    object$margin[[nf+1]] <- object
+    object$margin[[nf+1]]$X <- Xf[[nf+1]]
+    object$margin[[nf+1]]$margin.only <- TRUE
+    object$margin[[nf+1]]$margin <- NULL
+    object$margin[[nf+1]]$term <- object$term[!object$term%in%object$fterm]
+  
+  }
+  object
+} ## end of smooth.construct.sz.smooth.spec
+
+
+Predict.matrix.sz.interaction <- function(object,data) {
+# prediction method function for the zero mean smooth-factor interaction class
+  ## first remove factor from the data...  
+  fac <- data[object$fterm]
+  data[object$fterm] <- NULL
+
+  ## now get base prediction matrix...
+  class(object) <- object$base$bs
+  object$rank <- object$base$rank
+  object$null.space.dim <- object$base$null.space.dim
+  object$bs.dim <- object$base$bs.dim
+  object$term <- object$base$term
+  object$dim <- object$base$dim
+  Xb <- Predict.matrix(object,data)
+  if (!is.null(object$margin.only)) return(Xb)
+  n <- nrow(Xb)
+  Xf <- list()
+  for (j in 1:length(object$flev)) {
+    nf <- length(object$flev[[j]])
+    Xf[[j]] <- matrix(as.numeric(rep(object$flev[[j]],each=n)==fac[[j]]),n,nf) ## factor matrix
+  }
+  Xf[[j+1]] <- Xb
+  X <- tensor.prod.model.matrix(Xf)
+  
+  X 
+} ## Predict.matrix.sz.interaction
+
+
 
 
 ##########################################
@@ -3649,6 +3833,23 @@ ExtractData <- function(object,data,knots) {
    return(list(data=dat,knots=knt))
 } ## ExtractData
 
+XZKr <- function(X,m) {
+## postmultiplies X by contrast matrix constructed from Kronecker product
+## of sequence of sum to zero contrasts and a final identity matrix.
+## Returns transpose of result (since sometimes this is actually what's needed)
+## Sum to zero contrasts are rbind(diag(m[i]-1),-1). See Fackler, PL
+## (2019) ACM transactions on Mathematical Software 45(2) Article 22. 
+  p <- ncol(X)/prod(m) ## dimension of final identity matrix
+  n <- nrow(X)
+  for (i in 1:length(m)) {
+    dim(X) <- c(length(X)/m[i],m[i])
+    X <- t(X[,1:(m[i]-1)]-X[,m[i]])
+  }
+  dim(X) <- c(length(X)/p,p)
+  X <- t(X)
+  dim(X) <- c(length(X)/n,n)
+  X ## returns transpose of result
+} ## XZKr
 
 #########################################################################
 ## What follows are the wrapper functions that gam.setup actually
@@ -3856,11 +4057,16 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
       ## if by variable is an ordered factor then first level is taken as a 
       ## reference level, and smooths are only generated for the other levels
       ## this can help to ensure identifiability in complex models. 
-      if (is.ordered(by)&&length(lev)>1) lev <- lev[-1] 
+      if (is.ordered(by)&&length(lev)>1) lev <- lev[-1]
+      #sm$rank[length(sm$S)+1] <- ncol(sm$X) ## TEST CENTERING PENALTY
+      #sm$C <- matrix(0,0,1) ## TEST CENTERING PENALTY
       for (j in 1:length(lev)) {
         sml[[j]] <- sm  ## replicate smooth for each factor level
         by.dum <- as.numeric(lev[j]==by)
         sml[[j]]$X <- by.dum*sm$X   ## multiply model matrix by dummy for level
+
+        #sml[[j]]$S[[length(sm$S)+1]] <- crossprod(sm$X[by.dum==1,]) ## TEST CENTERING PENALTY
+	
         sml[[j]]$by.level <- lev[j] ## store level
         sml[[j]]$label <- paste(sm$label,":",object$by,lev[j],sep="") 
         if (!is.null(offs)) {
@@ -3981,20 +4187,7 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
             sml[[i]]$null.space.dim <- max(0,sml[[i]]$null.space.dim - j)
             ## ... so qr.qy(attr(sm,"qrc"),c(rep(0,nrow(sm$C)),b)) gives original para.'s
           } ## end smooth list loop
-        } else { ## full null space created
-        #  if (drop>0) { ## sweep and drop constraints
-        #    qrc <- c(drop,as.numeric(sm$C)[-drop])
-        #    class(qrc) <- "sweepDrop"
-        #    for (i in 1:length(sml)) { ## loop through smooth list
-        #      ## sml[[i]]$X <- sweep(sml[[i]]$X[,-drop],2,qrc[-1])
-        #      sml[[i]]$X <- sml[[i]]$X[,-drop] - 
-        #                    matrix(qrc[-1],nrow(sml[[i]]$X),ncol(sml[[i]]$X)-1,byrow=TRUE)
-        #      if (length(sm$S)>0)
-        #      for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
-        #        sml[[i]]$S[[l]]<-sml[[i]]$S[[l]][-drop,-drop]
-        #      }
-        #    }
-        #  } else 
+        } else { 
           { ## full QR based approach
             qrc<-qr(t(sm$C)) 
             for (i in 1:length(sml)) { ## loop through smooth list
@@ -4024,6 +4217,23 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
          attr(sml[[i]],"nCons") <- 0;
         }
       } ## end else no constraints
+    } else if (length(sm$C)>1) { ## Kronecker product of sum-to-zero contrasts (first element unused to allow index for alternatives)
+      m <- sm$C[-1] ## contrast order
+      for (i in 1:length(sml)) { ## loop through smooth list
+        if (length(sm$S)>0)
+        for (l in 1:length(sm$S)) { # some smooths have > 1 penalty 
+          sml[[i]]$S[[l]] <- XZKr(XZKr(sml[[i]]$S[[l]],m),m)
+        }
+	p <- ncol(sml[[i]]$X) 
+        sml[[i]]$X <- t(XZKr(sml[[i]]$X,m))
+	total.null.dim <- prod(m-1)*p/prod(m)
+	nc <- p - prod(m-1)*p/prod(m)
+	attr(sml[[i]],"nCons") <- nc
+        attr(sml[[i]],"qrc") <- c(sm$C,nc) ## unused, dim1, dim2, ..., n.cons
+	sml[[i]]$C <- NULL
+        ## NOTE: assumption here is that constructor returns rank, null.space.dim
+	## and df, post constraint.
+      }	
     } else if (sm$C>0) { ## set to zero constraints
        for (i in 1:length(sml)) { ## loop through smooth list
           if (length(sm$S)>0)
@@ -4232,7 +4442,7 @@ PredictMat <- function(object,data,n=nrow(data))
     if (j>0) { ## there were constraints to absorb - need to untransform
       k<-ncol(X)
       if (inherits(qrc,"qr")) {
-        indi <- attr(object,"indi") ## index of constrained parameters
+        indi <- attr(object,"indi") ## index of constrained parameters (only with QR constraints!)
         if (is.null(indi)) {
           if (sum(is.na(X))) {
             ind <- !is.na(rowSums(X))
@@ -4260,6 +4470,9 @@ PredictMat <- function(object,data,n=nrow(data))
         ## Remainder are constants to be swept out of remaining columns 
         ## Actually better handled first (see above)
         #X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
+      } else if (length(qrc)>0) { ## Kronecker product of sum-to-zero contrasts
+        m <- qrc[-c(1,length(qrc))] ## contrast dimensions - less initial code and final number of constraints
+	X <- t(XZKr(X,m))
       } else if (qrc>0) { ## simple set to zero constraint
         X <- X[,-qrc,drop=FALSE]
       } else if (qrc<0) { ## params sum to zero

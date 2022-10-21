@@ -72,6 +72,11 @@ pp <- predict(b,newdata=gr,type="response")
 pc <- apply(pp,1,function(x) which(max(x)==x)[1])-1
 plot(gr,col=pc+3,pch=19)
 
+## example sharing a smoother between linear predictors
+## ?formula.gam gives more details.
+b <- gam(list(y~s(x1),~s(x1),1+2~s(x2)-1),family=multinom(K=2))
+plot(b,pages=1)
+
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

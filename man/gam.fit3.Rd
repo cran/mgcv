@@ -1,7 +1,7 @@
 \name{gam.fit3}
 \alias{gam.fit3}
 %- Also NEED an `\alias' for EACH other topic documented here.
-\title{P-IRLS GAM estimation with GCV \& UBRE/AIC or RE/ML derivative calculation}
+\title{P-IRLS GAM estimation with GCV, UBRE/AIC or RE/ML derivative calculation}
 \description{Estimation of GAM smoothing parameters is most stable if
 optimization of the UBRE/AIC, GCV, GACV, REML or ML score is outer to the penalized iteratively
 re-weighted least squares scheme used to estimate the model given smoothing 
@@ -27,7 +27,7 @@ gam.fit3(x, y, sp, Eb ,UrS=list(),
          Mp = -1, family = gaussian(), control = gam.control(), 
          intercept = TRUE,deriv=2,gamma=1,scale=1,
          printWarn=TRUE,scoreType="REML",null.coef=rep(0,ncol(x)),
-         pearson.extra=0,dev.extra=0,n.true=-1,Sl=NULL,...)
+         pearson.extra=0,dev.extra=0,n.true=-1,Sl=NULL,nei=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
@@ -91,6 +91,8 @@ This allows immediate divergence problems to be controlled.}
 number of rows of \code{X}.}
 
 \item{Sl}{A smooth list suitable for passing to gam.fit5. }
+
+\item{nei}{List specifying neighbourhood structure if NCV used. See \code{\link{gam}}.}
 
 \item{...}{Other arguments: ignored.}
 }

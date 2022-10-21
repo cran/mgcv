@@ -287,7 +287,7 @@ gam.check <- function(b, old.style=FALSE,
     plot(fv, napredict(b$na.action, b$y),
          xlab="Fitted Values",ylab="Response",main="Response vs. Fitted Values",...)
 
-    gamm <- !(b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","fREML")) ## gamm `gam' object
+    gamm <- !(b$method%in%c("GCV","GACV","UBRE","REML","ML","P-ML","P-REML","fREML","NCV")) ## gamm `gam' object
 
     #if (is.null(.Platform$GUI) || .Platform$GUI != "RStudio") par(old.par)
     #   return(invisible())
@@ -675,6 +675,95 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
     }
 
 } ## end plot.mrf.smooth
+
+
+plot.sz.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
+                     partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
+                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
+                     shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
+## plot method for factor smooth interactions designed for models such as s(x) + s(fac,x) where
+## the factor level dependent smooths are strictly deviations from the main effect smooth.
+
+  nf2i <- function(nf,i) {
+    k <- length(nf)
+    kk <- rep(0,k)
+    i <- i-1
+    for (j in k:1) {
+      kk[j] <- i %% nf[j] + 1
+      i <- i %/% nf[j]
+    }
+    kk
+  } ## nf2i
+
+  if (is.null(P)) { ## get plotting info
+    if (x$base$dim!=1) return(NULL) ## no method for base smooth dim > 1
+    raw <- data[x$base$term][[1]]
+    xx <- seq(min(raw),max(raw),length=n) # generate x sequence for prediction
+    nf <- unlist(lapply(x$flev,length)) ## levels per grouping factor
+    dat <- data.frame(rep(xx,prod(nf)))
+    k <- length(x$flev) ## number of factors
+    for (i in 1:k) {
+      re <- if (i<k) prod(nf[(i+1):k]) else 1
+      rs <- if (i>1) prod(nf[1:(i-1)]) else 1
+      dat[,i+1] <- factor(rep(rep(x$flev[[i]],each=re*n),rs),levels=x$flev[[i]])
+    }
+    names(dat) <- c(x$base$term,x$fterm)  
+    if (x$by!="NA") {        # deal with any by variables
+      dat[[x$by]] <- rep(1,n)
+    }
+    X <- PredictMat(x,dat)
+    if (is.null(xlab)) xlabel <- x$base$term else xlabel <- xlab
+    if (is.null(ylab)) ylabel <- label else ylabel <- ylab
+    return(list(X=X,scale=TRUE,se=TRUE,se.mult=se1.mult,raw=raw,xlab=xlabel,ylab=ylabel,
+             main="",x=xx,n=n,nf=nf))
+  } else { ## produce the plot
+    nft <- prod(P$nf) ## total number of curves
+    if (scheme!=1) {
+      kol <- hcl.colors(nft,palette = "viridis", alpha = .33) ## CI
+      lkol <- hcl.colors(nft,palette = "viridis", alpha = .66) ## mode
+      tkol <- hcl.colors(nft,palette = "viridis", alpha = 1) ## label
+    }  
+    xlim <- range(P$x);dx <- xlim[2]-xlim[1]
+    xt <- xlim[1] + (1:nft-.5)*dx/nft ## text locations
+    ind <- 1:P$n; mind <- P$n:1
+    
+    if(is.null(ylim)) ylim <- trans(range(c(P$fit+P$se,P$fit-P$se))+shift)
+
+    plot(P$x[ind],trans(P$fit[ind]+shift),ylim=ylim,xlab=P$xlab,ylab=P$ylab,type="n",...)
+
+    nfac <- length(P$nf) ## number of factors
+    kk <- rep(0,nfac) ## factor level index vector
+    if (scheme==1) {
+      for (i in 1:nft) {
+        ul <- trans(P$fit[ind] + P$se[ind]+shift)
+        ll <- trans(P$fit[ind] - P$se[ind]+shift)
+	lines(P$x,ul,col="grey",lty=i);lines(P$x,ll,col="grey",lty=i)
+        ii <- P$x < xt[i] - dx/30
+	yt <- approx(P$x,P$fit[ind],xt[i])$y
+        lines(P$x[ii],(P$fit[ind])[ii],lty=i,lwd=2)
+        text(xt[i],yt,paste(nf2i(P$nf,i),collapse="."))
+        ii <- P$x > xt[i] + dx/30
+        lines(P$x[ii],(P$fit[ind])[ii],lty=i,lwd=2)
+        ind <- ind + P$n; mind <- mind + P$n
+      }	
+    } else {
+      for (i in 1:nft) {
+        ul <- trans(P$fit[ind] + P$se[ind]+shift)
+        ll <- trans(P$fit[mind] - P$se[mind]+shift)
+        polygon(c(P$x,P$x[P$n:1]),c(ul,ll),col=kol[i],border=kol[i])
+        yt <- approx(P$x,P$fit[ind],xt[i])$y
+        ii <- P$x < xt[i] - dx/30
+        lines(P$x[ii],(P$fit[ind])[ii],col=lkol[i])
+        text(xt[i],yt,paste(nf2i(P$nf,i),collapse="."),col=tkol[i])
+        ii <- P$x > xt[i] + dx/30
+        lines(P$x[ii],(P$fit[ind])[ii],col=lkol[i])
+        ind <- ind + P$n; mind <- mind + P$n
+      }
+    }  
+  }
+} ## end plot.sz.interaction
+
 
 plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
@@ -1269,7 +1358,12 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
           meanL1 <- x$smooth[[i]]$meanL1
           if (!is.null(meanL1)) X1 <- X1 / meanL1
           X1[,first:last] <- P$X
-          se.fit <- sqrt(pmax(0,rowSums(as(X1%*%x$Vp,"matrix")*X1)))
+          lpi <- attr(x$formula,"lpi")
+          if (is.null(lpi)) se.fit <- sqrt(pmax(0,rowSums(as(X1%*%x$Vp,"matrix")*X1))) else {
+            ii <- rep(0,0) ## only include constant uncertainty from relevant linear predictors  
+            for (q in 1:length(lpi)) if (any(first:last%in%lpi[[q]])) ii <- c(ii,lpi[[q]])
+            se.fit <- sqrt(pmax(0,rowSums(as(X1[,ii]%*%x$Vp[ii,ii],"matrix")*X1[,ii])))
+          }
         } else se.fit <- ## se in centred (or anyway unconstained) space only
         sqrt(pmax(0,rowSums(as(P$X%*%x$Vp[first:last,first:last,drop=FALSE],"matrix")*P$X)))
         if (!is.null(P$exclude)) se.fit[P$exclude] <- NA
@@ -1439,7 +1533,7 @@ exclude.too.far <- function(g1,g2,d1,d2,dist)
 
 
 vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="heat",
-           contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,nCol=50,...)
+           contour.col=NULL,se=-1,type="link",plot.type="persp",zlim=NULL,nCol=50,lp=1,...)
 # takes a gam object and plots 2D views of it, supply ticktype="detailed" to get proper axis anotation
 # (c) Simon N. Wood 23/2/03
 { fac.seq<-function(fac,n.grid)
@@ -1527,53 +1621,62 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
   newd[[view[1]]]<-v1
   newd[[view[2]]]<-v2
   # call predict.gam to get predictions.....
-  if (type=="link") zlab<-paste("linear predictor") ## ignore codetools
-  else if (type=="response") zlab<-type
+  if (type=="link") zlab <- paste("linear predictor") ## ignore codetools
+  else if (type=="response") zlab <- type
   else stop("type must be \"link\" or \"response\"")
   fv <- predict.gam(x,newdata=newd,se.fit=TRUE,type=type)
   z <- fv$fit # store NA free copy now
-  if (too.far>0) # exclude predictions too far from data
-  { ex.tf <- exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
-    fv$se.fit[ex.tf] <- fv$fit[ex.tf]<-NA
+  if (is.matrix(z)) {
+    lp <- min(ncol(z),max(1,round(lp)))
+    z <- z[,lp] ## retain selected linear predictor
+    fv$fit <- fv$fit[,lp]
+    fv$se.fit <- fv$se.fit[,lp]
+  }
+  if (too.far>0) { # exclude predictions too far from data
+    ex.tf <- exclude.too.far(v1,v2,x$model[,view[1]],x$model[,view[2]],dist=too.far)
+    fv$se.fit[ex.tf] <- fv$fit[ex.tf] <- NA
   }
   # produce a continuous scale in place of any factors
-  if (is.factor(m1)) 
-  { m1<-as.numeric(m1);m1<-seq(min(m1)-0.5,max(m1)+0.5,length=n.grid) }
-  if (is.factor(m2)) 
-  { m2<-as.numeric(m2);m2<-seq(min(m1)-0.5,max(m2)+0.5,length=n.grid) }
-  if (se<=0)
-  { old.warn<-options(warn=-1)
-    av<-matrix(c(0.5,0.5,rep(0,n.grid-1)),n.grid,n.grid-1)
+  if (is.factor(m1)) { 
+    m1<-as.numeric(m1);m1<-seq(min(m1)-0.5,max(m1)+0.5,length=n.grid) 
+  }
+  if (is.factor(m2)) { 
+    m2<-as.numeric(m2);m2<-seq(min(m1)-0.5,max(m2)+0.5,length=n.grid) 
+  }
+  if (se<=0) { 
+    old.warn<-options(warn=-1)
+    av <- matrix(c(0.5,0.5,rep(0,n.grid-1)),n.grid,n.grid-1)
     options(old.warn)
     # z is without any exclusion of gridpoints, so that averaging works nicely
     max.z <- max(z,na.rm=TRUE)
     z[is.na(z)] <- max.z*10000 # make sure NA's don't mess it up
-    z<-matrix(z,n.grid,n.grid) # convert to matrix
-    surf.col<-t(av)%*%z%*%av   # average over tiles  
+    z <- matrix(z,n.grid,n.grid) # convert to matrix
+    surf.col <- t(av)%*%z%*%av   # average over tiles  
     surf.col[surf.col>max.z*2] <- NA # restore NA's
     # use only non-NA data to set colour limits
-    if (!is.null(zlim))
-    { if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
-      min.z<-zlim[1]
-      max.z<-zlim[2]
-    } else
-    { min.z<-min(fv$fit,na.rm=TRUE)
-      max.z<-max(fv$fit,na.rm=TRUE)
+    if (!is.null(zlim)) { 
+      if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
+      min.z <- zlim[1]
+      max.z <- zlim[2]
+    } else { 
+      min.z <- min(fv$fit,na.rm=TRUE)
+      max.z <- max(fv$fit,na.rm=TRUE)
     }
-    surf.col<-surf.col-min.z
-    surf.col<-surf.col/(max.z-min.z)  
-    surf.col<-round(surf.col*nCol)
-    con.col <-1
+    if (min.z==max.z) {min.z <- min.z-1;max.z <- max.z + 1}
+    surf.col <- surf.col-min.z
+    surf.col <- surf.col/(max.z-min.z)  
+    surf.col <- round(surf.col*nCol)
+    con.col <- 1
     if (color=="heat") { pal<-heat.colors(nCol);con.col<-4;}
     else if (color=="topo") { pal<-topo.colors(nCol);con.col<-2;}
     else if (color=="cm") { pal<-cm.colors(nCol);con.col<-1;}
     else if (color=="terrain") { pal<-terrain.colors(nCol);con.col<-2;}
     else if (color=="gray"||color=="bw") {pal <- gray(seq(0.1,0.9,length=nCol));con.col<-1}
     else stop("color scheme not recognised")
-    if (is.null(contour.col)) contour.col<-con.col   # default colour scheme
-    surf.col[surf.col<1]<-1;surf.col[surf.col>nCol]<-nCol # otherwise NA tiles can get e.g. -ve index
-    if (is.na(col)) col<-pal[as.array(surf.col)]
-    z<-matrix(fv$fit,n.grid,n.grid)
+    if (is.null(contour.col)) contour.col <- con.col   # default colour scheme
+    surf.col[surf.col<1] <- 1; surf.col[surf.col>nCol] <- nCol # otherwise NA tiles can get e.g. -ve index
+    if (is.na(col)) col <- pal[as.array(surf.col)]
+    z <- matrix(fv$fit,n.grid,n.grid)
     if (plot.type=="contour")
     { stub <- paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
                     ifelse("ylab" %in% dnm, "" , ",ylab=view[2]"),
@@ -1614,14 +1717,14 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     }
     if (!is.null(zlim)) {
       if (length(zlim)!=2||zlim[1]>=zlim[2]) stop("Something wrong with zlim")
-      min.z<-zlim[1]
-      max.z<-zlim[2]
+      min.z <- zlim[1]
+      max.z <- zlim[2]
     } else {
-      max.z<-max(fv$fit+fv$se.fit*se,na.rm=TRUE)
-      min.z<-min(fv$fit-fv$se.fit*se,na.rm=TRUE)
+      max.z <- max(fv$fit+fv$se.fit*se,na.rm=TRUE)
+      min.z <- min(fv$fit-fv$se.fit*se,na.rm=TRUE)
       zlim<-c(min.z,max.z)
-    }
-    z<-fv$fit-fv$se.fit*se;z<-matrix(z,n.grid,n.grid)
+    } 
+    z <- fv$fit - fv$se.fit*se; z <- matrix(z,n.grid,n.grid)
     if (plot.type=="contour") warning("sorry no option for contouring with errors: try plot.gam")
 
     stub <-  paste(ifelse("xlab" %in% dnm, "" , ",xlab=view[1]"),
@@ -1635,7 +1738,7 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     eval(parse(text=txt))
 
     par(new=TRUE) # don't clean device
-    z<-fv$fit;z<-matrix(z,n.grid,n.grid)
+    z <- fv$fit; z <- matrix(z,n.grid,n.grid)
 
     txt <- paste("persp(m1,m2,z,col=col,zlim=zlim",
                  ifelse("border" %in% dnm, "" ,",border=\"black\""),
@@ -1643,13 +1746,12 @@ vis.gam <- function(x,view=NULL,cond=list(),n.grid=30,too.far=0,col=NA,color="he
     eval(parse(text=txt))
 
     par(new=TRUE) # don't clean device
-    z<-fv$fit+se*fv$se.fit;z<-matrix(z,n.grid,n.grid)
+    z <- fv$fit+se*fv$se.fit; z <- matrix(z,n.grid,n.grid)
     
     txt <- paste("persp(m1,m2,z,col=col,zlim=zlim",
                  ifelse("border" %in% dnm, "" ,",border=hi.col"),
                  stub,sep="")
     eval(parse(text=txt))
-
   }
 } ## vis.gam
 

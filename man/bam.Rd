@@ -96,7 +96,8 @@ Different terms can use different numbers of knots, unless they share a covariat
  Smoothing parameters must be supplied in the order that the smooth terms appear in the model 
 formula. Negative elements indicate that the parameter should be estimated, and hence a mixture 
 of fixed and estimated parameters is possible. If smooths share smoothing parameters then \code{length(sp)} 
-must correspond to the number of underlying smoothing parameters.}
+must correspond to the number of underlying smoothing parameters. Note that \code{discrete=TRUE}may result in
+re-ordering of variables in tensor product smooths for improved efficiency, and \code{sp} must be supplied in re-ordered order.}
 
 \item{min.sp}{Lower bounds can be supplied for the smoothing parameters. Note
 that if this option is used then the smoothing parameters \code{full.sp}, in the 

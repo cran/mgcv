@@ -1377,7 +1377,7 @@ void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
    there are n_theta theta parameters.
 
    beta is a q vector
-   b1 is r by (M+n_theta)
+   b1 is r by (M+n_theta) dependence on theta is in earlier columns
    b2 is r by n_2dCols 
 */
 { int n_2dCols,i,j,k,one=1,bt,ct,ntot,kk;
@@ -2123,9 +2123,9 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
           Det_th,Det2_th,Det3,Det_th2,
           b1,b2,eta1,eta2,
           n,&rank,M,n_theta,rSncol,&deriv2,&neg_w,&nr);
-    
-    if (*M>0) {
-      i=0;mgcv_mmult(work,Rh,b1,&i,&i,&rank,M,&rank); /* Rh db/drho */
+    /* note that theta dependencies are stored before sp dependencies in b1 etc */
+    if (*M>0) { 
+      i=0;mgcv_mmult(work,Rh,b1 + *n_theta * rank,&i,&i,&rank,M,&rank); /* Rh db/drho */
       /* Now obtain dVkk = db'/drho Rh' Rh db/drho ... */
       getXtX(dVkk,work,&rank,M);  
     }
@@ -2361,6 +2361,7 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
    * sp is an M array of smoothing parameters (NOT log smoothing parameters)
    * z, w and wf are n-vectors of the pseudodata iterative newton weights and iterative 
      fisher weights (only if `fisher' is zero) 
+   * w1 is deriv of w w.r.t. log sp if REML=1 and deriv of wf w.r.t. log sp otherwise 
    * p_weights is an n-vector of prior weights (as opposed to the iterative weights in w)
    * mu and y are n-vectors of the fitted values and data.
    * g1,g2,g3,g4 are the n-vectors of the link derivatives 

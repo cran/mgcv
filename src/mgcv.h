@@ -126,9 +126,9 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
             double *dH,int *deriv,int *nsp,int *nt);
 
 /* discretized covariate methods */
-void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
-          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
-          int *ar_row,double *ar_weights);
+//void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
+//          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
+//          int *ar_row,double *ar_weights);
 void XWXd0(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
           int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
           int *ar_row,double *ar_weights);
@@ -211,6 +211,17 @@ SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT);
 SEXP mgcv_Rpbacksolve(SEXP R, SEXP B,SEXP NT);
 SEXP mgcv_Rpcross(SEXP A, SEXP NT,SEXP NB);
 SEXP mgcv_madi(SEXP a, SEXP b,SEXP ind,SEXP diag);
+SEXP mrow_sum(SEXP x,SEXP M, SEXP K);
+SEXP ncv(SEXP x, SEXP hi, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND, SEXP MI,SEXP M,
+	 SEXP K, SEXP BETA, SEXP SP, SEXP ETA, SEXP DETA,SEXP DLET,SEXP DERIV);
+SEXP Rncv(SEXP x, SEXP r, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA, SEXP SP, SEXP ETA,
+	  SEXP DETA,SEXP DLET,SEXP DERIV,SEXP EPS,SEXP NT);
+SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA,
+	   SEXP ETACV,SEXP DETACV,SEXP DETA,SEXP DB,SEXP DERIV);
+SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA,
+	    SEXP ETACV,SEXP DETACV,SEXP DETA,SEXP DB,SEXP DERIV,SEXP EPS,SEXP NT);
+void chol_up(double *R,double *u, int *n,int *up,double *eps);
+void minres(double *R, double *u,double *b, double *x, int *p,int *m,double *work);
 
 /* sparse matrix routines */
 SEXP isa1p(SEXP L,SEXP S,SEXP NT);
@@ -274,4 +285,7 @@ void sspl_construct(double *lambda,double *x,double *w,double *U,double *V,
              double *diagA,double *lb,int *n,double *tol);
 void sspl_mapply(double *y,double *x,double *w,double *U,double *V,int *n,int *nf,double *tol,int *m);
 
-
+/* just for testing */
+void Zb(double *b1,double *b0,double *v,int *qc, int *p,double *w);
+void Ztb(double *b1,double *b0,double *v,int *qc,int *di, int *p,double *w);
+  

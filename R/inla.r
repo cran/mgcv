@@ -430,6 +430,6 @@ ginla <- function(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,int=0,approx=0) {
     }
     inla$reml <- reml
   } ## if nip
-  if (prog) cat("\n")
+  if (prog) close(prg)
   inla
 } ## ginla or gam inla newton enhanced (ginlane)

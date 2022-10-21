@@ -246,7 +246,7 @@ void mcopy(matrix *A,matrix *B)
   }
 } /* mcopy */
 
-void matmult(C,A,B,tA,tB) matrix C,A,B;int tA,tB;
+void matmult(matrix C,matrix A,matrix B,int tA,int tB)
 
 /* Puts A*B in C. A will be transposed in this calculation if tA is not zero.
    B will be transposed if tB is not zero */
@@ -374,7 +374,7 @@ void invert(matrix *A)
 
 
 
-double dot(a,b) matrix a,b;
+double dot(matrix a,matrix b)
 
 { int i,k=0;double c=0.0,*p,*p1;
   if (a.vec) { p1=b.V;for (p=a.V;p<a.V+a.c*a.r;p++) c+=(*p)*(*p1++);}
@@ -387,7 +387,7 @@ double dot(a,b) matrix a,b;
 
 
 
-double enorm(d) matrix d;
+double enorm(matrix d)
 
 /* Euclidian norm of vector d, or rms for matrix */
 
@@ -409,7 +409,7 @@ double enorm(d) matrix d;
 
 
 
-void householder(u,a,b,t1) matrix *u,a,b;int t1;
+void householder(matrix *u,matrix a,matrix b,int t1)
 
 /* transforms a to b, iff they are of equal Euclidian length. u is the
    (t1+1) vector such that the full post multiplying householder matrix is
@@ -425,7 +425,7 @@ void householder(u,a,b,t1) matrix *u,a,b;int t1;
 
 
 
-void Hmult(C,u) matrix C,u;
+void Hmult(matrix C,matrix u)
 
 /* This routine is for post multiplication by Housholder matrices only */
 
@@ -446,7 +446,7 @@ void Hmult(C,u) matrix C,u;
   freemat(Cu);
 } /* Hmult */
 
-void HQmult(C,U,p,t) matrix C,U;int p,t;
+void HQmult(matrix C,matrix U,int p,int t)
 
 /* This routine is for multiplying by householder matrices, stored as a
    series of vectors of the type u defined in routine householder above.
@@ -515,7 +515,7 @@ void HQmult(C,U,p,t) matrix C,U;int p,t;
 } /* HQmult */
 
 
-void QT(Q,A,fullQ) matrix Q,A;int fullQ;
+void QT(matrix Q,matrix A,int fullQ)
 
 /* Uses householder matrices to perform the factorization of A (nxm),n<=m: */
 /*                  AQ=[0,T]  where Tij=0 if i+j<n for T an (nxn) matrix   */

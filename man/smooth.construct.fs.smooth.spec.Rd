@@ -1,7 +1,7 @@
 \name{smooth.construct.fs.smooth.spec}
 \alias{smooth.construct.fs.smooth.spec}
 \alias{Predict.matrix.fs.interaction}
-\alias{factor.smooth.interaction}
+
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Factor smooth interactions in GAMs}
 
@@ -9,8 +9,7 @@
 This smooth class allows a separate smooth for each level of a factor, with the same smoothing parameter for all 
 smooths. It is an alternative to using factor \code{by} variables.
 
-See the discussion of \code{by} variables in \code{\link{gam.models}} for more general alternatives 
-for factor smooth interactions (including interactions of tensor product smooths with factors).
+See \code{\link{factor.smooth}} for more genral alternatives for factor smooth interactions (including interactions of tensor product smooths with factors).
 }
 
 \usage{
@@ -66,7 +65,7 @@ The plot method for this class has two schemes. \code{scheme==0} is in colour, w
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with input from Matteo Fasiolo.}
 
-\seealso{\code{\link{gam.models}}, \code{\link{gamm}}}
+\seealso{\code{\link{factor.smooth}}, \code{\link{gamm}}, \code{\link{smooth.construct.sz.smooth.spec}}}
 
 \examples{
 library(mgcv)
@@ -86,11 +85,15 @@ y <- f + rnorm(n)*2
 ## so response depends on global smooths of x0 and 
 ## x2, and a smooth of x1 for each level of fac.
 
-## fit model (note p-values not available when fit 
-## using gamm)...
+## fit model...
 bm <- gamm(y~s(x0)+ s(x1,fac,bs="fs",k=5)+s(x2,k=20))
 plot(bm$gam,pages=1)
 summary(bm$gam)
+
+## Also efficient using bam(..., discrete=TRUE)
+bd <- bam(y~s(x0)+ s(x1,fac,bs="fs",k=5)+s(x2,k=20),discrete=TRUE)
+plot(bd,pages=1)
+summary(bd)
 
 ## Could also use...
 ## b <- gam(y~s(x0)+ s(x1,fac,bs="fs",k=5)+s(x2,k=20),method="ML")

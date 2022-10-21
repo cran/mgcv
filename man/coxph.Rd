@@ -60,7 +60,7 @@ Journal of the American Statistical Association 111, 1548-1575
 \doi{10.1080/01621459.2016.1180986}
 }
 
-\seealso{\code{\link{cox.pht}}}
+\seealso{\code{\link{cox.pht}}, \code{\link{cnorm}}}
 
 \examples{
 library(mgcv)

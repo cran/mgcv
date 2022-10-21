@@ -2,8 +2,9 @@
 \alias{predict.bam}
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Prediction from fitted Big Additive Model model}
-\description{ Essentially a wrapper for \code{\link{predict.gam}} for prediction from a 
-model fitted by \code{\link{bam}}. Can compute on a parallel cluster. 
+\description{ In most cases essentially a wrapper for \code{\link{predict.gam}} for prediction from a 
+model fitted by \code{\link{bam}}. Can compute on a parallel cluster. For models fitted using discrete
+methods with \code{discrete=TRUE} then discrete prediction methods are used instead. 
 
 Takes a fitted \code{bam} object produced by \code{\link{bam}} 
 and produces predictions given a new set of values for the model covariates 
@@ -50,11 +51,11 @@ outside \code{R} (see example code, below). }
 
 \item{se.fit}{ when this is TRUE (not default) standard error estimates are returned for each prediction.}
 
-\item{terms}{if \code{type=="terms"} or \code{type="iterms"} then only results for the terms (smooth or parametric) named in this array will be returned. Otherwise any smooth terms not named in this array will be set to zero. If \code{NULL} then all terms are included.}
+\item{terms}{if \code{type=="terms"} or \code{type="iterms"} then only results for the terms (smooth or parametric) named in this array will be returned. Otherwise any terms not named in this array will be set to zero. If \code{NULL} then all terms are included. \code{"(Intercept)"} is the intercept term.}
 
 \item{exclude}{if \code{type=="terms"} or \code{type="iterms"} then terms (smooth or parametric) named in this array
-will not be returned. Otherwise any smooth terms named in this array will be set to zero. 
-If \code{NULL} then no terms are excluded. To avoid supplying covariate values for excluded terms, set \code{newdata.guaranteed=TRUE},
+will not be returned. Otherwise any terms named in this array will be set to zero. 
+If \code{NULL} then no terms are excluded. To avoid supplying covariate values for excluded smooth terms, set \code{newdata.guaranteed=TRUE},
 but note that this skips all checks of \code{newdata}. }
 
 

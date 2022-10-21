@@ -247,7 +247,8 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE) {
       Sl[[b]] <- Sl[[b]]$updateS(Sl[[b]]$lambda,Sl[[b]])
       lambda <- c(lambda,Sl[[b]]$lambda)
       if (sparse) {
-        E0 <- as(Sl[[b]]$St(Sl[[b]],1)$E,"dgTMatrix")
+        ## E0 <- as(Sl[[b]]$St(Sl[[b]],1)$E,"dgTMatrix") deprecated
+	E0 <- as(as(as(Sl[[b]]$St(Sl[[b]],1)$E, "dMatrix"), "generalMatrix"), "TsparseMatrix")
 	E$i[[b]] <- E0@i + Sl[[b]]$start
 	E$j[[b]] <- E0@j + Sl[[b]]$start
 	E$x[[b]] <- E0@x
@@ -319,7 +320,8 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE) {
 	        sqrt(Sl[[b]]$ev+Sl[[b]]$nl.reg)*t(Sl[[b]]$U)
         D.norm <- norm(D); D <- D/D.norm
         if (sparse) {
-	  D <- as(D,"dgTMatrix")
+	  ## D <- as(D,"dgTMatrix") deprecated
+	  D <- as(as(as(D, "dMatrix"), "generalMatrix"), "TsparseMatrix")
 	  E$i[[b]] <- D@i + Sl[[b]]$start
 	  E$j[[b]] <- D@j + Sl[[b]]$start
 	  E$x[[b]] <- D@x
@@ -380,7 +382,8 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE) {
       St <- (t(St) + St)/2  ## avoid over-zealous chol sym check
       St <- t(mroot(St,Sl[[b]]$rank))
       if (sparse) {
-        St <- as(St,"dgTMatrix")
+        ## St <- as(St,"dgTMatrix") - deprecated
+	St <- as(as(as(St, "dMatrix"), "generalMatrix"), "TsparseMatrix")
         E$i[[b]] <- St@i + Sl[[b]]$start
 	E$j[[b]] <- St@j + Sl[[b]]$start
 	E$x[[b]] <- St@x
@@ -765,7 +768,8 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2,sparse=FAL
       k.sp <- k.sp + Sl[[b]]$n.sp
       Sl[[b]]$lambda <- rho[ind] ## not really used in non-linear interface
       if (root) if (sparse) {
-        E0 <- as(Sl[[b]]$St(Sl[[b]],1)$E,"dgTMatrix")
+        ## E0 <- as(Sl[[b]]$St(Sl[[b]],1)$E,"dgTMatrix") - deprecated
+	E0 <- as(as(as(Sl[[b]]$St(Sl[[b]],1)$E, "dMatrix"), "generalMatrix"), "TsparseMatrix")
 	E$i[[b]] <- E0@i + Sl[[b]]$start
 	E$j[[b]] <- E0@j + Sl[[b]]$start
 	E$x[[b]] <- E0@x
@@ -794,8 +798,11 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2,sparse=FAL
         } else { ## root has to be in original parameterization...
           if (sparse) {
 	    ## dgTMatrix is triplet form, which makes combining easier...
-	    D <- if (is.null(Sl[[b]]$nl.reg)) as(Sl[[b]]$Di[1:Sl[[b]]$rank,]* exp(rho[k.sp]*.5),"dgTMatrix") else
-	         as(sqrt(Sl[[b]]$ev*exp(rho[k.sp])+Sl[[b]]$nl.reg)*t(Sl[[b]]$U),"dgTMatrix")
+	    #D <- if (is.null(Sl[[b]]$nl.reg)) as(Sl[[b]]$Di[1:Sl[[b]]$rank,]* exp(rho[k.sp]*.5),"dgTMatrix") else
+	    #     as(sqrt(Sl[[b]]$ev*exp(rho[k.sp])+Sl[[b]]$nl.reg)*t(Sl[[b]]$U),"dgTMatrix")
+	    D <- if (is.null(Sl[[b]]$nl.reg)) as(as(as(Sl[[b]]$Di[1:Sl[[b]]$rank,]* exp(rho[k.sp]*.5), "dMatrix"),
+	         "generalMatrix"), "TsparseMatrix") else as(as(as(sqrt(Sl[[b]]$ev*exp(rho[k.sp])+Sl[[b]]$nl.reg)*
+		 t(Sl[[b]]$U) , "dMatrix"), "generalMatrix"), "TsparseMatrix")	 
 	    E$i[[b]] <- D@i + Sl[[b]]$start
 	    E$j[[b]] <- D@j + Sl[[b]]$start
 	    E$x[[b]] <- D@x
@@ -854,7 +861,8 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2,sparse=FAL
       if (Sl[[b]]$repara) {
         if (root) { ## unpack the square root E'E
           if (sparse) {
-            E0 <- as(grp$E,"dgTMatrix")
+            # E0 <- as(grp$E,"dgTMatrix") deprecated
+	    E0 <- as(as(as(grp$E, "dMatrix"), "generalMatrix"), "TsparseMatrix")
 	    E$i[[b]] <- E0@i + Sl[[b]]$start
 	    E$j[[b]] <- E0@j + Sl[[b]]$start
 	    E$x[[b]] <- E0@x
@@ -878,7 +886,8 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,repara=TRUE,nt=1,deriv=2,sparse=FAL
         if (root) {
           Eb <- t(mroot(Sl[[b]]$St,Sl[[b]]$rank))
 	  if (sparse) {
-	    Eb <- as(Eb,"dgTMatrix")
+	    # Eb <- as(Eb,"dgTMatrix") - deprecated
+	    Eb <- as(as(as(Eb, "dMatrix"), "generalMatrix"), "TsparseMatrix")
 	    E$i[[b]] <- Eb@i + Sl[[b]]$start
 	    E$j[[b]] <- Eb@j + Sl[[b]]$start
 	    E$x[[b]] <- Eb@x

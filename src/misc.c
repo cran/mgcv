@@ -758,4 +758,3 @@ void rwMatrix(int *stop,int *row,double *w,double *X,int *n,int *p,int *trans,do
    mgcv:::rwMatrix(stop,row,w,X)
    
 */
-

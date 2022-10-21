@@ -662,7 +662,7 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
     Xs[i].nk = ks[mx+i] - ks[i]; // number of index vectors for this term
     Xs[i].off = off + off_start[ks[i]]; // the .nk offset .m+1 vectors for .r 
     j = Xs[i].p[Xs[i].c]; /* number of NZs in this matrix */
-    if (j>nzmax) nzmax=j; /* largest amount of NZ storage required by any eleemnt of Xs */
+    if (j>nzmax) nzmax=j; /* largest amount of NZ storage required by any element of Xs */
     /* now Cache its transpose... */
     spalloc(Xt+i,Xs[i].m,j);
     cs_trans(Xs[i].p,Xs[i].i,Xs[i].x,Xt[i].p,Xt[i].i,Xt[i].x,iwork,Xs[i].m,Xs[i].c);

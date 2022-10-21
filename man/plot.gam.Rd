@@ -84,7 +84,7 @@ interpretation of plots.}
 
 \item{all.terms}{if set to \code{TRUE} then the partial effects of parametric
 model components are also plotted, via a call to \code{\link{termplot}}. Only
-terms of order 1 can be plotted in this way.}
+terms of order 1 can be plotted in this way. Also see warnings.}
 
 \item{shade}{Set to \code{TRUE} to produce shaded regions as confidence bands
 for smooths (not avaliable for parametric terms, which are plotted using \code{termplot}).}
@@ -207,7 +207,7 @@ supporting data.
 
 Plots of 2-D smooths with standard error contours shown can not easily be customized.
 
-The function can not deal with smooths of more than 2 variables!
+\code{all.terms} uses \code{\link{termplot}} which looks for the original data in the environment of the fitted model object formula. Since \code{gam} resets this environment to avoid large saved model objects containing data in hidden environments, this can fail. 
 } 
 
 \seealso{  \code{\link{gam}}, \code{\link{predict.gam}}, \code{\link{vis.gam}}}

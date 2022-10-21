@@ -7,21 +7,23 @@ parameters or frequentist covariance matrix of the parameter estimators
 from a fitted \code{gam} object.
 }
 \usage{
-\method{vcov}{gam}(object, freq = FALSE, dispersion = NULL,unconditional=FALSE, ...)
+\method{vcov}{gam}(object, sandwich=FALSE, freq = FALSE, dispersion = NULL,unconditional=FALSE, ...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 
-\item{object}{ fitted model object of class \code{gam} as produced by \code{gam()}.}
+\item{object}{fitted model object of class \code{gam} as produced by \code{gam()}.}
+\item{sandwich}{compute sandwich estimate of covariance matrix. Currently expensive for discrete bam fits.}
 \item{freq}{ \code{TRUE} to return the frequentist covariance matrix of the
 parameter estimators, \code{FALSE} to return the Bayesian posterior covariance
-matrix of the parameters.} 
+matrix of the parameters. The latter option includes the expected squared bias
+according to the Bayesian smoothing prior.} 
 \item{dispersion}{ a value for the dispersion parameter: not normally used.}
 \item{unconditional}{ if \code{TRUE} (and \code{freq==FALSE}) then the Bayesian 
 smoothing parameter 
 uncertainty corrected covariance matrix is returned, if available. }
 \item{...}{ other arguments, currently ignored.}
 }
-\details{ Basically, just extracts \code{object$Ve} or \code{object$Vp} from a \code{\link{gamObject}}.
+\details{ Basically, just extracts \code{object$Ve}, \code{object$Vp} or \code{object$Vc} (if available) from a \code{\link{gamObject}}, unless \code{sandwich==TRUE} in which case the sandwich estimate is computed (with or without the squared bias component). 
 }
 
 \value{ A matrix corresponding to the estimated frequentist covariance matrix
@@ -34,7 +36,7 @@ Maintained by Simon N. Wood \email{simon.wood@r-project.org}
 }
 
 \references{
-Wood, S.N. (2006) On confidence intervals for generalized additive models based on penalized regression splines. Australian and New Zealand Journal of Statistics. 48(4): 445-464.
+Wood, S.N. (2017) Generalized Additive Models: An Introductio with R (2nd ed) CRC Press
 }
 
 

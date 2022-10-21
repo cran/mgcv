@@ -13,7 +13,7 @@ estimation of degree of penalization). Confidence/credible intervals are readily
 available for any quantity predicted using a fitted model.
 
 Smooth terms are represented using penalized regression splines (or similar smoothers)
-with smoothing parameters selected by GCV/UBRE/AIC/REML or by regression splines with
+with smoothing parameters selected by GCV/UBRE/AIC/REML/NCV or by regression splines with
 fixed degrees of freedom (mixtures of the two are permitted). Multi-dimensional smooths are 
 available using penalized thin plate regression splines (isotropic) or tensor product splines 
 (when an isotropic smooth is inappropriate), and users can add smooths. 
@@ -32,7 +32,7 @@ gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     optimizer=c("outer","newton"),control=list(),scale=0,
     select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
     fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,
-    drop.intercept=NULL,discrete=FALSE,...)
+    drop.intercept=NULL,nei=NULL,discrete=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -77,10 +77,11 @@ included in \code{formula} (this used to conform to the behaviour of
 \code{\link{gam.control}}. Values not set assume default values. }
 
 \item{method}{The smoothing parameter estimation method. \code{"GCV.Cp"} to use GCV for unknown scale parameter and
-Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using GACV in place of GCV. \code{"REML"} 
+Mallows' Cp/UBRE/AIC for known scale. \code{"GACV.Cp"} is equivalent, but using GACV in place of GCV. \code{"NCV"}
+for neighbourhood cross-validation using the neighbourhood structure speficied be \code{nei}. \code{"REML"} 
 for REML estimation, including of unknown scale, \code{"P-REML"} for REML estimation, but using a Pearson estimate 
 of the scale. \code{"ML"} and \code{"P-ML"} are similar, but using maximum likelihood in place of REML. Beyond the 
-exponential family \code{"REML"} is the default, and the only other option is \code{"ML"}.}
+exponential family \code{"REML"} is the default, and the only other options are \code{"ML"} or \code{"NCV"}.}
 
 \item{optimizer}{An array specifying the numerical optimization method to use to optimize the smoothing 
 parameter estimation criterion (given by \code{method}). \code{"perf"} (deprecated) for performance iteration. \code{"outer"} 
@@ -153,6 +154,9 @@ involving factor variables you might want to turn this off. Only do so if you kn
 \item{drop.intercept}{Set to \code{TRUE} to force the model to really not have the a constant in the parametric model part,
 even with factor variables present. Can be vector when \code{formula} is a list.}
 
+\item{nei}{A list specifying the neighbourhood structure for NCV. \code{k} is the vector of indices to be dropped
+for each neighbourhood and \code{m} gives the end of each neighbourhood. So \code{nei$k[(nei$m[j-1]+1):nei$m[j]]} gives the points dropped for the neighbourhood \code{j}. \code{i} is the vector of indices of points to predict, with corresponding endpoints \code{mi}. So \code{nei$i[(nei$mi[j-1]+1):nei$mi[j]]} indexes the points to predict for neighbourhood j. If \code{nei==NULL} (or \code{k} or \code{m} are missing) then leave-one-out cross validation is obtained.}
+
 \item{discrete}{experimental option for setting up models for use with discrete methods employed in \code{\link{bam}}. Do not modify.}
 
 \item{...}{further arguments for 
@@ -205,7 +209,7 @@ the scale parameter and
 \eqn{DoF}{DoF} the effective degrees of freedom of the model. Notice that UBRE is effectively
 just AIC rescaled, but is only used when \eqn{s}{s} is known. 
 
-Alternatives are GACV, or a Laplace approximation to REML. There
+Alternatives are GACV, NCV or a Laplace approximation to REML. There
 is some evidence that the latter may actually be the most effective choice. 
 The main computational challenge solved 
 by the \code{mgcv} package is to optimize the smoothness selection criteria efficiently and reliably. 

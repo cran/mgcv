@@ -393,11 +393,13 @@ smooth2random.fs.interaction <- function(object,vnames,type=1) {
       attr(random[[i]],"Xr.name") <- term.name
       attr(random[[i]],"Xr") <- X
     } else { ## gamm4 form --- whole sparse matrices
-      
-      Xr <- as(matrix(0,nrow(X),0),"dgCMatrix")
+      ## Xr <- as(matrix(0,nrow(X),0),"dgCMatrix") - deprecated, use...
+      Xr <- as(as(as(matrix(0,nrow(X),0), "dMatrix"), "generalMatrix"), "CsparseMatrix")
       ii <- 0
       for (j in 1:n.lev) { ## assemble full sparse model matrix
-        Xr <- cbind2(Xr,as(X*as.numeric(object$fac==object$flev[j]),"dgCMatrix"))
+        ## Xr <- cbind2(Xr,as(X*as.numeric(object$fac==object$flev[j]),"dgCMatrix")) - deprecated
+	Xr <- cbind2(Xr,
+	  as(as(as(X*as.numeric(object$fac==object$flev[j]), "dMatrix"), "generalMatrix"), "CsparseMatrix"))
         pen.ind[indi+ii] <- i;ii <- ii + colx
       }
       random[[i]] <- if (is.null(object$Xb)) Xr else as(Xr,"matrix") 

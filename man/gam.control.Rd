@@ -10,7 +10,7 @@ loss of numerical stability during fitting.  To change the default
 choise of fitting method, see \code{\link{gam}} arguments \code{method} and \code{optimizer}.
 }
 \usage{
-gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
+gam.control(nthreads=1,ncv.threads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
             mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,nlm=list(),
 	    optim=list(),newton=list(),outerPIsteps=0,
@@ -23,6 +23,8 @@ gam.control(nthreads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
 parallelization in the C code if your R installation supports openMP, and \code{nthreads} is set to 
 more than 1. Note that it is usually better to use the number of physical cores here, rather than the 
 number of hyper-threading cores.}
+\item{ncv.threads}{The computations for neighbourhood cross-validation (NCV) typically scale better than the rest of the GAM computations and are worth parallelizing. \code{ncv.threads} allows you to set the number of theads to use separately. 
+}
 \item{irls.reg}{For most models this should be 0. The iteratively re-weighted least squares method
 by which GAMs are fitted  can fail to converge in some circumstances. For example, data with many zeroes can cause 
 problems in a model with a log link, because a mean of zero corresponds to an infinite range of linear predictor 

@@ -866,7 +866,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
       if (!is.finite(dev)) stop("Non-finite deviance")
 
       ## preparation for working model fit is ready, but need to test for convergence first
-      if (iter>2 && abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon) {
+      if (iter>2 && abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon && (scale>0 || abs(Nstep[n.sp+1])<control$epsilon*(abs(log.phi)+1))) {
           conv <- TRUE
           #coef <- start
           break
@@ -1030,7 +1030,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
     ##nvars <- ncol(G$X)
     offset <- G$offset
     family <- G$family
-
+    ## extended family may have non-standard y that requires careful subsetting (e.g. cnorm)
+    subsety <- if (is.null(G$family$subsety)) function(y,ind) y[ind] else G$family$subsety
     if (inherits(G$family,"extended.family")) { ## preinitialize extended family
       efam <- TRUE
       pini <- if (is.null(G$family$preinitialize)) NULL else G$family$preinitialize(y,G$family)
@@ -1136,7 +1137,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 	  arg[[i]]$variance <- variance
         }
         arg[[i]]$G$w <- G$w[ind];arg[[i]]$G$model <- NULL
-        arg[[i]]$G$y <- G$y[ind]
+        arg[[i]]$G$y <- subsety(G$y,ind) ##G$y[ind]
       }
     } else { ## single thread, requires single indices
       ## construct indices for splitting up model matrix construction... 
@@ -1177,7 +1178,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
              rownames(X) <- NULL
              if (is.null(coef)) eta1 <- eta[ind] else eta[ind] <- eta1 <- drop(X%*%coef) + offset[ind]
              mu <- linkinv(eta1) 
-             y <- G$y[ind] ## G$model[[gp$response]] ## - G$offset[ind]
+             y <- subsety(G$y,ind) #G$y[ind] ## G$model[[gp$response]] ## - G$offset[ind]
              weights <- G$w[ind]
              if (efam) { ## extended family case
                 dd <- dDeta(y,mu,weights,theta=theta,family,0)
@@ -2341,11 +2342,15 @@ terms2tensor <- function(terms,data=NULL,contrasts.arg=NULL,drop.intercept=FALSE
       vn <- varn[as.logical(fac[,i])]
       if (no.int||!identify) {
         fm <- as.formula(paste("~",vn,"-1"))
-        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else model.matrix(fm,data,contrasts.arg)
+	## unfortunately a warning has been introduced in model.matrix that contradicts the documentation and will complain about any
+	## element of contrast.arg that does not match a variable name in the formula. Rather than introduce redundant work around
+	## code it seems better to just suppress the warning...
+        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else suppressWarnings(model.matrix(fm,data,contrasts.arg))
         no.int <- FALSE
       } else {
         fm <- as.formula(paste("~",vn))
-        if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE]
+        if (!dummy) X[[k]] <-
+	if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else suppressWarnings(model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE])
       }
       xname[k] <- if (!dummy && vn %in% names(data)) vn else all.vars(fm)
       form[[k]] <- fm; environment(form[[k]]) <- NULL
@@ -2357,10 +2362,11 @@ terms2tensor <- function(terms,data=NULL,contrasts.arg=NULL,drop.intercept=FALSE
         vn <- varn[m[j]]
         if (fac[m[j],i]==2||!identify) { ## no contrast
 	  fm <- as.formula(paste("~",vn,"-1"))
-	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else model.matrix(fm,data,contrasts.arg)
+	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg) else suppressWarnings(model.matrix(fm,data,contrasts.arg))
 	} else { ## with contrast
           fm <- as.formula(paste("~",vn))
-	  if (!dummy) X[[k]] <- if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE]
+	  if (!dummy) X[[k]] <-
+	  if (sparse) sparse.model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE] else suppressWarnings(model.matrix(fm,data,contrasts.arg)[,-1,drop=FALSE])
         }
 	xname[k] <- if (!dummy && vn %in% names(data)) vn else all.vars(fm)
 	form[[k]] <- fm; environment(form[[k]]) <- NULL
@@ -2679,6 +2685,10 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
               if (inherits(qrc,"qr")) {
                 v[[kb]] <- qrc$qr/sqrt(qrc$qraux);v[[kb]][1] <- sqrt(qrc$qraux)
                 qc[kb] <- 1 ## indicate a constraint
+              } else if (length(qrc)>1) { ## Kronecker product of set to zero constraints
+	        ## on entry qrc is [unused.index, dim1, dim2,..., total number of constraints]
+                v[[kb]] <- c(length(qrc)-2,qrc[-1]) ## number of sum-to-zero contrasts, their dimensions, number of constraints
+		qc[kb] <- -1 
               } else { 
                 v[[kb]] <- rep(0,0) ##
                 if (!inherits(qrc,"character")||qrc!="no constraints") warning("unknown tensor constraint type")
@@ -2698,7 +2708,8 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
           }  
 	  #jj <- G$smooth[[i]]$first.para:G$smooth[[i]]$last.para;
 	  if (sb==1&&qc[kb]) {
-            jj <- 1:(np-1) + lp0; lp0 <- lp0 + np - 1
+	    ncon <- if (qc[kb]<0) v[[kb]][length(v[[kb]])] else 1 
+            jj <- 1:(np-ncon) + lp0; lp0 <- lp0 + np - ncon 
 	    ## Hard to think of an application requiring constraint when nsub>1, hence not 
 	    ## worked out yet. Add warning to make sure this is flagged if attempt made
 	    ## to do this in future....

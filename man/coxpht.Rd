@@ -6,7 +6,7 @@
 
 The trick is to generate an artificial Poisson observation for each subject in the risk set at each non-censored event time. The corresponding covariate values for each subject are whatever they are at the event time, while the Poisson response is zero for all subjects except those experiencing the event at that time (this corresponds to Peto's correction for ties). The linear predictor for the model must include an intercept for each event time (the cumulative sum of the exponential of these is the Breslow estimate of the baseline hazard). 
 
-Below is some example code employing this trick for the \code{\link[survival]{pbcseq}} data from the \code{survival} package. It uses \code{\link{bam}} for fitting with the \code{discrete=TRUE} option for efficiency: there is some approximation involved in doing this, and the exact equivalent to what is done in \code{\link{cox.ph}} is rather obtained by using \code{\link{gam}} with \code{method="REML"} (taking some 14 times the computational time for the example below).
+Below is some example code employing this trick for the \code{\link[survival]{pbcseq}} data from the \code{survival} package. It uses \code{\link{bam}} for fitting with the \code{discrete=TRUE} option for efficiency: there is some approximation involved in doing this, and the exact equivalent to what is done in \code{\link{cox.ph}} is rather obtained by using \code{\link{gam}} with \code{method="REML"} (taking many times the computational time for the example below). An alternative fits the model as a conditional logistic model using stratified Cox PH with event times as strata (see example). This would be identical in the unpenalized case, but smoothing parameter estimates can differ.
 
 The function \code{tdpois} in the example code uses crude piecewise constant interpolation for the covariates, in which the covariate value at an event time is taken to be whatever it was the previous time that it was measured. Obviously more sophisticated interpolation schemes might be preferable. 
 
@@ -72,6 +72,11 @@ pb$tf <- factor(pb$futime) ## add factor for event time
 ## Fit Poisson model...
 b <- bam(z ~ tf - 1 + sex + trt + s(sqrt(protime)) + s(platelet)+ s(age)+
 s(bili)+s(albumin), family=poisson,data=pb,discrete=TRUE,nthreads=2)
+
+pb$dumt <- rep(1,nrow(pb)) ## dummy time
+## Fit as conditional logistic... 
+b1 <- gam(cbind(dumt,tf) ~ sex + trt + s(sqrt(protime)) + s(platelet)
++ s(age) + s(bili) + s(albumin),family=cox.ph,data=pb,weights=z)
 
 par(mfrow=c(2,3))
 plot(b,scale=0)

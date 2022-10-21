@@ -89,7 +89,7 @@ a response variable, but later formulae need not (depending on the requirements 
 be indexed, 1 to d where d is the number of linear predictors, and the indexing is in the order in which the 
 formulae appear in the list. It is possible to supply extra formulae specifying that several linear predictors 
 should share some terms. To do this a formula is supplied in which the response is replaced by numbers specifying the 
-indices of the linear predictors which will shre the terms specified on the r.h.s. For example \code{1+3~s(x)+z-1} specifies that linear predictors 1 and 3 will share the terms \code{s(x)} and \code{z} (but we don't want an extra intercept, as this would usually be unidentifiable). Note that it is possible that a linear predictor only includes shared terms: it must still have its own formula, but the r.h.s. would simply be \code{-1} (e.g. \code{y ~ -1} or \code{~ -1}).  
+indices of the linear predictors which will shre the terms specified on the r.h.s. For example \code{1+3~s(x)+z-1} specifies that linear predictors 1 and 3 will share the terms \code{s(x)} and \code{z} (but we don't want an extra intercept, as this would usually be unidentifiable). Note that it is possible that a linear predictor only includes shared terms: it must still have its own formula, but the r.h.s. would simply be \code{-1} (e.g. \code{y ~ -1} or \code{~ -1}). See \code{\link{multinom}} for an example. 
 
 }
 

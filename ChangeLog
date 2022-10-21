@@ -27,7 +27,56 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
-* bam(..., discrete=TRUE) te fixed sp ordering wrong.
+
+1.8-41
+
+** 'cnorm' family added for left, right, interval or un censored Gaussian 
+  data. Useful for log normal Accelerated Failure Time models, Tobit 
+  regression, rounded data etc.
+
+** 'sz' factor smooth interaction class added for implementing models with
+  main effect smooths and difference smooths for levels of a factor.
+  See ?factor.smooth.
+
+** 'NCV' smoothing parameter method added, but still experimental. 
+
+* replacment of some old (K&R) style C function declarations.
+
+* mono.con corrected for cases with upper bounds. Thanks to Sean Wu.
+
+* plot.gam(...,seWithMean=TRUE) modified to only include mean uncertainty 
+  for the linear predictor of which the smooth is a part, when there are 
+  multiple linear predictors. Thanks to Gavin Simpson.
+
+* modifications of sparce matrix coercions, to avoid deprecated direct 
+  coercions. as(as(as(a, "dMatrix"), "generalMatrix"), "XsparseMatrix") in
+  place of as(a,"dgXMatrix") where 'X' is 'C' or 'T'. Actually this requires
+  Matrix 1.4-2 to work (will be added to dependencies in future). 
+
+* vis.gam now deals properly with models with more than one linear predictor.
+
+* slight change in bgam.fitd to check scale parameter estimate converged when
+  using bam(...,discrete=TRUE), otherwise scale could be wrong for all fixed
+  smoothing parameters.
+
+* predict.gam modified so that 'terms' and 'exclude' control all terms, smooth
+  or parametric, in the same way. Including the "(Intercept)" term.
+
+* Warnings from 'model.matrix' suppressed in 'terms2tensor' called by e.g. 
+  predict.bamd. There is a warning if any extra contrasts are supplied to 
+  model matrix that do not relate to a term in the model (which contradicts 
+  the documentation). Doc vs code bug report also filed. 
+
+* Fix of broken rank deficiency handling in gam.fit5. Thanks to Cesko Voeten.
+
+* trind.generator modified to allow return of index functions in place 
+  of index arrays.  
+
+* summary.gam (recov/reTest) modified to deal with 'fs' smooths fitted using
+  'gamm'. 
+
+* gam.fit4 convergence testing improved and bug fix in computation of dVkk 
+  matrix used to check for converged 'infinite' smoothing parameters in bfgs.
 
 1.8-40
 

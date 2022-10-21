@@ -22,16 +22,18 @@ The \code{shash} family implements the four-parameter sinh-arcsinh (shash) distr
 }
 \details{
 The density function of the shash family is 
-         \deqn{p(y|\mu,\sigma,\epsilon,\delta)=C(z) exp{-S(z)^2/2} / \sigma{2\pi(1+z^2)}^1/2, }
-         where \eqn{ C(z)={1+S(z)^2}^1/2 }, \eqn{ S(z)=sinh{\delta sinh^(-1)(z)-\epsilon} } and
-         \eqn{z=(y-\mu)/(\sigma\delta)}. Here \eqn{\mu} and \eqn{\sigma > 0} control, respectively, location and 
+         \deqn{p(y|\mu,\sigma,\epsilon,\delta)= C(z) \exp\{-S(z)^2/2\} \{2\pi(1+z^2)\}^{-1/2}/\sigma,}{p(y|\mu,\sigma,\epsilon,\delta)=C(z)exp{-S(z)^2/2}{2\pi(1+z^2)}^-0.5/\sigma}
+         where \eqn{ C(z)=\{1+S(z)^2\}^{1/2} }{C(z)={1+S(z)^2}^0.5}, \eqn{ S(z)=\sinh\{\delta \sinh^{-1}(z)-\epsilon\} }{ S(z)=sinh{\delta asinh(z)-\epsilon} } and
+         \eqn{z = (y - \mu)/(\sigma \delta)}. Here \eqn{\mu} and \eqn{\sigma > 0} control, respectively, location and 
          scale, \eqn{\epsilon} determines skewness, while \eqn{\delta > 0} controls tailweight.
          \code{shash} can model skewness to either side, depending on the sign of \eqn{\epsilon}. 
          Also, shash can have tails that are lighter (\eqn{\delta>1}) or heavier (\eqn{0<\delta<1}) that a normal.
-         For fitting purposes, here we are using \eqn{\tau = log(\sigma)} and \eqn{\phi = log(\delta)}.
+         For fitting purposes, here we are using \eqn{\tau = \log(\sigma)}{\tau = log(\sigma)} and \eqn{\phi = \log(\delta)}{\phi = log(\delta)}.
+
+The density is based on the expression given on the second line of section 4.1 and equation (2) of Jones and Pewsey (2009), and uses the simple reparameterization given in section 4.3. 
          
-The link function used for \eqn{\tau} is logeb with is \eqn{\eta = log{exp(\tau)-b}} so that the inverse link is
-\eqn{\tau = log(\sigma) = log{exp(\eta)+b}}. The point is that we are don't allow \eqn{\sigma} to become smaller
+The link function used for \eqn{\tau} is logeb with is \eqn{\eta = \log \{\exp(\tau)-b\}}{\eta = log{exp(\tau)-b}} so that the inverse link is
+\eqn{\tau = \log(\sigma) = \log\{\exp(\eta)+b\}}{\tau = log(\sigma) = log{exp(\eta)+b}}. The point is that we are don't allow \eqn{\sigma} to become smaller
 than a small constant b. The likelihood includes a ridge penalty \eqn{- phiPen * \phi^2}, which shrinks \eqn{\phi} toward zero. When sufficient data is available the ridge penalty does not change the fit much, but it is useful to include it when fitting the model to small data sets, to avoid \eqn{\phi} diverging to +infinity (a problem already identified by Jones and Pewsey (2009)). 
 }
 \examples{
@@ -125,7 +127,8 @@ Matteo Fasiolo <matteo.fasiolo@gmail.com> and Simon N. Wood.
 }
 
 \references{
-Jones, M. and A. Pewsey (2009). Sinh-arcsinh distributions. Biometrika 96 (4), 761-780.
+Jones, M. and A. Pewsey (2009). Sinh-arcsinh distributions. Biometrika 96 (4), 761-780. \doi{10.1093/biomet/asp053}
+
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models.
 Journal of the American Statistical Association 111, 1548-1575
