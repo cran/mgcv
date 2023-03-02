@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Simon N. Wood  simon.wood@r-project.org
+/* Copyright (C) 2022/3 Simon N. Wood  simon.wood@r-project.org
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -27,8 +27,9 @@ USA. */
 //#include <Rmath.h>
 //#include <Rinternals.h>
 //#include <Rconfig.h>
-#include <R.h>
 #include "mgcv.h"
+#include <R.h>
+
 
 
 void minres0(double *R, double *u,double *b, double *x, int *p,int *m) {
@@ -213,6 +214,37 @@ int CG(double *A,double *Mi,double *b, double *x,int n,double tol,double *cgwork
 } /* CG */
 
 
+SEXP nei_cov(SEXP v,SEXP d, SEXP M, SEXP K) {
+/* Computes a direct estimate of the parameter covariance matrix V, given neighbourhood structure 
+   encoded in m and k, and parameters under leave one out perturbation in D. 
+*/
+  int *m,*k,n,p,i,j,i0,i1=0,ii,q;
+  double *D,*V,*Ds;
+  M = PROTECT(coerceVector(M,INTSXP));
+  K = PROTECT(coerceVector(K,INTSXP)); /* otherwise R might be storing as double on entry */
+  m = INTEGER(M); k = INTEGER(K);
+  V = REAL(v);
+  D = REAL(d);
+  n = length(M);
+  p = ncols(d);
+  for (ii=0;ii<p*p;ii++) V[ii]=0.0;
+  Ds = (double *)CALLOC((size_t) p,sizeof(double));
+  for (i=0;i<n;i++) { /* neibourhood loop */
+    i0 = i1;i1 = m[i]; /* k[i0:(i1-1)] are neighbours of i */
+    j=k[i0]; 
+    for (q=0;q<p;q++) Ds[q] = D[j+q*n]; /* first neighbour term to accumulate */  
+    for (ii=i0+1;ii<i1;ii++) { /* remainder */ 
+      j = k[ii];
+      for (q=0;q<p;q++) Ds[q] += D[j+q*n];
+    }
+    /* now add contribution to V */
+    for (ii=0,j=0;j<p;j++) for (q=0;q<p;q++,ii++) V[ii] += D[i+j*n]*Ds[q]; 
+  }
+  FREE(Ds);
+  UNPROTECT(2);
+  return(R_NilValue); 
+} /* nei_cov */  
+
 SEXP ncv(SEXP x, SEXP hi, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA, SEXP SP, SEXP ETA, SEXP DETA,SEXP DLET,SEXP DERIV) {
 /* Neighbourhood cross validation function. CG version - not optimal.
    Return: eta - eta[i] is linear predictor of y[ind[i]] when y[ind[i]] and its neighbours are ommited from fit
@@ -220,8 +252,8 @@ SEXP ncv(SEXP x, SEXP hi, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND,
    Input: X - n by p model matrix. Hi inverse penalized Hessian. H penalized Hessian. w1 = w1[i] X[i,j] is dl_i/dbeta_j to within a scale parameter.
           w2 - -X'diag(w2)X is Hessian of log likelihood to within a scale parameter. db - db[i,j] is dbeta_i/d rho_j where rho_j is a log s.p. or 
           possibly other parameter. dw - dw[i,j] is dw2[i]/drho_j. rS[[i]] %*% t(rS[[i]]) is ith smoothing penalty matrix. 
-          k[m[i-1]:(m[i])] index the points in the ith neighbourhood. m[-1]=0 by convention. 
-          Similarly ind[mi[i-1]:mi[i]] index the points whose linear predictors are to be predicted on dropping of the ith neighbourhood.
+          k[m[i-1]:(m[i]-1)] index the points in the ith neighbourhood. m[-1]=0 by convention. 
+          Similarly ind[mi[i-1]:(mi[i]-1)] index the points whose linear predictors are to be predicted on dropping of the ith neighbourhood.
           beta - model coefficients (eta=X beta if nothing dropped). sp the smoothing parameters. deriv==0
           for no derivative calculations, deriv!=0 otherwise. 
          
@@ -384,7 +416,7 @@ SEXP Rncv(SEXP x, SEXP r, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND,
    
    OMP parallel version - scaling reasonable, as irreducibly level 2 dominated.
 
-   Return: eta - eta[i] is linear predictor of y[ind[i]] when y[ind[i]] and its neighbours are ommited from fit
+   Return: eta - eta[i] is linear predictor of y[ind[i]] when y[ind[i]] and its neighbours are omitted from fit
            deta - deta[i,j] is derivative of eta[ind[i]] w.r.t. log smoothing parameter j.
    Input: X - n by p model matrix. R chol factor of penalized Hessian. w1 = w1[i] X[i,j] is dl_i/dbeta_j to within a scale parameter.
           w2 - -X'diag(w2)X is Hessian of log likelihood to within a scale parameter. db - db[i,j] is dbeta_i/d rho_j where rho_j is a log s.p. or 
@@ -392,8 +424,9 @@ SEXP Rncv(SEXP x, SEXP r, SEXP W1, SEXP W2, SEXP DB, SEXP DW, SEXP rS, SEXP IND,
           k[m[i-1]:(m[i])] index the points in the ith neighbourhood. m[-1]=0 by convention. 
           Similarly ind[mi[i-1]:mi[i]] index the points whose linear predictors are to be predicted on dropping of the ith neighbourhood.
           beta - model coefficients (eta=X beta if nothing dropped). sp the smoothing parameters. deriv==0
-          for no derivative calculations, deriv>0 to obtain first derivatives. deriv < 0 to compute NCV score without derivatives
-          and return perturbations of beta in columns of DLET.  
+          for no derivative calculations, deriv>0 to obtain first derivatives.
+ 
+          deriv < 0 to compute NCV score without derivatives and return perturbations of beta in columns of DLET.  
          
    Basic idea: to approximate the linear predictor on omission of the neighbours of each point in turn, a single Newton step is taken from the full fit
                beta, using the gradient and Hessian implied by omitting the neighbours. To keep the cost at O(np^2) an O(p^2) update of the Cholesky
@@ -816,17 +849,29 @@ static inline int i3f(int i,int j,int k,int K) {
 
 SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA,
 	   SEXP ETACV,SEXP DETACV,SEXP DETA,SEXP DB,SEXP DERIV) {
-/* This computes the NCV for GAMLSS families. X[,jj[[i]]] is the model matrix for the ith linear predictor.
+/* This computes the NCV for GAMLSS families, using a Conjugate Gradient iteration. 
+   Only intended as a fall back: Rncvls is better.
+
+   Inputs:
+   X[,jj[[i]]] is the model matrix for the ith linear predictor.
    H is the penalized Hessian, and Hi its inverse (or an approximation to it since its used as a pre-conditioner).
-   dH[[i]] is the derivarive of H w.r.t. log(sp[i]); k[m[i-1]:(m[i])] index the neighbours of the ind[i]th point 
-   (including ind[i],usually), m[-1]=0 by convention. beta - model coefficients. 
+   dH[[i]] is the derivarive of H w.r.t. log(sp[i]);   
    lj contains jth derivatives of the likelihood w.r.t. the lp for each datum.
+   k[m[i-1]:(m[i])] indexes the neighbours dropped for the ith neighbourhood.
+   ind[mi[i-1]:m[i]] indexes the points predicted for the ith neighbourhood.
+   m[-1]=mi[-1]=0 by convention. 
+   beta - model coefficients. 
    deta and dbeta are matrices with derivaives of the lp's and coefs in their cols. deta has the lps stacked in each 
    column. 
+   deriv=0 for no derivs, 1 to compute derivs.   
+   
+   Outputs:
    The perturbed etas will be returned in etacv: if nm is the length of ind,then eta[q*nm+i] is the ith element of 
    qth perturbed linear predictor.
-   The derivatives of the perturbed linear predictors are in deta: detacv[q*nm+i + l*(np*nlp)]] is the ith element of 
-   deriv of qth lp w.r.t. lth log sp. 
+   If deriv>0 then the the derivatives of the perturbed linear predictors are in deta: detacv[q*nm+i + l*(np*nlp)]] is the ith element of 
+   deriv of qth lp w.r.t. lth log sp. If deriv<0 the detacv contains the perturbtations of the coefs for each neighbourhood in its rows.
+ 
+ 
    BUG? Offset handling!!
 */
   double *X,*H,*Hi,*l1,*l2,*l3=NULL,*beta,*g,*Hp,xx,z,*d,*d1,*cgwork,*eta,*deta,v,*db=NULL,*dbp,*detacv,*dh;
@@ -845,7 +890,7 @@ SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP I
   eta = REAL(ETACV);H=REAL(h);Hi = REAL(hi);
   beta = REAL(BETA);
 
-  if (deriv) {
+  if (deriv>0) {
     l3=REAL(L3);deta=REAL(DETA);detacv=REAL(DETACV);db = REAL(DB);
   }  
   /* unpack the jj indices to here in order to avoid repeated list lookups withn loop */
@@ -903,7 +948,7 @@ SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP I
       }
       eta[ln+io] = xx;	
     }
-    if (deriv) { /* get the derivatives of the linear predictors */
+    if (deriv>0) { /* get the derivatives of the linear predictors */
       for (l=0;l<nsp;l++) {
 	ln = l*nlp;
 	DH = VECTOR_ELT(dH, l);dh = REAL(DH);
@@ -947,7 +992,9 @@ SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP I
           detacv[io + q*no +l*(no*nlp)] = xx;  
         }	  
       } /* l loop - smoothing parameters */	
-    } /* if deriv */  
+    } else if (deriv<0) { /* the output beta perturbations to rows of detacv */
+      for (j=0;j<p;j++) detacv[i+nm*j] = d[j];
+    }  
   } /* main obs loop */
   for (l=0;l<nlp;l++) {
     /* iff coerceVector did not have to create a new vector then subtracting 1 from index will have changed original object in R, so need to 
@@ -1387,18 +1434,29 @@ SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SE
    l.p.s can share coefs in this version
 
    OMP parallelization
-
+   
+   Inputs:
    X[,jj[[i]]] is the model matrix for the ith linear predictor.
-   H is the penalized Hessian, and Hi its inverse (or an approximation to it since its used as a pre-conditioner).
-   dH[[i]] is the derivarive of H w.r.t. log(sp[i]); k[m[i-1]:(m[i])] index the neighbours of the ind[i]th point 
-   (including ind[i],usually), m[-1]=0 by convention. beta - model coefficients. 
+   R1 is the Cholesky factor of the penalized Hessian.
+   dH[[i]] is the derivarive of H w.r.t. log(sp[i]); 
    lj contains jth derivatives of the likelihood w.r.t. the lp for each datum.
+   w.r.t. the linear predictors. 
+   k[m[i-1]:m[i]] index the neighbours omitted for the ith neighbourhood.
+   ind[mi[i-1]:mi[i]] index the points to predict when the ith neighbourhood is omitted. 
+   mi[-1] = m[-1]=0 by convention.
+   beta - model coefficients. 
    deta and dbeta are matrices with derivatives of the lp's and coefs in their cols. deta has the lps stacked in each 
    column. 
+   deriv = 0 for no derivative computations, 1 to compute derivatives (first order).
+   eps is the machine precision.
+   nt is the number of threads to use. 
+
+   Outputs:
    The perturbed etas will be returned in etacv: if nm is the length of ind,then eta[q*nm+i] is the ith element of 
    qth perturbed linear predictor.
-   The derivatives of the perturbed linear predictors are in deta: detacv[q*nm+i + l*(np*nlp)]] is the ith element of 
-   deriv of qth lp w.r.t. lth log sp. 
+   If deriv>0 then the derivatives of the perturbed linear predictors are in detacv: detacv[q*nm+i + l*(np*nlp)]] is the ith element of 
+   deriv of qth lp w.r.t. lth log sp.
+   If deriv<0 then detacv is used to return the perturbed coefficint vectors for each neighbourhood/fold (in its rows)
 */
   double *X,*R,*l1,*l2,*l3,*beta,*g,*R0,xx,z,*d,*d1,*eta,*deta,v,*db,*dbp,*detacv,*dh,*b,alpha,alpha0,eps,*Rb,*ddbuf,*p0,*p3,*work;
   int **jj,*jjl,*jjq,*ind,*m,*k,n,p,nm,nlp,*plp,ii,i,j,i0,i1,l,ln,ki,p2,q,r,l2i,one=1,kk,nsp,*error,deriv,nddbuf,
@@ -1417,7 +1475,7 @@ SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SE
   nm = length(M);nlp = length(JJ);nsp = length(dH);no=length(IND);
   eta = REAL(ETACV);beta = REAL(BETA);R=REAL(R1);
 
-  if (deriv) {
+  if (deriv>0) {
     l3=REAL(L3);deta=REAL(DETA);detacv=REAL(DETACV);db = REAL(DB);
   } else l3=deta=detacv=db=NULL;
   /* unpack the jj indices to here in order to avoid repeated list lookups withn loop */
@@ -1556,7 +1614,7 @@ SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SE
       }
       eta[ln+io] = xx;	
     }
-    if (deriv) { /* get the derivatives of the linear predictors */
+    if (deriv>0) { /* get the derivatives of the linear predictors */
       for (l=0;l<nsp;l++) {
 	ln = l*nlp;
 	DH = VECTOR_ELT(dH, l);dh = REAL(DH);
@@ -1603,6 +1661,8 @@ SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SE
           detacv[io + q*no +l*(no*nlp)] = xx;  
         }	  
       } /* l loop - smoothing parameters */	
+    } else if (deriv<0) { /* write the perturbations of the coefs out to deta.cv (nm by p) */
+      for (p0=d+tid*p,j=0;j<p;j++) detacv[i+nm*j] = p0[j]; 
     }  
   } /* main obs loop */
   for (l=0;l<nlp;l++) {

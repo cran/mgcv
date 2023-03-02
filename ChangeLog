@@ -27,6 +27,9 @@ present, and reparameterization needs checking (also for bam).
   which no smoother is penalized. Also there is no option to use the identical
   discretization to that used in fitting when predicting.
 
+1.8-42
+
+* One remaining old style C declaration fixed.
 
 1.8-41
 

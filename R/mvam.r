@@ -225,6 +225,7 @@ mvn <- function(d=2) {
       }
       if (nsp==0) d1H <- NULL else if (deriv==2) {
         d1H <- rep(0,nsp) #matrix(0,nb,nsp)
+	ind <- 1:(nb*nb)
         for (i in 1:nsp) { 
           dH <- matrix(oo$dH[ind],nb,nb)
           if (overlap) dH <- lpi.contract(dH,lpi0)

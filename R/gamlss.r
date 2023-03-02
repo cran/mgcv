@@ -1,4 +1,4 @@
-## (c) Simon N. Wood (2013-2019) distributed under GPL2
+## (c) Simon N. Wood (2013-2022) distributed under GPL2
 ## Code for the gamlss families.
 ## idea is that there are standard functions converting
 ## derivatives w.r.t. mu to derivatives w.r.t. eta, given 
@@ -34,6 +34,9 @@ trind.generator <- function(K=2,ifunc=FALSE,reverse=!ifunc) {
 ## Index functions require less storage for high K.
 ## ixr will extract the unique elements from an x dimensional
 ## upper triangular array in the correct order.
+## Note that there are K*(K+1)/2 unique entries in a 2d array
+## (K*(K+3)+2)*K/6 in a 2d array and (6+K*11+K^2*6+K^3)*K/24
+## in a 4d array. 
   m.start <- 1
   if (ifunc) { ## return index functions
    eval(parse(text= paste("i2 <- function(i,j) {\n",
@@ -122,7 +125,7 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
 ## ... gaulss provides an example.
   jj <- attr(X,"lpi") ## extract linear predictor index
   nlp <- length(jj); n <- nrow(X)
-  if (deriv) {
+  if (deriv>0) {
     nsp <- ncol(db)
     deta <- matrix(0,n*nlp,nsp)
     ind <- 1:n
@@ -138,7 +141,7 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
   nm <- length(nei$i)
   eta.cv <- matrix(0,nm,nlp)
   
-  deta.cv <- if (deriv) matrix(0,nm*nlp,nsp) else 0.0
+  deta.cv <- if (deriv>0) matrix(0,nm*nlp,nsp) else if (deriv<0) matrix(0,nm*length(beta),nsp)  else 0.0
   if (is.null(R)) {
     cg.iter <- .Call(C_ncvls,X,jj,H,Hi,dH,llf$l1,llf$l2,llf$l3,nei$i-1,nei$mi,nei$m,nei$k-1,beta,eta.cv,deta.cv,
                    deta,db,deriv)		   
@@ -160,24 +163,33 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
       k <- k  + 1
       ncv <- ncv - 0.5*gamma*(1+(i!=j))*sum(llf$l2[nei$i,k]*(eta.cv[,i]-eta[nei$i,i])*(eta.cv[,j]-eta[nei$i,j])) ## symmetric term
     }
-    if (deriv) {
-      ncv1 <- -colSums(as.numeric(llf$l1[nei$i,])*(deta.cv*gamma+(1-gamma)*deta)) 
+    if (deriv>0) {
+      #ncv1 <- -colSums(as.numeric(llf$l1[nei$i,])*(deta.cv*gamma+(1-gamma)*deta))
+      ncv1 <- -as.numeric(llf$l1[nei$i,])*(deta.cv*gamma+(1-gamma)*deta) 
       kk <- 0;jj <- 0
       for (j in 1:nlp) for (k in j:nlp) {
         kk <- kk  + 1
-	ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$i,j]) + 
-	                   (eta.cv[,k]-eta[nei$i,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$i+(j-1)*n,])))*gamma*.5
-
-        if (j!=k) ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$i,k]) + 
-	                   (eta.cv[,j]-eta[nei$i,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$i+(k-1)*n,])))*gamma*.5		  
+	#ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$i,j]) + 
+	#                   (eta.cv[,k]-eta[nei$i,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$i+(j-1)*n,])))*gamma*.5
+        ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$i,j]) +
+	                       (eta.cv[,k]-eta[nei$i,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$i+(j-1)*n,]))*gamma*.5
+        #if (j!=k) ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$i,k]) + 
+	#                   (eta.cv[,j]-eta[nei$i,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$i+(k-1)*n,])))*gamma*.5		  
+        if (j!=k) ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$i,k]) +
+	          (eta.cv[,j]-eta[nei$i,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$i+(k-1)*n,]))*gamma*.5
         for (l in k:nlp) {
           jj <- jj + 1
-	  ncv1 <- ncv1 - (1+(j!=k)) * gamma*.5 * colSums(
-   	          llf$l3[nei$i,jj]*deta[nei$i+(l-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,j]-eta[nei$i,j]))
-	  if (l!=k) ncv1 <- ncv1 - (1+(l!=j&&j!=k)) * gamma * .5 * colSums(
-	          llf$l3[nei$i,jj]*deta[nei$i+(k-1)*n,]*(eta.cv[,l]-eta[nei$i,l])*(eta.cv[,j]-eta[nei$i,j]))
-	  if (l!=j) ncv1 <- ncv1 - (1+(l!=k&&j!=k)) * gamma * .5 * colSums(
-	          llf$l3[nei$i,jj]*deta[nei$i+(j-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,l]-eta[nei$i,l]))
+	  #ncv1 <- ncv1 - (1+(j!=k)) * gamma*.5 * colSums(
+   	  #        llf$l3[nei$i,jj]*deta[nei$i+(l-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,j]-eta[nei$i,j]))
+	  ncv1 <- ncv1 - (1+(j!=k)) * gamma*.5 * llf$l3[nei$i,jj]*deta[nei$i+(l-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,j]-eta[nei$i,j])
+	  #if (l!=k) ncv1 <- ncv1 - (1+(l!=j&&j!=k)) * gamma * .5 * colSums(
+	  #        llf$l3[nei$i,jj]*deta[nei$i+(k-1)*n,]*(eta.cv[,l]-eta[nei$i,l])*(eta.cv[,j]-eta[nei$i,j]))
+	  if (l!=k) ncv1 <- ncv1 - (1+(l!=j&&j!=k)) * gamma * .5 * 
+	            llf$l3[nei$i,jj]*deta[nei$i+(k-1)*n,]*(eta.cv[,l]-eta[nei$i,l])*(eta.cv[,j]-eta[nei$i,j])
+	  #if (l!=j) ncv1 <- ncv1 - (1+(l!=k&&j!=k)) * gamma * .5 * colSums(
+	  #        llf$l3[nei$i,jj]*deta[nei$i+(j-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,l]-eta[nei$i,l]))
+          if (l!=j) ncv1 <- ncv1 - (1+(l!=k&&j!=k)) * gamma * .5 * 
+	          llf$l3[nei$i,jj]*deta[nei$i+(j-1)*n,]*(eta.cv[,k]-eta[nei$i,k])*(eta.cv[,l]-eta[nei$i,l])
         }
       }
     } 
@@ -187,20 +199,26 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
     ll <- family$ll(y[nei$i],X[nei$i,],beta,wt[nei$i],family,offi,deriv=1,db,eta=eta.cv,ncv=TRUE)
     ncv <- -ll$l
     ncv <- gamma*ncv - (gamma-1)*dev
-    if (deriv) {
-      dev1 <- ncv1 <- rep(0,nsp)
+    if (deriv>0) {
+      dev1 <- ncv1 <- matrix(0,nm,nsp) #rep(0,nsp)
       ind <- 1:nm; iin <- 1:n
       for (i in 1:nlp) {
-        ncv1 <- ncv1 - colSums(ll$l1[,i]*deta.cv[ind,])
-        if (gamma!=1) dev1 <- dev1 - colSums((llf$l1[,i]*deta[iin,])[nei$i,,drop=FALSE])
+        #ncv1 <- ncv1 - colSums(ll$l1[,i]*deta.cv[ind,])
+        ncv1 <- ncv1 - ll$l1[,i]*deta.cv[ind,]
+        #if (gamma!=1) dev1 <- dev1 - colSums((llf$l1[,i]*deta[iin,])[nei$i,,drop=FALSE])
+	if (gamma!=1) dev1 <- dev1 - (llf$l1[,i]*deta[iin,])[nei$i,,drop=FALSE]
         ind <- ind + nm; iin <- iin + n
       }
       ncv1 <- gamma*ncv1 - (gamma-1)*dev1
     } 
   }
+  if (deriv>0) {
+    Vg <- crossprod(ncv1)
+    ncv1 <- colSums(ncv1)
+  } else Vg <- NULL
   attr(ncv,"eta.cv") <- eta.cv
-  if (deriv) attr(ncv,"deta.cv") <- deta.cv
-  return(list(NCV=ncv,NCV1=ncv1,error=cg.iter))
+  if (deriv!=0) attr(ncv,"deta.cv") <- deta.cv ## actually the perturbations if deriv<0
+  return(list(NCV=ncv,NCV1=ncv1,error=cg.iter,Vg=Vg))
 } ## gamlss.ncv
 
 gamlss.etamu <- function(l1,l2,l3=NULL,l4=NULL,ig1,g2,g3=NULL,g4=NULL,i2,i3=NULL,i4=NULL,deriv=0) {
@@ -213,114 +231,346 @@ gamlss.etamu <- function(l1,l2,l3=NULL,l4=NULL,ig1,g2,g3=NULL,g4=NULL,i2,i3=NULL
 ## i2, i3 and i4 are the upper triangular indexing arrays
 ## e.g. l4[,i4[i,j,l,m]] contains the partial w.r.t.  
 ## params indexed by i,j,l,m with no restriction on
-## the index values except that they are in 1..K 
+## the index values except that they are in 1..K
+## lj may have an attribute "remap". If so then columns containing
+## only zeros are not actually stored. So, for example, if
+## remap is the attribute for l4 and k = remap[i4[i,j,l,m]] then
+## the derivative is zero if k==0 and l4[,k] otherwise. This
+## allows for situations in which K is quite high, but there
+## are many zero derivatives. Note, however that a zero col
+## in l4 does not always imply a zero column in d4 (deriv w.r.t.
+## eta), since the latter often involves lower order derivatives
+## l3, l2 etc. The same goes for l3 and l2.
+## Returned arrays have remap attributes if input arrays do -
+## they will generally be different to the input versions. 
+
+  ordf <- function(i,j,l=NULL,m=NULL) {
+  ## helper function to work out derivative orders
+   if (is.null(l)) { ## 2d
+     ord <- rep(1,2)
+     if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
+   } else if (is.null(m)) { ## 3 d 
+      ord <- rep(1,3)
+      if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
+      if (i==l) {ord[1] <- ord[1] + 1; ord[3] <- 0 }
+      if (ord[2]) {
+        if (j==l) {ord[2] <- ord[2] + 1; ord[3] <- 0 }
+      }
+    } else { ## 4 d
+      ord <- rep(1,4)
+      if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
+      if (i==l) {ord[1] <- ord[1] + 1; ord[3] <- 0 }
+      if (i==m) {ord[1] <- ord[1] + 1; ord[4] <- 0 }
+      if (ord[2]) {
+        if (j==l) {ord[2] <- ord[2] + 1; ord[3] <- 0 }
+        if (j==m) {ord[2] <- ord[2] + 1; ord[4] <- 0 }
+      }
+      if (ord[3]&&l==m) { ord[3] <- ord[3] + 1; ord[4] <- 0 }
+    }
+    ord
+  } ## ordf
+
   K <- ncol(l1) ## number of parameters of distribution
-  d1 <- l1
-  for (i in 1:K) { ## first derivative loop
-    d1[,i] <- l1[,i]*ig1[,i]
+  l1map <- attr(l1,"remap") ## lmap[i] is col of l1 storing ith deriv or zero if deriv zero
+  d1 <- l1 ## not "remap" matches l1
+  if (is.null(l1map)) { ## all derivs stored explicitly in l1
+    for (i in 1:K) { ## first derivative loop
+      d1[,i] <- l1[,i]*ig1[,i]
+    }
+  } else { ## some derivative are zero and not stored in l1
+    for (ii in 1:K) { ## first derivative loop
+      i <- l1map[ii] ## actual column in which iith deriv stored, or 0 if deriv zero.
+      if (i>0) d1[,i] <- l1[,i]*ig1[,i]
+    }
   }
 
   ifunc <- !is.array(i2) ## are index functions provided in place of index arrays?
-  ##n <- length(ig1[,1])
-
-  k <- 0
-  d2 <- l2
-  for (i in 1:K) for (j in i:K) {
-    ## obtain the order of differentiation associated 
-    ## with the i,j derivatives...
-    ord <- rep(1,2);k <- k+1
-    if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
-    ## l2[,k] is derivative to transform
-    mo <- max(ord)
-    if (mo==2) { ## pure 2nd derivative transform
-      d2[,k] <- (l2[,k] - l1[,i]*g2[,i]*ig1[,i])*ig1[,i]^2   
-    } else { ## all first derivative
-      d2[,k] <- l2[,k]*ig1[,i]*ig1[,j]
+ 
+  l2map <- attr(l2,"remap")
+  g2zero <- colMeans(abs(g2))==0
+  if (!is.null(l2map)||!is.null(l1map)) { ## l1 and or l2 are supplied with missing zero cols
+    if (is.null(l1map)) l1map <- 1:K
+    K2 <- ((K+1)*K)/2 ## number of second derivatives in total
+    d2map <- 1:K2
+    if (is.null(l2map)) l2map <- 1:K2 else { ## need to do a dummy run to establish which elements of d2 are non-zero
+      k <- 0
+      for (i in 1:K) for (j in i:K) {
+        ord <- ordf(i,j); k <- k+1
+        mo <- max(ord)
+        if (mo==2) { ## pure 2nd derivative transform
+          if (l2map[k]==0 && (l1map[i]==0||g2zero[i])) d2map[k] <- 0 ## d2[,k] zero as components zero.
+        } else { ## all first derivative
+          if (l2map[k]==0) d2map[k] <- 0 
+        }
+      }
+      K2 <- sum(d2map!=0)
+      d2map[d2map!=0] <- 1:K2
+    }
+    ## Now know d2map and l1map and l2map both exist. Do transforms...
+    d2 <- matrix(0,nrow(l2),K2)
+    for (i in 1:K) for (j in i:K) {
+      ord <- ordf(i,j);k <- k+1
+      mo <- max(ord)
+      if (d2map[k]>0) { ## non-zero term
+        if (mo==2) { ## pure 2nd derivative transform
+          a <- if (l2map[k]>0) l2[,l2map[k]] else 0
+	  b <- if (l1map[i]>0) l1[,l1map[i]]*g2[,i]*ig1[,i] else 0
+          d2[,d2map[k]] <- (a - b)*ig1[,i]^2   
+        } else { ## all first derivative
+          d2[,d2map[k]] <- l2[,l2map[k]]*ig1[,i]*ig1[,j]
+        }
+      }
+    }
+    attr(d2,"remap") <- d2map
+  } else { ## l1 and or l2 are supplied complete
+    k <- 0; d2 <- l2
+    for (i in 1:K) for (j in i:K) {
+      ## obtain the order of differentiation associated 
+      ## with the i,j derivatives...
+      ord <- ordf(i,j);k <- k+1
+      ## l2[,k] is derivative to transform
+      mo <- max(ord)
+      if (mo==2) { ## pure 2nd derivative transform
+        d2[,k] <- (l2[,k] - l1[,i]*g2[,i]*ig1[,i])*ig1[,i]^2   
+      } else { ## all first derivative
+        d2[,k] <- l2[,k]*ig1[,i]*ig1[,j]
+      }
     }
   } ## 2nd order transform done
 
-
-  k <- 0
-  d3 <- l3
-  if (deriv>0) for (i in 1:K) for (j in i:K) for (l in j:K) {
-    ## obtain the order of differentiation associated 
-    ## with the i,j,l derivatives...
-    ord <- rep(1,3);k <- k+1
-    if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
-    if (i==l) {ord[1] <- ord[1] + 1; ord[3] <- 0 }
-    if (ord[2]) {
-      if (j==l) {ord[2] <- ord[2] + 1; ord[3] <- 0 }
+  l3map <- attr(l3,"remap")
+  if (deriv>0) g3zero <- colMeans(abs(g3))==0
+  if (deriv>0&& (!is.null(l3map)||!is.null(l2map)||!is.null(l1map))) { ## 3rd order required, but some lj have dropped zero cols
+    if (is.null(l1map)) l1map <- 1:K
+    if (is.null(l2map)) { K2 <- ((K+1)*K)/2; l2map <- 1:K2 }  
+    K3 <- (K*(K+3)+2)*K/6
+    d3map <- 1:K3
+    if (is.null(l3map)) l3map <- 1:K3 else { ## dummy run to work out d3map
+      k <- 0
+      for (i in 1:K) for (j in i:K) for (l in j:K) {
+        k <- k + 1
+	ord <- ordf(i,j,l)
+        ii <- c(i,j,l)
+        ## l3[,k] is derivative to transform
+        mo <- max(ord)
+        if (mo==3) { ## pure 3rd derivative transform
+          mind <- if (ifunc) i2(i,i) else i2[i,i]
+	  if (l3map[k]==0&&(l2map[mind]==0||g2zero[i])&&(l1map[i]==0||(g3zero[i]&&g2zero[i]))) d3map[k] <- 0      
+        } else if (mo==1) { ## all first derivative
+          if (l3map[k]==0) d3map[k] <- 0
+        } else { ## 2,1 deriv
+          k1 <- ii[ord==1] ## index of order 1 deriv
+          k2 <- ii[ord==2] ## index of order 2 part
+          mind <- if (ifunc) i2(k2,k1) else i2[k2,k1]
+          if (l3map[k]==0&&(l2map[mind]==0||g2zero[k2])) d3map[k] <- 0
+        }
+      }
+      K3 <- sum(d3map!=0)
+      d3map[d3map!=0] <- 1:K3
     }
-    ii <- c(i,j,l)
-    ## l3[,k] is derivative to transform
-    mo <- max(ord)
-    if (mo==3) { ## pure 3rd derivative transform
-      mind <- if (ifunc) i2(i,i) else i2[i,i]
-      d3[,k] <- (l3[,k] - 3*l2[,mind]*g2[,i]*ig1[,i] +
+    ## now create and fill in non-zero cols of d3... 
+    d3 <- matrix(0,nrow(l3),K3)
+    k <- 0
+    for (i in 1:K) for (j in i:K) for (l in j:K) {
+      ## obtain the order of differentiation associated 
+      ## with the i,j,l derivatives...
+      k <- k+1
+      if (d3map[k]>0) {
+        ord <- ordf(i,j,l)
+        ii <- c(i,j,l)
+        ## l3[,k] is derivative to transform
+        mo <- max(ord)
+        if (mo==3) { ## pure 3rd derivative transform
+          mind <- if (ifunc) i2(i,i) else i2[i,i]
+	  aa <- if (l3map[k]>0) l3[,l3map[k]] else 0
+	  bb <- if (l2map[mind]>0) -3*l2[,l2map[mind]]*g2[,i]*ig1[,i] else 0
+	  cc <- if (l1map[i]>0) l1[,l1map[i]]*(3*g2[,i]^2*ig1[,i]^2 - g3[,i]*ig1[,i]) else 0
+          d3[,d3map[k]] <- (aa + bb + cc)*ig1[,i]^3         
+        } else if (mo==1) { ## all first derivative
+          d3[,d3map[k]] <- l3[,l3map[k]]*ig1[,i]*ig1[,j]*ig1[,l]
+        } else { ## 2,1 deriv
+          k1 <- ii[ord==1] ## index of order 1 deriv
+          k2 <- ii[ord==2] ## index of order 2 part
+          mind <- if (ifunc) i2(k2,k1) else i2[k2,k1]
+          aa <- if (l3map[k]>0) l3[,l3map[k]] else 0
+	  bb <- if (l2map[mind]>0) -l2[,l2map[mind]]*g2[,k2]*ig1[,k2] else 0
+          d3[,d3map[k]] <- (aa+bb)*ig1[,k1]*ig1[,k2]^2
+        } 
+      } ## d3map[k]>0
+    } ## loop
+    attr(d3,"remap") <- d3map
+  } else { ## l3, l2 and l1 all supplied complete without zero cols dropped
+    k <- 0
+    d3 <- l3
+    if (deriv>0) for (i in 1:K) for (j in i:K) for (l in j:K) {
+      ## obtain the order of differentiation associated 
+      ## with the i,j,l derivatives...
+      ord <- ordf(i,j,l);k <- k+1
+      ii <- c(i,j,l)
+      ## l3[,k] is derivative to transform
+      mo <- max(ord)
+      if (mo==3) { ## pure 3rd derivative transform
+        mind <- if (ifunc) i2(i,i) else i2[i,i]
+        d3[,k] <- (l3[,k] - 3*l2[,mind]*g2[,i]*ig1[,i] +
                 l1[,i]*(3*g2[,i]^2*ig1[,i]^2 - g3[,i]*ig1[,i]))*ig1[,i]^3          
-    } else if (mo==1) { ## all first derivative
-      d3[,k] <- l3[,k]*ig1[,i]*ig1[,j]*ig1[,l]
-    } else { ## 2,1 deriv
-      k1 <- ii[ord==1] ## index of order 1 deriv
-      k2 <- ii[ord==2] ## index of order 2 part
-      mind <- if (ifunc) i2(k2,k1) else i2[k2,k1]
-      d3[,k] <- (l3[,k] - l2[,mind]*g2[,k2]*ig1[,k2])*
+      } else if (mo==1) { ## all first derivative
+        d3[,k] <- l3[,k]*ig1[,i]*ig1[,j]*ig1[,l]
+      } else { ## 2,1 deriv
+        k1 <- ii[ord==1] ## index of order 1 deriv
+        k2 <- ii[ord==2] ## index of order 2 part
+        mind <- if (ifunc) i2(k2,k1) else i2[k2,k1]
+        d3[,k] <- (l3[,k] - l2[,mind]*g2[,k2]*ig1[,k2])*
                 ig1[,k1]*ig1[,k2]^2
-    } 
-  } ## 3rd order transform done
-  
-  k <- 0
-  d4 <- l4
-  if (deriv>2) for (i in 1:K) for (j in i:K) for (l in j:K) for (m in l:K) {
-    ## obtain the order of differentiation associated 
-    ## with the i,j,l & m derivatives...
-    ord <- rep(1,4);k <- k+1
-    if (i==j) {ord[1] <- ord[1] + 1; ord[2] <- 0 }
-    if (i==l) {ord[1] <- ord[1] + 1; ord[3] <- 0 }
-    if (i==m) {ord[1] <- ord[1] + 1; ord[4] <- 0 }
-    if (ord[2]) {
-      if (j==l) {ord[2] <- ord[2] + 1; ord[3] <- 0 }
-      if (j==m) {ord[2] <- ord[2] + 1; ord[4] <- 0 }
+      } 
     }
-    if (ord[3]&&l==m) { ord[3] <- ord[3] + 1; ord[4] <- 0 }
-    ii <- c(i,j,l,m)
-    ## l4[,k] is derivative to transform
-    mo <- max(ord)
-    if (mo==4) { ## pure 4th derivative transform
-    mi2 <- if (ifunc) i2(i,i) else i2[i,i]
-    mi3 <- if (ifunc) i3(i,i,i) else i3[i,i,i]
-    d4[,k] <-  (l4[,k] - 6*l3[,mi3]*g2[,i]*ig1[,i] + 
+  }  ## 3rd order transform done
+
+  l4map <- attr(l4,"remap")
+  if (deriv>2&& (!is.null(l4map)||!is.null(l3map)||!is.null(l2map)||!is.null(l1map))) { ## 4th order required, but some lj have dropped zero cols
+    g4zero <- colMeans(abs(g4))==0
+    if (is.null(l1map)) l1map <- 1:K
+    if (is.null(l2map)) { K2 <- ((K+1)*K)/2; l2map <- 1:K2 }  
+    if (is.null(l3map)) { K3 <- (K*(K+3)+2)*K/6;l3map <- 1:K3}
+    K4 <- (6+K*11+K^2*6+K^3)*K/24
+    d4map <- 1:K4
+    if (is.null(l4map)) l4map <- 1:K4 else { ## dummy run to create d4map
+      k <- 0
+      for (i in 1:K) for (j in i:K) for (l in j:K) for (m in l:K) { 
+        ## obtain the order of differentiation associated 
+        ## with the i,j,l & m derivatives...
+        ord <- ordf(i,j,l,m);k <- k+1
+        ii <- c(i,j,l,m)
+        ## l4[,k] is derivative to transform
+        mo <- max(ord)
+        if (mo==4) { ## pure 4th derivative transform
+          mi2 <- if (ifunc) i2(i,i) else i2[i,i]
+          mi3 <- if (ifunc) i3(i,i,i) else i3[i,i,i]
+          if (l4map[k]==0&&(l3map[mi3]==0||g2zero[i])&&(l2map[mi2]==0||(g2zero[i]&&g3zero[i]))&&(l1map[i]==0||(g4zero[i]&&g2zero[i]))) d4map[k] <- 0
+        } else if (mo==1) { ## all first derivative
+          if (l4map[k]==0) d4map[k] <- 0
+        } else if (mo==3) { ## 3,1 deriv
+          k1 <- ii[ord==1] ## index of order 1 deriv
+          k3 <- ii[ord==3] ## index of order 3 part
+          mi2 <- if (ifunc) i2(k3,k1) else i2[k3,k1]
+          mi3 <- if (ifunc) i3(k3,k3,k1) else i3[k3,k3,k1]
+	  if (l4map[k]==0&&(l3map[mi3]==0||g2zero[k3])&&(l2map[mi2]==0||(g2zero[k3]&&g3zero[k3]))) d4map[k] <- 0
+        } else { 
+          if (sum(ord==2)==2) { ## 2,2
+            k2a <- (ii[ord==2])[1];k2b <- (ii[ord==2])[2]
+	    mi2 <- if (ifunc) i2(k2a,k2b) else i2[k2a,k2b]
+	    mi3 <- if (ifunc) i3(k2a,k2b,k2b) else i3[k2a,k2b,k2b]
+	    mi3a <- if (ifunc) i3(k2a,k2a,k2b) else i3[k2a,k2a,k2b]
+	    if (l4map[k]==0&&(l3map[mi3]==0||g2zero[k2a])&&(l3map[mi3a]==0||g2zero[k2b])&&(l2map[mi2]==0||g2zero[k2a]||g2zero[k2b])) d4map[k] <- 0
+          } else { ## 2,1,1
+            k2 <- ii[ord==2] ## index of order 2 derivative
+            k1a <- (ii[ord==1])[1];k1b <- (ii[ord==1])[2]
+	    mi3 <- if (ifunc) i3(k2,k1a,k1b) else i3[k2,k1a,k1b]
+	    if (l4map[k]==0&&(l3map[mi3]==0||g2zero[k2])) d4map[k] <- 0
+          }
+        }
+      } ## loop	
+    }
+    K4 <- sum(d4map!=0)
+    d4map[d4map!=0] <- 1:K4
+    d4 <- matrix(0,nrow(l4),K4)
+    k <- 0
+    for (i in 1:K) for (j in i:K) for (l in j:K) for (m in l:K) { ## fill in d4
+      ## obtain the order of differentiation associated 
+      ## with the i,j,l & m derivatives...
+      k <- k+1
+      if (d4map[k]>0) {
+        ord <- ordf(i,j,l,m);
+        ii <- c(i,j,l,m)
+        ## l4[,k] is derivative to transform
+        mo <- max(ord)
+        if (mo==4) { ## pure 4th derivative transform
+          mi2 <- if (ifunc) i2(i,i) else i2[i,i]
+          mi3 <- if (ifunc) i3(i,i,i) else i3[i,i,i]
+          aa <- if (l4map[k]>0) l4[,l4map[k]] else 0
+	  bb <- if (l3map[mi3]>0) -6*l3[,l3map[mi3]]*g2[,i]*ig1[,i] else 0
+	  cc <- if (l2map[mi2]>0) l2[,l2map[mi2]]*(15*g2[,i]^2*ig1[,i]^2 - 4*g3[,i]*ig1[,i]) else 0
+	  dd <- if (l1map[i]>0) -l1[,l1map[i]]*(15*g2[,i]^3*ig1[,i]^3 - 10*g2[,i]*g3[,i]*ig1[,i]^2 + g4[,i]*ig1[,i]) else 0 
+          d4[,d4map[k]] <- (aa+bb+cc+dd)*ig1[,i]^4    
+        } else if (mo==1) { ## all first derivative
+          d4[,d4map[k]] <- l4[,l4map[k]]*ig1[,i]*ig1[,j]*ig1[,l]*ig1[,m]
+        } else if (mo==3) { ## 3,1 deriv
+          k1 <- ii[ord==1] ## index of order 1 deriv
+          k3 <- ii[ord==3] ## index of order 3 part
+          mi2 <- if (ifunc) i2(k3,k1) else i2[k3,k1]
+          mi3 <- if (ifunc) i3(k3,k3,k1) else i3[k3,k3,k1]
+	  aa <- if (l4map[k]>0) l4[,l4map[k]] else 0
+	  bb <- if (l3map[mi3]>0) -3*l3[,l3map[mi3]]*g2[,k3]*ig1[,k3] else 0
+	  cc <- if (l2map[mi2]>0) l2[,l2map[mi2]]*(3*g2[,k3]^2*ig1[,k3]^2 - g3[,k3]*ig1[,k3]) else 0
+          d4[,d4map[k]] <- (aa+bb+cc)*ig1[,k1]*ig1[,k3]^3
+        } else { 
+          if (sum(ord==2)==2) { ## 2,2
+            k2a <- (ii[ord==2])[1];k2b <- (ii[ord==2])[2]
+	    mi2 <- if (ifunc) i2(k2a,k2b) else i2[k2a,k2b]
+	    mi3 <- if (ifunc) i3(k2a,k2b,k2b) else i3[k2a,k2b,k2b]
+	    mi3a <- if (ifunc) i3(k2a,k2a,k2b) else i3[k2a,k2a,k2b]
+	    aa <- if (l4map[k]>0) l4[,l4map[k]] else 0
+	    bb <- if (l3map[mi3]>0) -l3[,l3map[mi3]]*g2[,k2a]*ig1[,k2a] else 0
+	    cc <- if (l3map[mi3a]>0) -l3[,l3map[mi3a]]*g2[,k2b]*ig1[,k2b] else 0
+	    dd <- if (l2map[mi2]>0) l2[,l2map[mi2]]*g2[,k2a]*g2[,k2b]*ig1[,k2a]*ig1[,k2b] else 0
+            d4[,d4map[k]] <- (aa+bb+cc+dd)*ig1[,k2a]^2*ig1[,k2b]^2
+          } else { ## 2,1,1
+            k2 <- ii[ord==2] ## index of order 2 derivative
+            k1a <- (ii[ord==1])[1];k1b <- (ii[ord==1])[2]
+	    mi3 <- if (ifunc) i3(k2,k1a,k1b) else i3[k2,k1a,k1b]
+	    aa <- if (l4map[k]>0) l4[,l4map[k]] else 0
+	    bb <- if (l3map[mi3]>0) -l3[,l3map[mi3]]*g2[,k2]*ig1[,k2] else 0
+            d4[,d4map[k]] <- (aa+bb)*ig1[,k1a]*ig1[,k1b]*ig1[,k2]^2
+          }
+        }
+      } ## if d4map[k]>0	
+    } ## loop  
+    attr(d4,"remap") <- d4map
+  } else { ## l1-l4 are all supplied complete with no dropping 
+    k <- 0
+    d4 <- l4
+    if (deriv>2) for (i in 1:K) for (j in i:K) for (l in j:K) for (m in l:K) {
+      ## obtain the order of differentiation associated 
+      ## with the i,j,l & m derivatives...
+      ord <- ordf(i,j,l,m);k <- k+1
+      ii <- c(i,j,l,m)
+      ## l4[,k] is derivative to transform
+      mo <- max(ord)
+      if (mo==4) { ## pure 4th derivative transform
+      mi2 <- if (ifunc) i2(i,i) else i2[i,i]
+      mi3 <- if (ifunc) i3(i,i,i) else i3[i,i,i]
+      d4[,k] <-  (l4[,k] - 6*l3[,mi3]*g2[,i]*ig1[,i] + 
         l2[,mi2]*(15*g2[,i]^2*ig1[,i]^2 - 4*g3[,i]*ig1[,i]) - 
         l1[,i]*(15*g2[,i]^3*ig1[,i]^3 - 10*g2[,i]*g3[,i]*ig1[,i]^2 
          + g4[,i]*ig1[,i]))*ig1[,i]^4    
-    } else if (mo==1) { ## all first derivative
-      d4[,k] <- l4[,k]*ig1[,i]*ig1[,j]*ig1[,l]*ig1[,m]
-    } else if (mo==3) { ## 3,1 deriv
-      k1 <- ii[ord==1] ## index of order 1 deriv
-      k3 <- ii[ord==3] ## index of order 3 part
-      mi2 <- if (ifunc) i2(k3,k1) else i2[k3,k1]
-      mi3 <- if (ifunc) i3(k3,k3,k1) else i3[k3,k3,k1]
-      d4[,k] <- (l4[,k] - 3*l3[,mi3]*g2[,k3]*ig1[,k3] +
+      } else if (mo==1) { ## all first derivative
+        d4[,k] <- l4[,k]*ig1[,i]*ig1[,j]*ig1[,l]*ig1[,m]
+      } else if (mo==3) { ## 3,1 deriv
+        k1 <- ii[ord==1] ## index of order 1 deriv
+        k3 <- ii[ord==3] ## index of order 3 part
+        mi2 <- if (ifunc) i2(k3,k1) else i2[k3,k1]
+        mi3 <- if (ifunc) i3(k3,k3,k1) else i3[k3,k3,k1]
+        d4[,k] <- (l4[,k] - 3*l3[,mi3]*g2[,k3]*ig1[,k3] +
         l2[,mi2]*(3*g2[,k3]^2*ig1[,k3]^2 - g3[,k3]*ig1[,k3])         
-      )*ig1[,k1]*ig1[,k3]^3
-    } else { 
-      if (sum(ord==2)==2) { ## 2,2
-        k2a <- (ii[ord==2])[1];k2b <- (ii[ord==2])[2]
-	mi2 <- if (ifunc) i2(k2a,k2b) else i2[k2a,k2b]
-	mi3 <- if (ifunc) i3(k2a,k2b,k2b) else i3[k2a,k2b,k2b]
-	mi3a <- if (ifunc) i3(k2a,k2a,k2b) else i3[k2a,k2a,k2b]
-        d4[,k] <- (l4[,k] - l3[,mi3]*g2[,k2a]*ig1[,k2a]
+        )*ig1[,k1]*ig1[,k3]^3
+      } else { 
+        if (sum(ord==2)==2) { ## 2,2
+          k2a <- (ii[ord==2])[1];k2b <- (ii[ord==2])[2]
+	  mi2 <- if (ifunc) i2(k2a,k2b) else i2[k2a,k2b]
+	  mi3 <- if (ifunc) i3(k2a,k2b,k2b) else i3[k2a,k2b,k2b]
+	  mi3a <- if (ifunc) i3(k2a,k2a,k2b) else i3[k2a,k2a,k2b]
+          d4[,k] <- (l4[,k] - l3[,mi3]*g2[,k2a]*ig1[,k2a]
           -l3[,mi3a]*g2[,k2b]*ig1[,k2b] + 
            l2[,mi2]*g2[,k2a]*g2[,k2b]*ig1[,k2a]*ig1[,k2b]
-        )*ig1[,k2a]^2*ig1[,k2b]^2
-      } else { ## 2,1,1
-        k2 <- ii[ord==2] ## index of order 2 derivative
-        k1a <- (ii[ord==1])[1];k1b <- (ii[ord==1])[2]
-	mi3 <- if (ifunc) i3(k2,k1a,k1b) else i3[k2,k1a,k1b]
-        d4[,k] <- (l4[,k] - l3[,mi3]*g2[,k2]*ig1[,k2] 
+          )*ig1[,k2a]^2*ig1[,k2b]^2
+        } else { ## 2,1,1
+          k2 <- ii[ord==2] ## index of order 2 derivative
+          k1a <- (ii[ord==1])[1];k1b <- (ii[ord==1])[2]
+	  mi3 <- if (ifunc) i3(k2,k1a,k1b) else i3[k2,k1a,k1b]
+          d4[,k] <- (l4[,k] - l3[,mi3]*g2[,k2]*ig1[,k2] 
                    )*ig1[,k1a]*ig1[,k1b]*ig1[,k2]^2
+        }
       }
-    }
+    }  
   } ## 4th order transform done
 
   list(l1=d1,l2=d2,l3=d3,l4=d4)
@@ -338,7 +588,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
 ## fh is a factorization of the penalized hessian, while D contains the corresponding
 ##    Diagonal pre-conditioning weights.
 ## deriv: 0 - just grad and Hess
-##        1 - tr(Hp^{-1} dH/drho_j) vector (was diagonal of first deriv of Hess - unused)
+##        1 - tr(Hp^{-1} dH/drho_j) vector - Hp^{-1} must be supplied in fh
 ##        2 - first deriv of Hess
 ##        3 - everything.
   K <- length(jj)
@@ -354,27 +604,52 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   ifunc <- !is.array(i2) ## are index functions provided in place of index arrays?
 
   ## the gradient...
+  l1map <- attr(l1,"remap")
   lb <- rep(0,p)
-  for (i in 1:K) { ## first derivative loop
-    lb[jj[[i]]] <- lb[jj[[i]]] + if (discrete) XWyd(X$Xd,rep(1,n),l1[,i],X$kd,X$ks,X$ts,X$dt,X$v,X$qc,X$drop,lt=X$lpid[[i]]) else
-                   colSums(l1[,i]*X[,jj[[i]],drop=FALSE]) ## !
+  if (is.null(l1map)) { ## all cols of l1 supplied
+    for (i in 1:K) { ## first derivative loop
+      lb[jj[[i]]] <- lb[jj[[i]]] + if (discrete) XWyd(X$Xd,rep(1,n),l1[,i],X$kd,X$ks,X$ts,X$dt,X$v,X$qc,X$drop,lt=X$lpid[[i]]) else
+                     colSums(l1[,i]*X[,jj[[i]],drop=FALSE]) ## !
+    }
+  } else { ## only non-zero cols of l1 supplied (only supplied for completeness - unclear any sensible model could ever want this)
+    for (i in 1:K) if (l1map[i]>0) { ## first derivative loop
+      lb[jj[[i]]] <- lb[jj[[i]]] + if (discrete) XWyd(X$Xd,rep(1,n),l1[,l1map[i]],X$kd,X$ks,X$ts,X$dt,X$v,X$qc,X$drop,lt=X$lpid[[i]]) else
+                     colSums(l1[,l1map[i]]*X[,jj[[i]],drop=FALSE]) ## !
+    }
   }
   
   ## the Hessian...
   lbb <- if (sparse) Matrix(0,p,p) else matrix(0,p,p)
   if (sandwich) { ## reset l2 so that Hessian becomes 'filling' for sandwich estimate
     if (deriv>0) warning("sandwich requested with higher derivatives")
+    if (!is.null(l1map)) stop("sandwich requested with structurally zero first derivatives - can't be sensible")
     k <- 0;
     for (i in 1:K) for (j in i:K) { k <- k + 1;l2[,k] <- l1[,i]*l1[,j] }
+    attr(l2,"remap") <- NULL ## l2 has to be full now.
   }
-  for (i in 1:K) for (j in i:K) {
-    ## A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
-    mi2 <- if (ifunc) i2(i,j) else i2[i,j] 
-    A <- if (discrete) XWXd(X$Xd,w=l2[,mi2],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
+
+  l2map <- attr(l2,"remap")
+  if (is.null(l2map)) { ## l2 supplied with all columns
+    for (i in 1:K) for (j in i:K) {
+      ## A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
+      mi2 <- if (ifunc) i2(i,j) else i2[i,j] 
+      A <- if (discrete) XWXd(X$Xd,w=l2[,mi2],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
              crossprod(X[,jj[[i]],drop=FALSE],l2[,mi2]*X[,jj[[j]],drop=FALSE])
-    lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
-    if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A) 
-  } 
+      lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
+      if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A) 
+    } 
+  } else { ## l2 supplied with zero columns dropped
+     for (i in 1:K) for (j in i:K) {
+      mi2 <- if (ifunc) i2(i,j) else i2[i,j]
+      if (l2map[mi2]>0) {
+        A <- if (discrete) XWXd(X$Xd,w=l2[,l2map[mi2]],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
+             crossprod(X[,jj[[i]],drop=FALSE],l2[,l2map[mi2]]*X[,jj[[j]],drop=FALSE])
+        lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
+        if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A)
+      }	
+    }
+  }
+
 
   if (deriv>0) {
     ## the first derivative of the Hessian, using d1b
@@ -389,20 +664,11 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
                                    X[,jj[[i]],drop=FALSE]%*%d1b[jj[[i]],]
       ind <- ind + n
     }
+    l3map <- attr(l3,"remap")
+    null3map <- is.null(l3map)
   }
 
   if (deriv==1) { 
-#    d1H <- matrix(0,p,m) ## only store diagonals of d1H
-#    for (l in 1:m) {
-#      for (i in 1:K) {
-#        v <- rep(0,n);ind <- 1:n
-#        for (q in 1:K) { 
-#          v <- v + l3[,i3[i,i,q]] * d1eta[ind,l]
-#          ind <- ind + n
-#        }
-#        d1H[jj[[i]],l] <-  d1H[jj[[i]],l] + colSums(X[,jj[[i]],drop=FALSE]*(v*X[,jj[[i]],drop=FALSE])) 
-#      } 
-#    }
    ## assuming fh contains the inverse penalized Hessian, Hp, forms tr(Hp^{-1}dH/drho_j) for each j
    g.index <- attr(d1b,"g.index") ## possible index indicating log parameterization
    if (!is.null(g.index)) { ## then several transform related quantities are required 
@@ -417,8 +683,9 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
        for (l in 1:m) { ## sp loop
          v <- rep(0,n);ind <- 1:n
          for (q in 1:K) { ## diagonal accumulation loop
-	   mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q] 
-           v <- v + l3[,mi3] * d1eta[ind,l]
+	   mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q]
+	   if (!null3map) mi3 <- l3map[mi3]
+           if (mi3>0) v <- v + l3[,mi3] * d1eta[ind,l]
            ind <- ind + n
          }
 	 XVX <- XWXd(X$Xd,w=v,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]])
@@ -475,8 +742,9 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
       for (l in 1:m) { ## sp loop
         v <- rep(0,n);ind <- 1:n
         for (q in 1:K) { ## diagonal accumulation loop
-	  mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q] 
-          v <- v + l3[,mi3] * d1eta[ind,l]
+	  mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q]
+	  if (!null3map) mi3 <- l3map[mi3]
+          if (mi3>0) v <- v + l3[,mi3] * d1eta[ind,l]
           ind <- ind + n
         }
 	mult <- if (i==j) 1 else 2
@@ -494,7 +762,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
         v <- rep(0,n);ind <- 1:n
         for (q in 1:K) {
 	  mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q] 
-          v <- v + l3[,mi3] * d1eta[ind,l]
+          if (!null3map) mi3 <- l3map[mi3]
+          if (mi3>0) v <- v + l3[,mi3] * d1eta[ind,l]
           ind <- ind + n
         }
         ## d1H[[l]][jj[[j]],jj[[i]]] <- 
@@ -507,6 +776,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   } ## if deriv>1
 
   if (deriv>2) {
+    l4map <- attr(l4,"remap")
+    null4map <- is.null(l4map)
     ## need tr(Hp^{-1} d^2H/drho_k drho_j)
     ## First form the expanded model matrix...
     VX <- Xe <- matrix(0,K*n,ncol(X))
@@ -537,12 +808,14 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
       for (i in 1:K) for (j in 1:K) {
         v <- rep(0,n);ind <- 1:n
         for (q in 1:K) { ## accumulate the diagonal matrix for X_i'diag(v)X_j
-	  mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q] 
-          v <- v + d2eta[ind,kk]*l3[,mi3]
+	  mi3 <- if (ifunc) i3(i,j,q) else i3[i,j,q]
+	  if (!null3map) mi3 <- l3map[mi3]
+          if (mi3>0) v <- v + d2eta[ind,kk]*l3[,mi3]
           ins <- 1:n
           for (s in 1:K) {
-	    mi4 <- if (ifunc) i4(i,j,q,s) else i4[i,j,q,s] 
-            v <- v + d1eta[ind,k]*d1eta[ins,l]*l4[,mi4]
+	    mi4 <- if (ifunc) i4(i,j,q,s) else i4[i,j,q,s]
+	    if (!null4map) mi4 <- l4map[mi4]
+            if (mi4>0) v <- v + d1eta[ind,k]*d1eta[ins,l]*l4[,mi4]
             ins <- ins + n
           }
           ind <- ind + n
@@ -665,13 +938,9 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
       l1[,2] <- 1/tau - tau*ymu2  
 
       ## the second derivatives
-    
-      l2 <- matrix(0,n,3)
       ## order mm,ms,ss
-      l2[,1] <- -tau2
-      l2[,2] <- 2*l1[,1]/tau
-      l2[,3] <- -ymu2 - 1/tau2
-
+      l2 <- cbind(-tau2,2*l1[,1]/tau,-ymu2 - 1/tau2)
+     
       ## need some link derivatives for derivative transform
       ig1 <- cbind(family$linfo[[1]]$mu.eta(eta),family$linfo[[2]]$mu.eta(eta1))
       g2 <- cbind(family$linfo[[1]]$d2link(mu),family$linfo[[2]]$d2link(tau))
@@ -682,23 +951,24 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     if (deriv>1) {
       ## the third derivatives
       ## order mmm,mms,mss,sss
-      l3 <- matrix(0,n,4) 
-      ## l3[,1] <- 0
-      l3[,2] <- -2*tau
-      l3[,3] <- 2*ymu
-      l3[,4] <- 2/tau^3 
+      if (TRUE) {
+        l3 <- cbind(0,-2*tau,2*ymu,2/tau^3)
+      } else { ## test infrastructure for dropping zero columns
+        l3 <- cbind(-2*tau,2*ymu,2/tau^3)
+	attr(l3,"remap") <- c(0,1:3)
+      }
       g3 <- cbind(family$linfo[[1]]$d3link(mu),family$linfo[[2]]$d3link(tau))
     }
 
     if (deriv>3) {
       ## the fourth derivatives
       ## order mmmm,mmms,mmss,msss,ssss
-      l4 <- matrix(0,n,5) 
-      ## l4[,1] <- 0
-      ## l4[,2] <- 0
-      l4[,3] <- -2
-      #l4[,4] <- 0
-      l4[,5] <- -6/tau2^2 
+      if (TRUE) {
+        l4 <- cbind(0,0,-2,0,-6/tau2^2)
+      } else { ## illustrates/tests 0 col dropping
+        l4 <- cbind(-2,-6/tau2^2)
+	attr(l4,"remap") <- c(0,0,1,0,2)
+      }
       g4 <- cbind(family$linfo[[1]]$d4link(mu),family$linfo[[2]]$d4link(tau))
     }
     if (deriv) {

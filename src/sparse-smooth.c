@@ -1307,7 +1307,7 @@ void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
    in polynomial from which derivatives are estimated. 
 
 */
-  int i,j,k,true=1,kk,l,i0,i1,max_nn=0,jj,di,doff;
+  int i,j,k,True=1,kk,l,i0,i1,max_nn=0,jj,di,doff;
   double *M,*Mi,*Vt,*sv, /* matrix mapping derivatives to function values */
     x,z; 
   
@@ -1381,7 +1381,7 @@ void nei_penalty(double *X,int *n,int *d,double *D,int *ni,int *ii,int *off,
       for (l=0;l<k;l++) M[l+i*k] *= x;
     }
     i=6;
-    mgcv_mmult(Mi,Vt,M,&true,&true,&i,&k,&i);
+    mgcv_mmult(Mi,Vt,M,&True,&True,&i,&k,&i);
 
     /* g = Mi f, where g = [f_0,f_x,f_z,f_zz,f_zz,f_xz] in obvious 
        notation, while f = [f_0,f_neighbours]. So first column of 

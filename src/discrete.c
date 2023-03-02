@@ -1071,7 +1071,7 @@ ptrdiff_t XWXijspace(int i,int j,int r,int c,int *k, int *ks, int *m, int *p,int
 /*  computes working memory requirement of XWXijs for given block - called by XWXspace below
 */
   int si,sj,//ri,rj,
-    jm,im,kk,ddtj,
+    jm,im,ddtj,
     ii,rfac,ddti,tensi,tensj,acc_w,alpha;
   ptrdiff_t nwork=0,mim,mjm; /* avoid integer overflow in large pointer calculations */ 
   si = ks[ts[i]+nx]-ks[ts[i]]; /* number of terms in summation convention for i */

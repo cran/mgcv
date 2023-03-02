@@ -1593,7 +1593,10 @@ gam.outer <- function(lsp,fscale,family,control,method,optimizer,criterion,scale
                  pearson.extra=G$pearson.extra,dev.extra=G$dev.extra,n.true=G$n.true,Sl=G$Sl,nei=nei,...)
     object$NCV <- as.numeric(b$NCV)
     object$Vj <- attr(b$NCV,"Vj")
-    
+    p <- ncol(object$Ve)
+    ii <- which(rep(1:p,each=p)>=rep(1:p,p)) ## upper triangle index
+    x <- object$Ve[ii]; y <- object$Vj[ii]
+    attr(object$Vj,"scale.factor") <- sum(x*y)/sum(x^2) ## sf minimizes ||Vj - sf*Ve||^2_F (upper triangles only)
   }
   ## note: use of the following (Vc) in place of Vp appears to mess up p-values for smooths,
   ##       but doesn't change r.e. p-values of course. 

@@ -169,7 +169,7 @@ void freemat(matrix A)
   }
 } /* freemat */
 
-void matrixintegritycheck()
+void matrixintegritycheck(void)
 
 /* iff RANGECHECK is defined above then you can call this routine to check
    on the integrity of the matrix system. The routine looks for writing out

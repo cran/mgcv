@@ -52,7 +52,7 @@ Tweedie, M. C. K. (1984). An index which distinguishes between
 
 Wood, S.N. and Fasiolo, M., (2017). A generalized Fellner-Schall method for smoothing
 parameter optimization with application to Tweedie location, scale and shape models. Biometrics, 73(4), pp.1071-1081.
-\url{https://onlinelibrary.wiley.com/doi/full/10.1111/biom.12666}
+\doi{10.1111/biom.12666}
 
 Wood, S.N., N. Pya and B. Saefken (2016). Smoothing parameter and
 model selection for general smooth models.

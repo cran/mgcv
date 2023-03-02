@@ -24,7 +24,7 @@ cnorm(theta=NULL,link="identity")
 An object of class \code{extended.family}.
 }
 
-\details{If the family is used with a vector response, then it assumed that there is no censoring, and a regular Gaussian regression results. If there is censoring then the response should be supplied as a two column matrix. The first column is always numeric. Entries in the second column are as follows.
+\details{If the family is used with a vector response, then it is assumed that there is no censoring, and a regular Gaussian regression results. If there is censoring then the response should be supplied as a two column matrix. The first column is always numeric. Entries in the second column are as follows.
 \itemize{
 \item If an entry is identical to the corresponding first column entry, then it is an uncensored observation.
 \item If an entry is numeric and different to the first column entry then there is interval censoring. The first column entry is the lower interval limit and the second column entry is the upper interval limit. \eqn{y}{y} is only known to be between these limits.
