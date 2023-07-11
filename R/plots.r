@@ -349,7 +349,7 @@ gam.check <- function(b, old.style=FALSE,
 
 plot.random.effect <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method for a "random.effect" smooth class
@@ -450,14 +450,14 @@ lolaxy <- function(lo,la,theta,phi) {
 
 plot.sos.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(100),
                      contour.col=4,...) {
 ## plot method function for sos.smooth terms
   if (scheme>1) return(plot.mgcv.smooth(x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
-                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,scheme=scheme-2,
                      hcolors=hcolors,contour.col=contour.col,...))
@@ -653,7 +653,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
 
 plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method function for mrf.smooth terms, depends heavily on polys.plot, above
@@ -679,7 +679,7 @@ plot.mrf.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
 
 plot.sz.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method for factor smooth interactions designed for models such as s(x) + s(fac,x) where
@@ -767,7 +767,7 @@ plot.sz.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=
 
 plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,...) {
 ## plot method for simple smooth factor interactions...
@@ -801,7 +801,7 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=
 
 plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(50),
                      contour.col=4,...) {
@@ -1068,7 +1068,6 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
 
       } else if (x$dim==2) { 
         P$fit[P$exclude] <- NA
-        if (pers) scheme <- 1
         if (scheme == 1) { ## perspective plot 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                   zlab=P$main,ylim=P$ylim,xlim=P$xlim,theta=theta,phi=phi,...)
@@ -1118,7 +1117,6 @@ plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",se1.mult=2,se2.mult=1,
       } else if (x$dim==2) { 
         P$fit[P$exclude] <- NA
         if (!is.null(main)) P$title <- main
-        if (pers) scheme <- 1
         if (scheme==1) { 
           persp(P$x,P$y,matrix(trans(P$fit+shift),n2,n2),xlab=P$xlab,ylab=P$ylab,
                           zlab=P$main,theta=theta,phi=phi,xlim=P$xlim,ylim=P$ylim,...)
@@ -1229,7 +1227,7 @@ md.plot <- function(f,nr,nc,m,vname,lo,hi,hcolors,scheme,main,...) {
 } ## md.plot
 
 plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+                     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,all.terms=FALSE,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,scheme=0,...)
 
@@ -1268,8 +1266,6 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
   #########################
   ## start of main function
   #########################
-
-  if (pers) warning("argument pers is deprecated, please use scheme instead")
 
   if (is.null(rug)) rug <- if (nrow(x$model)>10000) FALSE else TRUE
 
@@ -1338,7 +1334,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
     #          se1.mult=se1.mult,se2.mult=se2.mult,xlim=xlim,ylim=ylim,main=main,scheme=scheme[i],...)
     attr(x$smooth[[i]],"coefficients") <- x$coefficients[first:last]   ## relevent coefficients
     P <- plot(x$smooth[[i]],P=NULL,data=x$model,partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,n3=n3,
-                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,label=term.lab,
+                     theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,label=term.lab,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      se1.mult=se1.mult,se2.mult=se2.mult,shift=shift,trans=trans,
                      by.resids=by.resids,scheme=scheme[i],...)
@@ -1462,7 +1458,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
 
   if (m>0) for (i in 1:m) if (pd[[i]]$plot.me&&(is.null(select)||i==select)) {
     plot(x$smooth[[i]],P=pd[[i]],partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,n3=n3,
-                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,scheme=scheme[i],...)
    if (ask) { ## this is within loop so we don't get asked before it's necessary

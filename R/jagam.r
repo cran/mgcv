@@ -372,7 +372,7 @@ sim2jam <- function(sam,pregam,edf.type=2,burnin=0) {
 print.jam <- function(x,...) print.gam(x,...)
 vcov.jam <- function(object,...) vcov.gam(object,...)
 plot.jam <- function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,
-              n=100,n2=40,pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,
+              n=100,n2=40,theta=30,phi=30,jit=FALSE,xlab=NULL,
               ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
               shade=FALSE,shade.col="gray80",
               shift=0,trans=I,seWithMean=FALSE,
@@ -386,7 +386,7 @@ plot.jam <- function(x,rug=TRUE,se=TRUE,pages=0,select=NULL,scale=-1,
     if ("all.terms"%in% arg.names) stop("all.terms argument not supported")
   }
   plot.gam(x,residuals=FALSE,rug=rug,se=se,pages=pages,select=select,scale=scale,
-              n=n,n2=n2,pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,
+              n=n,n2=n2,theta=theta,phi=phi,jit=jit,xlab=xlab,
               ylab=ylab,main=main,ylim=ylim,xlim=xlim,too.far=too.far,
               all.terms=FALSE,shade=shade,shade.col=shade.col,
               shift=shift,trans=trans,seWithMean=seWithMean,

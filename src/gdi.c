@@ -815,7 +815,7 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
 */
 
 { double *diagKKt,xx,*KtTK,*PtrSm,*PtSP,*trPtSP,*work,*pdKK,*p1,*pTkm;
-    int m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,max_col,Mtot;
+  int m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,max_col,Mtot,work_n;
   int tid;
   if (nthreads<1) nthreads = 1;
   
@@ -830,7 +830,8 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
       return;
   }
   /* set up work space */
-  work =  (double *)CALLOC((size_t)*n * nthreads,sizeof(double));
+  work_n = *n; if (work_n < *r) work_n = *r;
+  work =  (double *)CALLOC((size_t) work_n * nthreads,sizeof(double));
   tid=0; /* thread identifier defaults to zero if openMP not available */
   /* now loop through the smoothing parameters to create K'TkK */
   if (deriv2) {
@@ -886,7 +887,7 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
       #endif    
       bt=1;ct=0;mgcv_mmult(PtrSm + tid * *r * max_col,P,rS+rSoff[m] * *q,&bt,&ct,r,rSncol+m,q);
       /*rSoff += rSncol[m];*/
-      trPtSP[m] = sp[m] * diagABt(work + *n * tid,PtrSm + tid * *r * max_col,
+      trPtSP[m] = sp[m] * diagABt(work + work_n * tid,PtrSm + tid * *r * max_col,
                                  PtrSm + tid * *r * max_col,r,rSncol+m); /* sp[m]*tr(P'S_mP) */ 
       det1[m + *M0] += trPtSP[m]; /* completed first derivative */
       if (deriv2) { /* get P'S_mP */
@@ -920,20 +921,20 @@ void get_ddetXWXpS(double *det1,double *det2,double *P,double *K,double *sp,
         det2[km] = xx;
 
         /* - tr(KTkKK'TmK) */
-        det2[km] -= diagABt(work + *n * tid,KtTK + k * *r * *r,KtTK+ m * *r * *r,r,r);
+        det2[km] -= diagABt(work + work_n * tid,KtTK + k * *r * *r,KtTK+ m * *r * *r,r,r);
 
         /* sp[k]*tr(P'S_kP) */
         if (k >= *M0 && k==m) det2[km] += trPtSP[m - *M0];
 
         /* -sp[m]*tr(K'T_kKP'S_mP) */
-        if (m >= *M0) det2[km] -= sp[m - *M0]*diagABt(work + *n * tid,KtTK + k * *r * *r,PtSP + (m - *M0) * *r * *r,r,r);
+        if (m >= *M0) det2[km] -= sp[m - *M0]*diagABt(work + work_n * tid,KtTK + k * *r * *r,PtSP + (m - *M0) * *r * *r,r,r);
      
         /* -sp[k]*tr(K'T_mKP'S_kP) */
-        if (k >= *M0) det2[km] -= sp[k - *M0]*diagABt(work + *n * tid,KtTK + m * *r * *r,PtSP + (k - *M0) * *r * *r,r,r);
+        if (k >= *M0) det2[km] -= sp[k - *M0]*diagABt(work + work_n * tid,KtTK + m * *r * *r,PtSP + (k - *M0) * *r * *r,r,r);
  
         /* -sp[m]*sp[k]*tr(P'S_kPP'S_mP) */
         if (k >= *M0 && m >= *M0) det2[km] -= sp[m - *M0]*sp[k - *M0]*
-                                  diagABt(work + *n * tid,PtSP + (k - *M0) * *r * *r,PtSP + (m - *M0) * *r * *r,r,r);
+                                  diagABt(work + work_n * tid,PtSP + (k - *M0) * *r * *r,PtSP + (m - *M0) * *r * *r,r,r);
 
         det2[mk] = det2[km];
       }     
@@ -972,7 +973,7 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
 
 { double *diagKKt,*diagKKtKKt,xx,*KtTK,*KtTKKtK,*KKtK,*KtK,*work,*pTk,*pTm,*pdKKt,*pdKKtKKt,*p0,*p1,*p2,*p3,*pd,
     *PtrSm,*PtSP,*KPtrSm,*diagKPtSPKt,*diagKPtSPKtKKt,*PtSPKtK, *KtKPtrSm, *KKtKPtrSm,*Ip,*IpK/*,lowK,hiK*/;
-    int i,m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,neg_w=0,tid=0;
+  int i,m,k,bt,ct,j,one=1,km,mk,*rSoff,deriv2,neg_w=0,tid=0,n_work;
   #ifdef OMP_REPORT
     Rprintf("get_trA2 (d=%d)...",*deriv);
   #endif
@@ -996,7 +997,8 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
   }
 
   /* set up work space */
-  work =  (double *)CALLOC((size_t)*n * *nt,sizeof(double));
+  if (*n > *r) n_work = *n; else n_work = *r;
+  work =  (double *)CALLOC((size_t)n_work * *nt,sizeof(double));
   /* Get K'IpK and KK'IpK  */
   KtK = (double *)CALLOC((size_t)*r * *r,sizeof(double));
   if (neg_w) { 
@@ -1034,7 +1036,7 @@ void get_trA2(double *trA,double *trA1,double *trA2,double *P,double *K,double *
         tid = omp_get_thread_num(); /* thread running this bit */
         #endif      
         j = k * *r * *r;
-        getXtWX(KtTK+ j,K,Tk + k * *n,n,r,work + tid * *n);
+        getXtWX(KtTK+ j,K,Tk + k * *n,n,r,work + tid * n_work);
         bt=ct=0;mgcv_mmult(KtTKKtK + k * *r * *r ,KtTK + j,KtK,&bt,&ct,r,r,r);
       }
     } /* parallel section end */
@@ -1327,8 +1329,9 @@ void ift1(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
 */
 { int n_2dCols,i,j,k,one=1,bt,ct;
   double *work,*Skb,*pp,*p0,*p1,*work1;
-  work = (double *) CALLOC((size_t)*n,sizeof(double));
-  work1 = (double *) CALLOC((size_t)*n,sizeof(double));
+  i = *n; if (i < *r) i = *r;
+  work = (double *) CALLOC((size_t)i,sizeof(double));
+  work1 = (double *) CALLOC((size_t)i,sizeof(double));
   Skb = (double *) CALLOC((size_t)*r,sizeof(double));
   n_2dCols = (*M * (1 + *M))/2;
   for (i=0;i<*M;i++) { /* first derivative loop */
@@ -1381,9 +1384,10 @@ void ift2(double *R,double *Vt,double *X,double *rS,double *beta,double *sp,doub
    b2 is r by n_2dCols 
 */
 { int n_2dCols,i,j,k,one=1,bt,ct,ntot,kk;
-  double *work,*Db_th,*pp,*p0,*p1,*work1;
-  work = (double *) CALLOC((size_t)*n,sizeof(double));
-  work1 = (double *) CALLOC((size_t)*n,sizeof(double));
+  double *work,*Db_th,*pp,*p0,*p1,*work1,n_work;
+  if (*n < *r) n_work = *r; else n_work = *n; 
+  work = (double *) CALLOC((size_t)n_work,sizeof(double));
+  work1 = (double *) CALLOC((size_t)n_work,sizeof(double));
   Db_th = (double *) CALLOC((size_t)*r,sizeof(double));
   ntot = *M + *n_theta;
   n_2dCols = (ntot  * (1 + ntot))/2;
@@ -1692,6 +1696,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
 /* Does initial QR decomposition for gdi routines work must be at least 3*q 
    If type==1 uses wz instead of sqrt(|w|)z and returns K s.t. \hat \beta = PK'Wz. In this case
    z must contain Wz on entry.
+   X is n by q. E is Enrow by q. On exit rank is rank of penalized problem (rank <= q)
 */
 { int i,j,k,*pivot,nt1,nr,left,tp,bt,ct,TRUE=1,FALSE=0,one=1,rr;
   double *zz=NULL,*WX,*tau,*R1,Rnorm,Enorm,Rcond,*Q=NULL,*tau1,*Ri,ldetI2D,*IQ,*d,*p0,*p1,*p2,*p3,*p4,xx,norm1,norm2;
@@ -2076,7 +2081,9 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   k = (*M * (1 + *M))/2 * *n;
   if (n_work < k) n_work = k;
   work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
-  nr = *q + *Enrow;
+  
+  if (*n < *q) nr = *n + *Enrow; else nr = *q + *Enrow;
+  
   R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
   Rh = (double *)CALLOC((size_t)*q * *q,sizeof(double)); /* to hold Rh s.t. Rh'Rh = X'WX + S */
   pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
@@ -2098,7 +2105,6 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   
   /* get  R,nulli,dev_hess,P,K,Vt,PKtz (== beta),Q1, nind,pivot1,drop,rank,n_drop,ldetXWXS */
   if (*type==1) z=wz; /* need to pass wz to gdiPK */ 
-  //j=1; // debug &j for nt
   gdiPK(work,X,E,Es,rS,U1,z,raw,
         R,Rh,nulli,dev_hess,P,K,Vt,PKtz,Q1,
         nind,pivot1,drop,
@@ -2113,7 +2119,6 @@ void gdi2(double *X,double *E,double *Es,double *rS,double *U1,
   ntot = *M + *n_theta;
   n_2dCols = (ntot  * (1 + ntot))/2;
   if (*deriv) {
-    //b1 = (double *)CALLOC((size_t) rank * ntot,sizeof(double)); 
     eta1 = (double *)CALLOC((size_t) *n * ntot,sizeof(double)); 
     if (deriv2) {
       b2 = (double *)CALLOC((size_t) rank * n_2dCols,sizeof(double)); 
@@ -2462,7 +2467,9 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
   k = (*M * (1 + *M))/2 * *n; if (n_work < k) n_work = k;
  
   work = (double *)CALLOC((size_t) n_work,sizeof(double)); /* work space for several routines*/
-  nr = *q + *Enrow;
+
+  if (*n < *q) nr = *n + *Enrow; else nr = *q + *Enrow;
+  
   R = (double *)CALLOC((size_t)*q * nr,sizeof(double));
   Rh = (double *)CALLOC((size_t)*q * *q,sizeof(double)); /* to hold Rh s.t. Rh'Rh = X'WX + S */
   pivot1=(int *)CALLOC((size_t)*q,sizeof(int));
@@ -2503,15 +2510,10 @@ void gdi1(double *X,double *E,double *Es,double *rS,double *U1,
     n_b2 = rank * n_2dCols;
     b2 = (double *)CALLOC((size_t)n_b2,sizeof(double)); /* 2nd derivs of beta */
    
-    //n_b1 = rank * *M;
-    //b1 = (double *)CALLOC((size_t)n_b1,sizeof(double)); /* 1st derivs of beta */
-   
     n_eta1 = *n * *M;
     eta1 = (double *)CALLOC((size_t)n_eta1,sizeof(double));
     Tk = (double *)CALLOC((size_t)n_eta1,sizeof(double));
    
-    //w1 = (double *)CALLOC((size_t)n_eta1,sizeof(double));
-
     n_eta2 = *n * n_2dCols;
     eta2 = (double *)CALLOC((size_t)n_eta2,sizeof(double));
     Tkm = (double *)CALLOC((size_t)n_eta2,sizeof(double));
@@ -3081,8 +3083,8 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
 
   if (!*use_wy) { /* Now get the fitted values X \beta, *without* finding \beta */
     /* st left=1;tp=1;mgcv_qrqy(z,WX,tau,n,&one,q,&left,&tp); */ /* z = Q'z */
-    tp=1;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt);
-    j = rank; if (j > rr) j = rr; /* number of rows in r factor */
+    tp=1;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt); 
+    j = rank; //if (j > rr) j = rr; /* number of rows in r factor */
     for (i=j;i<nz;i++) z[i]=0.0;
     left=1,tp=1; 
     mgcv_qrqy(z,R,tau1,&nr,&one,&rank,&left,&tp); /* z = Q1'Q'z, where Q1 is the first rank rows of second orth factor */
@@ -3099,13 +3101,14 @@ void pls_fit1(double *y,double *X,double *w,double *wy,double *E,double *Es,int 
     }
   
     left=1,tp=0; mgcv_qrqy(z,R,tau1,&nr,&one,&rank,&left,&tp); /* z = Q1 Q1'Q'z */
-
-    for (*penalty=0.0,i=rank;i<nr;i++) *penalty += z[i]*z[i]; /* the penalty term */
+    
+    /* the penalty term, using  Eb = Q2Q1'Q'z, where Q2 is part of second orth factor excluding Q1... */
+    for (*penalty=0.0,i=rr;i<nr;i++) *penalty += z[i]*z[i]; 
 
     for (i=rank;i < *n;i++) z[i]=0.0;
 
     /* st left=1;tp=0;mgcv_qrqy(z,WX,tau,n,&one,q,&left,&tp); */ /* z = Q Q1 Q1'Q z */
-    tp=0;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt);
+    tp=0;mgcv_pqrqy(z,WX,tau,n,&rr,&one,&tp,nt); 
 
     for (i=0;i<*n;i++) eta[i] = z[i]/raw[i]; /* the linear predictor */
   } /* if (!*use_wy) */

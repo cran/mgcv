@@ -123,10 +123,10 @@ regions for quantities derived from the model.
 Chambers and Hastie (1993) Statistical Models in S. Chapman & Hall.
 
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
-Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
+Model Components. Scandinavian Journal of Statistics, 39(1), 53-74. \doi{10.1111/j.1467-9469.2011.00760.x}
 
-Wood S.N. (2006b) Generalized Additive Models: An Introduction with R. Chapman
-and Hall/CRC Press.
+Wood S.N. (2017, 2nd ed) Generalized Additive Models: An Introduction with R. Chapman
+and Hall/CRC Press.  \doi{10.1201/9781315370279}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} 
 

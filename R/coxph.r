@@ -277,7 +277,8 @@ cox.ph <- function (link = "identity") {
       g <- rep(0,p);H <- rep(0,p*p)
       if (deriv > 0) {
         M <- ncol(d1b)
-        d1H <- if (deriv==1) rep(0,p*M) else rep(0,p*p*M)
+        d1H <- #if (deriv==1) rep(0,p*M) else
+	       rep(0,p*p*M)
       } else M <- d1Ho <- d1H <- 0
       if (deriv > 2) {
         d2H <- rep(0,p*M*(M+1)/2)

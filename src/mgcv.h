@@ -220,6 +220,8 @@ SEXP ncvls(SEXP x,SEXP JJ,SEXP h,SEXP hi,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP I
 	   SEXP ETACV,SEXP DETACV,SEXP DETA,SEXP DB,SEXP DERIV);
 SEXP Rncvls(SEXP x,SEXP JJ,SEXP R1,SEXP dH,SEXP L1, SEXP L2,SEXP L3,SEXP IND, SEXP MI, SEXP M, SEXP K,SEXP BETA,
 	    SEXP ETACV,SEXP DETACV,SEXP DETA,SEXP DB,SEXP DERIV,SEXP EPS,SEXP NT);
+SEXP nei_cov(SEXP v,SEXP d, SEXP M, SEXP K);
+
 void chol_up(double *R,double *u, int *n,int *up,double *eps);
 void minres(double *R, double *u,double *b, double *x, int *p,int *m,double *work);
 

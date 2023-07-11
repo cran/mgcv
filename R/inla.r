@@ -231,8 +231,11 @@ ginla <- function(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,int=0,approx=0) {
       Gmod <- G$family$preinitialize(G)
       for (gnam in names(Gmod)) G[[gnam]] <- Gmod[[gnam]] ## copy these into G 
     } else {
-      ## extended family - just initializes theta and possibly y
+      ## extended family - usually just initializes theta and possibly y
+      if (!is.null(attr(G$family$preinitialize,"needG"))) attr(G$family,"G") <- G ## more complicated
       pini <- G$family$preinitialize(G$y,G$family)
+      attr(G$family,"G") <- NULL
+      if (!is.null(pini$family)) G$family <- pini$family
       #if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta) ## DON'T - will reset stored theta!
       if (!is.null(pini$y)) G$y <- pini$y
     }

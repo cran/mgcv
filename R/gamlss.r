@@ -141,7 +141,7 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
   nm <- length(nei$i)
   eta.cv <- matrix(0,nm,nlp)
   
-  deta.cv <- if (deriv>0) matrix(0,nm*nlp,nsp) else if (deriv<0) matrix(0,nm*length(beta),nsp)  else 0.0
+  deta.cv <- if (deriv>0) matrix(0,nm*nlp,nsp) else if (deriv<0) matrix(0,length(nei$m),length(beta))  else 0.0
   if (is.null(R)) {
     cg.iter <- .Call(C_ncvls,X,jj,H,Hi,dH,llf$l1,llf$l2,llf$l3,nei$i-1,nei$mi,nei$m,nei$k-1,beta,eta.cv,deta.cv,
                    deta,db,deriv)		   
@@ -165,18 +165,25 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
     }
     if (deriv>0) {
       #ncv1 <- -colSums(as.numeric(llf$l1[nei$i,])*(deta.cv*gamma+(1-gamma)*deta))
-      ncv1 <- -as.numeric(llf$l1[nei$i,])*(deta.cv*gamma+(1-gamma)*deta) 
+      rowk <- 1:nm
+      ncv1 <- -as.numeric(llf$l1[nei$i,1])*(deta.cv[rowk,]*gamma+(1-gamma)*deta[rowk,])
+      if (nlp>1) for (j in 2:nlp) {
+        rowk <- rowk + nm 
+        ncv1 <- ncv1 - as.numeric(llf$l1[nei$i,j])*(deta.cv[rowk,]*gamma+(1-gamma)*deta[rowk,])
+      }
       kk <- 0;jj <- 0
       for (j in 1:nlp) for (k in j:nlp) {
         kk <- kk  + 1
+	rowk <- 1:nm+(k-1)*nm
+	rowj <- 1:nm+(j-1)*nm
 	#ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$i,j]) + 
 	#                   (eta.cv[,k]-eta[nei$i,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$i+(j-1)*n,])))*gamma*.5
-        ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$i,j]) +
-	                       (eta.cv[,k]-eta[nei$i,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$i+(j-1)*n,]))*gamma*.5
+        ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[rowk,] + deta.cv[rowk,])*(eta.cv[,j]-eta[nei$i,j]) +
+	                       (eta.cv[,k]-eta[nei$i,k])*(deta.cv[rowj,] - deta[nei$i+(j-1)*n,]))*gamma*.5
         #if (j!=k) ncv1 <- ncv1 - colSums(llf$l2[nei$i,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$i,k]) + 
 	#                   (eta.cv[,j]-eta[nei$i,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$i+(k-1)*n,])))*gamma*.5		  
-        if (j!=k) ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$i,k]) +
-	          (eta.cv[,j]-eta[nei$i,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$i+(k-1)*n,]))*gamma*.5
+        if (j!=k) ncv1 <- ncv1 - llf$l2[nei$i,kk]*((deta[rowj,] + deta.cv[rowj,])*(eta.cv[,k]-eta[nei$i,k]) +
+	          (eta.cv[,j]-eta[nei$i,j])*(deta.cv[rowk,] - deta[nei$i+(k-1)*n,]))*gamma*.5
         for (l in k:nlp) {
           jj <- jj + 1
 	  #ncv1 <- ncv1 - (1+(j!=k)) * gamma*.5 * colSums(
@@ -880,12 +887,12 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     paste("function(mu) { mub <- pmax(1 - mu *",b,",.Machine$double.eps);(((24*mub-36)*mub+24)*mub-6)/(mub*mu)^4}")))
   } else stop(link[[2]]," link not available for precision parameter of gaulss")
   
-  residuals <- function(object,type=c("deviance","pearson","response")) {
+  residuals <- function(object,type=c("deviance","pearson","response")) { 
       type <- match.arg(type)
       rsd <- object$y-object$fitted[,1]
       if (type=="response") return(rsd) else
       return((rsd*object$fitted[,2])) ## (y-mu)/sigma 
-    }
+    } ## gaulss residuals
     
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
@@ -1067,7 +1074,7 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
   rd <- function(mu,wt,scale) {
   ## simulate responses 
     return( rnorm(nrow(mu), mu[ , 1], sqrt(scale/wt)/mu[ , 2]) )
-  } ## rd
+  } ## gaulss rd
 
 
   structure(list(family="gaulss",ll=ll,link=paste(link),ncv=ncv,nlp=2,sandwich=sandwich,
@@ -1113,7 +1120,7 @@ multinom <- function(K=1) {
   ## or not (-ve)...
       type <- match.arg(type)
       ## get category probabilities...
-      p <- object$family$predict(object$family,eta=object$linear.predictors)[[1]]
+      p <- object$family$predict(object$family,eta=object$fitted.values)[[1]] ## changed from linear predictor for consistency
       ## now get most probable category for each observation
       pc <- apply(p,1,function(x) which(max(x)==x)[1])-1 
       n <- length(pc)
@@ -1144,7 +1151,8 @@ multinom <- function(K=1) {
       if (se) { 
         ve <- matrix(0,nobs,K) ## variance of eta
         ce <- matrix(0,nobs,K*(K-1)/2) ## covariance of eta_i eta_j
-      } 
+      }
+      ii <- 0
       for (i in 1:K) {
         if (discrete) {
 	  eta[,i] <- Xbd(X$Xd,beta,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[i]]) 
@@ -1157,7 +1165,7 @@ multinom <- function(K=1) {
 	  
           ve[,i] <- if (discrete) diagXVXd(X$Xd,Vb,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,nthreads=1,
 	                   lt=X$lpid[[i]],rt=X$lpid[[i]]) else drop(pmax(0,rowSums((Xi%*%Vb[lpi[[i]],lpi[[i]]])*Xi)))
-          ii <- 0
+          ## ii <- 0 BUGGY location!
           if (i<K) for (j in (i+1):K) {
             ii <- ii + 1
             ce[,ii] <- if (discrete) diagXVXd(X$Xd,Vb,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,nthreads=1,
@@ -1935,7 +1943,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
   stats <- list()
   for (i in 1:3) {
     if (link[[i]] %in% okLinks[[i]]) stats[[i]] <- make.link(link[[i]]) else 
-    stop(link[[i]]," link not available for mu parameter of gaulss")
+    stop(link[[i]]," link not available for gevlss")
     fam <- structure(list(link=link[[i]],canonical="none",linkfun=stats[[i]]$linkfun,
            mu.eta=stats[[i]]$mu.eta),
            class="family")
@@ -1975,7 +1983,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
         rsd <- y-fv
       }
       rsd
-    }
+    } ## gevlss residuals
     
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
@@ -2483,7 +2491,7 @@ twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
         rsd <- sign(object$y-mu)*sqrt(pmax(2 * (object$y * theta - kappa) * object$prior.weights/phi,0))
       }
       return(rsd) ## (y-mu)/sigma 
-    }
+    } ## twlss residuals
     
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
@@ -2632,7 +2640,7 @@ gammals <- function(link=list("identity","log"),b=-7) {
   stats <- list()
   for (i in 1:2) {
     if (link[[i]] %in% okLinks[[i]]) stats[[i]] <- make.link(link[[i]]) else 
-    stop(link[[i]]," link not available for mu parameter of gammals")
+    stop(link[[i]]," link not available for gammals")
     fam <- structure(list(link=link[[i]],canonical="none",linkfun=stats[[i]]$linkfun,
            mu.eta=stats[[i]]$mu.eta),
            class="family")
@@ -2696,13 +2704,10 @@ gammals <- function(link=list("identity","log"),b=-7) {
         rsd <- y-mu
       }
       rsd
-    }
+    } ## gammls residuals
     
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
-    ## It's difficult to define a sensible version of this that ensures
-    ## that the data fall in the support of the null model, whilst being
-    ## somehow equivalent to the full fit
     object$fitted.values[,1] <- exp(object$fitted.values[,1])
     .my <- mean(object$y)
     object$null.deviance <- sum(((object$y-.my)/.my-log(object$y/.my))*exp(-object$fitted.values[,2]))*2
@@ -2928,7 +2933,7 @@ gammals <- function(link=list("identity","log"),b=-7) {
     if (se) { ## need to loop to find se of probabilities...
       vp <- gamma
       vp[,1] <- abs(gamma[,1])*sqrt(ve[,1])
-      vp[,2] <- abs(family$linfo[[2]]$mu.eta(eta[,2]))*sqrt(ve[2])
+      vp[,2] <- abs(family$linfo[[2]]$mu.eta(eta[,2]))*sqrt(ve[,2])
       return(list(fit=gamma,se.fit=vp))
     } ## if se
     list(fit=gamma)
@@ -3032,7 +3037,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
         rsd <- y-mean
       }
       rsd
-    }
+    } ## gumbls residuals
     
   postproc <- expression({
     ## code to evaluate in estimate.gam, to evaluate null deviance
@@ -3367,7 +3372,7 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
       rsd <- sqrt(rsd)*sgn
     }
     rsd
-  } ## residuals
+  } ## shash residuals
 
   ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=NULL,dH=NULL,db=NULL,deriv=FALSE,nt=1) {
     gamlss.ncv(X,y,wt,nei,beta,family,llf,H=H,Hi=Hi,R=R,offset=offset,dH=dH,db=db,deriv=deriv,nt=nt)

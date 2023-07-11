@@ -3,7 +3,7 @@
 \alias{mgcv-package}
 \alias{mgcv}
 \docType{package}
-\title{Mixed GAM Computation Vehicle with GCV/AIC/REML smoothness estimation and GAMMs by REML/PQL
+\title{Mixed GAM Computation Vehicle with GCV/AIC/REML/NCV smoothness estimation and GAMMs by REML/PQL
 }
 \description{
 \code{mgcv} provides functions for generalized additive modelling (\code{\link{gam}} and \code{\link{bam}})  and
@@ -34,7 +34,7 @@ predictors can be specified using \code{\link{te}},  \code{\link{ti}} or \code{\
 overview of the built in smooth classes, and \code{\link{random.effects}} should be refered to for an overview 
 of random effects terms (see also \code{\link{mrf}} for Markov random fields). Estimation is by
 penalized likelihood or quasi-likelihood maximization, with smoothness
-selection by GCV, GACV, gAIC/UBRE or (RE)ML. See \code{\link{gam}}, \code{\link{gam.models}}, 
+selection by GCV, GACV, gAIC/UBRE, \code{\link{NCV}} or (RE)ML. See \code{\link{gam}}, \code{\link{gam.models}}, 
 \code{\link{linear.functional.terms}} and \code{\link{gam.selection}} for some discussion of model specification and
 selection. For detailed control of fitting see \code{\link{gam.convergence}},
 \code{\link{gam}} arguments \code{method} and \code{optimizer} and \code{\link{gam.control}}. For checking and
@@ -54,7 +54,7 @@ approximations can be used for hypothesis testing based model comparison. See \c
 \code{\link{summary.gam}} for more on hypothesis testing.
 
 For large datasets (that is large n) see \code{\link{bam}} which is a version of \code{\link{gam}} with 
-a much reduced memory footprint.
+a much reduced memory footprint. \code{bam(...,discrete=TRUE)} offers the very efficient methods of Wood et al. (2017) and Li and Wood (2020).
 
 The package also provides a generalized additive mixed modelling function,
 \code{\link{gamm}}, based on a PQL approach and  
@@ -89,7 +89,11 @@ Part funded by EPSRC: EP/K005251/1
 }
 \references{
 These provide details for the underlying mgcv methods, and fuller 
-references to the large literature on which the methods are based. 
+references to the large literature on which the methods are based.
+
+Wood, S. N. (2020) Inference and computation with generalized
+additive models and their extensions. Test 29(2): 307-339.
+\doi{10.1007/s11749-020-00711-5}
 
 Wood, S.N., N. Pya and B. Saefken (2016), Smoothing parameter and
 model selection for general smooth models (with discussion).
@@ -106,12 +110,19 @@ generalized additive models. J. Amer. Statist. Ass. 99:673-686.
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
 Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
 
-Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010
+Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010 \doi{10.1093/biomet/ast038}
 
-Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
+Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228 \doi{10.1093/biomet/ass048}
 
 Wood, S.N. (2017) \emph{Generalized Additive Models: an introduction with R (2nd edition)},
-CRC
+CRC \doi{10.1201/9781315370279}
+
+Wood, S.N., Li, Z., Shaddick, G. & Augustin N.H. (2017) Generalized additive models for gigadata: modelling the UK black smoke network daily data. Journal of the American Statistical Association. 112(519):1199-1210
+\doi{10.1080/01621459.2016.1195744}
+
+Li, Z & S.N. Wood (2020) Faster model matrix crossproducts for large generalized linear models with discretized covariates. Statistics and Computing. 30:19-25
+\doi{10.1007/s11222-019-09864-2}
+
 
 Development of mgcv version 1.8 was part funded by EPSRC grants EP/K005251/1 and EP/I000917/1.
 
@@ -123,5 +134,5 @@ Development of mgcv version 1.8 was part funded by EPSRC grants EP/K005251/1 and
 
 
 \examples{
-## see examples for gam and gamm
+## see examples for gam, bam and gamm
 }

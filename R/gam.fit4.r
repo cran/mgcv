@@ -1,4 +1,4 @@
-## (c) Simon N. Wood (2013-2022). Provided under GPL 2.
+# (c) Simon N. Wood (2013-2022). Provided under GPL 2.
 ## Routines for gam estimation beyond exponential family.
 
 dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
@@ -60,14 +60,16 @@ dDeta <- function(y,mu,wt,theta,fam,deriv=0) {
    } ## end of non identity
    good <- is.finite(d$Deta)&is.finite(d$Deta2)
    if (deriv>0) {
-     if (length(theta)>1) good <- good&is.finite(rowSums(d$Dth))&is.finite(rowSums(d$Detath))&
-                                  is.finite(rowSums(d$Deta2th))&is.finite(d$Deta3) else
-     good <- good&is.finite(d$Dth)&is.finite(d$Detath)&is.finite(d$Deta2th)&is.finite(d$Deta3)
+     nth <- length(theta)
+     if (nth>1) good <- good&is.finite(rowSums(d$Dth))&is.finite(rowSums(d$Detath))&
+                                 is.finite(rowSums(d$Deta2th))&is.finite(d$Deta3) else
+     good <- good & is.finite(d$Deta3) & if (nth==0) TRUE else
+             is.finite(d$Dth)&is.finite(d$Detath)&is.finite(d$Deta2th)
      if (deriv>1) { 
-       if (length(theta)==1) good <- good&is.finite(d$Dth2)&is.finite(d$Detath2)&is.finite(d$Deta2th2)&
-                                     is.finite(d$Deta3th)&is.finite(d$Deta4) else
-       good <- good&is.finite(rowSums(d$Dth2))&is.finite(rowSums(d$Detath2))&is.finite(rowSums(d$Deta2th2))&
-               is.finite(rowSums(d$Deta3th))&is.finite(d$Deta4)
+       if (nth>1) good <- good&is.finite(rowSums(d$Dth2))&is.finite(rowSums(d$Detath2))&is.finite(rowSums(d$Deta2th2))&
+                          is.finite(rowSums(d$Deta3th))&is.finite(d$Deta4) else
+       good <- good & is.finite(d$Deta4) & if (nth==0) TRUE else
+               is.finite(d$Dth2)&is.finite(d$Detath2)&is.finite(d$Deta2th2)&is.finite(d$Deta3th)
      }
    }	   
    d$good <- good	   
@@ -85,7 +87,7 @@ fetad.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
   cat("Deta: rdiff = ",range(dd$Deta-Deta.fd)," cor = ",cor(dd$Deta,Deta.fd),"\n")
   plot(dd$Deta,Deta.fd);abline(0,1)
   nt <- length(theta)
-  for (i in 1:nt) {
+  if (fam$n.theta && nt>0) for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
     dev1 <- fam$dev.resids(y, mu, wt,th1)   
     Dth.fd <- (dev1-dev)/eps
@@ -106,7 +108,7 @@ fetad.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
   plot(dd$Deta4,Deta4.fd);abline(0,1)
   ## and now the higher derivs wrt theta...
   ind <- 1:nt
-  for (i in 1:nt) {
+  if (fam$n.theta && nt>0) for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
     dd1 <- dDeta(y,mu,wt,th1,fam,deriv=2)
     Detath.fd <- (dd1$Deta - dd$Deta)/eps 
@@ -169,13 +171,14 @@ fmud.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
     on.exit(devAskNewPage(oask))
   }
   nt <- length(theta)
-  for (i in 1:nt) {
+  if (fam$n.theta>0&&nt>0) for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
     dev1 <- dev.resids(y, mu, wt,th1)
     Dth.fd <- (dev1-dev)/eps
     um <- if (nt>1) dd$Dth[,i] else dd$Dth
-    cat("Dth[",i,"]: rdiff = ",range(um-Dth.fd)," cor = ",corb(um,Dth.fd),"\n")
-    if (plot) { plot(um,Dth.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    cat("Dth[",i,"]: rdiff = ",range(um-Dth.fd)," cor = ",corb(um,Dth.fd),"\n",sep="")
+    if (plot) { plot(um,Dth.fd,pch=pch,cex=cex,xlab=paste("Dth[",i,"]",sep=""));
+    abline(0,1,col=2)}
   }
   ## second order up...
   dd1 <- Dd(y, mu+eps, theta, wt, level=2)
@@ -190,47 +193,47 @@ fmud.test <- function(y,mu,wt,theta,fam,eps = 1e-7,plot=TRUE) {
   if (plot) { plot(dd$Dmu4,Dmu4.fd,pch=pch,cex=cex);abline(0,1,col=2)}
   ## and now the higher derivs wrt theta 
   ind <- 1:nt
-  for (i in 1:nt) {
+  if (fam$n.theta>0&&nt>0) for (i in 1:nt) {
     th1 <- theta;th1[i] <- th1[i] + eps
     dd1 <- Dd(y, mu, th1, wt, level=2)
     Dmuth.fd <- (dd1$Dmu - dd$Dmu)/eps
     um <- if (nt>1) dd$Dmuth[,i] else dd$Dmuth
     cat("Dmuth[",i,"]: rdiff = ",range(um-Dmuth.fd)," cor = ",corb(um,Dmuth.fd),"\n")
-    if (plot) { plot(um,Dmuth.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,Dmuth.fd,pch=pch,cex=cex,xlab=paste("Dmuth[",i,"]",sep=""));abline(0,1,col=2)}
     Dmu2th.fd <- (dd1$Dmu2 - dd$Dmu2)/eps
     um <- if (nt>1) dd$Dmu2th[,i] else dd$Dmu2th
     cat("Dmu2th[",i,"]: rdiff = ",range(um-Dmu2th.fd)," cor = ",corb(um,Dmu2th.fd),"\n")
-    if (plot) { plot(um,Dmu2th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,Dmu2th.fd,pch=pch,cex=cex,xlab=paste("Dmu2th[",i,"]",sep=""));abline(0,1,col=2)}
     if (!is.null(dd$EDmu2th)) {
        EDmu2th.fd <- (dd1$EDmu2 - dd$EDmu2)/eps
        um <- if (nt>1) dd$EDmu2th[,i] else dd$EDmu2th
        cat("EDmu2th[",i,"]: rdiff = ",range(um-EDmu2th.fd)," cor = ",corb(um,EDmu2th.fd),"\n")
-       if (plot) { plot(um,EDmu2th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+       if (plot) { plot(um,EDmu2th.fd,pch=pch,cex=cex,xlab=paste("EDmu2th[",i,"]",sep=""));abline(0,1,col=2)}
     }
     Dmu3th.fd <- (dd1$Dmu3 - dd$Dmu3)/eps
     um <- if (nt>1) dd$Dmu3th[,i] else dd$Dmu3th
     cat("Dmu3th[",i,"]: rdiff = ",range(um-Dmu3th.fd)," cor = ",corb(um,Dmu3th.fd),"\n")
-    if (plot) { plot(um,Dmu3th.fd,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,Dmu3th.fd,pch=pch,cex=cex,xlab=paste("Dmu3th[",i,"]",sep=""));abline(0,1,col=2)}
     ## now the 3 second derivative w.r.t. theta terms...
 
     Dth2.fd <- (dd1$Dth - dd$Dth)/eps
     um <- if (nt>1) dd$Dth2[,ind] else dd$Dth2
     er <- if (nt>1) Dth2.fd[,i:nt] else Dth2.fd
     cat("Dth2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
-    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,er,pch=pch,cex=cex,xlab=paste("Dth2[",i,",]",sep=""),ylab="fd");abline(0,1,col=2)}
     Dmuth2.fd <- (dd1$Dmuth - dd$Dmuth)/eps
     um <- if (nt>1) dd$Dmuth2[,ind] else dd$Dmuth2
     er <- if (nt>1) Dmuth2.fd[,i:nt] else Dmuth2.fd
     cat("Dmuth2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
-    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,er,pch=pch,cex=cex,xlab=paste("Dmuth2[",i,",]",sep=""),ylab="fd");abline(0,1,col=2)}
     Dmu2th2.fd <- (dd1$Dmu2th - dd$Dmu2th)/eps
     um <- if (nt>1) dd$Dmu2th2[,ind] else dd$Dmu2th2
     er <- if (nt>1) Dmu2th2.fd[,i:nt] else Dmu2th2.fd
     cat("Dmu2th2[",i,",]: rdiff = ",range(um-er)," cor = ",corb(as.numeric(um),as.numeric(er)),"\n")
-    if (plot) { plot(um,er,pch=pch,cex=cex);abline(0,1,col=2)}
+    if (plot) { plot(um,er,pch=pch,cex=cex,xlab=paste("Dmu2th2[",i,",]",sep=""),ylab="fd");abline(0,1,col=2)}
     ind <- max(ind)+1:(nt-i)
   }
-}
+} ## fmud.test
 
 
 
@@ -646,7 +649,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
      if (nei$jackknife > 2) { ## return NCV coef changes for each fold 
        if (deriv>0) stop("jackknife and derivatives requested together")
        dth <- matrix(0,ncol(x),length(nei$m))
-       deriv1 <- -1
+       deriv1 <- -1 ## signal to return coef changes
      } else deriv1 <- deriv
      if (inherits(R,"try-error")) { ## use CG approach...
 	Hi <- tcrossprod(rV) ## inverse of penalized Expected Hessian - inverse actual Hessian probably better
@@ -659,60 +662,45 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
      }   
      mu.cv <- linkinv(eta.cv)
      nt <- family$n.theta
-     if (deriv) keep <- if (length(theta)>nt) (length(theta)+1):ncol(db.drho) else 1:ncol(db.drho)
-     #dev0 <- sum(dev.resids(y[nei$i], mu[nei$i], weights[nei$i],theta))
+     ## if some elements of theta are fixed, figure out which derivatives will be needed...
+     if (deriv) keep <- if (length(theta)>nt) (length(theta)+1):(ncol(db.drho)+!scale.known) else 1:(ncol(db.drho)+!scale.known)
+   
      dev0 <- dev.resids(y[nei$i], mu[nei$i], weights[nei$i],theta)
      ls0 <- family$ls(y[nei$i],weights[nei$i],theta,scale)
      if (family$qapprox) { ## quadratic approximation to NCV
-       #qdev <- dev0 + gamma*sum(dd$Deta[nei$i]*(eta.cv-eta[nei$i])) + 0.5*gamma*sum(dd$Deta2[nei$i]*(eta.cv-eta[nei$i])^2)
        qdev <- dev0 + gamma*dd$Deta[nei$i]*(eta.cv-eta[nei$i]) + 0.5*gamma*dd$Deta2[nei$i]*(eta.cv-eta[nei$i])^2
        NCV <- sum(qdev)/(2*scale) - ls0$ls
        if (deriv) {
          deta <- x %*% db.drho
-         #NCV1 <- (colSums(dd$Deta[nei$i]*((1-gamma)*deta[nei$i,,drop=FALSE]+gamma*deta.cv)) +
-	 #gamma*colSums(dd$Deta2[nei$i]*deta.cv*(eta.cv-eta[nei$i])) +
-	 #0.5*gamma*colSums(as.numeric(dd$Deta3[nei$i])*deta[nei$i,,drop=FALSE]*(eta.cv-eta[nei$i])^2))/(2*scale)
 	 ncv1 <- (dd$Deta[nei$i]*((1-gamma)*deta[nei$i,,drop=FALSE]+gamma*deta.cv) +
 	          gamma*dd$Deta2[nei$i]*deta.cv*(eta.cv-eta[nei$i]) +
 	          0.5*gamma*as.numeric(dd$Deta3[nei$i])*deta[nei$i,,drop=FALSE]*(eta.cv-eta[nei$i])^2)/(2*scale)
 	 if (nt>0) { ## deal with direct dependence on the theta parameters
-           #NCV1[1:nt] <- NCV1[1:nt]- ls0$lsth1[1:nt] +
-	   #   if (nt==1) (sum(dd$Dth[nei$i]) + gamma*sum(dd$Detath[nei$i]*(eta.cv-eta[nei$i])) + 0.5*gamma*sum(dd$Deta2th[nei$i]*(eta.cv-eta[nei$i])^2))/(2*scale)
-	   #   else (colSums(dd$Dth[nei$i,]) + gamma*colSums(dd$Detath[nei$i,]*(eta.cv-eta[nei$i])) + 0.5*gamma*colSums(dd$Deta2th[nei$i,]*(eta.cv-eta[nei$i])^2))/(2*scale)
            ncv1[,1:nt] <- ncv1[,1:nt]- ls0$LSTH1[,1:nt] +
 	      if (nt==1) (dd$Dth[nei$i] + gamma*dd$Detath[nei$i]*(eta.cv-eta[nei$i]) + 0.5*gamma*dd$Deta2th[nei$i]*(eta.cv-eta[nei$i])^2)/(2*scale)
 	      else (dd$Dth[nei$i,] + gamma*dd$Detath[nei$i,]*(eta.cv-eta[nei$i]) + 0.5*gamma*dd$Deta2th[nei$i,]*(eta.cv-eta[nei$i])^2)/(2*scale)
          }
 	 if (!scale.known) {
-           #NCV1 <- c(NCV1,-qdev/(2*scale) - ls0$lsth1[1+nt])
 	   ncv1 <- cbind(ncv1,-qdev/(2*scale) - ls0$LSTH1[,1+nt])
          }
        }
      } else { ## exact NCV
-       #dev.cv <- sum(dev.resids(y, mu.cv, weights,theta))
        dev.cv <- dev.resids(y, mu.cv, weights,theta)
        NCV <- sum(dev.cv)/(2*scale) - ls0$ls
        DEV <- sum(dev0)/(2*scale) - ls0$ls 
        if (gamma!=1) NCV <- gamma*NCV - (gamma-1)*DEV
        if (deriv) {
          dd.cv <- dDeta(y[nei$i],mu.cv,weights[nei$i],theta,family,1) 
-         #NCV1 <- colSums(dd.cv$Deta*deta.cv)/(2*scale)
 	 ncv1 <- dd.cv$Deta*deta.cv/(2*scale)
-         #if (gamma!=1) DEV1 <- colSums((dd$Deta*(x%*%db.drho))[nei$i,,drop=FALSE])/(2*scale)
 	 if (gamma!=1) dev1 <- (dd$Deta*(x%*%db.drho))[nei$i,,drop=FALSE]/(2*scale)
          if (nt>0) {
-           #NCV1[1:nt] <- NCV1[1:nt] + colSums(as.matrix(dd.cv$Dth/(2*scale))) - ls0$lsth1[1:nt]
-	   #if (gamma!=1) DEV1[1:nt] <- DEV1[1:nt] + colSums(as.matrix(dd$Dth/(2*scale))[nei$i,,drop=FALSE]) - ls0$lsth1[1:nt]
-	   ncv1[,1:nt] <- ncv1[,1:nt] + as.matrix(dd.cv$Dth/(2*scale)) - ls0$LSTH1[,1:nt]
+       	   ncv1[,1:nt] <- ncv1[,1:nt] + as.matrix(dd.cv$Dth/(2*scale)) - ls0$LSTH1[,1:nt]
 	   if (gamma!=1) dev1[,1:nt] <- dev1[,1:nt] + as.matrix(dd$Dth/(2*scale))[nei$i,,drop=FALSE] - ls0$LSTH1[,1:nt]
          }
          if (!scale.known) { ## deal with log scale parameter derivative
-           #NCV1 <- c(NCV1,-dev.cv/(2*scale) - ls0$lsth1[1+nt])
-	   #if (gamma!=1) DEV1 <- c(DEV1,-dev0/(2*scale) - ls0$lsth1[1+nt])
 	   ncv1 <- cbind(ncv1,-dev.cv/(2*scale) - ls0$LSTH1[,1+nt])
 	   if (gamma!=1) dev1 <- cbind(dev1,-dev0/(2*scale) - ls0$lSTH1[,1+nt])
          }
-         #if (gamma!=1) NCV1 <- gamma*NCV1 - (gamma-1)*DEV1
 	 if (gamma!=1) ncv1 <- gamma*ncv1 - (gamma-1)*dev1
        }
      } ## exact NCV
@@ -721,9 +709,10 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
        nk <- c(nei$m[1],diff(nei$m)) ## dropped fold sizes
        jkw <- sqrt((nobs-nk)/(nobs*nk)) ## jackknife weights
        dth <-jkw*t(dth)%*%t(T)
-       Vj <- crossprod(dd) ## jackknife cov matrix for coefs (beta)
-       attr(Vj,"dd") <- dd
-       attr(NCV,"Vj") <- Vj
+       #Vj <- crossprod(dd) ## jackknife cov matrix for coefs (beta)
+       #attr(Vj,"dd") <- dd
+       #attr(NCV,"Vj") <- Vj
+       attr(NCV,"dd") <- dth
      }  
 
      attr(NCV,"eta.cv") <- eta.cv
@@ -740,8 +729,8 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
      ## compute the REML score...
      ls <- family$ls(y,weights,theta,scale)
      nt <- length(theta)
-     lsth1 <- ls$lsth1[1:nt];
-     lsth2 <- as.matrix(ls$lsth2)[1:nt,1:nt] ## exclude any derivs w.r.t log scale here
+     lsth1 <- if (nt>0) ls$lsth1[1:nt] else rep(0,0)
+     lsth2 <- if (nt>0) as.matrix(ls$lsth2)[1:nt,1:nt] else matrix(0,0,0) ## exclude any derivs w.r.t log scale here
      REML <- ((dev+oo$P)/(2*scale) - ls$ls)/gamma + (oo$ldet - rp$det)/2 - 
              as.numeric(scoreType=="REML") * Mp * (log(2*pi*scale)/2-log(gamma)/2)
      
@@ -753,7 +742,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
        }
        REML1 <- ((oo$D1+oo$P1)/(2*scale) - c(lsth1,rep(0,length(sp))))/gamma + (det1)/2
        if (deriv>1) {
-         ls2 <- D2*0;ls2[1:nt,1:nt] <- lsth2 
+         ls2 <- D2*0;if (nt>0) ls2[1:nt,1:nt] <- lsth2 
          if (nSp) ldet2[ind,ind] <- ldet2[ind,ind] - rp$det2
          REML2 <- ((D2+bSb2)/(2*scale) - ls2)/gamma + ldet2/2
        }
@@ -764,7 +753,7 @@ gam.fit4 <- function(x, y, sp, Eb,UrS=list(),
         dlr.dlphi <- (-Dp/(2 *scale) - ls$lsth1[nt+1])/gamma - as.numeric(scoreType=="REML") * Mp/2
         d2lr.d2lphi <- (Dp/(2*scale) - ls$lsth2[nt+1,nt+1])/gamma 
         d2lr.dspphi <- -(oo$D1+oo$P1)/(2*scale*gamma) 
-        d2lr.dspphi[1:nt] <- d2lr.dspphi[1:nt] - ls$lsth2[nt+1,1:nt]/gamma
+        if (nt>0) d2lr.dspphi[1:nt] <- d2lr.dspphi[1:nt] - ls$lsth2[nt+1,1:nt]/gamma
         REML1 <- c(REML1,dlr.dlphi)
         if (deriv==2) {
               REML2 <- rbind(REML2,as.numeric(d2lr.dspphi))
@@ -1306,7 +1295,7 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,scoreTyp
     REML <- REML1 <- REML2 <- NULL
     if (deriv==0) ll <- llf(y,x,coef,weights,family,offset=offset,deriv=1,d1b=d1b,ncv=TRUE) ## otherwise l1, l2 not returned
     ncv <- family$ncv ## helps debugging!
-    deriv1 <- if (deriv==0) 0 else  if (nei$jackknife>2) -1 else 1
+    deriv1 <-  if (nei$jackknife>2) -1 else if (deriv==0) 0 else  1
     ## create nei if null - now in estimate.gam
     #if (is.null(nei)||is.null(nei$k)||is.null(nei$m)) nei <- list(i=1:nobs,mi=1:nobs,m=1:nobs,k=1:nobs) ## LOOCV
     #if (is.null(nei$i)) if (length(nei$m)==nobs) nei$mi <- nei$i <- 1:nobs else stop("unclear which points NCV neighbourhoods belong to")
@@ -1337,11 +1326,13 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,scoreTyp
     if (deriv1<0) { ## Jackknife cov matrix...
       nk <- c(nei$m[1],diff(nei$m)) ## dropped fold sizes
       jkw <- sqrt((nobs-nk)/(nobs*nk)) ## jackknife weights
-      dd <- jkw*attr(ret$NCV,"deta.cv")
+      dd <- attr(ret$NCV,"deta.cv")
       #dd <-jkw*t(dd)%*%t(T)
       dd <- Sl.repa(rp$rp,t(dd),l=-1) ## undo repara
-      Vj <- tcrossprod(dd) ## jackknife cov matrix
-      attr(NCV,"Vj") <- Vj
+      dd <- Sl.inirep(Sl,dd,l=1) ## undo initial repara
+      #Vj <- tcrossprod(dd) ## jackknife cov matrix
+      #attr(NCV,"Vj") <- Vj
+      attr(NCV,"dd") <- jkw*t(dd)
     }
   } else { ## REML required
     NCV <- NCV1 <- NULL

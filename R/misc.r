@@ -843,6 +843,17 @@ minres <- function(R,u,b) {
   oo$x
 }
 
+neicov <- function(Dd,nei) {
+## wrapper for nei_cov. Dd is n by p matrix of leave one out perturbations to
+## coef vectors. nei is neighbourhood structure. 
+  p <- ncol(Dd)
+  V <- matrix(0,p,p)
+  k <- nei$k-1
+  .Call(C_nei_cov,V,Dd,nei$m,k)
+  (V+t(V))/2
+} ## neicov
+
+
 ## following are wrappers for KP STZ constraints - intended for testing only
 
 Zb <- function(b0,v,qc,p,w) {
@@ -861,4 +872,5 @@ Ztb <- function(b0,v,qc,di,p,w) {
   b1 <- rep(0,p0*di)
   oo <- .C(C_Ztb,b1=as.double(b1),as.double(b0),as.double(v),as.integer(qc),as.integer(di),as.integer(p),as.double(w))
   oo$b1
-} 
+}
+

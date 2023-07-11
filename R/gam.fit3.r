@@ -326,11 +326,11 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
               w <- weg*alpha*mevg^2/var.mug
             }
 
-            
-            if (sum(good)<ncol(x)) stop("Not enough informative observations.")
+            ##if (sum(good)<ncol(x)) stop("Not enough informative observations.")
+
             if (control$trace) t1 <- proc.time()
 
-            ng <- sum(good);zg[1:ng] <- z ## ensure y dim large enough for beta in all cases
+            ng <- sum(good);zg[1:ng] <- z ## ensure y dim large enough for beta in all cases (including p>n)
             oo <- .C(C_pls_fit1,y=as.double(zg),X=as.double(x[good,]),w=as.double(w),wy=as.double(w*z),
                      E=as.double(Sr),Es=as.double(Eb),n=as.integer(ng),
                      q=as.integer(ncol(x)),rE=as.integer(rows.E),eta=as.double(z),
@@ -675,7 +675,7 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
            if (nei$jackknife>2) { ## need coef changes for each NCV drop fold.
              dd <- matrix(0,ncol(x),length(nei$m))
 	     if (deriv>0) stop("jackknife and derivatives requested together")
-	     deriv1 <- -1
+	     deriv1 <- -1 ## signal that coef changes to be returned
            } else { ## dd unused
              dd <- matrix(1.0,1,1);
 	     deriv1 <- deriv
@@ -718,7 +718,6 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 	       ww1 <- weights[nei$i]*(y[nei$i]-mug)*mevg/var.mug
 	       ww1[!is.finite(ww1)] <- 0
 	       ncv1 <- -2*ww1*deta.cv*gamma - (gamma-1)*dev1
-	       #gjk <- colSums(ww1*x[nei$i,]) ## jackknife deriv of log lik estimate (multiplied by scale)
              } ## if deriv
 	   }
 
@@ -730,11 +729,12 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
 	   if (nei$jackknife>2) {
              nk <- c(nei$m[1],diff(nei$m)) ## dropped fold sizes
-             jkw <- sqrt((nobs-nk)/(nobs*nk)) ## jackknife weights
+             jkw <- ((nobs-nk)/(nobs))^.4/sqrt(nk) ## jackknife weights
 	     dd <-jkw*t(dd)%*%t(T)
-	     Vj <- crossprod(dd) ## jackknife cov matrix
-             attr(Vj,"dd") <- dd
-             attr(NCV,"Vj") <- Vj
+	     #Vj <- crossprod(dd) ## jackknife cov matrix
+             #attr(Vj,"dd") <- dd
+             #attr(NCV,"Vj") <- Vj
+	     attr(NCV,"dd") <- dd
 	   }  
 	   attr(NCV,"eta.cv") <- eta.cv
 	   if (deriv) attr(NCV,"deta.cv") <- deta.cv
@@ -843,7 +843,8 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 
     ## use exact MLE scale param for aic in gaussian case, otherwise scale.est (unless known)
     
-    dev1 <- if (scale.known) scale*sumw else if (family$family=="gaussian") dev else if (is.na(reml.scale)) scale.est*sumw else reml.scale*sumw  
+    dev1 <- if (scale.known) scale*sumw else if (family$family=="gaussian") dev else
+            if (is.na(reml.scale)) scale.est*sumw else reml.scale*sumw  
 
     aic.model <- aic(y, n, mu, weights, dev1) # note: incomplete 2*edf needs to be added
     if (control$trace) {
@@ -972,16 +973,6 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object,gamma) {
   WX <- sqrt(object$weights)*X
   qrx <- pqr(WX,object$control$nthreads)
   R <- pqr.R(qrx);R[,qrx$pivot] <- R
-#  if (gamma!=1) { ## compute Vp assuming gamma is inverse learning rate - wrong parameterization s.t. Vp*gamma is it!
-#    H <- crossprod(WX)/gamma
-#    lsp <- lsp0 + if (is.null(L)) log(object$sp) else L %*% log(object$sp)
-#    sp <- exp(lsp)
-#    if (length(S)) for (i in 1:length(S)) {
-#      ii <- 1:nrow(S[[i]]) + off[i] - 1
-#      H[ii,ii] <- H[ii,ii] + sp[i] * S[[i]]
-#    }
-#    Vl <- chol2inv(chol(H))*scale
-#  } else Vl <- NULL
   if (!is.na(object$reml.scale)&&!is.null(object$db.drho)) { ## compute sp uncertainty correction
     hess <- object$outer.info$hess
     edge.correct <- if (is.null(attr(hess,"edge.correct"))) FALSE else TRUE
@@ -1855,7 +1846,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   rm(b)
 
   B <- diag(length(initial$grad)) ## initial Hessian
-  feps <- 1e-4
+  feps <- 1e-4;fdgrad <- grad*0
   for (i in 1:length(lsp)) { ## loop to FD for Hessian
      ilsp <- lsp;ilsp[i] <- ilsp[i] + feps 
      b <- gam.fit3(x=X, y=y, sp=L%*%ilsp+lsp0,Eb=Eb,UrS=UrS,
@@ -1865,7 +1856,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
                scoreType=scoreType,null.coef=null.coef,
                pearson.extra=pearson.extra,dev.extra=dev.extra,n.true=n.true,Sl=Sl,nei=nei,...) 
      grad1 <- t(L)%*%b[[sname1]];
-
+     fdgrad[i] <- (b[[sname]]-score)/feps ## get FD grad for free - useful for debug checks
      B[i,] <- (grad1-grad)/feps 
      rm(b)
   } ## end of FD Hessian loop
@@ -2129,7 +2120,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   if (!is.null(b$Vg)) {
     M <- ncol(b$db.drho)
     b$Vg <- (B%*%t(L)%*%b$Vg%*%L%*%B)[1:M,1:M] ## sandwich estimate of 
-    db.drho <- b$db.drho%*%L[1:M,,drop=FALSE]
+    db.drho <- b$db.drho%*%L[1:M,1:M,drop=FALSE]
     b$Vc <- db.drho %*% b$Vg %*% t(db.drho) ## correction term for cov matrices
   }
   b$dVkk <- NULL
@@ -3081,6 +3072,7 @@ Tweedie <- function(p=1,link=power(0)) {
         n <- rep(1, nobs)
         mustart <- y + 0.1 * (y == 0)
     })
+
     ls <-  function(y,w,n,scale) {
       power <- p
       colSums(w*ldTweedie(y,y,p=power,phi=scale))

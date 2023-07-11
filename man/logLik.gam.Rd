@@ -63,7 +63,7 @@ Journal of the American Statistical Association 111, 1548-1575
 \doi{10.1080/01621459.2016.1180986}
 
 Wood S.N. (2017) Generalized Additive Models: An Introduction with R
-(2nd edition). Chapman and Hall/CRC Press.
+(2nd edition). Chapman and Hall/CRC Press. \doi{10.1201/9781315370279}
 
 
 }

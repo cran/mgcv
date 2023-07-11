@@ -11,9 +11,9 @@
 Alternatively, function \code{\link{bam}} can use the facilities provided in the \link[parallel:parallel-package]{parallel} package. See examples below. Note that most multi-core machines are memory bandwidth limited, so parallel speed up tends to be rather variable. 
 
 Function \code{\link{gam}} can use parallel threads on a (shared memory) multi-core 
-machine via \code{openMP} (where this is supported). To do this, set the desired number of threads by setting \code{nthreads} to the number of cores to use, in the \code{control} argument of \code{\link{gam}}. Note that, for the most part, only the dominant \eqn{O(np^2)}{O(np^2)} steps are parallelized (n is number of data, p number of parameters). For additive Gaussian models estimated by GCV, the speed up can be disappointing as these employ an \eqn{O(p^3)}{O(p^3)} SVD step that can also have substantial cost in practice. 
+machine via \code{openMP} (where this is supported). To do this, set the desired number of threads by setting \code{nthreads} to the number of cores to use, in the \code{control} argument of \code{\link{gam}}. Note that, for the most part, only the dominant \eqn{O(np^2)}{O(np^2)} steps are parallelized (n is number of data, p number of parameters). For additive Gaussian models estimated by GCV, the speed up can be disappointing as these employ an \eqn{O(p^3)}{O(p^3)} SVD step that can also have substantial cost in practice. \code{\link{magic}} can also use multiple cores, but the same comments apply as for the GCV Gaussian additive model. 
 
-\code{\link{magic}} can also use multiple cores, but the same comments apply as for the GCV Gaussian additive model. 
+When using \code{\link{NCV}} with \code{\link{gam}} worthwhile performance improvements are available by setting \code{ncv.threads}in \code{\link{gam.control}}.   
 
 If \code{control$nthreads} is set to more than the number of cores detected, then only the number of detected cores is used. Note that using virtual cores usually gives very little speed up, and can even slow computations slightly. For example, many Intel processors reporting 4 cores actually have 2 physical cores, each with 2 virtual cores, so using 2 threads gives a marked increase in speed, while using 4 threads makes little extra difference. 
 

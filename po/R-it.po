@@ -1,0 +1,1523 @@
+# R Italian translation                                                                    
+# This file is distributed under the same license as the R package.
+# Copyright (C) The R Foundation.
+# Daniele Medri <dmedri@gmail.com>, 2005-2020.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: R-mgcv 1.8-29\n"
+"Report-Msgid-Bugs-To: bugs.r-project.org\n"
+"POT-Creation-Date: 2021-04-16 14:36\n"
+"PO-Revision-Date: \n"
+"Last-Translator: Daniele Medri <dmedri@gmail.com>\n"
+"Language-Team: Italian https://github.com/dmedri/R-italian-lang\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 2.2.1\n"
+
+msgid "bam can not discretize with this nesting structure"
+msgstr "bam non può discretizzare con questa struttura nidificata"
+
+msgid "'family' argument seems not to be a valid family object"
+msgstr "l'argomento 'family' non sembra essere un oggetto family valido"
+
+msgid "This family should not have a matrix response"
+msgstr "Questa famiglia non dovrebbe avere una risposta matrice"
+
+msgid "cannot find valid starting values: please specify some"
+msgstr ""
+"non riesco a trovare valori iniziali validi: si prega di specificarne alcuni"
+
+msgid "Deviance = %s Iterations - %d"
+msgstr "Devianza = %s Iterazioni - %d"
+
+msgid "Non-finite deviance"
+msgstr "Devianza non finita"
+
+msgid "non-finite coefficients at iteration %d"
+msgstr "coefficienti non finiti nell'iterazione %d"
+
+msgid "algorithm did not converge"
+msgstr "l'algoritmo non converge"
+
+msgid "fitted probabilities numerically 0 or 1 occurred"
+msgstr ""
+
+msgid "fitted rates numerically 0 occurred"
+msgstr "sono occorsi tassi adattati numericamente 0"
+
+msgid "Too many cluster nodes to use all efficiently"
+msgstr "Troppi nodi nel cluster per un utilizzo efficiente"
+
+msgid "iterms reset to terms"
+msgstr "iterms ripristinato a terms"
+
+msgid "requires a terms or formula object as first argument"
+msgstr ""
+
+msgid "family not recognized"
+msgstr "famiglia non riconosciuta"
+
+msgid "un-supported smoothness selection method"
+msgstr "metodo di selezione livellamento non supportato"
+
+msgid "discretization only available with fREML"
+msgstr "discretizzazione disponibile solo con fREML"
+
+msgid "discrete method does not use parallel cluster - use nthreads instead"
+msgstr ""
+"il metodo discreto non utilizza il cluster 'parallel' - utilizza nthreads in "
+"alternativa"
+
+msgid "openMP not available: single threaded computation only"
+msgstr ""
+"openMP non è disponibile: disponibile solo la computazione a thread singolo"
+
+msgid "min.sp not supported with fast REML computation, and ignored."
+msgstr ""
+"'min.sp' non è supportato con la computazione fast REML, sarà ignorato."
+
+msgid "no smooths, ignoring `discrete=TRUE'"
+msgstr "nessun livellamento, si ignora `discrete=TRUE'"
+
+msgid "Not enough (non-NA) data to do anything meaningful"
+msgstr "Dati insufficienti (non NA) per fare qualcosa di significativo"
+
+msgid "AR.start must be logical"
+msgstr "AR.start dev'essere logico"
+
+msgid "chunk.size < number of coefficients. Reset to %d"
+msgstr "chunk.size < numero di coefficienti. Reimpostata a %d"
+
+msgid "unknown tensor constraint type"
+msgstr ""
+
+msgid "constraints for sub blocked tensor products un-tested"
+msgstr ""
+
+msgid "Model has more coefficients than data"
+msgstr "Il modello ha più coefficienti che dati"
+
+msgid ""
+"length of sp must be number of free smoothing parameters in original model"
+msgstr ""
+"la lunghezza di 'sp' dev'essere un numero di parametri di livellamento "
+"liberi nel modello originale"
+
+msgid "general families not supported by bam"
+msgstr "famiglie generiche non supportate da bam"
+
+msgid "AR1 parameter rho unused with generalized model"
+msgstr "Il parametro AR1 rho è inutilizzato con i modelli generalizzati"
+
+msgid "samfrac too small - ignored"
+msgstr "samfrac è troppo piccolo - ignorato"
+
+msgid "Model can not be updated"
+msgstr "Il modello non può essere aggiornato"
+
+msgid "link not available for coxph family; available link is \"identity\""
+msgstr ""
+"link non disponibile per la famiglia coxph; il link disponibile è \"identity"
+"\""
+
+msgid "something wrong with stratified prediction"
+msgstr "c'è qualcosa di sbagliato con la previsione stratificata"
+
+msgid "NA times supplied for cox.ph prediction"
+msgstr "Tempi con NA passati per la previsione di cox.ph"
+
+msgid "not an extended family"
+msgstr "non è una famiglia estesa"
+
+msgid "erroneous call to estimate.theta - no free parameters"
+msgstr "chiamata errata a estimate.theta - nessun parametro libero"
+
+msgid "step failure in theta estimation"
+msgstr "fallimento del passo nella stima theta"
+
+msgid ""
+"link not available for ordered categorical family; available links are "
+"\"identity\""
+msgstr ""
+"link non disponibile per la famiglia categorica ordinata; i link disponibili "
+"sono \"identity\""
+
+msgid "Must supply theta or R to ocat"
+msgstr "Bisogna passare theta o R a ocat"
+
+msgid "Response should be integer class labels"
+msgstr "La risposta dovrebbero essere etichette di classe intera"
+
+msgid "values out of range"
+msgstr "valori fuori intervallo"
+
+msgid ""
+"link not available for negative binomial family; available links are "
+"\"identity\", \"log\" and \"sqrt\""
+msgstr ""
+"link non disponibile per la famiglia binomiale negativa; i link disponibili "
+"sono \"identity\", \"log\" e \"sqrt\""
+
+msgid "negative values not allowed for the negative binomial family"
+msgstr "valori negativi non ammessi per la famiglia binomiale negativa"
+
+msgid "link \"%s\" not available for Tweedie family."
+msgstr "link \"%s\" non disponibile per la famiglia Tweedie."
+
+msgid "Tweedie p must be in interval (a,b)"
+msgstr "La p di Tweedie dev'essere nell'intervallo (a,b)"
+
+msgid ""
+"link not available for beta regression; available links are  \"logit\", "
+"\"probit\", \"cloglog\" and \"cauchit\""
+msgstr ""
+"link non disponibile per la regressione beta; i link disponibili sono  "
+"\"logit\", \"probit\", \"cloglog\" e \"cauchit\""
+
+msgid "saturated likelihood may be inaccurate"
+msgstr ""
+
+msgid ""
+"link not available for scaled t distribution; available links are \"identity"
+"\", \"log\",  and \"inverse\""
+msgstr ""
+"link non disponibile per la distribuzione t di scala; i link disponibili "
+"sono \"identity\", \"log\" e \"inverse\""
+
+msgid "Supplied df below min.df. min.df reset"
+msgstr "Il df passato è inferiore a min.df. Si reimposta min.df"
+
+msgid "NA values not allowed for the scaled t family"
+msgstr "Valori NA non ammessi per la famiglia t in scala"
+
+msgid ""
+"link not available for zero inflated; available link for `lambda' is only  "
+"\"loga\""
+msgstr ""
+"link non disponibile per inflazione zero; il link disponibile per 'lambda' è "
+"unicamente \"loga\""
+
+msgid "negative values not allowed for the zero inflated Poisson family"
+msgstr ""
+"i valori negativi non sono ammessi per la famiglia Poisson ad inflazione zero"
+
+msgid "Non-integer response variables are not allowed with ziP"
+msgstr "Le variabili di risposta non intere non sono ammesse con ziP"
+
+msgid "Using ziP for binary data makes no sense"
+msgstr "L'utilizzo di ziP per dati binari non ha senso"
+
+msgid "second derivs not available for non-linear penalties"
+msgstr ""
+
+msgid "Possible divergence detected in fast.REML.fit"
+msgstr "Possibile divergenza rilevata in fast.REML.fit"
+
+msgid "fast REML optimizer reached iteration limit"
+msgstr "l'ottimizzatore fast REML ha raggiunto il limite di iterazioni"
+
+msgid "unsupported order of differentiation requested of gam.fit3"
+msgstr "richiesto ordine di differenziazione di gam.fit3 non supportato"
+
+msgid "illegal `family' argument"
+msgstr "argomento `family' illegale"
+
+msgid "Invalid linear predictor values in empty model"
+msgstr "Predittore lineare non valido nel modello vuoto"
+
+msgid "Invalid fitted means in empty model"
+msgstr "Medie adattate non valide nel modello vuoto"
+
+msgid "Length of start should equal %d and correspond to initial coefs for %s"
+msgstr ""
+"La lunghezza di 'start' dovrebbe essere uguale a %d e corrispondere ai "
+"coefficienti iniziali per %s"
+
+msgid "Can't find valid starting values: please specify some"
+msgstr ""
+"Non è possibile trovare valori iniziali validi: per piacere, indicateli"
+
+msgid "NAs in V(mu)"
+msgstr "NA in V(mu)"
+
+msgid "0s in V(mu)"
+msgstr "0 in V(mu)"
+
+msgid "NAs in d(mu)/d(eta)"
+msgstr "NA in d(mu)/d(eta)"
+
+msgid "No observations informative at iteration %d"
+msgstr "Nessuna osservazione informativa all'iterazione %d"
+
+msgid "Not enough informative observations."
+msgstr "Non ci sono abbastanza osservazioni informative."
+
+msgid "Non-finite coefficients at iteration %d"
+msgstr "Coefficienti non finiti nell'iterazione %d"
+
+msgid ""
+"no valid set of coefficients has been found:please supply starting values"
+msgstr ""
+"non è stato trovato alcun insieme valido di coefficienti; per piacere, "
+"passate dei valori di partenza"
+
+msgid "Step size truncated due to divergence"
+msgstr "Dimensione del passo troncata a causa della divergenza"
+
+msgid "inner loop 1; can't correct step size"
+msgstr "ciclo interno 1; non è possibile correggere la dimensione del passo"
+
+msgid "Step size truncated: out of bounds"
+msgstr "Dimensione del passo troncata: fuori dai limiti"
+
+msgid "inner loop 2; can't correct step size"
+msgstr "ciclo interno 2; non è possibile correggere la dimensione del passo"
+
+msgid "penalized deviance = %s"
+msgstr "devianza penalizzata = %s"
+
+msgid "inner loop 3; can't correct step size"
+msgstr "ciclo interno 3; non è possibile correggere la dimensione del passo"
+
+msgid "Step halved: new penalized deviance = %g"
+msgstr "Passo dimezzato: nuova devianza penalizzata =%g"
+
+msgid ""
+"Non finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam."
+"contol'"
+msgstr ""
+"Derivate non finite. Prova a ridurre la tolleranza di adattamento! Vedi "
+"`epsilon' in `game.control'"
+
+msgid ""
+"Non-finite derivatives. Try decreasing fit tolerance! See `epsilon' in `gam."
+"contol'"
+msgstr ""
+"Derivate non finite. Provate a ridurre la tolleranza di adattamento! Si veda "
+"`epsilon 'in` game.control'"
+
+msgid "Algorithm did not converge"
+msgstr "L'algoritmo non converge"
+
+msgid "Algorithm stopped at boundary value"
+msgstr "L'algoritmo si è fermato al valore limite"
+
+msgid "deriv should be 1 or 2"
+msgstr "deriv dovrebbe essere 1 o 2"
+
+msgid "L must be a matrix."
+msgstr "L dev'essere una matrice."
+
+msgid "L must have at least as many rows as columns."
+msgstr "L deve avere almeno tante righe quanto le colonne."
+
+msgid "L has inconsistent dimensions."
+msgstr "L ha dimensioni inconsistenti."
+
+msgid "Fitting terminated with step failure - check results carefully"
+msgstr ""
+"Adattamento terminato con errore di passo: controllare attentamente i "
+"risultati"
+
+msgid "Iteration limit reached without full convergence - check carefully"
+msgstr ""
+"Limite di iterazione raggiunto senza piena convergenza - controllate "
+"attentamente"
+
+msgid "link not implemented for extended families"
+msgstr "link non implementati per le famiglie estese"
+
+msgid "fam not a family object"
+msgstr "fam non è un oggetto famiglia"
+
+msgid "unrecognized (vector?) link"
+msgstr "link (vettore?) non riconosciuto"
+
+msgid "link not recognised"
+msgstr "link non riconosciuto"
+
+msgid "variance function not recognized for quasi"
+msgstr "funzione della varianza non riconosciuta per quasi"
+
+msgid "family not recognised"
+msgstr "famiglia non riconosciuta"
+
+msgid "'theta' must be specified"
+msgstr "'theta' dev'essere specificato"
+
+msgid ""
+"%s link not available for negative binomial family; available links are "
+"\"identity\", \"log\" and \"sqrt\""
+msgstr ""
+"%s link non disponibile per la famiglia binomiale negativa; i link "
+"disponibili sono \"identity\", \"log\" e \"sqrt\""
+
+msgid "H has wrong dimension"
+msgstr "H ha una dimensione errata"
+
+msgid "only scalar `rho' and `theta' allowed."
+msgstr "sono ammessi solo gli scalari `rho 'e` theta'."
+
+msgid "1<a<b<2 (strict) required"
+msgstr "1<a<b<2 (strict) richiesto"
+
+msgid "only scalar `p' and `phi' allowed."
+msgstr "sono ammessi solo gli scalari `p' e `phi'."
+
+msgid "p must be in [1,2]"
+msgstr "p dev'essere in [1,2]"
+
+msgid "y must be strictly positive for a Gamma density"
+msgstr "'y' dev'essere strettamente positivo per una densità Gamma"
+
+msgid "y must be an integer multiple of phi for Tweedie(p=1)"
+msgstr "'y' dev'essere un intero multiplo di 'phi' per Tweedie(p=1)"
+
+msgid "all.derivs only available in rho, theta parameterization"
+msgstr "all.derivs è disponibile solo nella parametrizzazione rho, theta"
+
+msgid "Tweedie density may be unreliable - series not fully converged"
+msgstr ""
+"La densità di Tweedie potrebbe essere inaffidabile - serie non completamente "
+"convergenti"
+
+msgid "Only 1<p<=2 supported"
+msgstr "Solo 1<p<=2 supportato"
+
+msgid "p must be in (1,2)"
+msgstr "p dev'essere in (1,2)"
+
+msgid "mean, mu, must be non negative"
+msgstr "mean e mu devono essere non negativi"
+
+msgid "scale parameter must be positive"
+msgstr "il parametro di scala dev'essere positivo"
+
+msgid "emtpy models not available"
+msgstr "modelli vuoti non disponibili"
+
+msgid "Length of start should equal"
+msgstr "La lunghezza di 'start' dovrebbe essere uguale"
+
+msgid "and correspond to initial coefs for"
+msgstr "e corrispondono ai coefficienti iniziali per"
+
+msgid "no good data in iteration"
+msgstr "nessun dato valido nell'iterazione"
+
+msgid "Non-finite coefficients at iteration"
+msgstr "Coefficienti non finiti all'iterazione"
+
+msgid "not enough finite derivatives"
+msgstr "non ci sono abbastanza derivate finite"
+
+msgid "non finite values in Hessian"
+msgstr "valori non finiti in Hessian"
+
+msgid "indefinite penalized likelihood in gam.fit5"
+msgstr "probabilità penalizzata indefinita in gam.fit5"
+
+msgid "step failed: max abs grad ="
+msgstr ""
+
+msgid "iteration limit reached: max abs grad = %g"
+msgstr "limite di iterazione raggiunto: max abs grad =%g"
+
+msgid "dist not recognised"
+msgstr "dist non riconosciuto"
+
+msgid "er... no discrete methods for higher derivatives"
+msgstr ""
+
+msgid "gaulss requires 2 links specified as character strings"
+msgstr "gaulss richiede 2 link specificati come stringhe di caratteri"
+
+msgid "link not available for mu parameter of gaulss"
+msgstr "link non disponibile per il parametro mu di gaulss"
+
+msgid "link not available for precision parameter of gaulss"
+msgstr "link non disponibile per il parametro precisione di gaulss"
+
+msgid "number of categories must be at least 2"
+msgstr "il numero di categorie dev'essere almeno 2"
+
+msgid "number of linear predictors doesn't match"
+msgstr "il numero di predittori lineari non corrisponde"
+
+msgid "response not in 0 to number of predictors + 1"
+msgstr ""
+
+msgid "ziplss requires 2 links specified as character strings"
+msgstr "ziplss richieste 2 link specificati come stringhe di caratteri"
+
+msgid "link not available for"
+msgstr "link non disponibile per"
+
+msgid "parameter of ziplss"
+msgstr "parametro di ziplss"
+
+msgid "Non-integer response variables are not allowed with ziplss"
+msgstr "Le variabili di risposta non intere non sono ammesse con ziplss"
+
+msgid "Using ziplss for binary data makes no sense"
+msgstr "L'utilizzo di ziplss per dati binari non ha senso"
+
+msgid "gevlss requires 3 links specified as character strings"
+msgstr "gevlss richiede 3 link specificati come stringhe di caratteri"
+
+msgid "link not available for mu parameter of twlss"
+msgstr "link non disponibile per il parametro mu di twlss"
+
+msgid "gammals requires 2 links specified as character strings"
+msgstr "gammals richiede 2 link specificati come stringhe di caratteri"
+
+msgid "link not available for mu parameter of gammals"
+msgstr "link non disponibile per il parametro mu di gammals"
+
+#, fuzzy
+msgid "gumbls requires 2 links specified as character strings"
+msgstr "gaulss richiede 2 link specificati come stringhe di caratteri"
+
+#, fuzzy
+msgid "shash requires 4 links specified as character strings"
+msgstr "gaulss richiede 2 link specificati come stringhe di caratteri"
+
+#, fuzzy
+msgid "parameter of shashlss"
+msgstr "parametro di ziplss"
+
+#, fuzzy
+msgid "link not available for scale parameter of shash"
+msgstr "link non disponibile per il parametro mu di twlss"
+
+#, fuzzy
+msgid "'a' has to be positive"
+msgstr "l'argomento k dev'essere positivo."
+
+#, fuzzy
+msgid "offset not still available for this family"
+msgstr "link \"%s\" non disponibile per la famiglia Tweedie."
+
+msgid "An object of length %d does not match the required parameter size"
+msgstr ""
+"Un oggetto di lunghezza %d non corrisponde alla dimensione richiesta per il "
+"parametro"
+
+msgid "NA's in pdTens factor"
+msgstr "NA nel fattore pdTens"
+
+msgid "Cannot extract the matrix from an uninitialized object"
+msgstr "Non è possibile estrarre la matrice da un oggetto non inizializzato"
+
+msgid "NA's in pdTens matrix"
+msgstr "NA nella matrice pdTens"
+
+msgid "Cannot extract the matrix from an uninitialized pdMat object"
+msgstr ""
+"Non è possibile estrarre la matrice da un oggetto pdMat non inizializzato"
+
+msgid "Cannot extract the matrix with uninitialized dimensions"
+msgstr "Non è possibile estrarre la matrice con dimensioni non inizializzate"
+
+msgid "An object of length"
+msgstr "Un oggetto di lunghezza"
+
+msgid "does not match the required parameter size"
+msgstr "non corrisponde alla dimensione del parametro richiesta"
+
+msgid "Must give names when initializing pdIdnot from parameter."
+msgstr ""
+"Bisogna indicare dei nomi quando si inizializza pdldnot da un parametro."
+
+msgid "without a formula"
+msgstr "senza una formula"
+
+msgid "Cannot extract the dimensions"
+msgstr "Non è possibile estrarre le dimensioni"
+
+msgid "Cannot extract the inverse from an uninitialized object"
+msgstr "Non è possibile estrarre l'inversa di un oggetto non inizializzato"
+
+msgid "Can not convert this smooth class to a random effect"
+msgstr ""
+"Non è possibile convertire questa classe di livellamento in random effect"
+
+msgid "te smooths not useable with gamm4: use t2 instead"
+msgstr ""
+
+msgid "gamm can not fix only some margins of tensor product."
+msgstr ""
+
+msgid ""
+"Tensor product penalty rank appears to be too low: please email Simon.Wood@R-"
+"project.org with details."
+msgstr ""
+
+msgid "No data supplied to gamm.setup"
+msgstr "Nessun dato passato a gamm.setup"
+
+msgid ""
+"gamm can not handle linked smoothing parameters (probably from use of `id' "
+"or adaptive smooths)"
+msgstr ""
+"gamm non può gestire i parametri di adattamento collegati (probabilmente per "
+"l'uso di 'id' o livellamenti adattivi)"
+
+msgid "only one level of smooth nesting is supported by gamm"
+msgstr ""
+"gamm supporta solo un livello di nidificazione regolare (smooth nesting)"
+
+msgid "side conditions not allowed for nested smooths"
+msgstr ""
+
+msgid "object does not appear to be of class lme"
+msgstr "l'oggetto non sembra essere della classe lme"
+
+msgid "inner groupings not nested in outer!!"
+msgstr "raggruppamenti interni non nidificati in esterno!!"
+
+msgid "iteration %d"
+msgstr "iterazione %d"
+
+msgid "gamm not converged, try increasing niterPQL"
+msgstr "gamm non converge, prova ad aumentare niterPQL"
+
+msgid "family are not designed for use with gamm!"
+msgstr "famiglia non progettata per l'utilizzo con gamm!"
+
+msgid "gamm is not designed to use extended families"
+msgstr "gamm non è progettato per l'utilizzo di famiglie estese"
+
+msgid "random argument must be a *named* list."
+msgstr "l'argomento 'random' dev'essere una lista *nominata*."
+
+msgid "all elements of random list must be named"
+msgstr "tutti gli elementi di una lista casuale devono essere nominati"
+
+msgid "gamm() can only handle random effects defined as named lists"
+msgstr "gamm() può gestire solo effetti casuali definiti come liste nominate"
+
+msgid ""
+"gamm models must have at least 1 smooth with unknown smoothing parameter or "
+"at least one other random effect"
+msgstr ""
+"i modelli gamm devono avere almeno 1 livellamento con parametro di smoothing "
+"sconosciuto o almeno un altro effetto casuale"
+
+msgid "weights must be like glm weights for generalized case"
+msgstr "i pesi devono essere come pesi glm per il caso generalizzato"
+
+msgid "Nested smooths must be fully random"
+msgstr "I livellamenti nidificati devono essere completamente casuali"
+
+msgid "size must be in [1,120]"
+msgstr "size dev'essere in [1,120]"
+
+msgid "rank deficient re-parameterization"
+msgstr ""
+
+msgid "modal weight <=0 in integration step!!"
+msgstr "peso modale <=0 nel passo integrazione!!"
+
+msgid "Requires a gam or bam prefit object"
+msgstr "Richiede un oggetto pre-adattato gam o bam"
+
+msgid "bam fits only supported with discrete==TRUE"
+msgstr "gli adattamenti bam sono supportati solo con discrete==TRUE"
+
+msgid "integration not available with this family - insufficient derivatives"
+msgstr ""
+"integrazione non disponibile con questa famiglia - derivate insufficienti"
+
+msgid "something wrong with A index vector"
+msgstr "c'è qualcosa di sbagliato nel vettore indice A"
+
+msgid "sorry link not yet handled"
+msgstr "ci dispiace, link non ancora gestito"
+
+msgid "weights ignored"
+msgstr "pesi ignorati"
+
+msgid "family not implemented yet"
+msgstr "famiglia non ancora implementata"
+
+msgid "jagam requires a file for the JAGS model specification"
+msgstr "jagam richiede un file per le specifiche del modello JAGS"
+
+msgid "smoothing parameter prior choise not recognised, reset to gamma"
+msgstr ""
+"la scelta del parametro a priori di livellamento non è riconosciuta, si "
+"ripristina a gamma"
+
+msgid "coefficient simulation data is missing"
+msgstr "mancano i dati di simulazione del coefficiente"
+
+msgid "burnin too large, reset"
+msgstr "burnin è troppo largo, si annulla"
+
+msgid "rho missing from simulation data edf.type reset to 2"
+msgstr ""
+
+msgid "residuals argument not supported"
+msgstr "argomento 'residuals' non supportato"
+
+msgid "unconditional argument not meaningful here"
+msgstr "argomento 'unconditional' non significativo qui"
+
+msgid "by.resids argument not supported"
+msgstr "argomento by.resids non supportato"
+
+msgid "all.terms argument not supported"
+msgstr "argomento all.terms non supportato"
+
+#, fuzzy
+msgid "not usable with bam fits"
+msgstr "base non utilizzabile con un te ridotto"
+
+msgid "silly tolerance supplied"
+msgstr "indicata 'tolerance' debole"
+
+msgid "argument k must be positive."
+msgstr "l'argomento k dev'essere positivo."
+
+msgid "A not square"
+msgstr "A non quadrata"
+
+msgid "Can not have more eigenvalues than nrow(A)"
+msgstr "Non è possibile avere più autovalori (eigenvalue) che nrow(A)"
+
+msgid "nrow(M$X) != length(M$y)"
+msgstr "nrow(M$X) != length(M$y)"
+
+msgid "ncol(M$X) != length(M$p)"
+msgstr "ncol(M$X) != length(M$p)"
+
+msgid "length(M$w) != length(M$y)"
+msgstr "length(M$w) != length(M$y)"
+
+msgid "nrow(M$Ain) != length(M$bin)"
+msgstr "nrow(M$Ain) != length(M$bin)"
+
+msgid "nrow(M$Ain) != length(M$p)"
+msgstr "nrow(M$Ain) != length(M$p)"
+
+msgid "initial parameters not feasible"
+msgstr "parametri iniziali non fattibili"
+
+msgid "initial point very close to some inequality constraints"
+msgstr "punto iniziale molto vicino ad alcuni vincoli di disuguaglianza"
+
+msgid "initial parameters very close to inequality constraints"
+msgstr "parametri iniziali molto vicini ai vincoli di disuguaglianza"
+
+msgid "ncol(M$C) != length(M$p)"
+msgstr "ncol(M$C) != length(M$p)"
+
+msgid "M$S and M$off have different lengths"
+msgstr "M$S e M$off hanno lunghezze differenti"
+
+msgid "M$sp has different length to M$S and M$off"
+msgstr "M$sp ha una lunghezza differente da M$S e M$off"
+
+msgid "M$S[%d] is too large given M$off[%d]"
+msgstr "M$S[%d] è troppo largo dato M$off[%d]"
+
+msgid "Penalized model matrix must have no more columns than rows"
+msgstr ""
+"La matrice del modello penalizzato non deve avere più colonne delle righe"
+
+msgid "Model matrix not full column rank"
+msgstr "Matrice del modello non ha rango di colonna completo"
+
+msgid "can't handle [[ in formula"
+msgstr "non è possibile gestire [[ nella formula"
+
+msgid "single linear predictor indices are ignored"
+msgstr "gli indici dei predittori lineari singoli sono ignorati"
+
+msgid "linear predictor labels out of range"
+msgstr "etichette del predittore lineare fuori portata"
+
+msgid "model has repeated 1-d smooths of same variable."
+msgstr "il modello ha ripetuto 1-d smooth della stessa variabile."
+
+msgid "`id' linked smooths must have same number of arguments"
+msgstr ""
+"I livellamenti (smooths) collegati a 'id' devono avere lo stesso numero di "
+"argomenti"
+
+msgid "`rank' has wrong length in `paraPen'"
+msgstr "`rank' ha una lunghezza errata in `paraPen'"
+
+msgid "a parametric penalty has wrong dimension"
+msgstr "una penalizzazione parametrica ha dimensione errata"
+
+msgid "L has wrong dimension in `paraPen'"
+msgstr "L ha una dimensione errata in `paraPen'"
+
+msgid "`sp' dimension wrong in `paraPen'"
+msgstr "dimensione 'sp' errata in 'paraPen'"
+
+msgid "`sp' too short"
+msgstr "`sp' troppo corto"
+
+msgid "No data supplied to gam.setup"
+msgstr "Nessun dato passato a gam.setup"
+
+msgid "paraPen not supported for multi-formula models"
+msgstr "'paraPen' non supportato per modelli multi-formula"
+
+msgid "absorb.cons must be TRUE for multi-formula models"
+msgstr "assorb.cons dev'essere TRUE per i modelli multi-formula"
+
+msgid "length(drop.intercept) should be equal to number of model formulas"
+msgstr ""
+"length(drop.intercept) dovrebbe essere uguale al numero di formule del "
+"modello"
+
+msgid "shared offsets not allowed"
+msgstr ""
+
+msgid "dropping unidentifiable parametric terms from model"
+msgstr "si rilasciano i termini parametrici non identificabili dal modello"
+
+msgid "First argument is no sort of formula!"
+msgstr "Il primo argomento non è in alcun modo una formula!"
+
+msgid "You've got no model...."
+msgstr "Non si è ottenuto alcun modello..."
+
+msgid ""
+"Later terms sharing an `id' can not have more smoothing parameters than the "
+"first such term"
+msgstr ""
+"I termini successivi che condividono un `id 'non possono avere più parametri "
+"di livellamento rispetto al primo di questi termini"
+
+msgid "Supplied smoothing parameter vector is too short - ignored."
+msgstr ""
+"Il vettore dei parametri di livellamento passato è troppo corto - ignorato."
+
+msgid "NA's in supplied smoothing parameter vector - ignoring."
+msgstr "NA passati nel vettore dei parametri di livellamento - ignorato."
+
+msgid "incorrect number of smoothing parameters supplied for a smooth term"
+msgstr ""
+"numero errato di parametri di livellamento forniti per un termine di smooth"
+
+msgid "length of min.sp is wrong."
+msgstr "la lunghezza di min.sp è errata."
+
+msgid "NA's in min.sp."
+msgstr "NA in min.sp."
+
+msgid "elements of min.sp must be non negative."
+msgstr "gli elementi di min.sp devono essere non negativi."
+
+msgid "unknown outer optimization method."
+msgstr "metodo dell'ottimizzatore esterno sconosciuto."
+
+msgid "Please provide a single value for theta or use nb to estimate it"
+msgstr ""
+"Per piacere, indicate un valore singolo per theta o utilizzate nb per "
+"stimarlo"
+
+msgid "nlm.fd only available for GCV/UBRE"
+msgstr "nlm.fd disponibile solo per GCV/UBRE"
+
+msgid "unknown optimizer"
+msgstr "ottimizzatore sconosciuto"
+
+msgid "unknown smoothness selection criterion"
+msgstr "criterio di selezione adattamento sconosciuto"
+
+msgid "Reset optimizer to outer/newton"
+msgstr "Si ripristina l'ottimizzatore su outer/newton"
+
+msgid "in.out incorrect: see documentation"
+msgstr "in.out errato: consultare la documentazione"
+
+msgid "incorrect number of linear predictors for family"
+msgstr "numero errato di predittori lineari per la famiglia"
+
+msgid "edge.correct must be logical or a positive number"
+msgstr "edge.correct dev'essere logico o un numero positivo"
+
+msgid "nthreads must be a positive integer"
+msgstr "nthreads dev'essere un intero positivo"
+
+msgid "IRLS regularizing parameter must be a non-negative number."
+msgstr ""
+"Il parametro di regolarizzazione IRLS dev'essere un numero non negativo."
+
+msgid "value of epsilon must be > 0"
+msgstr "il valore di epsilon dev'essere > 0"
+
+msgid "maximum number of iterations must be > 0"
+msgstr "il numero massimo d iterazioni dev'essere > 0"
+
+msgid ""
+"silly value supplied for rank.tol: reset to square root of machine precision."
+msgstr ""
+"indicato un valore debole per 'rank.tol': si ripristina alla radice quadrata "
+"della precisione macchina."
+
+msgid "Model seems to contain no terms"
+msgstr "Il modello sembra non contenere termini"
+
+msgid "Discrete Theta search not available with performance iteration"
+msgstr ""
+"La ricerca del Theta discreto non è disponibile con iterazione delle "
+"prestazioni"
+
+msgid "y must be univariate unless binomial"
+msgstr "'y' dev'essere univariato a meno che binomiale"
+
+msgid "Length of start should equal %d and correspond to initial coefs."
+msgstr ""
+"La lunghezza di 'start' dovrebbe essere uguale a %d e corrispondere ai "
+"coefficienti iniziali."
+
+msgid ""
+"iterative weights or data non-finite in gam.fit - regularization may help. "
+"See ?gam.control."
+msgstr ""
+"pesi iterativi o dati non finiti in gam.fit - la regolarizzazione potrebbe "
+"aiutare. Si veda ?gam.control."
+
+msgid "Step size truncated: out of bounds."
+msgstr "Dimensione del passo troncata: fuori dai limiti."
+
+msgid "`object' is not of class \"gam\""
+msgstr "`object' non è della classe \"gam\""
+
+msgid "unrecognised na.action"
+msgstr "na.action non riconosciuta"
+
+msgid "na.action not character or function"
+msgstr "na.action non è ne un character ne una funzione"
+
+msgid "Smoothness uncertainty corrected covariance not available"
+msgstr ""
+"La covarianza corretta dall'incertezza del livellamento non è disponibile"
+
+msgid "Unknown type, reset to terms."
+msgstr "Tipo sconosciuto, si reimpostano i termini."
+
+msgid "predict.gam can only be used to predict from gam objects"
+msgstr "predict.gam possono essere utilizzati per predire da oggetti gam"
+
+msgid "newdata is a model.frame: it should contain all required variables"
+msgstr ""
+"newdata è un model.frame: dovrebbe contenere tutte le variabili richieste"
+
+msgid "no NAs allowed in response data for this model"
+msgstr "nessun NA ammesso nei dati risposta per questo modello"
+
+msgid "not all required variables have been supplied in  newdata!"
+msgstr "non tutte le variabili richieste sono state passate in  newdata!"
+
+msgid "type iterms not available for multiple predictor cases"
+msgstr ""
+
+msgid "non-existent terms requested - ignoring"
+msgstr "termini richiesti non esistenti - ignorato"
+
+msgid "non-existent exclude terms requested - ignoring"
+msgstr "termini di esclusione richiesti non esistenti - ignorato"
+
+msgid "requires an object of class gam"
+msgstr "richiede un oggetto di classe gam"
+
+msgid "nothing to do for this model"
+msgstr "niente da fare per questo modello"
+
+msgid ""
+"Pearson residuals not available for this family - returning deviance "
+"residuals"
+msgstr ""
+"Residui di Pearson non disponibili per questa famiglia - si restituiscono i "
+"residui della devianza"
+
+#, fuzzy
+msgid "lengths of lb, df and nc must match"
+msgstr "i nomi di z e pc devono corrispondere"
+
+#, fuzzy
+msgid "df must be positive integers"
+msgstr "nthreads dev'essere un intero positivo"
+
+#, fuzzy
+msgid "at least one element of lb must be non-zero"
+msgstr "tutti gli elementi di una lista casuale devono essere nominati"
+
+msgid "danger of round-off error"
+msgstr ""
+
+msgid "failure of Davies method, falling back on Liu et al approximtion"
+msgstr ""
+
+msgid "lambda and h should have the same length!"
+msgstr "'lambda' e 'h' dovrebbero avere la medesima lunghezza!"
+
+msgid "recov works with fitted gam objects only"
+msgstr "'recov' funziona solo con oggetti adattati gam"
+
+msgid "m can't be in re"
+msgstr "m non può essere in re"
+
+msgid ""
+"p-values for any terms that can be penalized to zero will be unreliable: "
+"refit model to fix this."
+msgstr ""
+"i p-value di tutti i termini che possono essere penalizzati a zero saranno "
+"inaffidabili: ri-adattare il modello per risolvere questo problema."
+
+msgid "The following arguments to anova.glm(..) are invalid and dropped:"
+msgstr ""
+"I seguenti argomenti di anova.glm(..) non sono validi e sono rilasciati:"
+
+msgid ","
+msgstr ","
+
+msgid "un-supported test"
+msgstr "test non supportato"
+
+msgid "test argument ignored"
+msgstr "argomento test ignorato"
+
+msgid "anova.gam called with non gam object"
+msgstr "anova.gam chiamato senza oggetto gam"
+
+msgid "not a gam object"
+msgstr "non è un oggetto gam"
+
+msgid "argument is not a gam object"
+msgstr "l'argomento non è un oggetto gam"
+
+msgid "S.scale vector doesn't match S list - please report to maintainer"
+msgstr ""
+"Il vettore S.scale non corrisponde all'elenco S - per piacere, segnalatelo "
+"al maintainer del pacchetto"
+
+msgid "Supplied matrix not symmetric"
+msgstr "Matrice passata non simmetrica"
+
+msgid "singular values not returned in order"
+msgstr "valori singolari non restituiti in ordine"
+
+msgid "Something wrong - matrix probably not +ve semi definite"
+msgstr "Qualcosa non va - la matrice probabilmente non è +ve semi-definita"
+
+msgid "method not recognised."
+msgstr "metodo non riconosciuto."
+
+msgid "S[[%d]] matrix is not +ve definite."
+msgstr "La matrice S[[%d]] non è definita +ve."
+
+msgid "dimensions of supplied w wrong."
+msgstr "le dimensioni di w sono errate."
+
+msgid "w different length from y!"
+msgstr "con lunghezza differente da y!"
+
+msgid "X lost dimensions in magic!!"
+msgstr ""
+
+msgid "mu dimensions wrong"
+msgstr "dimensioni di mu errate"
+
+msgid "something wrong with inputs to LAPACK routine"
+msgstr "c'è qualcosa di sbagliato nei valori di ingresso nella routine LAPACK"
+
+msgid "not positive definite"
+msgstr "non definito positivo"
+
+msgid "don't be silly"
+msgstr "non essere stupido"
+
+msgid "sd should have exactly one less entry than ld"
+msgstr ""
+
+#, fuzzy
+msgid "AR not available with sparse marginals"
+msgstr "link non disponibile per il parametro mu di gaulss"
+
+msgid "reverse indices missing from sparse discrete marginals"
+msgstr ""
+
+msgid "update not positive definite"
+msgstr "aggiornamento non positivo definito"
+
+msgid "internal error in vcorr, please report to simon.wood@r-project.org"
+msgstr ""
+"errore interno in vcorr, per piacere, segnalatelo a simon.wood@r-project.org"
+
+msgid "a has wrong number of rows"
+msgstr "a ha un numero errato di righe"
+
+msgid "isa requires a dg/tCMatrix"
+msgstr ""
+
+msgid "mvn requires 2 or more dimensional data"
+msgstr "mvn richiede 2 o più dati dimensionali"
+
+msgid "mvn does not yet handle offsets"
+msgstr "mvn non gestisce ancora gli offset"
+
+msgid "mvn dimension error"
+msgstr "errore dimensione mvn"
+
+msgid "non-integer binomial denominator: quantiles incorrect"
+msgstr "denominatore binomiale non intero: quantili non corretti"
+
+msgid "object is not a glm or gam"
+msgstr "l'oggetto non è un glm o gam"
+
+msgid "names of z and pc must match"
+msgstr "i nomi di z e pc devono corrispondere"
+
+msgid ""
+"Partial residuals do not have a natural x-axis location for linear "
+"functional terms"
+msgstr ""
+"I residui parziali non hanno una posizione naturale sull'asse x (ascisse) "
+"per termini funzionali lineari"
+
+msgid "no automatic plotting for smooths of more than two variables"
+msgstr "nessun plot automatico per gli smooth con più di due variabili"
+
+msgid "no automatic plotting for smooths of more than four variables"
+msgstr "nessun plot automatico per gli smooth con più di quattro variabili"
+
+msgid "argument pers is deprecated, please use scheme instead"
+msgstr ""
+"l'argomento 'pers' è deprecato, per piacere, si utilizzi 'scheme' in "
+"alternativa"
+
+msgid "residuals argument to plot.gam is wrong length: ignored"
+msgstr "l'argomento 'residuals' per plot.gam ha lunghezza errata: ignorato"
+
+msgid "No variance estimates available"
+msgstr "Nessuna stima di varianza disponibile"
+
+msgid "No terms to plot - nothing for plot.gam() to do."
+msgstr "Nessun termin per il plot - niente da fare per plot.gam()."
+
+msgid "grid vectors are different lengths"
+msgstr ""
+
+msgid "data vectors are of different lengths"
+msgstr "i vettori dei dati hanno differenti lunghezze"
+
+msgid "supplied dist negative"
+msgstr ""
+
+msgid "Model does not seem to have enough terms to do anything useful"
+msgstr ""
+"Il modello non sembra avere abbastanza termini per fare qualcosa di utile"
+
+msgid "view variables must be one of %s"
+msgstr "le variabili di visualizzazione devono essere una di %s"
+
+msgid ""
+"Don't know what to do with parametric terms that are not simple numeric or "
+"factor variables"
+msgstr ""
+"Non si sa cosa fare con i termini parametrici che non sono semplici numerici "
+"o variabili fattore"
+
+msgid "View variables must contain more than one value. view = c(%s,%s)."
+msgstr ""
+"Le variabili di visualizzazione devono contenere più di un valore. view = "
+"c(%s,%s)."
+
+msgid "type must be \"link\" or \"response\""
+msgstr "il tipo dev'essere \"link\" o \"response\""
+
+msgid "Something wrong with zlim"
+msgstr "Qualcosa è andato storto con zlim"
+
+msgid "color scheme not recognised"
+msgstr "schema colore non riconosciuto"
+
+msgid "sorry no option for contouring with errors: try plot.gam"
+msgstr ""
+
+msgid "At least three knots required in call to mono.con."
+msgstr "Almeno tre knot richiesti nella chiamata a mono.con."
+
+msgid "lower bound >= upper bound in call to mono.con()"
+msgstr "banda inferiore >= banda superiore nella chiamata a mono.con()"
+
+msgid "x is null"
+msgstr "x è nullo"
+
+msgid "uniquecombs has not worked properly"
+msgstr ""
+
+msgid "order too low"
+msgstr "ordine troppo piccolo"
+
+msgid "too few knots"
+msgstr "pochi knot"
+
+msgid "x out of range"
+msgstr "x fuori intervallo"
+
+msgid "something wrong with argument d."
+msgstr "c'è qualcosa di sbagliato con l'argomento 'd'."
+
+msgid "one or more supplied k too small - reset to default"
+msgstr ""
+"uno o più dei k passati è troppo piccolo - si reimposta ai valori predefiniti"
+
+msgid "dimension of fx is wrong"
+msgstr "la dimensione di fx è errata"
+
+msgid "xt argument is faulty."
+msgstr "argomento 'xt' diffettoso."
+
+msgid "bs wrong length and ignored."
+msgstr "bs ha lunghezza errata e viene ignorato."
+
+msgid "m wrong length and ignored."
+msgstr "m ha lunghezza errata e viene ignorato."
+
+msgid "Repeated variables as arguments of a smooth are not permitted"
+msgstr ""
+"Le variabili ripetute come argomenti di un livellamento non sono consentite"
+
+msgid "only first element of `id' used"
+msgstr "si utilizza solo il primo elemento di 'id'"
+
+msgid "supply a value for each variable for a point constraint"
+msgstr ""
+
+msgid "ord is wrong. reset to NULL."
+msgstr "ord è errato. Si utilizza NULL."
+
+msgid "ord contains out of range orders (which will be ignored)"
+msgstr "'ord' contiene ordini fuori intervallo (che saranno ignorati)"
+
+msgid "by=. not allowed"
+msgstr "by=. non ammesso"
+
+msgid "s(.) not supported."
+msgstr "s(.) non supportato."
+
+msgid "s(.) not yet supported."
+msgstr "s(.) non ancora supportato."
+
+msgid "argument k of s() should be integer and has been rounded"
+msgstr "l'argomento k di s() dovrebbe essere intero ed è stato arrotondato"
+
+msgid "matrices must be all class dgCMatrix or all class matrix"
+msgstr ""
+
+msgid "attempt to use unsuitable marginal smooth class"
+msgstr "tentato utilizzo di una classe uniforme marginale non adatta"
+
+msgid ""
+"Sorry, tensor products of smooths with multiple penalties are not supported."
+msgstr ""
+
+msgid "reparameterization unstable for margin: not done"
+msgstr "ri-parametrizzazione non stabile per il margine: non eseguito"
+
+msgid "basis not usable with reduced te"
+msgstr "base non utilizzabile con un te ridotto"
+
+msgid "fx length wrong from t2 term: ignored"
+msgstr "lunghezza fx errata per il termine t2: ignorata"
+
+msgid "length of sp incorrect in t2: ignored"
+msgstr "la lunghezza di 'sp' è incorretta in 't2': ignorata"
+
+msgid "d can not be negative in call to null.space.dimension()."
+msgstr "d non può essere negativo nella chiamata a null.space.dimension()."
+
+msgid "arguments of smooth not same dimension"
+msgstr "gli argomenti del livellamento non hanno la medesima dimensione"
+
+msgid "components of knots relating to a single smooth must be of same length"
+msgstr ""
+"i componenti dei knot relativi ad un singolo livellamento devono avere la "
+"stessa lunghezza"
+
+msgid "more knots than data in a tp term: knots ignored."
+msgstr "più knot che dati nel termine tp: knot ignorati."
+
+msgid "basis dimension, k, increased to minimum possible"
+msgstr "dimensione base, k, incrementata al minimo possibile"
+
+msgid "no data to predict at"
+msgstr "nessun dato a cui predire"
+
+msgid "Basis only handles 1D smooths"
+msgstr "La base gestisce solo livellamenti 1D"
+
+msgid "number of supplied knots != k for a cr smooth"
+msgstr "numero di knot forniti !=k per un cr smooth"
+
+msgid "F is missing from cr smooth - refit model with current mgcv"
+msgstr ""
+"F assente dal livellamento cr - riadattate il modello con l'attuale mgcv"
+
+msgid "more knots than unique data values is not allowed"
+msgstr "non è ammesso avere più knot che valori univoci"
+
+msgid "number of supplied knots != k for a cc smooth"
+msgstr "numero di knot forniti !=k per un cc smooth"
+
+msgid "basis dimension too small for b-spline order"
+msgstr "dimensione base troppo piccola per b-spline order"
+
+msgid "knot range does not include data"
+msgstr "l'intervallo del nodo (knot) non include i dati"
+
+msgid "there should be"
+msgstr "dovrebbero essere"
+
+msgid "supplied knots"
+msgstr "know passati"
+
+msgid "knots supplied"
+msgstr "knot passati"
+
+msgid ""
+"knot range is so wide that there is *no* information about some basis "
+"coefficients"
+msgstr ""
+
+msgid "penalty order too high for basis dimension"
+msgstr "ordine penalità troppo alto per la dimensione base"
+
+msgid "there is *no* information about some basis coefficients"
+msgstr "non ci sono informazioni circa i coefficienti base"
+
+msgid "basis dimension is larger than number of unique covariates"
+msgstr "la dimensione base è maggiore del numero di covariate uniche"
+
+msgid "multiple penalties of the same order is silly"
+msgstr "penalità multiple per il medesimo ordine non ha senso"
+
+msgid "requested non-existent derivative in B-spline penalty"
+msgstr ""
+
+msgid "fs smooths can only have one factor argument"
+msgstr "i livellamenti fs possono avere solo un argomento con un fattore"
+
+msgid "\"fs\" smooth cannot use a multiply penalized basis (wrong basis in xt)"
+msgstr ""
+"il livellamento \"fs\" non può utilizzare una base penalizzata multipla "
+"(base errate in xt)"
+
+msgid "no factor supplied to fs smooth"
+msgstr "nessun fattore passato per il livellamento fs"
+
+msgid "\"fs\" terms can not be fixed here"
+msgstr "i termini in \"fs\" non possono essere fissati qui"
+
+msgid ""
+"fs smooth not suitable for discretisation with more than one metric predictor"
+msgstr ""
+"livellamento fs non adatto alla discretizzazione con più di un predittore "
+"metrico"
+
+msgid "the adaptive smooth class is limited to 1 or 2 covariates."
+msgstr "la classe di livellamento adattivo è limitata a 1 o 2 covariate."
+
+msgid "penalty basis too large for smoothing basis"
+msgstr "base di penalità troppo larga per basi di livellamento"
+
+msgid "penalty basis too small"
+msgstr "base di penalità troppo piccola"
+
+msgid "random effects don't work with ids."
+msgstr "gli effetti casuali non funzionano con ids."
+
+msgid ""
+"Please put term with most levels last in 're' to avoid spoiling supplied "
+"penalties"
+msgstr ""
+"Per piacere, indicate il termine con la maggior parte dei livelli ultimi in "
+"'ri' per evitare di rovinare le penalità passata"
+
+msgid "supplied S matrices are wrong diminsion"
+msgstr "la matrice S passata ha dimensioni errate"
+
+msgid "argument of mrf should be a factor variable"
+msgstr "l'argomento di mrf dovrebbe essere una variabile fattore"
+
+msgid "MRF basis dimension set too high"
+msgstr "Dimensione base MRF impostata troppo alta"
+
+msgid "data contain regions that are not contained in the knot specification"
+msgstr ""
+
+msgid ""
+"penalty matrix, boundary polygons and/or neighbours list must be supplied in "
+"xt"
+msgstr ""
+
+msgid "no spatial information provided!"
+msgstr "nessuna informazione spaziale passata!"
+
+msgid "mismatch between nb/polys supplied area names and data area names"
+msgstr ""
+
+msgid "Something wrong with auto- penalty construction"
+msgstr "Qualcosa non va nella costruzione della penalità automatica"
+
+msgid "supplied penalty not square!"
+msgstr "la penalizzazione passata non è quadrata!"
+
+msgid "supplied penalty wrong dimension!"
+msgstr "la penalizzazione passata a errate dimensioni!"
+
+msgid "penalty column names don't match supplied area names!"
+msgstr ""
+"i nomi della colonna penalità non corrispondono con i nomi area passati!"
+
+msgid "Can only deal with a sphere"
+msgstr "Si può gestire unicamente una sfera"
+
+msgid "more knots than data in an sos term: knots ignored."
+msgstr "più knot che dati nel termine sos: knot ignorati."
+
+msgid "more knots than data in a ds term: knots ignored."
+msgstr "più knot che dati nel termine ds: knot ignorati."
+
+msgid ""
+"A term has fewer unique covariate combinations than specified maximum "
+"degrees of freedom"
+msgstr ""
+"Un termine ha meno combinazioni di covariate uniche rispetto ai gradi "
+"massimi di libertà specificati"
+
+msgid "s value reduced"
+msgstr "valore s riminuito"
+
+msgid "s value increased"
+msgstr "valore s incrementato"
+
+msgid "No suitable s (i.e. m[2]) try increasing m[1]"
+msgstr "Nessun s adeguato (es. m[2]), si provi ad incrementare m[1]"
+
+msgid "s value modified to give continuous function"
+msgstr "valore 's' modificato per dare una funzione continua"
+
+msgid "basis dimension reset to minimum possible"
+msgstr "la dimensione base è ripristinata al minimo possibile"
+
+msgid "incorrect arguments to GP smoother"
+msgstr "argomenti errati per lo smoother GP"
+
+msgid "more knots than data in an ms term: knots ignored."
+msgstr "più knot che dati nel termine ms: knot ignorati."
+
+msgid "smooth objects should not have a qrc attribute."
+msgstr "gli oggetti di livellamento non dovrebbero avere un attributo qrc."
+
+msgid "unimplemented sparse constraint type requested"
+msgstr "richiesto tipo di vincolo sparso non implementato"
+
+msgid ""
+"handling `by' variables in smooth constructors may not work with the "
+"summation convention"
+msgstr ""
+
+msgid "Can't find by variable"
+msgstr "Non è possibile cercare per variabile"
+
+msgid ""
+"sweep and drop constraints unlikely to work well with self handling of by "
+"vars"
+msgstr ""
+
+msgid "factor `by' variables can not be used with matrix arguments."
+msgstr ""
+"le variabili fattore `by 'non possono essere utilizzate con argomenti della "
+"matrice."
+
+msgid "`by' variable must be same dimension as smooth arguments"
+msgstr ""
+"la variabile 'by' dev'essere la medesima dimensione degli argomenti di "
+"livellamento"
+
+msgid "Number of prediction and fit constraints must match"
+msgstr "Il numero di vincoli di previsione e adattamento deve corrispondere"
+
+msgid "x and y must be same length"
+msgstr "x e y devono essere della medesima lunghezza"
+
+msgid "variable names don't match boundary names"
+msgstr "i nomi delle variabili non corrispondono ai nomi dei limiti"
+
+msgid "x and y not same length"
+msgstr "x e y non della stessa lunghezza"
+
+msgid "bnd must be a list."
+msgstr "bnd dev'essere una lista."
+
+msgid "lengths of k and bnd are not compatible."
+msgstr "le lunghezze di 'k' e 'bnd' non sono compatibili."
+
+msgid "attempt to select non existent basis function"
+msgstr "tentata selezione di un'inesistente funzione base"
+
+msgid "coefficient vector wrong length"
+msgstr "vettore coefficienti con lunghezza errata"
+
+msgid "knots must be specified for soap"
+msgstr "i knot devono essere specificati per soap"
+
+msgid "soap films are bivariate only"
+msgstr ""
+
+msgid "need at least one interior knot"
+msgstr "richiesto almento un nodo (knot) interno"
+
+msgid "can't soap smooth without a boundary"
+msgstr ""
+
+msgid "bnd must be a list of boundary loops"
+msgstr "bnd dev'essere un elenco di cicli limite"
+
+msgid "dropping soap knots not inside boundary - use 'in.out' to investigate."
+msgstr ""
+
+msgid "faulty bnd"
+msgstr "bnd difettoso"
+
+msgid "k and bnd lengths are inconsistent"
+msgstr "le lunghezze di k e bnd sono inconsistenti"
+
+msgid "data outside soap boundary"
+msgstr ""
+
+msgid "soap basis ill-conditioned - changing 'xt$nmax' may help"
+msgstr ""
+
+msgid "no free coefs in sf smooth"
+msgstr "nessun coefficiente libero nel livellamento fs"
+
+msgid "only deals with 2D case"
+msgstr "tratta solo con casi 2D"
+
+msgid "not enough unique values to find k nearest"
+msgstr "non ci sono abbastanza valori unici per trovare il k più vicino"
+
+msgid "cubic spline only deals with 1D data"
+msgstr "la spline cubica si occupa solo di dati 1D"
+
+msgid "object not fully initialized"
+msgstr "oggetto non inizializzato completamente"
+
+#~ msgid "exclude ignored by discrete prediction at present"
+#~ msgstr "attualmente 'exclude\" è ignorato dalla previsione discreta"

@@ -10,10 +10,10 @@ loss of numerical stability during fitting.  To change the default
 choise of fitting method, see \code{\link{gam}} arguments \code{method} and \code{optimizer}.
 }
 \usage{
-gam.control(nthreads=1,ncv.threads=1,irls.reg=0.0,epsilon = 1e-07, maxit = 200,
-            mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
+gam.control(nthreads=1,ncv.threads=1,irls.reg=0.0,epsilon = 1e-07,
+            maxit = 200,mgcv.tol=1e-7,mgcv.half=15, trace = FALSE,
             rank.tol=.Machine$double.eps^0.5,nlm=list(),
-	    optim=list(),newton=list(),outerPIsteps=0,
+	    optim=list(),newton=list(),
 	    idLinksBases=TRUE,scalePenalty=TRUE,efs.lspmax=15,
 	    efs.tol=.1,keepData=FALSE,scale.est="fletcher",
 	    edge.correct=FALSE) 
@@ -61,8 +61,8 @@ is used for outer estimation of smoothing parameters (not default). See details.
 \item{newton}{list of control parameters to pass to default Newton optimizer
 used for outer estimation of log smoothing parameters. See details.}
 
-\item{outerPIsteps}{The number of performance interation steps used to
-initialize outer iteration.}
+%- \item{outerPIsteps}{The number of performance interation steps used to
+%- initialize outer iteration.}
 
 \item{idLinksBases}{If smooth terms have their smoothing parameters linked via 
 the \code{id} mechanism (see \code{\link{s}}), should they also have the same 

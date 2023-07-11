@@ -457,25 +457,31 @@ Sl.rSb <- function(Sl,rho,beta) {
 
 Sl.inirep <- function(Sl,X,l=0,r=0,nt=1) {
 ## Re-parameterize X using initial Sl reparameterization info.
-## l,r = -2,-1,0,1,2. O is do not apply, negative to apply inverse transform Di,
+## l,r = -2,-1,0,1,2. O is do not apply, negative to apply inverse transform
+##       Di (t(D) if no Di indicating D orthogonal),
 ##       positive for transform D, 1 for transform, 2 for its transpose.
 ## Aim is for simpler and cleaner than Sl.initial.repara
   if (length(Sl)==0 && !l && !r) return(X) ## nothing to do
   if (is.matrix(X)) {
     for (b in 1:length(Sl)) if (Sl[[b]]$repara) {
+      nuDi <- is.null(Sl[[b]]$Di)
       ind <- Sl[[b]]$start:Sl[[b]]$stop
       if (l) X[ind,] <- if (l == 1) Sl[[b]]$D%*%X[ind,,drop=FALSE] else if (l == 2) t(Sl[[b]]$D)%*%X[ind,,drop=FALSE] else
-                        if (l == -1) Sl[[b]]$Di%*%X[ind,,drop=FALSE] else t(Sl[[b]]$Di)%*%X[ind,,drop=FALSE]
+             if (l == -1) { if (nuDi) t(Sl[[b]]$D)%*%X[ind,,drop=FALSE] else Sl[[b]]$Di%*%X[ind,,drop=FALSE] } else
+			  { if (nuDi) Sl[[b]]$D%*%X[ind,,drop=FALSE] else t(Sl[[b]]$Di)%*%X[ind,,drop=FALSE]} 
       if (r) X[,ind] <- if (l == 1) X[,ind,drop=FALSE]%*%Sl[[b]]$D else if (l == 2) X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) else
-                        if (l == -1) X[,ind,drop=FALSE]%*%Sl[[b]]$Di else X[,ind,drop=FALSE]%*%t(Sl[[b]]$Di)			
+             if (l == -1) { if (nuDi) X[,ind,drop=FALSE]%*%t(Sl[[b]]$D) else X[,ind,drop=FALSE]%*%Sl[[b]]$Di} else
+			{ if (nuDi) X[,ind,drop=FALSE]%*%Sl[[b]]$D else X[,ind,drop=FALSE]%*%t(Sl[[b]]$Di)}			
     }
   } else { ## it's a vector
     for (b in 1:length(Sl)) if (Sl[[b]]$repara) {
-      ind <- Sl[[b]]$start:Sl[[b]]$stop
+      ind <- Sl[[b]]$start:Sl[[b]]$stop; nuDi <- is.null(Sl[[b]]$Di)
       if (l) X[ind] <- if (l == 1) Sl[[b]]$D%*%X[ind] else if (l == 2) t(Sl[[b]]$D)%*%X[ind] else
-                        if (l == -1) Sl[[b]]$Di%*%X[ind] else t(Sl[[b]]$Di)%*%X[ind]
+                        if (l == -1) { if (nuDi) t(Sl[[b]]$D)%*%X[ind] else Sl[[b]]$Di%*%X[ind] } else
+			{ if (nuDi) Sl[[b]]$D%*%X[ind] else t(Sl[[b]]$Di)%*%X[ind] }
       if (r) X[ind] <- if (l == 1) X[ind]%*%Sl[[b]]$D else if (l == 2) X[ind]%*%t(Sl[[b]]$D) else
-                        if (l == -1) X[ind]%*%Sl[[b]]$Di else X[ind]%*%t(Sl[[b]]$Di)			
+                        if (l == -1) { if (nuDi) X[ind]%*%t(Sl[[b]]$D) else X[ind]%*%Sl[[b]]$Di } else
+			{ if (nuDi) X[ind]%*%Sl[[b]]$D else X[ind]%*%t(Sl[[b]]$Di)}			
     }
   }
   X
@@ -1216,7 +1222,7 @@ d.detXXS <- function(Sl,PP,nt=1,deriv=2) {
   SPP <- Sl.termMult(Sl,PP,full=FALSE,nt=nt) ## SPP[[k]] is S_k PP'
   nd <- length(SPP)
   d1 <- rep(0,nd);d2 <- matrix(0,nd,nd) 
-  for (i in 1:nd) { 
+  if (nd>0) for (i in 1:nd) { 
     indi <- attr(SPP[[i]],"ind")
     d1[i] <- sum(diag(SPP[[i]][,indi,drop=FALSE]))
     if (deriv==2) {
@@ -1309,6 +1315,7 @@ Sl.iftChol <- function(Sl,XX,R,d,beta,piv,nt=1) {
   np <- length(beta)
   db <- matrix(0,np,nd)
   rss1 <- bSb1 <- rep(0,nd)
+  if (nd==0) return(list(bSb=0,bSb1=rep(0,nd),bSb2=rep(0,nd),d1b=db,rss1=rss1,rss2=rss1))
 
   ## alternative all in one code - matches loop results, but
   ## timing close to identical - modified for parallel exec
@@ -1386,18 +1393,24 @@ Sl.fitChol <- function(Sl,XX,f,rho,yy=0,L=NULL,rho0=0,log.phi=0,phi.fixed=TRUE,
 
   phi <- exp(log.phi)  
 
-  reml1 <-  (dXXS$d1[!fixed] - ldS$ldet1 + 
+  nrho <- length(rho)
+
+  reml1 <- if (nrho==0) rep(0,0) else (dXXS$d1[!fixed] - ldS$ldet1 + 
             (dift$rss1[!fixed] + dift$bSb1[!fixed])/(phi*gamma))/2
 
-  reml2 <- (dXXS$d2[!fixed,!fixed] - ldS$ldet2 +  
+  reml2 <- if (nrho==0) matrix(0,0,0) else (dXXS$d2[!fixed,!fixed] - ldS$ldet2 +  
            (dift$rss2[!fixed,!fixed] + dift$bSb2[!fixed,!fixed])/(phi*gamma))/2 
- 
+
+  if (nrho==0&&phi.fixed) { ## need to return now - nothing else to do
+    return(list(beta=beta,grad=0,step=0,db=dift$d1b,PP=PP,R=R,piv=piv,rank=r, hess=reml2,ldetS=ldS$ldetS,ldetXXS=ldetXXS))
+  }  
+
   if (!phi.fixed) {
     n <- length(reml1)
     rss.bSb <- yy - sum(beta*f) ## use identity ||y-Xb|| + b'Sb = y'y - b'X'y (b is minimizer)
     reml1[n+1] <- (-rss.bSb/(phi*gamma) + nobs/gamma - Mp)/2
     d <- c(-(dift$rss1[!fixed] + dift$bSb1[!fixed]),rss.bSb)/(2*phi*gamma)
-    reml2 <- rbind(cbind(reml2,d[1:n]),d) 
+    reml2 <- if (n>0) rbind(cbind(reml2,d[1:n]),d) else matrix(d,1,1) 
     if (!is.null(L)) L <- rbind(cbind(L,rep(0,nrow(L))),c(rep(0,ncol(L)),1))
   }
 

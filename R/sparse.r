@@ -411,7 +411,7 @@ spasm.construct.default <- function(object,data) {
   object
 }
 
-spasm.sp.default <- function(object,sp,get.trH=FALSE) { 
+spasm.sp.default <- function(object,sp,w=0,get.trH=FALSE,block=0,centre=FALSE) { 
 ## Set up default null smoother. i.e. set trH=0,
   trH <-  0
   if (get.trH) object$trH <- trH

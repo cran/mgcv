@@ -165,7 +165,7 @@ values (defualt).}
 \author{ Simon N. Wood \email{simon.wood@r-project.org} and Fabian Scheipl}
 \references{
 
-Wood S.N., F. Scheipl and J.J. Faraway (2013, online Feb 2012) Straightforward intermediate rank tensor product smoothing in mixed models. Statistical Computing. 23(3):341-360
+Wood S.N., F. Scheipl and J.J. Faraway (2013, online Feb 2012) Straightforward intermediate rank tensor product smoothing in mixed models. Statistics and Computing. 23(3):341-360 \doi{10.1007/s11222-012-9314-z}
 
 Gu, C. (2002) Smoothing Spline ANOVA, Springer.
 

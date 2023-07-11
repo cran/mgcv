@@ -507,6 +507,9 @@ smooth2random.mgcv.smooth <- function(object,vnames,type=1) {
 
   ## reparameterize so that unpenalized basis is separated out and at end...
   ev <- eigen(object$S[[1]],symmetric=TRUE)
+  ## following is a hack for developers calling smooth2random for fit and then again
+  ## for prediction, rather than as intended (do this on different machines and...)
+  if (ev$vectors[1,1]<0) ev$vectors <- -ev$vectors 
   null.rank <- object$df - object$rank
   p.rank <- object$rank
   if (p.rank>ncol(object$X)) p.rank <- ncol(object$X)
@@ -584,7 +587,9 @@ smooth2random.tensor.smooth <- function(object,vnames,type=1) {
   #null.rank <- null.rank - bs.dim + object$df
   ##sum.S <- (sum.S+t(sum.S))/2 # ensure symmetry
   ev <- eigen(sum.S,symmetric=TRUE)
- 
+  ## following is a hack for developers calling smooth2random for fit and then again
+  ## for prediction, rather than as intended...
+  if (ev$vectors[1,1]<0) ev$vectors <- -ev$vectors 
   p.rank <- ncol(object$X) - null.rank
   if (p.rank>ncol(object$X)) p.rank <- ncol(object$X)
   U <- ev$vectors
@@ -1310,7 +1315,7 @@ gamm <- function(formula,random=NULL,correlation=NULL,family=gaussian(),data=lis
   
     ## summarize the *raw* input variables
     ## note can't use get_all_vars here -- buggy with matrices
-    vars <- all.vars1(gp$fake.formula[-2]) ## drop response here
+    vars <- all_vars1(gp$fake.formula[-2]) ## drop response here
     inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
     dl <- eval(inp, data, parent.frame())
     names(dl) <- vars ## list of all variables needed

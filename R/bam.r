@@ -1,5 +1,5 @@
 ## routines for very large dataset generalized additive modelling.
-## (c) Simon N. Wood 2009-2019
+## (c) Simon N. Wood 2009-2023
 
 
 ls.size <- function(x) {
@@ -43,7 +43,7 @@ chol2qr <- function(XX,Xy,nt=1) {
   list(R=R,f=f)
 } ## chol2qr
 
-qr.update <- function(Xn,yn,R=NULL,f=rep(0,0),y.norm2=0,use.chol=FALSE,nt=1)
+qr_update <- function(Xn,yn,R=NULL,f=rep(0,0),y.norm2=0,use.chol=FALSE,nt=1)
 ## Let X = QR and f = Q'y. This routine updates f and R
 ## when Xn is appended to X and yn appended to y. If R is NULL
 ## then initial QR of Xn is performed. ||y||^2 is accumulated as well.
@@ -68,14 +68,14 @@ qr.update <- function(Xn,yn,R=NULL,f=rep(0,0),y.norm2=0,use.chol=FALSE,nt=1)
       yn <- c(f,yn)
     }
     qrx <- if (nt==1) qr(Xn,tol=0,LAPACK=TRUE) else pqr2(Xn,nt)
-    fn <- qr.qty(qrx,yn)[1:p]
+    fn <- qr.qty(qrx,yn)[1:min(p,nrow(Xn))]
     rp <- qrx$pivot;rp[rp] <- 1:p # reverse pivot
     return(list(R = qr.R(qrx)[,rp],f=fn,y.norm2=y.norm2))
   }
-} ## qr.update
+} ## qr_update
 
 
-qr.up <- function(arg) {
+qr_up <- function(arg) {
 ## routine for parallel computation of the QR factorization of 
 ## a large gam model matrix, suitable for calling with parLapply.
   wt <- rep(0,0) 
@@ -109,15 +109,15 @@ qr.up <- function(arg) {
     wt <- c(wt,w)
     z <- z[good];w <- w[good]
     w <- sqrt(w)
-    ## note assumption that nt=1 in following qr.update - i.e. each cluster node is strictly serial
-    if (b == 1) qrx <- qr.update(w*X[good,,drop=FALSE],w*z,use.chol=arg$use.chol) 
-    else qrx <- qr.update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
+    ## note assumption that nt=1 in following qr_update - i.e. each cluster node is strictly serial
+    if (b == 1) qrx <- qr_update(w*X[good,,drop=FALSE],w*z,use.chol=arg$use.chol) 
+    else qrx <- qr_update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
     rm(X);if(arg$gc.level>1) gc() ## X can be large: remove and reclaim
   }
   qrx$dev <- dev;qrx$wt <- wt;qrx$eta <- eta
   if (arg$gc.level>1) { rm(arg,ind,mu,y,weights,mu.eta.val,good,z,w,wt,w);gc()}
   qrx
-} ## qr.up
+} ## qr_up
 
 compress.df <- function(dat,m=NULL) {
 ## Takes dataframe in dat and compresses it by rounding and duplicate 
@@ -132,8 +132,9 @@ compress.df <- function(dat,m=NULL) {
 ## is typically used before calling to force exact repeatability. 
   d <- ncol(dat) ## number of variables to deal with
   n <- nrow(dat) ## number of data/cases
-  if (is.null(m)) m <- if (d==1) 1000 else if (d==2) 100 else 25 else
-  if (d>1) m <- round(m^{1/d}) + 1
+  if (is.null(m)) {
+    m <- if (d==1) 1000 else if (d==2) 100 else 25
+  } else if (d>1) m <- round(m^{1/d}) + 1
   
   mf <- mm <- 1 ## total grid points for factor and metric
   for (i in 1:d) if (is.factor(dat[,i])) {  
@@ -195,223 +196,6 @@ check.term <- function(term,rec) {
   } else return(0) ## no match
 } ## check.term
 
-discrete.mf0 <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
-## more or less original version where nr and k.start are by model
-## term
-## discretize the covariates for the terms specified in smooth.spec
-## id not allowed. names.pmf gives the names of the parametric part
-## of mf, and is used to create a model frame for just the 
-## parametric terms --- mini.mf is applied to this.
-## if full is FALSE then
-## what is returned is a list where columns can be of 
-## different lengths.
-## On exit... 
-## * mf is a model frame containing the unique discretized covariate
-##   values, in randomized order, padded to all be same length (if full=TRUE)
-## * nr records the number of unique discretized covariate values
-##   i.e. the number of rows before the padding starts -
-##   elements are labelled, corresponding to names in mf, but
-##   not in the same order.
-## * k.start contains the starting column in index vector k, for
-##   each variable. The final element is the column beyond the last one.
-## * k is the index matrix. The ith record of the 1st column of the 
-##   jth variable is in row k[i,k.start[j]] of the corresponding 
-##   column of mf.
-## ... there is an element of nr and k.start for each variable of 
-## each smooth, but variables are only discretized and stored in mf
-## once. If there are no matrix variables then k.start = 1:(ncol(k)+1) 
-
-  ## some sub sampling here... want to set and restore RNG state used for this
-  ## to ensure strict repeatability.
-  rngs <- temp.seed(8547) ## keep different to tps constructor!
-  #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-  #if (inherits(seed,"try-error")) {
-  #     runif(1)
-  #     seed <- get(".Random.seed",envir=.GlobalEnv)
-  #}
-  #kind <- RNGkind(NULL)
-  #RNGkind("default", "default")
-  #set.seed(8547) ## keep different to tps constructor!
-
-  mf0 <- list()
-  nk <- 0 ## count number of index vectors to avoid too much use of cbind
-  nlp <- if (is.null(gp$nlp)) 1 else sum(unlist(lapply(gp,inherits,"split.gam.formula")))
-  for (lp in 1:nlp) { ## loop over linear predictors
-    smooth.spec <- if (is.null(gp$nlp)) gp$smooth.spec else gp[[lp]]$smooth.spec
-    if (length(smooth.spec)>0) for (i in 1:length(smooth.spec)) nk <- nk + as.numeric(smooth.spec[[i]]$by!="NA") +
-      if (inherits(smooth.spec[[i]],"tensor.smooth.spec")) length(smooth.spec[[i]]$margin) else 1
-  }
-  names.pmf <- names.pmf[names.pmf %in% names(mf)] ## drop names.pmf not in mf (usually response)
-  #if (full)
-  nk <- nk + length(names.pmf)
-  k <- matrix(0,nrow(mf),nk) ## each column is an index vector
-  k.start <- 1:(nk+1) ## record last column for each term
-  ik <- 0 ## index counter i.e. counts marginal smooths and their indices
-  nr <- rep(0,nk) ## number of rows for marginal term
-  ## structure to record terms already processed...
-  rec <- list(vnames = rep("",0), ## variable names
-              ki = rep(0,0),      ## index of original index vector var relates to  
-              d = rep(0,0))       ## dimension of terms involving this var
-  ## loop through the terms discretizing the covariates...
- 
-  for (lp in 1:nlp) { ## loop over linear predictors
-    smooth.spec <- if (is.null(gp$nlp)) gp$smooth.spec else gp[[lp]]$smooth.spec
-    if (length(smooth.spec)>0) for (i in 1:length(smooth.spec)) {
-      nmarg <- if (inherits(smooth.spec[[i]],"tensor.smooth.spec")) length(smooth.spec[[i]]$margin) else 1
-      maxj <- if (smooth.spec[[i]]$by=="NA") nmarg else nmarg + 1 
-      mi <- if (is.null(m)||length(m)==1) m else m[i]
-      j <- 0
-      for (jj in 1:maxj) { ## loop through marginals
-        if (jj==1&&maxj!=nmarg) termi <- smooth.spec[[i]]$by else {
-          j <- j + 1
-          termi <- if (inherits(smooth.spec[[i]],"tensor.smooth.spec")) smooth.spec[[i]]$margin[[j]]$term else 
-                   smooth.spec[[i]]$term          
-        } 
-        ik.prev <- check.term(termi,rec) ## term already discretized?
-        ik <- ik + 1 ## increment index counter
-        if (ik.prev==0) { ## new discretization required
-	  if (termi=="(Intercept)") {
-            mfd <- data.frame(1)
-	    names(mfd) <- termi
-	    ki <- 1:nrow(mf)
-          } else {
-            mfd <- compress.df(mf[termi],m=mi)
-            ki <- attr(mfd,"index")
-	  }  
-          if (is.matrix(ki)) {
-             ind <- (ik+1):length(k.start) 
-             k.start[ind] <- k.start[ind] + ncol(ki)-1    ## adjust start indices
-             k <- cbind(k,matrix(0,nrow(k),ncol(ki)-1)) ## extend index matrix
-             ind <- k.start[ik]:(k.start[ik+1]-1) 
-             k[,ind] <- ki 
-           } else {
-             k[,k.start[ik]] <- ki
-           }
-           nr[ik] <- nrow(mfd)
-           mf0 <- c(mf0,mfd) 
-           ## record variable discretization info, for later duplicate avoiding check...
-           d <- length(termi)
-           rec$vnames <- c(rec$vnames,termi)
-           rec$ki <- c(rec$ki,rep(ik,d))
-           rec$d <- c(rec$d,rep(d,d))
-         } else { ## re-use an earlier discretization...
-           ind.prev <- k.start[ik.prev]:(k.start[ik.prev+1]-1)
-           ind <- (ik+1):length(k.start)
-           k.start[ind] <- k.start[ind] + length(ind.prev)-1
-	   if (length(ind.prev)>1) k <- cbind(k,matrix(0,nrow(k),length(ind.prev)-1)) ## extend index matrix
-           ind <- k.start[ik]:(k.start[ik+1]-1)
-           k[,ind] <- k[,ind.prev]
-           nr[ik] <- nr[ik.prev]
-         }
-      } ## end marginal jj loop
-    } ## term loop (i)
-  } ## linear predictor, lp, loop
-
-  ## obtain parametric terms and..
-  ## pad mf0 so that all rows are the same length
-  ## padding is necessary if gam.setup is to be used for setup
-
-  if (full) {
-    colnames(k) <- rep("",ncol(k))
-    maxr <- max(nr)
-    ## If NA's caused rows to be dropped in mf, then they should
-    ## also be dropped in pmf, otherwise we can end up with factors
-    ## with more levels than unique observations, for example.
-    ## The next couple of lines achieve this.
-    ## find indices of terms in mf but not pmf...
-    #di <- sort(which(!names(mf) %in% names.pmf),decreasing=TRUE)
-    ## create copy of mf with only pmf variables...
-    #mfp <- mf; for (i in di) mfp[[i]] <- NULL
-
-    mfp <- mf[names.pmf] ## retain only variables needed in parametric part
-
-    ## now discretize parametric covariates...
-    mi <- if (is.null(m)) m else max(m)
-    if (length(mfp)) for (i in 1:length(mfp)) {
-      ii <- which(rec$vnames %in% names.pmf[i])
-      ik.prev <- if (length(ii)>0) rec$ki[ii] else 0  ## term already discretized?
-      ik <- ik + 1
-      if (ik.prev==0) { ## new discretization needed (no need to record - no repeat vars within para)
-        mfd <- compress.df(mfp[i],m=mi)
-        mf0 <- c(mf0,mfd)
-        ki <- attr(mfd,"index")
-        #ik <- ik + 1
-        k[,k.start[ik]] <- ki
-        colnames(k)[k.start[ik]] <- names(mfp[i]) ## record the variable name associated with the index
-        if (maxr<nrow(mfd)) maxr <- nrow(mfd)
-        nr[ik] <- nrow(mfd)
-      } else { ## re-use previous discretization
-        k[,k.start[ik]] <- k[,k.start[ik.prev]]
-	colnames(k)[k.start[ik]] <- names(mfp[i])
-	nr[ik] <- nr[ik.prev]
-      }
-    }
-
-    nr0 <- rep(NA,length(mf0)) 
-    for (i in 1:length(mf0)) {
-      me <- length(mf0[[i]]) 
-      if (me < maxr) mf0[[i]][(me+1):maxr] <- sample(mf0[[i]],maxr-me,replace=TRUE)
-      nr0[i] <- me ## record original column length
-    }
-    names(nr0) <- names(mf0)
-
-    ## add response so that gam.setup can do its thing - looks redundant!! 
-    # mf0[[gp$response]] <- sample(mf[[gp$response]],maxr,replace=TRUE) ## redundant??
-    
-    ## mf0 is the discretized model frame (actually a list), padded to have equal length rows
-    ## k is the index vector for each sub-matrix, only the first nr rows of which are
-    ## to be retained... Use of check.names=FALSE ensures, e.g. 'offset(x)' not changed...
-
-    ## now copy back into mf so terms unchanged
-    mf <- mf[sample(1:nrow(mf),maxr,replace=TRUE),]
-    for (na in names(mf0)) mf[[na]] <- mf0[[na]] 
-    nr0 <- nr0[names(mf)] ## makes sure nr0 order is same as mf order
-    attr(mf,"nr") <- nr0 ## record original column lengths
-  } else mf <- mf0
-  ## reset RNG to old state...
-  temp.seed(rngs)
-  #RNGkind(kind[1], kind[2])
-  #assign(".Random.seed", seed, envir = .GlobalEnv)
-
-  ## finally one more pass through, expanding k, k.start and nr to deal with replication that
-  ## will occur with factor by variables...
-  #ik <- ncol(k)+1 ## starting index col for this term in k.start - wrong with matrix predictors
-  ik <- length(k.start) ## starting index col for this term in k.start
-  for (lp in 1:nlp) { ## loop over linear predictors
-    smooth.spec <- if (is.null(gp$nlp)) gp$smooth.spec else gp[[lp]]$smooth.spec
-    if (length(smooth.spec)>0) for (i in length(smooth.spec):1) { ## work down through terms so insertion painless
-      if (inherits(smooth.spec[[i]],"tensor.smooth.spec")) nd <-  
-         length(smooth.spec[[i]]$margin) else nd <- 1 ## number of indices
-      ik <- ik - nd ## starting index if no by  
-      if (smooth.spec[[i]]$by!="NA") {
-        ik <- ik - 1 ## first index
-        nd <- nd + 1 ## number of indices
-        byvar <- mf[[smooth.spec[[i]]$by]]
-        if (is.factor(byvar)) { ## then need to expand nr and index matrix
-          nex <- length(levels(byvar))  ## number of copies of term indices
-          if (is.ordered(byvar)) nex <- nex - 1 ## first level dropped
-          if (nex>0) { ## insert index copies
-            ii0 <- if (ik>1) 1:(ik-1) else rep(0,0) ## earlier
-            ii1 <- if (ik+nd-1 < length(nr)) (ik+nd):length(nr) else rep(0,0) ## later
-            ii <- ik:(ik+nd-1) ## cols for this term    
-            ## indices for columns of k... 
-            kk0 <- if (ik>1) 1:(k.start[ik]-1) else rep(0,0) ## earlier
-            kk1 <- if (ik+nd-1 < length(nr)) k.start[ik+nd]:ncol(k) else rep(0,0) ## later
-            kk <- k.start[ik]:(k.start[ik+nd]-1) ## cols for this term
-            k <- cbind(k[,kk0,drop=FALSE],k[,rep(kk,nex),drop=FALSE],k[,kk1,drop=FALSE])
-            nr <- c(nr[ii0],rep(nr[ii],nex),nr[ii1])
-            ## expand k.start...
-            nkk <- length(kk) ## number of k columns in term to be repeated
-            k.start <- c(k.start[ii0],rep(k.start[ii],nex)+rep(0:(nex-1),each=nkk)*nkk,
-                       (nex-1)*nkk+c(k.start[ii1],k.start[length(k.start)]))
-          }
-        } ## factor by 
-      } ## existing by
-    } ## smooth.spec loop
-  } ## lp loop  
-  list(mf=mf,k=k,nr=nr,k.start=k.start)
-} ## discrete.mf0
-
 
 discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
 ## Attempt at a cleaner design, in which k.start and nr have an entry
@@ -436,7 +220,7 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
 ## ... there is an element of nr and ks for each variable of
 ## mf. Variables are only discretized and stored in mf once.
 ## Model terms can be matched to elements of nr and ks based on the
-## 'xnames' retuned from terms2tensor, or the 'terms' component of
+## 'xnames' returned from terms2tensor, or the 'terms' component of
 ## smooth objects.
 ## ks has an extra row, k an extra column and nr an extra entry for
 ## any "(Intercept)"
@@ -460,7 +244,6 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
  
   nk <- nk + length(names.pmf)
   k <- matrix(0,nrow(mf),nk) ## each column is an index vector
-  #k.start <- 1:(nk+1) ## record last column for each term
   ks <- matrix(NA,nk,2,dimnames=list(rep("",nk)))
   ik <- 0 ## index counter i.e. counts marginal smooths and their indices
   nr <- rep(0,nk) ## number of rows for marginal term
@@ -469,13 +252,14 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
               ki = rep(0,0),      ## index of original index vector var relates to  
               d = rep(0,0))       ## dimension of terms involving this var
   ## loop through the terms discretizing the covariates...
- 
+  ii <- 0
   for (lp in 1:nlp) { ## loop over linear predictors
     smooth.spec <- if (is.null(gp$nlp)) gp$smooth.spec else gp[[lp]]$smooth.spec
-    if (length(smooth.spec)>0) for (i in 1:length(smooth.spec)) {
+    if (length(smooth.spec)>0) for (i in 1:length(smooth.spec)) { ## loop over smooths in this lp
       nmarg <- if (inherits(smooth.spec[[i]],"tensor.smooth.spec")) length(smooth.spec[[i]]$margin) else 1
       maxj <- if (smooth.spec[[i]]$by=="NA") nmarg else nmarg + 1 
-      mi <- if (is.null(m)||length(m)==1) m else m[i]
+      ii <- ii + 1 ## all smooths counter (ii==i if nlp = 1)
+      mi <- if (is.null(m)||length(m)==1) m else m[ii]
       j <- 0
       for (jj in 1:maxj) { ## loop through marginals
         if (jj==1&&maxj!=nmarg) termi <- smooth.spec[[i]]$by else {
@@ -525,7 +309,6 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
   ## padding is necessary if gam.setup is to be used for setup
 
   if (full) {
-   # colnames(k) <- rep("",ncol(k))
     maxr <- max(nr)
     ## If NA's caused rows to be dropped in mf, then they should
     ## also be dropped in pmf, otherwise we can end up with factors
@@ -543,7 +326,6 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
         ## note that compress.df(mfp[i]) is set up to deal with matrices in the manner appropriate
 	## to the smooth summation convention, but not to matrices in the parametric part of the model
 	## hence the following work around...
-        #mfd <- compress.df(mfp[i],m=mi);mf0 <- c(mf0,mfd)
         if (is.matrix(mfp[[i]])) {
           mfd <- compress.df(mfp[[i]],m=mi)
 	  mr <- nrow(mfd)
@@ -608,14 +390,6 @@ mini.mf <-function(mf,chunk.size) {
   n <- nrow(mf)
   if (n <= chunk.size) return(mf)
   rngs <- temp.seed(66)
-  #seed <- try(get(".Random.seed",envir=.GlobalEnv),silent=TRUE) ## store RNG seed
-  #if (inherits(seed,"try-error")) {
-  #   runif(1)
-  #   seed <- get(".Random.seed",envir=.GlobalEnv)
-  #}
-  #kind <- RNGkind(NULL)
-  #RNGkind("default", "default")
-  #set.seed(66)  
   ## randomly sample from original frame...
   ind <- sample(1:n,chunk.size)
   mf0 <- mf[ind,,drop=FALSE]
@@ -647,16 +421,14 @@ mini.mf <-function(mf,chunk.size) {
     k <- k + nf
   }
   temp.seed(rngs) ## reset RNG to initial state
-  #RNGkind(kind[1], kind[2])
-  #assign(".Random.seed", seed, envir = .GlobalEnv)
 
   mf0
 } ## mini.mf
 
 
-bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
+bgam.fitd <- function (G, mf, gp ,scale , coef=NULL, etastart = NULL,
     mustart = NULL, offset = rep(0, nobs),rho=0, control = gam.control(), intercept = TRUE, 
-    gc.level=0,nobs.extra=0,npt=c(1,1),gamma=1) {
+    gc.level=0,nobs.extra=0,npt=c(1,1),gamma=1,in.out=NULL,...) {
 ## This is a version of bgam.fit designed for use with discretized covariates. 
 ## Difference to bgam.fit is that XWX, XWy and Xbeta are computed in C
 ## code using compressed versions of X. Parallelization of XWX formation
@@ -666,7 +438,6 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 ## and to control the step length to ensure that at the end of the step we
 ## are not going uphill w.r.t. the REML criterion...
     
-    #y <- mf[[gp$response]]
     y <- G$y
     weights <- G$w 
     conv <- FALSE
@@ -675,7 +446,10 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
    
     if (inherits(G$family,"extended.family")) { ## preinitialize extended family
       efam <- TRUE
+      if (!is.null(G$family$preinitialize) && !is.null(attr(G$family$preinitialize,"needG"))) attr(G$family,"G") <- G
       pini <- if (is.null(G$family$preinitialize)) NULL else G$family$preinitialize(y,G$family)
+      if (is.null(G$family$preinitialize)) attr(G$family,"G") <- NULL
+      if (!is.null(pini$family)) G$family <- pini$family
       if (!is.null(pini$Theta)) G$family$putTheta(pini$Theta)
       if (!is.null(pini$y)) y <- pini$y
       if (is.null(G$family$scale)) scale <- 1 else scale <- if (G$family$scale<0) scale else G$family$scale
@@ -768,13 +542,10 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
           eta <- Xbd(G$Xd,coef,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,G$drop) + offset
 	  lsp.full <- G$lsp0
 	  if (n.sp>0) lsp.full <- lsp.full + if (is.null(G$L)) lsp[1:n.sp] else G$L %*% lsp[1:n.sp]
-	  #Sb <- Sl.Sb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
 	  rSb <- Sl.rSb(Sl,lsp.full,prop$beta) ## store S beta to allow rapid step halving
 	  if (iter>2) {
-            #Sb0 <- Sl.Sb(Sl,lsp.full,b0)
-	    #bSb0 <- sum(b0*Sb0) ## penalty at start of beta step
 	    rSb0 <- Sl.rSb(Sl,lsp.full,b0)
-	    bSb0 <- sum(rSb0^2)
+	    bSb0 <- sum(rSb0^2) ## penalty at start of beta step
 	    ## get deviance at step start, with current theta if efam
 	    dev0 <- if (efam) sum(family$dev.resids(G$y,mu0,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu0,G$w))
@@ -786,11 +557,9 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	  dev <- if (efam) sum(family$dev.resids(G$y,mu,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu,G$w))
           if (iter>2) { ## coef step length control
-	    #bSb <- sum(prop$beta*Sb) ## penalty at end of beta step
 	    bSb <- sum(rSb^2) ## penalty at end of beta step 
             if ((!is.finite(dev) || dev0 + bSb0 < dev + bSb) && kk < 30) { ## beta step not improving current pen dev
               coef <- (coef0 + coef)/2 ## halve the step
-	      #Sb <- (Sb0 + Sb)/2
 	      rSb <- (rSb0 + rSb)/2
 	      eta <- (eta0 + eta)/2
 	      prop$beta <- (b0 + prop$beta)/2
@@ -804,13 +573,11 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
 	  eta0 <- eta
 	  mu0 <- mu
 	  b0 <- prop$beta ## beta repara
-	  #dev <- dev + sum(prop$beta*Sb) ## add penalty to deviance
-	  dev <- dev + sum(rSb^2)
+	  dev <- dev + sum(rSb^2) ## add penalty to deviance
 	} else reml <- dev ## for convergence checking
 	
 	if (efam) { ## extended family
 	  if (iter>1) { ## estimate theta
-	    #scale1 <- if (!is.null(family$scale)) family$scale else scale
             if (family$n.theta>0||scale1<0) theta <- estimate.theta(theta,family,y,mu,scale=scale1,wt=G$w,tol=1e-7)
             if (!is.null(family$scale) && scale1<0) {
 	      scale <- exp(theta[family$n.theta+1])
@@ -846,7 +613,6 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
        
         ## form X'WX efficiently...
         qrx$R <- XWXd(G$Xd,w,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,npt[1],G$drop,ar.stop,ar.row,ar.weight)
-	##R0 <- XWXd(G$Xd,w,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,1,G$drop,ar.stop,ar.row,ar.weight) ## DEBUG compare
         ## form X'Wz efficiently...
         qrx$f <- XWyd(G$Xd,w,z,G$kd,G$ks,G$ts,G$dt,G$v,G$qc,G$drop,ar.stop,ar.row,ar.weight)
         if(gc.level>1) gc()
@@ -868,16 +634,14 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
       ## preparation for working model fit is ready, but need to test for convergence first
       if (iter>2 && abs(dev - devold)/(0.1 + abs(dev)) < control$epsilon && (scale>0 || abs(Nstep[n.sp+1])<control$epsilon*(abs(log.phi)+1))) {
           conv <- TRUE
-          #coef <- start
           break
       }
 
       ## use fast REML code
       ## block diagonal penalty object, Sl, set up before loop
 
-
       if (iter==1) { ## need to get initial smoothing parameters 
-        lambda.0 <- initial.sp(qrx$R,G$S,G$off,XX=TRUE) ## note that this uses the untransformed X'X in qrx$R
+        lambda.0 <- if (is.null(in.out)) initial.sp(qrx$R,G$S,G$off,XX=TRUE) else in.out$sp ## note that this uses the untransformed X'X in qrx$R
         ## convert intial s.p.s to account for L 
         lsp0 <- log(lambda.0) ## initial s.p.
         if (!is.null(G$L)) lsp0 <- 
@@ -888,8 +652,10 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
       ## carry forward scale estimate if possible...
       if (scale>0) log.phi <- log(scale) else {
         if (iter==1) {
-            if (is.null(coef)||qrx$y.norm2==0) lsp0[n.sp+1] <- log(var(as.numeric(G$y))*.05) else
-               lsp0[n.sp+1] <- log(qrx$y.norm2/(nobs+nobs.extra))
+	    if (is.null(in.out)) {
+              if (is.null(coef)||qrx$y.norm2==0) lsp0[n.sp+1] <- log(var(as.numeric(G$y))*.05) else
+                 lsp0[n.sp+1] <- log(qrx$y.norm2/(nobs+nobs.extra))
+            } else lsp0[n.sp+1] <- log(in.out$scale)		 
         }
       }
 
@@ -941,7 +707,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL,etastart = NULL,
     reml <- reml - (nobs/gamma-df)*log(ld)
   }
 
-  for (i in 1:ncol(prop$db)) prop$db[,i] <- ## d beta / d rho matrix
+  if (ncol(prop$db)>0) for (i in 1:ncol(prop$db)) prop$db[,i] <- ## d beta / d rho matrix
         Sl.initial.repara(Sl,as.numeric(prop$db[,i]),inverse=TRUE,both.sides=TRUE,cov=TRUE,nt=npt[1]) 
 
   object <- list(db.drho=prop$db,
@@ -1021,13 +787,11 @@ regular.Sb <- function(S,off,sp,beta) {
 
 bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etastart = NULL,
     mustart = NULL, offset = rep(0, nobs), control = gam.control(), intercept = TRUE, 
-    cl = NULL,gc.level=0,use.chol=FALSE,nobs.extra=0,samfrac=1,npt=1) {
-    #y <- mf[[gp$response]]
+    cl = NULL,gc.level=0,use.chol=FALSE,nobs.extra=0,samfrac=1,npt=1,in.out=NULL,...) {
     y <- G$y
     weights <- G$w
     conv <- FALSE
     nobs <- nrow(mf)
-    ##nvars <- ncol(G$X)
     offset <- G$offset
     family <- G$family
     ## extended family may have non-standard y that requires careful subsetting (e.g. cnorm)
@@ -1185,7 +949,6 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 	        ## note: no handling of infinities and wz case yet
                
 	        w <- dd$EDeta2 * .5 
-	        #w <- w
                 z <- (eta1-offset[ind]) - dd$Deta.EDeta2
 	        good <- is.finite(z)&is.finite(w)
 	       
@@ -1202,8 +965,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
              w <- w[good];z <- z[good]
              w <- sqrt(w)
              ## note that QR may be parallel using npt>1, even under serial accumulation...
-             if (b == 1) qrx <- qr.update(w*X[good,,drop=FALSE],w*z,use.chol=use.chol,nt=npt) 
-             else qrx <- qr.update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
+             if (b == 1) qrx <- qr_update(w*X[good,,drop=FALSE],w*z,use.chol=use.chol,nt=npt) 
+             else qrx <- qr_update(w*X[good,,drop=FALSE],w*z,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
              rm(X);if(gc.level>1) gc() ## X can be large: remove and reclaim
           }
           if (use.chol) { ## post proc to get R and f...
@@ -1217,12 +980,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 	    arg[[i]]$coef <- coef
 	    if (efam) arg[[i]]$theta <- theta
 	  }
-          res <- parallel::parLapply(cl,arg,qr.up) 
-          ## single thread debugging version 
-          #res <- list()
-          #for (i in 1:length(arg)) {
-          #  res[[i]] <- qr.up(arg[[i]])
-          #}
+          res <- parallel::parLapply(cl,arg,qr_up) 
           ## now consolidate the results from the parallel threads...
           if (use.chol) {
             R <- res[[1]]$R;f <- res[[1]]$f;dev <- res[[1]]$dev
@@ -1321,7 +1079,6 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       }
 
       if (efam && iter>1) { ## estimate theta
-	#scale1 <- if (!is.null(family$scale)) family$scale else scale
         if (family$n.theta>0||scale1<0) theta <- estimate.theta(theta,family,G$y,linkinv(eta),scale=scale1,wt=G$w,tol=1e-7)
         if (!is.null(family$scale) && scale1<0) {
 	   scale <- exp(theta[family$n.theta+1])
@@ -1340,13 +1097,15 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
       } else if (method=="fREML") { ## use fast REML code
         ## block diagonal penalty object, Sl, set up before loop
         um <- Sl.Xprep(Sl,qrx$R,nt=npt)
-        lambda.0 <- initial.sp(qrx$R,G$S,G$off)
+        lambda.0 <- if (is.null(in.out)) initial.sp(qrx$R,G$S,G$off) else in.out$sp
         lsp0 <- log(lambda.0) ## initial s.p.
         ## carry forward scale estimate if possible...
         if (scale>0) log.phi <- log(scale) else {
           if (iter>1) log.phi <- log(object$scale) else {
-            if (is.null(coef)||qrx$y.norm2==0) log.phi <- log(var(as.numeric(G$y))*.05) else
-               log.phi <- log(qrx$y.norm2/(nobs+nobs.extra))
+	    if (is.null(in.out)) {
+              if (is.null(coef)||qrx$y.norm2==0) log.phi <- log(var(as.numeric(G$y))*.05) else
+                 log.phi <- log(qrx$y.norm2/(nobs+nobs.extra))
+	    } else log.phi <- log(in.out$scale)	 
           }
         }
         fit <- fast.REML.fit(um$Sl,um$X,qrx$f,rho=lsp0,L=G$L,rho.0=G$lsp0,
@@ -1391,7 +1150,6 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
         object$coefficients <- fit$b
         object$edf <- post$edf 
         object$edf1 <- post$edf1
-        ##object$F <- post$F
         object$full.sp <- fit$sp.full
         object$gcv.ubre <- fit$score
         object$hat <- post$hat
@@ -1465,7 +1223,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
 
 
 
-ar.qr.up <- function(arg) {
+ar.qr_up <- function(arg) {
 ## function to perform QR updating with AR residuals, on one execution thread
   if (arg$rho!=0) { ## AR1 error model
      ld <- 1/sqrt(1 - arg$rho^2) ## leading diagonal of root inverse correlation
@@ -1491,7 +1249,6 @@ ar.qr.up <- function(arg) {
            }
        }
      } 
-     ## arg$G$model <- arg$mf[ind,]
      w <- sqrt(arg$G$w[ind])
      X <- w*predict(arg$G,newdata=arg$mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
      y <- w*(arg$mf[ind,arg$response] - arg$offset[ind]) ## w*(arg$G$model[[arg$response]] - arg$offset[ind])
@@ -1507,13 +1264,13 @@ ar.qr.up <- function(arg) {
           y <- rwMatrix(stop,row,weight,y)[-1]
        } 
      } ## dealt with AR1      
-     qrx <- qr.update(X,y,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
+     qrx <- qr_update(X,y,qrx$R,qrx$f,qrx$y.norm2,use.chol=arg$use.chol)
      rm(X);if (arg$gc.level>1) {gc()} ## X can be large: remove and reclaim
   } ## all blocks dealt with
   qrx$yX.last <- yX.last
   if (arg$gc.level>1) {rm(arg,w,y,ind);gc()}
   qrx
-} ## ar.qr.up
+} ## ar.qr_up
 
 pabapr <- function(arg) {
 ## function for parallel calling of predict.gam
@@ -1612,7 +1369,7 @@ predict.bam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
 
 
 bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
-                    cl=NULL,gc.level=0,use.chol=FALSE,npt=1) {
+                    cl=NULL,gc.level=0,use.chol=FALSE,in.out=NULL,npt=1) {
 ## function that does big additive model fit in strictly additive case
    ## first perform the QR decomposition, blockwise....
    n <- nrow(mf)
@@ -1703,7 +1460,6 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
              }
            }
          } 
-         #G$model <- mf[ind,]
          w <- sqrt(G$w[ind])
          X <- w*predict(G,newdata=mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
          y <- w*(mf[ind,gp$response]-G$offset[ind])  ## w*(G$model[[gp$response]] - G$offset[ind])
@@ -1719,7 +1475,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
            } 
          }      
 
-         qrx <- qr.update(X,y,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
+         qrx <- qr_update(X,y,qrx$R,qrx$f,qrx$y.norm2,use.chol=use.chol,nt=npt)
          rm(X)
          if (gc.level>1) {gc()} ## X can be large: remove and reclaim
        } ## end of single thread block loop
@@ -1730,12 +1486,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
         }
      } else { ## use parallel accumulation
      
-       res <- parallel::parLapply(cl,arg,ar.qr.up)
-       ## Single thread de-bugging...
-       # res <- list()
-       # for (i in 1:length(arg)) {
-       #   res[[i]] <- ar.qr.up(arg[[i]])
-       # }
+       res <- parallel::parLapply(cl,arg,ar.qr_up)
 
        ## now consolidate the results from the parallel threads...
        R <- res[[1]]$R;f <- res[[1]]$f; ## dev <- res[[1]]$dev
@@ -1761,10 +1512,9 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
        yX.last <- res[[n.threads]]$yX.last
      } 
      G$n <- n
-     #G$y <- mf[[gp$response]]
    
    } else { ## n <= chunk.size
-     if (rho==0) qrx <- qr.update(sqrt(G$w)*G$X,sqrt(G$w)*(G$y-G$offset),use.chol=use.chol,nt=npt) else {
+     if (rho==0) qrx <- qr_update(sqrt(G$w)*G$X,sqrt(G$w)*(G$y-G$offset),use.chol=use.chol,nt=npt) else {
        row <- c(1,rep(1:n,rep(2,n))[-c(1,2*n)])
        weight <- c(1,rep(c(sd,ld),n-1))
        stop <- c(1,1:(n-1)*2+1)
@@ -1779,7 +1529,7 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
        yX.last <- c(G$y[n],G$X[n,])  ## store final row, in case of update
        X <- rwMatrix(stop,row,weight,sqrt(G$w)*G$X)
        y <- rwMatrix(stop,row,weight,sqrt(G$w)*G$y)
-       qrx <- qr.update(X,y,use.chol=use.chol,nt=npt)
+       qrx <- qr_update(X,y,use.chol=use.chol,nt=npt)
    
        rm(X); if (gc.level>1) gc() ## X can be large: remove and reclaim
      } 
@@ -1802,10 +1552,9 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
    } else if (method=="fREML"){ ## use fast REML code
      Sl <- Sl.setup(G) ## setup block diagonal penalty object
      um <- Sl.Xprep(Sl,qrx$R,nt=npt)
-     lambda.0 <- initial.sp(qrx$R,G$S,G$off)
+     lambda.0 <- if (is.null(in.out)) initial.sp(qrx$R,G$S,G$off) else in.out$sp
      lsp0 <- log(lambda.0) ## initial s.p.
-     if (scale<=0) log.phi <- log(var(as.numeric(G$y))*.05) else ## initial phi guess
-                   log.phi <- log(scale)
+     log.phi <- if (scale<=0) { if (is.null(in.out)) log(var(as.numeric(G$y))*.05) else log(in.out$scale) } else log(scale)
      fit <- fast.REML.fit(um$Sl,um$X,qrx$f,rho=lsp0,L=G$L,rho.0=G$lsp0,
             log.phi=log.phi,phi.fixed=scale>0,rss.extra=rss.extra,
             nobs =n,Mp=um$Mp,nt=npt,gamma=gamma)
@@ -1861,7 +1610,6 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
      object$coefficients <- fit$b
      object$edf <- post$edf
      object$edf1 <- post$edf1
-     ##object$F <- post$F
      object$full.sp <- fit$sp.full
      object$gcv.ubre <- fit$score
      object$hat <- post$hat
@@ -1891,9 +1639,11 @@ bam.fit <- function(G,mf,chunk.size,gp,scale,gamma,method,rho=0,
 } # end of bam.fit
 
 predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclude=NULL,
-                        block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,n.threads=1,gc.level=0,...) {
+                         block.size=50000,newdata.guaranteed=FALSE,na.action=na.pass,
+			 n.threads=1,gc.level=0,...) {
 ## function for prediction from a bam object, by discrete methods
-## remove some un-needed stuff from object
+
+  ## remove some un-needed stuff from object
   object$Sl <- object$qrx <- object$R <- object$F <- object$Ve <-
   object$Vc <- object$G <- object$residuals <- object$fitted.values <-
   object$linear.predictors <- NULL
@@ -1935,73 +1685,32 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
   
   na.act <- attr(newdata,"na.action") ## save the NA action for later
 
-
+  yname <- attr(attr(object$terms,"dataClasses"),"names")[attr(object$terms,"response")]
+  response <- newdata[[yname]]
+  
   ## Parametric terms have to be dealt with safely, but without forming all terms 
   ## or a full model matrix. Strategy here is to use predict.gam, having removed
   ## key smooth related components from model object, so that it appears to be
   ## a parametric model... 
   offset <- if (nlp>1) as.list(rep(0,nlp)) else 0
-  para.discrete <- !is.null(object$dinfo$para.discrete)
-  if (!para.discrete&&(any(object$nsdf)||any(object$offset!=0))) { ## deal with parametric terms...
-    ## save copies of smooth info...
-    .Deprecated(package="mgcv",msg="prediction from discrete bam models prior to 1.8-32 is deprecated, please refit")
-    smooth <- object$smooth; coef <- object$coefficients; Vp <- object$Vp
-    ## remove key smooth info from object
-    ## first identify coefficients (indexed by ii) to retain, and modify pstart
-    ## attribute so that it's pointing to retained coefficient array.
-    if (length(object$nsdf)>1) {
-      pstart <- attr(object$nsdf,"pstart")
-      ps <- pstart * 0
-      ii <- rep(0,0); k <- 1
-      for (i in 1:length(object$nsdf)) if (object$nsdf[i]) {
-        ps[i] <- k;k <- k + object$nsdf[i]
-        ii <- c(ii,1:object$nsdf[i]+pstart[i]-1)
-      }
-      attr(object$nsdf,"pstart") <- ps ## make compatible with stripping out smooths
-    } else { ii <- 1:object$nsdf; pstart <- 1; ps <- 1}
-    object$coefficients <-  object$coefficients[ii]
-    object$Vp <- object$Vp[ii,ii]
-    object$smooth <- NULL
-    ## get prediction for parametric component. Always "lpmatrix", unless terms required.
-    ptype <- if (type %in% c("terms","iterms")) type else "lpmatrix"
-    pterms <- if (is.null(terms)) terms else terms[terms %in% row.names(attr(object$pterms,"factors"))]
-    pexclude <- if (is.null(exclude)) exclude else exclude[exclude %in% row.names(attr(object$pterms,"factors"))]
-    pp <- predict.gam(object,newdata=newdata,type=ptype,se.fit=se.fit,terms=pterms,exclude=pexclude,
-            block.size=block.size,newdata.guaranteed=TRUE,
-            na.action=na.action,...)  
-    ## restore smooths to 'object'
-    object$coefficients <- coef
-    object$Vp <- Vp
-    object$smooth <- smooth
-    if (length(object$nsdf)) pstart -> attr(object$nsdf,"pstart") ## restore pstart
-    if (ptype=="lpmatrix") {
-      offset <- attr(pp,"model.offset")
-      if (is.null(offset)) offset <- if (nlp==1) 0 else as.list(rep(0,nlp))
-    }
-  } else {
-    pp <- if (se.fit) list(fit=rep(0,0),se.fit=rep(0,0)) else rep(0,0) ## note: needed in terms branch below
-  } ## parametric component dealt with in non-discrete case
+
+  pp <- if (se.fit) list(fit=rep(0,0),se.fit=rep(0,0)) else rep(0,0) ## note: needed in terms branch below
 
   ## now discretize covariates...
   if (convert2mf) newdata <- model.frame(object$dinfo$gp$fake.formula[-2],newdata)
-  dk <- if (para.discrete) discrete.mf(object$dinfo$gp,mf=newdata,names.pmf=object$dinfo$pmf.names,full=TRUE) else
-        discrete.mf0(object$dinfo$gp,mf=newdata,names.pmf=NULL,full=FALSE)
+  dk <- discrete.mf(object$dinfo$gp,mf=newdata,names.pmf=object$dinfo$pmf.names,full=TRUE)
   Xd <- list() ### list of discrete model matrices...
   n <- if (is.matrix(newdata[[1]])) nrow(newdata[[1]]) else length(newdata[[1]])
   kb <- k <- 1;kd <- dk$k
   ks <- matrix(0,0,2) ## NOTE: slightly more efficient not to repeatedly extend
-  if (para.discrete) { 
-    for (j in 1:nlp) { ## loop over parametric components of linear predictors
+  for (j in 1:nlp) { ## loop over parametric components of linear predictors
       ## get discretized marginal matrices for the parametric model (if contrast warnings see predict.gam fix)
       ptens <- if (nlp==1&&!is.list(object$pterms)) terms2tensor(object$pterms,dk$mf,object$contrasts) else
 	             terms2tensor(object$pterms[[j]],dk$mf,object$contrasts)
       offi <- if (nlp==1&&!is.list(object$pterms)) attr(object$pterms,"offset") else attr(object$pterms[[j]],"offset")
       if (!is.null(offi)) {
-        #offname <- if (nlp==1&&!is.list(object$pterms)) attr(object$pterms,"factor") else attr(object$pterms[[j]],"factor")
-	#offname <- rownames(offname)[offi]
         offname <- if (nlp==1&&!is.list(object$pterms)) names(attr(object$pterms,"dataClasses"))[offi] else
 	                                                names(attr(object$pterms[[j]],"dataClasses"))[offi]
-        
 	if (j==1&&nlp>1) offset <- list()
 	if (nlp>1) offset[[j]] <- newdata[[offname]] else  offset <- newdata[[offname]]
       }
@@ -2014,17 +1723,8 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
         }	
       }
       kb <- kb + length(ptens$ts)
-    } ## parametric lp loop
-  } ## if (para.discrete)
-
-  if (!para.discrete && any(object$nsdf>0)) for (i in 1:length(object$nsdf)) if (object$nsdf[i]>0) {
-     Xd[[k]] <- if (type%in%c("terms","iterms")) matrix(0,0,0) else pp[,ps[k]+1:object$nsdf[k]-1,drop=FALSE] 
-     kd <- cbind(1:nrow(newdata),kd) ## add index for parametric part to index list
-     k <- k + 1; 
-     dk$k.start <- c(1,dk$k.start+1) ## and adjust k.start accordingly
-     dk$nr <- c(NA,dk$nr) ## need array index to match elements of Xd
-  } 
-  
+  } ## parametric lp loop
+ 
   ts <- object$dinfo$ts
   dt <- object$dinfo$dt
 
@@ -2079,82 +1779,33 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
   ## end of discrete set up
   se <- se.fit
   if (type=="terms") {
-    if (para.discrete) {
-      term.lab <- names(object$dinfo$ts) ## names of all terms
-      termi <- rep(TRUE,length(term.lab)) ## do we want term included?
-      termi[term.lab=="(Intercept)"] <- FALSE ## not if it's intercept
-      if (!is.null(terms)) termi <- termi & term.lab %in% terms ## and only if it's in terms
-      if (!is.null(exclude)) termi <- termi & !(term.lab %in% exclude) ## and not in exclude
-      uterms <- unique(term.lab[termi])
-      nterms <- length(uterms) ## sum(termi) 
-      fit <- matrix(0,nrow(kd),nterms)
-      if (se) se.fit <- matrix(0,nrow(kd),nterms)
-      for (k in 1:nterms) {
-        lt <- which(term.lab%in%uterms[k]) ## discrete terms involved in this smooth (can be more than one)
-        if (termi[lt]) {
-          fit[,k] <- Xbd(Xd,object$coefficients,kd,ks,                          
-                      ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt)
-          if (se) se.fit[,k] <- diagXVXd(Xd,object$Vp,kd,ks,                
-                       ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,nthreads=n.threads,lt=lt,rt=lt)^.5
-        }	
-      }
-      colnames(fit) <- uterms
-      if (se) {
-        colnames(se.fit) <- uterms
-	fit <- list(fit=fit,se.fit=se.fit)
-      }
-    } else { ## legacy code for prediction from old objects
-      term.lab <- unlist(lapply(object$smooth,function(x) x$label))
-      termi <- rep(TRUE,length(object$smooth))
-      if (!is.null(terms)) termi <- termi & term.lab %in% terms
-      if (!is.null(exclude)) termi <- termi & !(term.lab %in% exclude)
-      if (any(object$nsdf>0)) {
-        if (se) {
-          fit <- cbind(pp$fit,matrix(0,nrow(kd),sum(termi)))
-          se.fit <- cbind(pp$se.fit,matrix(0,nrow(kd),sum(termi))) 
-        } else fit <- cbind(pp,matrix(0,nrow(kd),sum(termi)))
-        #k <- 2; ## starting Xd
-        kk <- ncol(fit) - sum(termi) + 1 ## starting col of fit for smooth terms
-      } else {
-        if (se) {
-          fit <- matrix(0,nrow(kd),sum(termi))
-          se.fit <- matrix(0,nrow(kd),sum(termi)) 
-        } else fit <- matrix(0,nrow(kd),sum(termi))
-        #k <- 1; ## starting Xd
-        kk <- 1 ## starting col of fit for smooth terms
-      }
-      k <- min(which(!is.na(dk$nr))) ## starting Xd
-      n.smooth <- length(object$smooth)
-      if (n.smooth) for (i in 1:n.smooth) {
-        ilab <- object$smooth[[i]]$label
-        if (termi[i]) {
-          ii <- ts[k]:(ts[k]+dt[k]-1) ## index components for this term
-          ind <- object$smooth[[i]]$first.para:object$smooth[[i]]$last.para ## index coefs for this term
-          if (!is.null(object$dinfo$drop)) { 
-            drop <- object$dinfo$drop-object$smooth[[i]]$first.para+1
-            drop <- drop[drop<=length(ii)]
-          } else drop <- NULL
-          fit[,kk] <- Xbd(Xd[ii],object$coefficients[ind],kd,ks[ii,],                           ##kd[,ii,drop=FALSE]
-                      1,dt[k],object$dinfo$v[k],object$dinfo$qc[k],drop=drop)
-          if (se) se.fit[,kk] <- diagXVXd(Xd[ii],object$Vp[ind,ind,drop=FALSE],kd,ks[ii,],                 #kd[,ii,drop=FALSE],
-                       1,dt[k],object$dinfo$v[k],object$dinfo$qc[k],drop=drop,nthreads=n.threads)^.5
-          kk <- kk + 1
-        }
-        k <-  k + 1;
-      } 
-      fit.names <- c(if (se) colnames(pp$fit) else colnames(pp), term.lab[termi])
-      colnames(fit) <- fit.names
-      if (se) { 
-        colnames(se.fit) <- fit.names
-        fit <- list(fit=fit,se.fit=se.fit)
-      }
-    } ## !para.discrete branch  
+    term.lab <- names(object$dinfo$ts) ## names of all terms
+    termi <- rep(TRUE,length(term.lab)) ## do we want term included?
+    termi[term.lab=="(Intercept)"] <- FALSE ## not if it's intercept
+    if (!is.null(terms)) termi <- termi & term.lab %in% terms ## and only if it's in terms
+    if (!is.null(exclude)) termi <- termi & !(term.lab %in% exclude) ## and not in exclude
+    uterms <- unique(term.lab[termi])
+    nterms <- length(uterms) ## sum(termi) 
+    fit <- matrix(0,nrow(kd),nterms)
+    if (se) se.fit <- matrix(0,nrow(kd),nterms)
+    for (k in 1:nterms) {
+      lt <- which(term.lab%in%uterms[k]) ## discrete terms involved in this smooth (can be more than one)
+      if (termi[lt]) {
+        fit[,k] <- Xbd(Xd,object$coefficients,kd,ks,                          
+                    ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt)
+        if (se) se.fit[,k] <- diagXVXd(Xd,object$Vp,kd,ks,                
+                     ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,nthreads=n.threads,lt=lt,rt=lt)^.5
+      }	
+    }
+    colnames(fit) <- uterms
+    if (se) {
+      colnames(se.fit) <- uterms
+      fit <- list(fit=fit,se.fit=se.fit)
+    } 
   } else if (type=="lpmatrix") {
-    if (para.discrete) {
-      lt <- 1:length(ts);names(lt) <- names(ts)
-      if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
-      if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
-    } else lt <- NULL 
+    lt <- 1:length(ts);names(lt) <- names(ts)
+    if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
+    if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
     fit <- Xbd(Xd,diag(length(object$coefficients)),kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt)
     if (nlp>1) attr(fit,"lpi") <- lpi
   } else { ## link or response 
@@ -2164,22 +1815,18 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
         fit <- matrix(0,nrow(kd),nlp)
 	if (se) se.fit <- matrix(0,nrow(kd),nlp)
         for (i in 1:nlp) {
-          if (para.discrete) {
-            lt <- 1:length(ts);names(lt) <- names(ts)
-	    lt <- lt[lpid[[i]]]
-            if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
-            if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
-          } else lt <- lpid[[i]]
+          lt <- 1:length(ts);names(lt) <- names(ts)
+	  lt <- lt[lpid[[i]]]
+          if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
+          if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
           fit[,i] <- Xbd(Xd,object$coefficients,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt) + offset[[i]]
 	  if (se) se.fit[,i] <- diagXVXd(Xd,object$Vp,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,
 	                                        lt=lt,rt=lt,nthreads=n.threads)^.5
 	}  
       } else {
-        if (para.discrete) {
-          lt <- 1:length(ts);names(lt) <- names(ts)
-          if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
-          if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
-        } else lt <- NULL 
+        lt <- 1:length(ts);names(lt) <- names(ts)
+        if (!is.null(terms)) lt <- lt[names(lt)%in%terms]
+        if (!is.null(exclude)) lt <- lt[!names(lt)%in%exclude]
         fit <- Xbd(Xd,object$coefficients,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt) + offset
 	if (se) se.fit <- diagXVXd(Xd,object$Vp,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,lt=lt,rt=lt,nthreads=n.threads)^.5
       }
@@ -2188,11 +1835,6 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
         dmu.deta <- object$family$mu.eta
       } else linkinv <- dmu.deta <- NULL
       if (se==TRUE) {
-#        if (nlp>1) {
-#          se.fit <- matrix(0,nrow(kd),nlp)
-#          for (i in 1:nlp) se.fit[,i] <- diagXVXd(Xd,object$Vp,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,
-#	                                        lt=lpid[[i]],rt=lpid[[i]],nthreads=n.threads)^.5
-#        } else se.fit <- diagXVXd(Xd,object$Vp,kd,ks,ts,dt,object$dinfo$v,object$dinfo$qc,drop=object$dinfo$drop,nthreads=n.threads)^.5
         if (type=="response") {
 	  if (nlp>1) for (i in 1:nlp) {
 	    se.fit[,i] <- se.fit[,i] * abs(object$family$linfo[[i]]$mu.eta[fit[,i]])
@@ -2204,13 +1846,14 @@ predict.bamd <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,excl
         }
         fit <- list(fit=fit,se.fit=se.fit)
       } else if (type=="response") fit <- object$family$linkinv(fit)
-    } else { ## family has its own response fitting code
+    } else { ## family has its own response prediction code
       X <- list(Xd=Xd,kd=kd,ks=ks,ts=ts,dt=dt,v=object$dinfo$v,qc=object$dinfo$qc,drop=object$dinfo$drop,lpid=lpid)
       if (nlp>1) attr(X,"lpi") <- lpi
       ## NOTE: not set up for families needing response for prediction (e.g. cox.ph)
       fampred <- object$family$predict ## just eases debugging
-      ffv <- fampred(object$family,se=se,y=NULL,X=X,beta=object$coefficients,
-                             off=offset,Vb=object$Vp)  ## NOTE: offsets not handled
+      offs <- if (length(offset)==1) rep(offset,nrow(kd)) else offset ## avoid subsetting failure
+      ffv <- fampred(object$family,se=se,y=response,X=X,beta=object$coefficients,
+                             off=offs,Vb=object$Vp)  ## NOTE: offsets not handled
       fit <- ffv[[1]]
       if (se) fit <- list(fit=fit,se.fit =ffv[[2]])
     }
@@ -2389,7 +2032,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
                 offset=NULL,method="fREML",control=list(),select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,
                 min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
                 cluster=NULL,nthreads=1,gc.level=0,use.chol=FALSE,samfrac=1,coef=NULL,
-                drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,...)
+                drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,in.out=NULL,...)
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -2411,7 +2054,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
             stop("family not recognized")
       
     if (family$family=="gaussian"&&family$link=="identity") am <- TRUE else am <- FALSE
-    if (scale==0) { if (family$family%in%c("poisson","binomial")) scale <- 1 else scale <- -1} 
+    if (scale==0) { if (family$family %in% c("poisson","binomial")) scale <- 1 else scale <- -1} 
     if (!method%in%c("fREML","GACV.Cp","GCV.Cp","REML",
                     "ML","P-REML","P-ML")) stop("un-supported smoothness selection method")
     if (is.logical(discrete)) {
@@ -2483,7 +2126,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     mf$method <-  mf$family<-mf$control<-mf$scale<-mf$knots<-mf$sp<-mf$min.sp <- mf$gc.level <-
     mf$gamma <- mf$paraPen<- mf$chunk.size <- mf$rho  <- mf$cluster <- mf$discrete <-
     mf$use.chol <- mf$samfrac <- mf$nthreads <- mf$G <- mf$fit <- mf$select <- mf$drop.intercept <-
-    mf$coef <- mf$...<-NULL
+    mf$coef <- mf$in.out <- mf$... <-NULL
     mf$drop.unused.levels <- drop.unused.levels
     mf[[1]] <- quote(stats::model.frame) ## as.name("model.frame")
 
@@ -2527,7 +2170,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     
     ## summarize the *raw* input variables
     ## note can't use get_all_vars here -- buggy with matrices
-    vars <- all.vars1(gp$fake.formula[-2]) ## drop response here
+    vars <- all_vars1(gp$fake.formula[-2]) ## drop response here
     inp <- parse(text = paste("list(", paste(vars, collapse = ","),")"))
 
     ## allow a bit of extra flexibility in what `data' is allowed to be (as model.frame actually does)
@@ -2784,7 +2427,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
       if (is.null(G$offset)) G$offset <- rep(0,n)
     }
    
-    if (!discretize && ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data") 
+##    if (!discretize && ncol(G$X)>nrow(mf)) stop("Model has more coefficients than data") 
   
     if (ncol(G$X) > chunk.size && !discretize) { ## no sense having chunk.size < p
       chunk.size <- 4*ncol(G$X)
@@ -2846,10 +2489,10 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
   if (G$am&&!G$discretize) {
     if (nrow(mf)>chunk.size) G$X <- matrix(0,0,ncol(G$X)); if (gc.level>1) gc() 
     object <- bam.fit(G,mf,chunk.size,gp,scale,gamma,method,rho=rho,cl=cluster,
-                      gc.level=gc.level,use.chol=use.chol,npt=nthreads[1])
+                      gc.level=gc.level,use.chol=use.chol,in.out=in.out,npt=nthreads[1])
   } else if (G$discretize) {
     object <- bgam.fitd(G, mf, gp ,scale ,nobs.extra=0,rho=rho,coef=coef,
-                       control = control,npt=nthreads,gc.level=gc.level,gamma=gamma,...)
+                       control = control,npt=nthreads,gc.level=gc.level,gamma=gamma,in.out=in.out,...)
                        
   } else {
     G$X  <- matrix(0,0,ncol(G$X)); if (gc.level>1) gc()
@@ -2863,7 +2506,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
         control1$epsilon <- 1e-2
         object <- bgam.fit(G, mf[ind,], chunk.size, gp ,scale ,gamma,method=method,nobs.extra=0,
                        control = control1,cl=cluster,npt=nthreads[1],gc.level=gc.level,coef=coef,
-                       use.chol=use.chol,samfrac=1,...)
+                       use.chol=use.chol,samfrac=1,in.out=in.out,...)
         G$w <- Gw;G$offset <- Goffset
         coef <- object$coefficients
       }
@@ -2871,7 +2514,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
     ## fit full dataset
     object <- bgam.fit(G, mf, chunk.size, gp ,scale ,gamma,method=method,coef=coef,
                        control = control,cl=cluster,npt=nthreads[1],gc.level=gc.level,
-                       use.chol=use.chol,...)
+                       use.chol=use.chol,in.out=in.out,...)
   }
 
   if (gc.level>0) gc()
@@ -3058,9 +2701,9 @@ bam.update <- function(b,data,chunk.size=10000) {
     wy <- rwMatrix(stop,row,weight,wy)[-1]    
 
     ## update
-    b$qrx <- qr.update(wX,wy,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+    b$qrx <- qr_update(wX,wy,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
   } else {
-    b$qrx <- qr.update(w*X,w*y,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
+    b$qrx <- qr_update(w*X,w*y,b$qrx$R,b$qrx$f,b$qrx$y.norm2)
   }
 
   ## now do the refit...

@@ -152,17 +152,17 @@ by scale parameter.}
 
 
 Marra, G and S.N. Wood (2012) Coverage Properties of Confidence Intervals for Generalized Additive
-Model Components. Scandinavian Journal of Statistics, 39(1), 53-74.
+Model Components. Scandinavian Journal of Statistics, 39(1), 53-74. \doi{10.1111/j.1467-9469.2011.00760.x}
 
 Nychka (1988) Bayesian Confidence Intervals for Smoothing Splines. 
 Journal of the American Statistical Association 83:1134-1143.
 
-Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010
+Wood, S.N. (2013a) A simple test for random effects in regression models. Biometrika 100:1005-1010 \doi{10.1093/biomet/ast038}
 
-Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228
+Wood, S.N. (2013b) On p-values for smooth components of an extended generalized additive model. Biometrika 100:221-228 \doi{10.1093/biomet/ass048}
 
 Wood S.N. (2017) Generalized Additive Models: An Introduction with R (2nd edition). Chapman
-and Hall/CRC Press.
+and Hall/CRC Press. \doi{10.1201/9781315370279}
 }
 \author{ Simon N. Wood \email{simon.wood@r-project.org} with substantial
 improvements by Henric Nilsson.}

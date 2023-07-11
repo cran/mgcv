@@ -52,7 +52,7 @@ It is possible to set a \code{deriv} flag in a smooth specification or smooth ob
 \seealso{\code{\link{p.spline}}}
 
 \references{
-Wood, S.N. (2017) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. 27(4) 985-989 \url{https://arxiv.org/abs/1605.02446}
+Wood, S.N. (2017) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. 27(4) 985-989 \url{https://arxiv.org/abs/1605.02446} \doi{10.1007/s11222-016-9666-x}
 }
 
 

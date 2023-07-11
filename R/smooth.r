@@ -321,11 +321,23 @@ get.var <- function(txt,data,vecMat = TRUE)
 # fails tries evaluating txt within data (only). Routine returns NULL
 # on failure, or if result is not numeric or a factor.
 # matrices are coerced to vectors, which facilitates matrix arguments 
-# to smooths.
+# to smooths. Note that other routines rely on this returning NULL if the
+# variable concerned is not in 'data' - this requires care, to avoid
+# picking things up from e.g. the global environment, while still allowing
+# searching that environment for e.g. user defined functions. 
 { x <- data[[txt]]
-  if (is.null(x)) 
-  { x <- try(eval(parse(text=txt),data,enclos=NULL),silent=TRUE)
+  if (is.null(x)) {
+    a <- parse(text=txt) 
+    x <- try(eval(a,data,enclos=NULL),silent=TRUE)
     if (inherits(x,"try-error")) x <- NULL
+  }
+  if (is.null(x)) { ## still null try allowing evaluation with access to more environments (e.g. to find functions)
+    txt1 <- all.vars(parse(text=txt)) ## hopefully the actual variable name
+    x <- try(eval(parse(text=txt1),data,enclos=NULL),silent=TRUE) ## check actual variable is in data
+    if (!inherits(x,"try-error")) { ## actual variable was present in data, so ok to try expression
+      x <- try(eval(parse(text=txt),data),silent=TRUE) ## can pick up functions from, e.g., global env
+      if (inherits(x,"try-error")) x <- NULL
+    }  
   }
   if (!is.numeric(x)&&!is.factor(x)) x <- NULL
   if (is.matrix(x)) {
@@ -719,158 +731,8 @@ tensor.prod.penalties <- function(S)
 }## end tensor.prod.penalties
 
 
-## EXPERIMENTAL:
-smooth.construct.tensor0.smooth.spec <- function(object,data,knots) {
-## the constructor for a tensor product basis object
-  inter <- object$inter ## signal generation of a pure interaction
-  m <- length(object$margin)  # number of marginal bases
-  if (inter) { ## interaction term so at least some marginals subject to constraint
-    object$mc <- if (is.null(object$mc)) rep(TRUE,m) else as.logical(object$mc) ## which marginals to constrain
-    object$sparse.cons <-  if (is.null(object$sparse.cons)) rep(0,m) else object$sparse.cons
-  } else {
-    object$mc <- rep(FALSE,m) ## all marginals unconstrained - QUERY: remove altogether?
-  }
-  Xc <- Xm <- list();Sm<-list();nr<-r<-d<-array(0,m)
-  C <- NULL
-  object$plot.me <- TRUE 
-  mono <- rep(FALSE,m) ## indicator for monotonic parameterization margins
-  for (i in 1:m) { 
-    if (!is.null(object$margin[[i]]$mono)&&object$margin[[i]]$mono!=0) mono[i] <- TRUE
-    knt <- dat <- list()
-    term <- object$margin[[i]]$term
-    for (j in 1:length(term)) { 
-      dat[[term[j]]] <- data[[term[j]]]
-      knt[[term[j]]] <- knots[[term[j]]] 
-    }
-   
-    if (inter) Xc[[i]] <- if (object$mc[i]) smoothCon(object$margin[[i]],dat,knt,absorb.cons=TRUE,n=length(dat[[1]]),
-                                sparse.cons=object$sparse.cons[i])[[1]]$X else smooth.construct(object$margin[[i]],dat,knt)$X		      
-    object$margin[[i]] <- smooth.construct(object$margin[[i]],dat,knt)
-    Xm[[i]] <- object$margin[[i]]$X
-    if (!is.null(object$margin[[i]]$te.ok)) {
-      if (object$margin[[i]]$te.ok == 0) stop("attempt to use unsuitable marginal smooth class")
-      if (object$margin[[i]]$te.ok == 2) object$plot.me <- FALSE ## margin has declared itself unplottable in a te term
-    }
-    if (length(object$margin[[i]]$S)>1) 
-    stop("Sorry, tensor products of smooths with multiple penalties are not supported.")
-    Sm[[i]] <- object$margin[[i]]$S[[1]]
-    d[i] <- nrow(Sm[[i]])
-    r[i] <- object$margin[[i]]$rank
-    nr[i] <- object$margin[[i]]$null.space.dim
-    if (!inter&&!is.null(object$margin[[i]]$C)&&nrow(object$margin[[i]]$C)==0) C <- matrix(0,0,0) ## no centering constraint needed
-  }
-  ## Re-parameterization currently breaks monotonicity constraints
-  ## so turn it off. An alternative would be to shift the marginal
-  ## basis functions to force non-negativity. 
-  if (sum(mono)) { 
-    object$np <- FALSE
-    ## need the re-parameterization indicator for the whole term, 
-    ## by combination of those for single terms.
-    km <- which(mono)
-    g <- list(); for (i in 1:length(km)) g[[i]] <- object$margin[[km[i]]]$g.index
-    for (i in 1:length(object$margin)) {
-      dx <- ncol(object$margin[[i]]$X)
-      for (j in length(km)) if (i!=km[j]) g[[j]] <- if (i > km[j])  rep(g[[j]],each=dx) else rep(g[[j]],dx)
-    }
-    object$g.index <- as.logical(rowSums(matrix(unlist(g),length(g[[1]]),length(g))))
-  }
-  XP <- list()
-  if (object$np) for (i in 1:m) { # reparameterize 
-    if (object$margin[[i]]$dim==1) { 
-      # only do classes not already optimal (or otherwise excluded)
-      if (is.null(object$margin[[i]]$noterp)) { ## apply repara
-        x <- get.var(object$margin[[i]]$term,data)
-        np <- ncol(object$margin[[i]]$X) ## number of params
-        ## note: to avoid extrapolating wiggliness measure
-        ## must include extremes as eval points
-        knt <- if(is.factor(x)) {
-          unique(x)
-        } else { 
-          seq(min(x), max(x), length=np)
-        } 
-        pd <- data.frame(knt)
-        names(pd) <- object$margin[[i]]$term
-        sv <- if (object$mc[i]) svd(PredictMat(object$margin[[i]],pd)) else
-                                svd(Predict.matrix(object$margin[[i]],pd))
-        if (sv$d[np]/sv$d[1]<.Machine$double.eps^.66) { ## condition number rather high
-          XP[[i]] <- NULL
-          warning("reparameterization unstable for margin: not done")
-        } else {
-          XP[[i]] <- sv$v%*%(t(sv$u)/sv$d)
-          object$margin[[i]]$X <- Xm[[i]] <- Xm[[i]]%*%XP[[i]]
-          Sm[[i]] <- t(XP[[i]])%*%Sm[[i]]%*%XP[[i]]
-        }
-      } else XP[[i]] <- NULL
-    } else XP[[i]] <- NULL
-  }
-  # scale `nicely' - mostly to avoid problems with lme ...
-  for (i in 1:m)  Sm[[i]] <- Sm[[i]]/eigen(Sm[[i]],symmetric=TRUE,only.values=TRUE)$values[1] 
-  max.rank <- prod(d)
-  r <- max.rank*r/d # penalty ranks
-  X <- tensor.prod.model.matrix(Xm)
-  S <- tensor.prod.penalties(Sm)
-  for (i in m:1) if (object$fx[i]) { 
-      S[[i]] <- NULL # remove penalties for un-penalized margins
-      r <- r[-i]   # remove corresponding rank from list
-  }
-  if (inter) { ## pure interaction, so we need to othorgonalize to the margins and lower interactions
-    ind <- 1:m
-    Xa <- matrix(1,nrow(X),1)
-    if (m>1) for (i in 1:m) { ## create (rank def) model matrix for lower order interactions
-      Xa <- cbind(Xa,tensor.prod.model.matrix(Xc[ind[-i]]))
-    }
-    ncon <- ncol(X)-prod(unlist(lapply(Xc,ncol))) ## number of constraints needed
-  }
-
-  ## code for dropping unused basis functions from X and adjusting penalties appropriately
-  if (!is.null(object$margin[[1]]$xt$dropu)&&object$margin[[1]]$xt$dropu) {
-    ind <- which(colSums(abs(X))!=0)
-    X <- X[,ind]
-    if (!is.null(object$g.index)) object$g.index <- object$g.index[ind]
-    #for (i in 1:length(S)) {
-      ## next line is equivalent to setting coefs for deleted to zero! 
-      #S[[i]] <- S[[i]][ind,ind] 
-    #}
-    ## Instead we need to drop the differences involving deleted coefs
-    for (i in 1:m) { 
-      if (is.null(object$margin[[i]]$D)) stop("basis not usable with reduced te")
-      Sm[[i]] <- object$margin[[i]]$D ## differences
-    }
-    S <- tensor.prod.penalties(Sm) ## tensor prod difference penalties
-    ## drop rows corresponding to differences that involve a dropped 
-    ## basis function, and crossproduct...
-    for (i in 1:m) { 
-      D <- S[[i]][rowSums(S[[i]][,-ind,drop=FALSE])==0,ind]
-      r[i] <- nrow(D) ## penalty rank
-      S[[i]] <- crossprod(D)
-    }
-    object$udrop <- ind
-    if (inter) {
-      ind <-  which(colSums(abs(Xa))!=0)
-      Xa <- Xa[,ind]
-    }
-    ## rank r ??
-  }
-  
-  object$X <- X;object$S <- S;
-  if (inter&&m>1) { ## Create constraint that will orthogonalize to lower order terms
-    #object$C <- matrix(0,0,0)
-    C <- t(X)%*%Xa ## C'b = 0
-    qrc <- qr(C,LAPACK=TRUE)
-    C <- C[,qrc$pivot[1:ncon]] ## reduce to number of independent constraints
-    object$C <- t(C)
-  } else object$C <- C ## really just in case a marginal has implied that no cons are needed
-  object$df <- ncol(X)
-  object$null.space.dim <- prod(nr) # penalty null space rank 
-  object$rank <- r
-  object$XP <- XP
-  class(object)<-"tensor.smooth"
-  object
-} ## end smooth.construct.tensor.smooth.spec
 
 
-
-##ORIGINAL:
 smooth.construct.tensor.smooth.spec <- function(object,data,knots) {
 ## the constructor for a tensor product basis object
   inter <- object$inter ## signal generation of a pure interaction
@@ -2248,6 +2110,7 @@ smooth.construct.fs.smooth.spec <- function(object,data,knots) {
     if (object$dim>1) stop("fs smooth not suitable for discretisation with more than one metric predictor") 
     form1 <- as.formula(paste("~",object$fterm,"-1")) 
     fac -> data[[fterm]]
+    if (is.list(data)) data <- data[all.vars(reformulate(names(data)))%in%all.vars(form1)] ## avoid over-zealous checking
     object$margin[[1]] <- list(X=model.matrix(form1,data),term=object$fterm,form=form1,by="NA")
     class(object$margin[[1]]) <- "random.effect"
     object$margin[[2]] <- object
@@ -2697,7 +2560,8 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
   if (!is.null(object$id)) stop("random effects don't work with ids.")
   
   form <- as.formula(paste("~",paste(object$term,collapse=":"),"-1"))
-  object$X <- model.matrix(form,data)
+  ## following construction avoids silly model.matrix overchecking...
+  object$X <- model.matrix(form, data = if(is.list(data)) data[all.vars(reformulate(names(data)))%in%all.vars(form)] else data)
   object$bs.dim <- ncol(object$X)
 
   if (inherits(object,"tensor.smooth.spec")) { 
@@ -2706,7 +2570,8 @@ smooth.construct.re.smooth.spec <- function(object,data,knots)
     maxd <- maxi <- 0
     for (i in 1:object$dim) {
       form1 <- as.formula(paste("~",object$term[i],"-1"))
-      object$margin[[i]] <- list(X=model.matrix(form1,data),term=object$term[i],form=form1,by="NA")
+      data1 <- if (is.list(data)) data[all.vars(reformulate(names(data)))%in%all.vars(form1)] else data
+      object$margin[[i]] <- list(X=model.matrix(form1,data1),term=object$term[i],form=form1,by="NA")
       class(object$margin[[i]]) <- "random.effect"
       d <- ncol(object$margin[[i]]$X)
       if (d>maxd) {maxi <- i;maxd <- d}
@@ -2768,6 +2633,8 @@ Predict.matrix.random.effect <- function(object,data) {
 ## fit factor levels, we will get NA's for levels introduced at the
 ## prediction stage, and these effects will be set to zero in prediction.
   ##X <- model.matrix(object$form,data)
+  ## following fixes over zealous checks...
+  if (is.list(data)) data <- data[all.vars(reformulate(names(data)))%in%all.vars(object$form)]
   X <- model.matrix(object$form,model.frame(object$form,data,na.action=na.pass))
   X[!is.finite(X)] <- 0
   X
@@ -3814,14 +3681,15 @@ ExtractData <- function(object,data,knots) {
    names(dat) <- object$term; m <- length(object$term)
    if (!is.null(attr(dat[[1]],"matrix")) && vecMat) { ## strip down to unique covariate combinations
      n <- length(dat[[1]])
-     X <- matrix(unlist(dat),n,m)
-     if (is.numeric(X)) {
+     #X <- matrix(unlist(dat),n,m) ## no use for factors!
+     X <- data.frame(dat)
+     #if (is.numeric(X)) {
        X <- uniquecombs(X)
        if (nrow(X)<n*.9) { ## worth the hassle
          for (i in 1:m) dat[[i]] <- X[,i]     ## return only unique rows
          attr(dat,"index") <- attr(X,"index") ## index[i] is row of dat[[i]] containing original row i
        }
-     } ## end if(is.numeric(X))
+     #} ## end if(is.numeric(X))
    }    
    if (object$by!="NA") {
      by <- get.var(object$by,data) 
@@ -4470,9 +4338,9 @@ PredictMat <- function(object,data,n=nrow(data))
         ## Remainder are constants to be swept out of remaining columns 
         ## Actually better handled first (see above)
         #X <- X[,-qrc[1],drop=FALSE] - matrix(qrc[-1],nrow(X),ncol(X)-1,byrow=TRUE)
-      } else if (length(qrc)>0) { ## Kronecker product of sum-to-zero contrasts
+      } else if (length(qrc)>1) { ## Kronecker product of sum-to-zero contrasts
         m <- qrc[-c(1,length(qrc))] ## contrast dimensions - less initial code and final number of constraints
-	X <- t(XZKr(X,m))
+	if (length(m)>0) X <- t(XZKr(X,m))
       } else if (qrc>0) { ## simple set to zero constraint
         X <- X[,-qrc,drop=FALSE]
       } else if (qrc<0) { ## params sum to zero

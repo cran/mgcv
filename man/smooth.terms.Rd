@@ -39,7 +39,7 @@ See \code{\link{Duchon.spline}} for further details.
 These have a cubic spline basis defined by a modest sized 
 set of knots spread evenly through the 
 covariate values. They are penalized by the conventional intergrated square second derivative cubic spline penalty. 
-For details see \code{\link{cubic.regression.spline}} and e.g. Wood (2006a).
+For details see \code{\link{cubic.regression.spline}} and e.g. Wood (2017).
 
 \code{bs="cs"} specifies a shrinkage version of \code{"cr"}.
 
@@ -86,9 +86,9 @@ bases for tensor product smooths specified via \code{\link{te}}, \code{\link{ti}
 product smooths are smooth functions 
 of several variables where the basis is built up from tensor products of bases for smooths of fewer (usually one) 
 variable(s) (marginal bases). The multiple penalties for these smooths are produced automatically from the
-penalties of the marginal smooths. Wood (2006b) and Wood, Scheipl and Faraway (2012), give the general recipe for these constructions. 
+penalties of the marginal smooths. Wood (2006) and Wood, Scheipl and Faraway (2012), give the general recipe for these constructions. 
 \describe{
-\item{te}{\code{te} smooths have one penalty per marginal basis, each of which is interpretable in a similar way to the marginal penalty from which it is derived. See Wood (2006b).}
+\item{te}{\code{te} smooths have one penalty per marginal basis, each of which is interpretable in a similar way to the marginal penalty from which it is derived. See Wood (2006).}
 \item{ti}{\code{ti} smooths exclude the basis functions associated with the `main effects' of the marginal smooths, plus interactions other than the highest order specified. These provide a stable an interpretable way of specifying models with main effects and interactions. For example if we are interested in linear predicto \eqn{f_1(x)+f_2(z)+f_3(x,z)}{f1(x) + f2(z) + f3(x,z)}, we might use model formula \code{y~s(x)+s(z)+ti(x,z)} or \code{y~ti(x)+ti(z)+ti(x,z)}. A similar construction involving \code{te} terms instead will be much less statsitically stable.}   
 \item{t2}{\code{t2} uses an alternative tensor product construction that results in more penalties each having a simple non-overlapping structure allowing use with the  \code{gamm4} package. It is a natural generalization of the SS-ANOVA construction, but the penalties are a little harder to interpret. See Wood, Scheipl and Faraway (2012/13). }  
 }
@@ -114,10 +114,10 @@ A special smoother class (see \code{\link{smooth.construct.fs.smooth.spec}}) is 
 }
 }}
 
-\seealso{\code{\link{s}}, \code{\link{te}}, \code{\link{t2}} \code{\link{tprs}},\code{\link{Duchon.spline}}, 
-\code{\link{cubic.regression.spline}},\code{\link{p.spline}}, \code{\link{mrf}}, \code{\link{soap}}, 
+\seealso{\code{\link{s}}, \code{\link{te}}, \code{\link{t2}}, \code{\link{tprs}}, \code{\link{Duchon.spline}}, 
+\code{\link{cubic.regression.spline}}, \code{\link{p.spline}}, \code{\link{d.spline}}, \code{\link{mrf}}, \code{\link{soap}}, 
 \code{\link{Spherical.Spline}}, \code{\link{adaptive.smooth}}, \code{\link{user.defined.smooth}},
-\code{\link{smooth.construct.re.smooth.spec}}, \code{\link{smooth.construct.gp.smooth.spec}},\code{\link{factor.smooth.interaction}}}
+\code{\link{smooth.construct.re.smooth.spec}}, \code{\link{smooth.construct.gp.smooth.spec}}, \code{\link{factor.smooth.interaction}}}
 
 \author{
 Simon Wood <simon.wood@r-project.org>
@@ -128,16 +128,20 @@ Statistical Science, 11(2):89-121
 
 Wahba (1990) Spline Models of Observational Data. SIAM 
 
-Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114
+Wood, S.N. (2003) Thin plate regression splines. J.R.Statist.Soc.B 65(1):95-114 \doi{10.1111/1467-9868.00374}
 
-Wood, S.N. (2006a) \emph{Generalized Additive Models: an introduction with R}, CRC
+Wood, S.N. (2017, 2nd ed) \emph{Generalized Additive Models: an introduction with R}, CRC \doi{10.1201/9781315370279}
 
-Wood, S.N. (2006b) Low rank scale invariant tensor product smooths for
-generalized additive mixed models. Biometrics 62(4):1025-1036
+Wood, S.N. (2006) Low rank scale invariant tensor product smooths for
+generalized additive mixed models. Biometrics 62(4):1025-1036 \doi{10.1111/j.1541-0420.2006.00574.x}
 
-Wood S.N., F. Scheipl and J.J. Faraway (2013) Straightforward intermediate rank tensor product smoothing
-in mixed models. Statistical Computing. 23(3), 341-360. [online 2012]
+Wood, S.N., M.V. Bravington and S.L. Hedley (2008) "Soap film smoothing", J.R.Statist.Soc.B 70(5), 931-955.
+\doi{10.1111/j.1467-9868.2008.00665.x}
 
+Wood S.N., F. Scheipl and J.J. Faraway (2013) [online 2012] Straightforward intermediate rank tensor product smoothing
+in mixed models. Statistics and Computing. 23(3):341-360 \doi{10.1007/s11222-012-9314-z}
+
+Wood, S.N. (2017) P-splines with derivative based penalties and tensor product smoothing of unevenly distributed data. Statistics and Computing. 27(4) 985-989 \url{https://arxiv.org/abs/1605.02446} \doi{10.1007/s11222-016-9666-x}
 }
 
 \examples{

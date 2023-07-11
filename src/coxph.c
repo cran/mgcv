@@ -166,7 +166,8 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
           * < 0 and only lp is returned 
           * 0 only lp, g and H are returned.
           * 1 the first derivative of the leading diagonal of H w.r.t. rho is 
-              returned in d1H, using d1b. 
+              returned in d1H, using d1b. This case dealt with as 2 and full 
+              d1H matrices returned.
           * 2 the first derivative of H w.r.t. rho is returned in d1H, using 
               d1b. 
 	  * 3 is for first and second derivatives of H are returned in d1H

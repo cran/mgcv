@@ -753,7 +753,7 @@ Predict.matrix.sw <- function(object,data)
 
 plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
-                     pers=FALSE,theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
+		     theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,
                      ylim=NULL,xlim=NULL,too.far=0.1,shade=FALSE,shade.col="gray80",
                      shift=0,trans=I,by.resids=FALSE,scheme=0,hcolors=heat.colors(100),
                      contour.col=1,...) {
@@ -765,7 +765,7 @@ plot.soap.film <- function(x,P=NULL,data=NULL,label="",se1.mult=1,se2.mult=2,
        
             P0 <- plot.mgcv.smooth(x=x,P=P,data=data,label=label,se1.mult=se1.mult,se2.mult=se2.mult,
                      partial.resids=partial.resids,rug=rug,se=se,scale=scale,n=n,n2=n2,
-                     pers=pers,theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
+                     theta=theta,phi=phi,jit=jit,xlab=xlab,ylab=ylab,main=main,
                      ylim=ylim,xlim=xlim,too.far=too.far,shade=shade,shade.col=shade.col,
                      shift=shift,trans=trans,by.resids=by.resids,hcolors=hcolors, ## don't pass scheme!!
                      contour.col=contour.col,...)

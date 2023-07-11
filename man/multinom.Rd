@@ -27,7 +27,7 @@ Note that the model is not completely invariant to category relabelling, even if
 
 %- maybe also `usage' for other objects documented here.
 
-\author{ Simon N. Wood \email{simon.wood@r-project.org}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}, with a variance bug fix from Max Goplerud.
 }
 
 \references{
