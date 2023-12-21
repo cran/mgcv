@@ -3762,13 +3762,13 @@ smoothCon <- function(object,data,knots=NULL,absorb.cons=FALSE,scale.penalty=TRU
     ## compute the ingredients for sweep and drop cons...
     sm$C <- matrix(colMeans(sm$X),1,ncol(sm$X))
     if (length(sm$S)) {
-      upen <- rowMeans(abs(sm$S[[1]]))==0
+      upen <- rowMeans(abs(sm$S[[1]]))==0 ## identify unpenalized
       if (length(sm$S)>1) for (i in 2:length(sm$S)) upen <- upen &  rowMeans(abs(sm$S[[i]]))==0
       if (sum(upen)>0) drop <- min(which(upen)) else {
         drop <- min(which(!sm$g.index))
       }
-    } else drop <- 1
-    sm$g.index <- sm$g.index[-drop]
+    } else drop <- which.min(apply(sm$X,2,sd))
+    if (absorb.cons) sm$g.index <- sm$g.index[-drop] 
   } else drop <- -1 ## signals not to use sweep and drop (may be modified below)
 
   ## can this term be safely re-parameterized?

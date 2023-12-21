@@ -3204,6 +3204,7 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
       } 
     } else { ## "link" or "response" case
       fam <- object$family
+      if (!is.null(object$family$setInd)) object$family$setInd(start:stop) ## family may need to know subset index - e.g gfam
       k <- attr(attr(object$model,"terms"),"offset")
       if (nlp>1) { ## multiple linear predictor case
         if (is.null(fam$predict)||type=="link") {
@@ -3276,7 +3277,9 @@ predict.gam <- function(object,newdata,type="link",se.fit=FALSE,terms=NULL,exclu
     } ## end of link or response case 
     rm(X)
   } ## end of prediction block loop
-
+ 
+  if (!is.null(object$family$setInd)) object$family$setInd(NULL) ## reset any set subset index
+  
   if ((type=="terms"||type=="iterms")&&(!is.null(terms)||!is.null(exclude))) { # return only terms requested via `terms'
     cnames <- colnames(fit)
     if (!is.null(terms)) {

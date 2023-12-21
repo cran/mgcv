@@ -15,14 +15,31 @@ Issues:
    0.2.20 appears to be OK. For 0.3.x x>6 make USE_THREAD=0 USE_LOCKING=1
    to make openblas ensures thread safety.
 
-* .C can't use R's long vectors, which can lead to bam failing on very large
-  datasets. Probably requires extensive re-writing using .Call.
-
 * t2 in bam(...,discrete=TRUE) - not treated as tensor products at 
 present, and reparameterization needs checking (also for bam). 
 
 * bam(...,discrete=TRUE) has no option to use the identical
   discretizaton to that used in fitting when predicting.
+
+1.9-1
+
+* Revised bam discrete code to allow indexing vectors to be long vectors, 
+  thereby allowing much larger datasets to be used. n limit is still 
+  .Machine$integer.max.
+
+* Revised C code underlying mvn family to allow larger problems, via use of 
+  R long vectors. 
+
+* Revised gfam to work correctly with bam(...,discrete=FALSE). Subsetting 
+  in bgam.fit was incorrect for gfam. Thanks to Dave Miller for reporting it. 
+
+* Correction of ziplss residual computation - incorrect probability of non
+  zero used. Thanks to Xiao Liang. 
+
+* correction of ginla integration weights (correcting typo from Rue et al. 
+	2009). Thanks to Paul Van Dam-Bates.
+
+* C code modification to remove some new compiler warnings. 
 
 1.9-0
 

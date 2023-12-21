@@ -51,7 +51,7 @@ These are two dimensional splines on a sphere. Arguments are latitude and longit
 the analogue of thin plate splines for the sphere. Useful for data sampled over a large portion of the globe, 
 when isotropy is appropriate. See \code{\link{Spherical.Spline}} for details.}
 
-\item{B-splines}{\code{bs="bs"}}{
+\item{B-splines}{\code{bs="bs"}.
 B-spline basis with integrated squared derivative penalties. The order of basis and penalty can be chosen separately, and several penalties of different orders can be applied. Somewhat like a derivative penalty version of P-splines. See \link{b.spline} for details.
 
 }

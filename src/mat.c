@@ -3657,3 +3657,113 @@ void Rlanczos(double *A,double *U,double *D,int *n, int *m, int *lm,double *tol,
   #endif
 } /* end of Rlanczos */
 
+
+SEXP spdev(SEXP A) {
+/* A is a column compressed sparse matrix (not stored as symmetric).
+   A should have no missing elements on LD on entry - they should be 
+   forced to -eps.
+
+   This fuction checks that the matrix meets the necessary conditions 
+   for positive definiteness given in Thm 4.2.8 of Golub and van Loan. 
+   If not non-positive LD elements are reset to be diagonally dominant,
+   after which off diagonal elements are reset to just meet the conditions, 
+   if they don't.  
+
+   The conditions are not sufficient, so some regularization is still likely 
+   to be needed. This approach avoids the very heavy distortion that can 
+   otherwise occur when there are a few large magnitude negative elements 
+   on the leading diagonal. 
+
+   Returns count of number of modifications made (each member of symmetric off 
+   diagonal pair is counted). A is modified directly. Take care if original 
+   should be kept - need to then force R to make an actual copy before calling.
+
+*/
+  SEXP i_sym,x_sym,dim_sym,p_sym,MOD;
+  int *dim,*Ai,*Ap,n,i,j,k,*mod;
+  double *Ax,x,z,*dA,*csA;
+  p_sym = install("p");
+  dim_sym = install("Dim");
+  i_sym = install("i");
+  x_sym = install("x");
+  dim = INTEGER(R_do_slot(A,dim_sym));
+  n = dim[0];
+  Ap = INTEGER(R_do_slot(A,p_sym));
+  Ai = INTEGER(R_do_slot(A,i_sym));
+  Ax = REAL(R_do_slot(A,x_sym));
+  /* first obtain diagonal and col/row sums excluding diagonal */
+  dA = (double *) CALLOC((size_t)n,sizeof(double)); /* diagonal elements */
+  csA = (double *) CALLOC((size_t)n,sizeof(double)); /* sum of abs off diag by col*/
+  
+  for (j=0;j<n;j++) { /* loop over cols of A */
+    for (k=Ap[j];k<Ap[j+1];k++) {
+      i = Ai[k]; /* current row to A */
+      if (i==j) dA[j] = Ax[k]; else csA[j] += fabs(Ax[k]);
+    }  
+  }
+  PROTECT(MOD=allocVector(INTSXP,1)); /* return object - just count of mods */
+  mod=INTEGER(MOD);*mod=0;
+  /* deal with non-positive diagonal elements */
+  for (j=0;j<n;j++) if (dA[j]<=0) { dA[j] = csA[j];(*mod)++;} /* force to diagonal dominance */
+
+  /* now reduce off diagonal elements to meet necessary conditions */
+  for (j=0;j<n;j++) { /* loop over cols of A */
+    for (k=Ap[j];k<Ap[j+1];k++) { /* work down nz elements */
+      i = Ai[k]; /* current row to A */
+      if (i==j) Ax[k] = dA[j]; /* ensures any reset diagonal elements are put in matrix */  
+      x = sqrt(dA[i]*dA[j]); z = (dA[i] + dA[j])/2;
+      /* |Ax[k]| must be <= z and x */
+      if (z<x) x = z;
+      if (Ax[k] > x) { Ax[k] = x; (*mod)++;} else if (Ax[k] < -x) { Ax[k] = -x; (*mod)++;} 
+    }  
+  }
+  
+  FREE(dA);FREE(csA);
+  UNPROTECT(1);
+  return(MOD);
+} /* spdev */
+
+
+SEXP dpdev(SEXP a) {
+/* Dense version of spdev (see description there). A/a is a dense matrix (so
+   exact zeroes on LD fine, unlike sparse case). 
+
+   a is modified directly. Take care if original should be kept - need to then 
+   force R to make an actual copy before calling.
+*/
+  int n,i,j,k,*mod;
+  double *A,*dA,*csA,*pA,*p1,*p2,*pd,*pc,x,z;
+  SEXP MOD;
+  n = nrows(a);
+  a = PROTECT(coerceVector(a,REALSXP));
+  A = REAL(a);
+  /* first obtain diagonal and col/row sums excluding diagonal */
+  dA = (double *) CALLOC((size_t)n,sizeof(double)); /* diagonal elements */
+  csA = (double *) CALLOC((size_t)n,sizeof(double)); /* sum of abs off diag by col*/
+  PROTECT(MOD=allocVector(INTSXP,1)); /* return object - just count of mods */
+  mod=INTEGER(MOD);*mod=0;
+  for (pd=dA,pc=csA,pA=A,j=0;j<n;j++,pd++,pc++) { /* loop over cols of A */
+    for (p1=pA+j,p2=pA+n;pA<p1;pA++) *pc += fabs(*pA);
+    *pd = *pA;pA++;
+    for (;pA<p2;pA++) *pc += fabs(*pA);
+  }
+  /* deal with non-positive diagonal elements */
+  for (j=0;j<n;j++) if (dA[j]<=0) {
+      A[j+j*n] = dA[j] = csA[j];(*mod)++; /* force to diagonal dominance */
+  }
+  /* now reduce off diagonal elements to meet necessary conditions */
+ 
+  for (k=j=0;j<n;j++)  /* loop over cols of A */
+  for (i=0;i<n;i++,k++) { /* work down rows of A */  
+    x = sqrt(dA[i]*dA[j]); z = (dA[i] + dA[j])/2;
+    /* |Ax[i,j]| must be <= z and x */
+    if (z<x) x = z;
+    if (A[k] > x) { A[k] = x; (*mod)++;} else
+    if (A[k] < -x) { A[k] = -x; (*mod)++;}
+  }
+
+  FREE(dA);FREE(csA);
+  UNPROTECT(2);
+  return(MOD);
+} /* dpdev */
+

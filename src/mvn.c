@@ -1,7 +1,7 @@
-/* (c) Simon N Wood. 2014. Released under GPL2. 
+/* (c) Simon N Wood. 2014/2023 Released under GPL2. 
   
-  likelihood and derivative evaluation for multivariate Gaussian 
-  additive models.
+  Likelihood and derivative evaluation for multivariate Gaussian 
+  additive models. .Call wrapper at end. 
 
 */
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 
 #include "mgcv.h"
 #include <R.h>
+
 
 void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note zero indexing */
             int *m,double *ll,double *lb,double *lbb,double *dbeta,
@@ -30,7 +31,8 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
 */
   double *R,*theta,ldetR,*Xl,*bl,oned=1.0,zerod=0.0,*p,*p1,*p2,*p3,xx,zz,yy,*yty,
     *mu,*Rymu,rip,*dtheta,*db,*deriv_theta,*yX,*yRX;
-  int i,j,k,l,pl,one=1,bt,ct,nb,*din,ntheta,ncoef,*rri,*rci,ri,rj,ril,rjl,rik,rjk,rij,rjj,q,r;
+  ptrdiff_t i,j,k,l,q,r;
+  int pl,one=1,bt,ct,nb,*din,ntheta,ncoef,*rri,*rci,ri,rj,ril,rjl,rik,rjk,rij,rjj;
   const char not_trans='N';
   ntheta = *m * (*m+1)/2;ncoef = lpi[*m-1];
  
@@ -265,4 +267,24 @@ void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi, /* note
   FREE(R);FREE(Rymu);FREE(deriv_theta);
 } /* mvn_ll */
 
+SEXP mvnll(SEXP Y,SEXP x,SEXP xx,SEXP BETA,SEXP LPI, SEXP LL, SEXP LB,
+	   SEXP LBB, SEXP DBETA, SEXP Dh, SEXP DERIV,SEXP NSP, SEXP NT) {
+  /* .Call wrapper for mvn_ll, allowing long vectors to be passed */
+  double *y,*X,*XX,*ll,*lb,*lbb,*dbeta,*dH,*beta;
+  int *lpi,n,nt,nsp,deriv,m; 
+  /* get the controlling integers */
+  m = length(LPI);
+  n = nrows(x);
+  nt = asInteger(NT);
+  nsp = asInteger(NSP);
+  deriv = asInteger(DERIV);
+  /* now the data arrays */
+  y = REAL(Y);
+  X = REAL(x); XX = REAL(xx);
+  lpi = INTEGER(LPI);
+  ll = REAL(LL);lb = REAL(LB);lbb = REAL(LBB);
+  beta = REAL(BETA);dbeta = REAL(DBETA);dH = REAL(Dh);
+  mvn_ll(y,X,XX,beta,&n,lpi,&m,ll,lb,lbb,dbeta,dH,&deriv,&nsp,&nt);
+  return(R_NilValue);
+} /* mvnll */  
 

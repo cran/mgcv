@@ -17,7 +17,7 @@ zipll(y,g,eta,deriv=0)
 }
 \arguments{
 \item{link}{two item list specifying the link - currently only identity links are possible, as 
-parameterization is directly in terms of log of Poisson response and logit of probability of presence.}
+parameterization is directly in terms of log of Poisson response and complementary log log of probability of presence.}
 \item{y}{response}
 \item{g}{gamma vector}
 \item{eta}{eta vector}
@@ -31,7 +31,7 @@ parameterization is directly in terms of log of Poisson response and logit of pr
 a list containing 2 formulae, the first specifies the response on the left hand side and the structure of the linear predictor for the Poisson parameter on the right hand side. The second is one sided, specifying the linear predictor for the probability of presence on the right hand side. 
 
 The fitted values for this family will be a two column matrix. The first column is the log of the Poisson parameter, 
-and the second column is the complimentary log log of probability of presence.. 
+and the second column is the complementary log log of probability of presence.. 
 Predictions using \code{\link{predict.gam}} will also produce 2 column matrices for \code{type} 
 \code{"link"} and \code{"response"}.
 
@@ -54,7 +54,7 @@ Journal of the American Statistical Association 111, 1548-1575
 }
 
 \section{WARNINGS }{
-Zero inflated models are often over-used. Having lots of zeroes in the data does not in itself imply zero inflation. Having too many zeroes *given the model mean* may imply zero inflation. 
+Zero inflated models are often over-used. Having many zeroes in the data does not in itself imply zero inflation. Having too many zeroes *given the model mean* may imply zero inflation. 
 }
 
 \examples{

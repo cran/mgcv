@@ -1664,7 +1664,7 @@ ziplss <-  function(link=list("identity","identity")) {
       } ## ls
 
       type <- match.arg(type)
-      p <- exp(-exp(object$fitted[,2]));
+      p <-  1 - exp(-exp(object$fitted[,2]));
       lam <- exp(object$fitted[,1])
       ind <- lam > .Machine$double.eps^.5
       ## compute E(y)

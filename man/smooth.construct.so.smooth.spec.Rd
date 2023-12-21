@@ -43,7 +43,7 @@ of knots defines the *interior* basis dimension (i.e. it is *not* supplied via a
 \details{
 
 For soap film smooths the following *must* be supplied:
-\itemize{
+\describe{
 \item{k}{ the basis dimension for each boundary loop smooth.}
 \item{xt$bnd}{ the boundary specification for the smooth.}
 \item{knots}{ the locations of the interior knots for the smooth.}
@@ -60,7 +60,7 @@ loops. Each boundary loop list may also contain a column \code{f} giving known
 boundary conditions on a loop.
 
 The \code{bndSpec} element of \code{xt}, if non-NULL, should contain
-\itemize{
+\describe{
 \item{bs}{ the type of cyclic smoothing basis to use: one of \code{"cc"} and \code{"cp"}. 
 If not \code{"cc"} then a cyclic p-spline is used, and argument 
 \code{m} must be supplied.}

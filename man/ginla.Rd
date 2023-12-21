@@ -5,17 +5,17 @@
 \description{Apply Integrated Nested Laplace Approximation (INLA, Rue et al. 2009) to models estimable by \code{\link{gam}} or \code{\link{bam}}, using the INLA variant described in Wood (2019). Produces marginal posterior densities for each coefficient, selected coefficients or linear transformations of the coefficient vector. 
 }
 \usage{
-ginla(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,int=0,approx=0)
+ginla(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,integ=0,approx=0)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
  \item{G}{A pre-fit gam object, as produced by \code{gam(...,fit=FALSE)} or \code{bam(...,discrete=TRUE,fit=FALSE)}.}
-\item{A}{Either a matrix of transforms of the coefficients that are of interest, or an array of indices of the parameters of interest. If \code{NULL} then distributions are produced for all coefficients.}
+\item{A}{Either a matrix whose rows are transforms of the coefficients that are of interest (no more rows than columns, full row rank), or an array of indices of the parameters of interest. If \code{NULL} then distributions are produced for all coefficients.}
 \item{nk}{Number of values of each coefficient at which to evaluate its log marginal posterior density. These points are then spline interpolated.}
 \item{nb}{Number of points at which to evaluate posterior density of coefficients for returning as a gridded function.}
 \item{J}{How many determinant updating steps to take in the log determinant approximation step. Not recommended to increase this. }
 \item{interactive}{If this is \code{>0} or \code{TRUE} then every approximate posterior is plotted in red, overlaid on the simple Gaussian approximate posterior. If \code{2} then waits for user to press return between each plot. Useful for judging whether anything is gained by using INLA approach. }
-\item{int}{0 to skip integration and just use the posterior modal smoothing parameter. >0 for integration using the CCD approach proposed in Rue et al. (2009).}
+\item{integ}{0 to skip integration and just use the posterior modal smoothing parameter. >0 for integration using the CCD approach proposed in Rue et al. (2009).}
 \item{approx}{0 for full approximation; 1 to update Hessian, but use approximate modes; 2 as 1 and assume constant Hessian. See details.}
 }
 
@@ -23,7 +23,7 @@ ginla(G,A=NULL,nk=16,nb=100,J=1,interactive=FALSE,int=0,approx=0)
 A list with elements \code{beta} and \code{density}, both of which are matrices. Each row relates to one coefficient (or linear coefficient combination) of interest. Both matrices have \code{nb} columns. If \code{int!=0} then a further element \code{reml} gives the integration weights used in the CCD integration, with the central point weight given first.  
 }
 
-\details{Let \eqn{\beta}{b}, \eqn{\theta}{h} and \eqn{y}{y} denote the model coefficients, hyperparameters/smoothing parameters and response data, respectively. In principle, INLA employs Laplace approximations for \eqn{\pi(\beta_i|\theta,y)}{p(b_i|h,y)} and \eqn{\pi(\theta|y)}{p(h|y)} and then obtains the marginal posterior distribution \eqn{\pi(\beta_i|y)}{p(b_i|y)} by intergrating the approximations to \eqn{\pi(\beta_i|\theta,y)\pi(\theta|y)}{p(b_i|h,y)p(h|y)} w.r.t \eqn{\theta}{h} (marginals for the hyperparameters can also be produced). In practice the Laplace approximation for \eqn{\pi(\beta_i|\theta,y)}{p(b_i|h,y)} is too expensive to compute for each \eqn{\beta_i}{b_i} and must itself be approximated. To this end, there are two quantities that have to be computed: the posterior mode \eqn{\beta^*|\beta_i}{b*|b_i} and the determinant of the Hessian of the joint log density \eqn{\log \pi(\beta,\theta,y)}{log p(b,h,y)} w.r.t. \eqn{\beta}{b} at the mode. Rue et al. (2009) originally approximated the posterior conditional mode by the conditional mode implied by a simple Gaussian approximation to the posterior \eqn{\pi(\beta|y)}{p(b|y)}. They then approximated the log determinant of the Hessian as a function of \eqn{\beta_i}{b_i} using a first order Taylor expansion, which is cheap to compute for the sparse model representaiton that they use, but not when using the dense low rank basis expansions used by \code{\link{gam}}. They also offer a more expensive alternative approximation based on computing the log determiannt with respect only to those elements of \eqn{\beta}{b} with sufficiently high correlation with \eqn{\beta_i}{b_i} according to the simple Gaussian posterior approximation: efficiency again seems to rest on sparsity. Wood (2018) suggests computing the required posterior modes exactly, and basing the log determinant approximation on a BFGS update of the Hessian at the unconditional model. The latter is efficient with or without sparsity, whereas the former is a `for free' improvement. Both steps are efficient because it is cheap to obtain the Cholesky factor of \eqn{H[-i,-i]}{H[-i,-i]} from that of \eqn{H}{H} - see \code{\link{choldrop}}. This is the approach taken by this routine.
+\details{Let \eqn{\beta}{b}, \eqn{\theta}{h} and \eqn{y}{y} denote the model coefficients, hyperparameters/smoothing parameters and response data, respectively. In principle, INLA employs Laplace approximations for \eqn{\pi(\beta_i|\theta,y)}{p(b_i|h,y)} and \eqn{\pi(\theta|y)}{p(h|y)} and then obtains the marginal posterior distribution \eqn{\pi(\beta_i|y)}{p(b_i|y)} by intergrating the approximations to \eqn{\pi(\beta_i|\theta,y)\pi(\theta|y)}{p(b_i|h,y)p(h|y)} w.r.t \eqn{\theta}{h} (marginals for the hyperparameters can also be produced). In practice the Laplace approximation for \eqn{\pi(\beta_i|\theta,y)}{p(b_i|h,y)} is too expensive to compute for each \eqn{\beta_i}{b_i} and must itself be approximated. To this end, there are two quantities that have to be computed: the posterior mode \eqn{\beta^*|\beta_i}{b*|b_i} and the determinant of the Hessian of the joint log density \eqn{\log \pi(\beta,\theta,y)}{log p(b,h,y)} w.r.t. \eqn{\beta}{b} at the mode. Rue et al. (2009) originally approximated the posterior conditional mode by the conditional mode implied by a simple Gaussian approximation to the posterior \eqn{\pi(\beta|y)}{p(b|y)}. They then approximated the log determinant of the Hessian as a function of \eqn{\beta_i}{b_i} using a first order Taylor expansion, which is cheap to compute for the sparse model representaiton that they use, but not when using the dense low rank basis expansions used by \code{\link{gam}}. They also offer a more expensive alternative approximation based on computing the log determiannt with respect only to those elements of \eqn{\beta}{b} with sufficiently high correlation with \eqn{\beta_i}{b_i} according to the simple Gaussian posterior approximation: efficiency again seems to rest on sparsity. Wood (2020) suggests computing the required posterior modes exactly, and basing the log determinant approximation on a BFGS update of the Hessian at the unconditional model. The latter is efficient with or without sparsity, whereas the former is a `for free' improvement. Both steps are efficient because it is cheap to obtain the Cholesky factor of \eqn{H[-i,-i]}{H[-i,-i]} from that of \eqn{H}{H} - see \code{\link{choldrop}}. This is the approach taken by this routine.
 
 The \code{approx} argument allows two further approximations to speed up computations. For \code{approx==1} the exact posterior conditional modes are not used, but instead the conditional modes implied by the simple Gaussian posterior approximation. For \code{approx==2} the same approximation is used for the modes and the Hessian is assumed constant. The latter is quite fast as no log joint density gradient evaluations are required.  
 
@@ -36,7 +36,7 @@ Note that for many models the INLA estimates are very close to the usual Gaussia
 \references{
 Rue, H, Martino, S. & Chopin, N. (2009) Approximate Bayesian inference for latent Gaussian models by using integrated nested Laplace approximations (with discussion). Journal of the Royal Statistical Society, Series B.  71: 319-392.
 
-Wood (2019) Simplified Integrated Laplace Approximation. In press Biometrika. 
+Wood (2020) Simplified Integrated Laplace Approximation. Biometrika 107(1): 223-230. [Note: There is an error in the theorem proof - theoretical properties are weaker than claimed - under investigation]
 }
 
 \section{WARNINGS}{
@@ -53,8 +53,8 @@ The routine is written for relatively expert users.
 \examples{
   require(mgcv); require(MASS)
 
-  ## example using a scale location model for the motorcycle data. A simple plotting
-  ## routine is produced first...
+  ## example using a scale location model for the motorcycle data. A simple
+  ## plotting routine is produced first...
 
   plot.inla <- function(x,inla,k=1,levels=c(.025,.1,.5,.9,.975),
                lcol = c(2,4,4,4,2),lwd = c(1,1,2,1,1),lty=c(1,1,1,1,1),
@@ -100,11 +100,11 @@ The routine is written for relatively expert users.
   X1[,1:20] <- 0
   A <- rbind(X0,X1) ## A maps coefs to required function values
 
-  ## call ginla. Set int to 1 for integrated version.
+  ## call ginla. Set integ to 1 for integrated version.
   ## Set interactive = 1 or 2 to plot marginal posterior distributions
   ## (red) and simple Gaussian approximation (black).
  
-  inla <- ginla(G,A,int=0)
+  inla <- ginla(G,A,integ=0)
 
   par(mfrow=c(1,2),mar=c(5,5,1,1))
   fv <- predict(b,se=TRUE) ## usual Gaussian approximation, for comparison

@@ -28,7 +28,7 @@ USA. */
 void *R_chk_calloc1(size_t nmemb,size_t size) {
   /* checks for zero or negative memory allocation calls...*/
   if (nmemb<=0) {
-    Rprintf("adjusting %d memory allocation\n",nmemb);
+    Rprintf("adjusting %d memory allocation\n",(int) nmemb);
     nmemb++;
   }  
   return(R_chk_calloc(nmemb,size));

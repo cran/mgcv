@@ -121,27 +121,42 @@ void coxlpl(double *eta,double *X,int *r, int *d,double *tr,
             double *d2H,int *n_sp,int *deriv);
 
 /* MVN smooth additive */
-void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
+/*void mvn_ll(double *y,double *X,double *XX,double *beta,int *n,int *lpi,
             int *m,double *ll,double *lb,double *lbb,double *dbeta,
-            double *dH,int *deriv,int *nsp,int *nt);
+            double *dH,int *deriv,int *nsp,int *nt);*/
+
+SEXP mvnll(SEXP Y,SEXP x,SEXP xx,SEXP BETA,SEXP LPI, SEXP LL, SEXP LB,
+	   SEXP LBB, SEXP DBETA, SEXP Dh, SEXP DERIV,SEXP NSP, SEXP NT);
 
 /* discretized covariate methods */
 //void XWXd(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
 //          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
 //          int *ar_row,double *ar_weights);
 void XWXd0(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, 
-          int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,
-          int *ar_row,double *ar_weights);
+	   int *ts, int *dt, int *nt,double *v,int *qc,int *nthreads,
+          int *ar_stop,double *ar_weights);
+SEXP CXWXd0(SEXP XWXr, SEXP Xr, SEXP wr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr, SEXP tsr, SEXP dtr,
+	    SEXP vr,SEXP qcr, SEXP nthreadsr, SEXP ar_stopr, SEXP ar_weightsr);
 void XWXd1(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, int *n, int *nx, int *ts, 
-	   int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,int *ar_row,double *ar_weights,
+	   int *dt, int *nt,double *v,int *qc,int *nthreads,int *ar_stop,double *ar_weights,
 	   int *rs, int *cs, int *nrs, int *ncs);
+SEXP CXWXd1(SEXP XWXr, SEXP Xr, SEXP wr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr, SEXP tsr, SEXP dtr,
+	    SEXP vr,SEXP qcr, SEXP nthreadsr, SEXP ar_stopr, SEXP ar_weightsr,
+	    SEXP csr, SEXP rsr);
 void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *ks, int *m,int *p, int *n,int *cy, 
 	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
           int *ar_stop,int *ar_row,double *ar_weights,int *cs,int *ncs);
+SEXP CXWyd(SEXP XWyr, SEXP yr, SEXP Xr, SEXP wr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr, SEXP cyr, SEXP tsr,
+	   SEXP dtr,SEXP vr,SEXP qcr, SEXP ar_stopr, SEXP ar_rowr, SEXP ar_weightsr,SEXP csr);
 void Xbd(double *f,double *beta,double *X,int *k, int *ks, int *m,int *p, int *n, 
 	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc,int *cs,int *ncs);
+SEXP CXbd(SEXP fr, SEXP betar, SEXP Xr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr,
+	  SEXP tsr, SEXP dtr,SEXP vr,SEXP qcr,SEXP bcr,SEXP csr);
 void diagXVXt(double *diag,double *V,double *X,int *k,int *ks,int *m,int *p, int *n, 
 	      int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *pv,int *cv,int *nthreads,int *cs,int *ncs,int *rs,int *nrs);
+SEXP CdiagXVXt(SEXP DIAG, SEXP Vp, SEXP x, SEXP K, SEXP KS, SEXP M, SEXP P, SEXP TS, SEXP DT,
+	       SEXP vp,SEXP QC, SEXP NTHREADS, SEXP CS, SEXP RS);
+
 
 /* various service routines */
 void davies(double *lb,double *nc,int *n,int *r,double *sigma,double *c,int *lim,
@@ -197,6 +212,7 @@ void row_block_reorder(double *x,int *r,int *c,int *nb,int *reverse);
 void mgcv_pqr(double *x,int *r, int *c,int *pivot, double *tau, int *nt);
 void getRpqr(double *R,double *x,int *r, int *c,int *rr,int *nt);
 void mgcv_pqrqy(double *b,double *a,double *tau,int *r,int *c,int *cb,int *tp,int *nt);
+SEXP dpdev(SEXP a);
 SEXP mgcv_Rpiqr(SEXP X, SEXP BETA,SEXP PIV,SEXP NT,SEXP NB);
 SEXP mgcv_tmm(SEXP x,SEXP t,SEXP D,SEXP M, SEXP N);
 SEXP mgcv_Rpbsi(SEXP A, SEXP NT);
@@ -233,6 +249,7 @@ SEXP sXbd(SEXP X,SEXP BETA,SEXP LT);
 SEXP sXyd(SEXP X,SEXP Y,SEXP LT);
 SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT);
 SEXP AddBVB(SEXP A,SEXP bt, SEXP vbt);
+SEXP spdev(SEXP A);
 
 /* basis constructor/prediction routines*/
 

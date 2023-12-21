@@ -12,7 +12,7 @@ gam.mh(b,ns=10000,burn=1000,t.df=40,rw.scale=.25,thin=1)
 \arguments{
  \item{b}{a fitted model object from \code{\link{gam}}. {\code{\link{bam}}} fits are not supported.}
  \item{ns}{the number of samples to generate.}
- \item{burn}{the length of any initial burn in period to discard (in addition to code{ns}).}
+ \item{burn}{the length of any initial burn in period to discard (in addition to \code{ns}).}
  \item{t.df}{degrees of freedom for static multivariate t proposal. Lower for heavier tailed proposals.}
  \item{rw.scale}{Factor by which to scale posterior covariance matrix when generating random walk proposals. Negative or non finite to skip the random walk step.  }
 \item{thin}{retain only every \code{thin} samples.} 

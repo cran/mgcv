@@ -1,4 +1,4 @@
-## (c) Simon N. Wood 2011-2019
+## (c) Simon N. Wood 2011-2023
 ## Many of the following are simple wrappers for C functions
 
 dpnorm <- function(x0,x1) {
@@ -18,8 +18,8 @@ dpnorm <- function(x0,x1) {
 
 "%.%" <- function(a,b) {
   if (inherits(a,"dgCMatrix")||inherits(b,"dgCMatrix"))
-  tensor.prod.model.matrix(list(
-  as(as(as(a, "dMatrix"), "generalMatrix"), "CsparseMatrix"),
+  tensor.prod.model.matrix(list( ## following is coercion to double, general (no special structure), compressed column 
+  as(as(as(a, "dMatrix"), "generalMatrix"), "CsparseMatrix"), 
   as(as(as(b, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   )) else tensor.prod.model.matrix(list(as.matrix(a),as.matrix(b)))
 #  tensor.prod.model.matrix(list(as(a,"dgCMatrix"),as(b,"dgCMatrix"))) else - deprecated
@@ -147,34 +147,6 @@ mgcv.omp <- function() {
   if (oo$a==1) TRUE else FALSE
 }
 
-mvn.ll <- function(y,X,beta,dbeta=NULL) {
-## to facilitate testing of MVN routine mvn_ll.
-## X is a sequence of m model matrices bound columnwise, with m dim attribute lpi
-##   indicating where the next starts in all cases.
-## beta is parameter vector - last m*(m+1)/2 elements are chol factor of precision params.
-## y is m by n data matrix.
-  lpi <- attr(X,"lpi")-1;m <- length(lpi)
-  nb <- length(beta)
-  if (is.null(dbeta)) {
-    nsp = 0;dbeta <- dH <- 0
-  } else {
-    nsp = ncol(dbeta)
-    dH = rep(0,nsp*nb*nb)
-  }
-  oo <- .C(C_mvn_ll,y=as.double(y),X=as.double(X),XX=as.double(crossprod(X)),beta=as.double(beta),n=as.integer(nrow(X)),
-                  lpi=as.integer(lpi),m=as.integer(m),ll=as.double(0),lb=as.double(beta*0),
-                  lbb=as.double(rep(0,nb*nb)), dbeta = as.double(dbeta), dH = as.double(dH), 
-                  deriv = as.integer(nsp>0),nsp = as.integer(nsp),nt=as.integer(1))
-  if (nsp==0) dH <- NULL else {
-    dH <- list();ind <- 1:(nb*nb)
-    for (i in 1:nsp) { 
-      dH[[i]] <- matrix(oo$dH[ind],nb,nb)
-      ind <- ind + nb*nb
-    }
-  }
-  list(l=oo$ll,lb=oo$lb,lbb=matrix(oo$lbb,nb,nb),dH=dH)
-} ## mvn.ll
-
 ## discretized covariate routines...
 
 XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt=NULL,rt=NULL) {
@@ -247,13 +219,19 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
   }
   ## block oriented code...
   if (is.null(lt)&&is.null(lt)) {
-    #t0 <- system.time( ## BUG dodgy assumption about full sized XWX, based on one constraint per term!!!
-    oo <- .C(C_XWXd0,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
-           k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
-           ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
-           v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
-           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w))#)
-    XWX <- if (is.null(drop)) matrix(oo$XWX[1:pt^2],pt,pt) else matrix(oo$XWX[1:pt^2],pt,pt)[-drop,-drop]
+    # old .C code - can't handle long vector k
+    #oo <- .C(C_XWXd0,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
+    #       k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
+    #       ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
+    #       v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
+    #       ar.stop=as.integer(ar.stop-1),ar.weights=as.double(ar.w))
+    #XWX <- if (is.null(drop)) matrix(oo$XWX[1:pt^2],pt,pt) else matrix(oo$XWX[1:pt^2],pt,pt)[-drop,-drop]
+    XWX <- numeric(ptfull^2)
+    .Call(C_CXWXd0,XWX,as.double(unlist(X)),w,k-1L,as.integer(ks-1L),as.integer(m),as.integer(p),
+          as.integer(ts-1L), as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(nthreads),
+	  as.integer(ar.stop-1L),as.double(ar.w))
+    XWX <- if (is.null(drop)) matrix(XWX[1:pt^2],pt,pt) else matrix(XWX[1:pt^2],pt,pt)[-drop,-drop]
+    
   } else {
     lpip <- attr(X,"lpip") ## list of coefs for each term
     rpi <- unlist(lpip[rt])
@@ -269,14 +247,18 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
 	rpi <- lpi
       } else ncs <- length(rt)
     }  
-    #t0 <- system.time(
-    oo <- .C(C_XWXd1,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
-           k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
-           ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
-           v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
-           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w),rs=as.integer(lt-1),
-	   cs=as.integer(rt-1),nrs=as.integer(nrs),ncs=as.integer(ncs))#)
-    XWX <- matrix(oo$XWX[1:(length(lpi)*length(rpi))],length(lpi),length(rpi))
+    #oo <- .C(C_XWXd1,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
+    #       k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
+    #       ns=as.integer(nx), ts=as.integer(ts-1), dt=as.integer(dt), nt=as.integer(nt),
+    #       v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
+    #       ar.stop=as.integer(ar.stop-1),ar.weights=as.double(ar.w),rs=as.integer(lt-1),
+    # 	   cs=as.integer(rt-1),nrs=as.integer(nrs),ncs=as.integer(ncs))#)	   
+    #XWX <- matrix(oo$XWX[1:(length(lpi)*length(rpi))],length(lpi),length(rpi))
+    XWX <- numeric(ptfull^2)
+    .Call(C_CXWXd1,XWX,as.double(unlist(X)),w,k-1L,as.integer(ks-1L),as.integer(m),as.integer(p),
+          as.integer(ts-1L), as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(nthreads),
+	  as.integer(ar.stop-1L),as.double(ar.w),as.integer(lt-1L),as.integer(rt-1L))
+    XWX <- matrix(XWX[1:(length(lpi)*length(rpi))],length(lpi),length(rpi))
     if (!is.null(drop)) {
       ldrop <- which(lpi %in% drop)
       rdrop <- which(lpi %in% drop)
@@ -284,17 +266,6 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
         if (length(ldrop==0)) XWX[,-rdrop] else if (length(rdrop)==0) XWX[-ldrop,] else XWX[-ldrop,-rdrop]
     }
   }
-## old strictly level 2 code for comparison...	   
-#  t1 <- system.time(ooo <- .C(C_XWXd,XWX =as.double(rep(0,pt^2)),X= as.double(unlist(X)),w=as.double(w),
-#           k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
-#           ns=as.integer(nx), ts=as.integer(ts-1), as.integer(dt), nt=as.integer(nt),
-#           v = as.double(unlist(v)),qc=as.integer(qc),nthreads=as.integer(nthreads),
-#           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w)))
-  
-#  XWX <- matrix(oo$XWX[1:pt^2],pt,pt)
-#  XWX0 <- matrix(ooo$XWX[1:pt^2],pt,pt)
-#  plot(XWX0,XWX,pch=".",main=range(XWX-XWX0));abline(0,1,col=2)
-  #if (is.null(drop)) matrix(oo$XWX[1:pt^2],pt,pt) else matrix(oo$XWX[1:pt^2],pt,pt)[-drop,-drop]
   XWX
 } ## XWXd
 
@@ -304,8 +275,7 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
 ## returned vector/matrix only includes rows for selected terms
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
   nx <- length(X);nt <- length(ts)
-  n <- length(w);##pt <- 0;
-  ##for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - as.numeric(qc[i]>0)
+  n <- length(w);
   if (is.null(lt)) {
     pt <- 0
     for (i in 1:nt) pt <- pt + prod(p[ts[i]:(ts[i]+dt[i]-1)]) - if (qc[i]>0) 1 else if (qc[i]<0) v[[i]][v[[i]][1]+2] else 0
@@ -318,7 +288,6 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
   }
   cy <- if (is.matrix(y)) ncol(y) else 1
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
-    #if (cy>1) stop("sparse XWyd with matrix y not coded") ## just loop for this?    
     ## create list for passing to C
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
@@ -332,15 +301,23 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
     if (cy>1) XWy <- matrix(XWy,ncol=cy)
     if (!is.null(drop)) XWy <- if (cy>1) XWy[-drop,] else XWy[-drop]
   } else { ## dense marginals case  
-    oo <- .C(C_XWyd,XWy=rep(0,pt*cy),y=as.double(y),X=as.double(unlist(X)),w=as.double(w),k=as.integer(k-1), 
-           ks=as.integer(ks-1),
-           m=as.integer(m),p=as.integer(p),n=as.integer(n),cy=as.integer(cy), nx=as.integer(nx), ts=as.integer(ts-1), 
-           dt=as.integer(dt),nt=as.integer(nt),v=as.double(unlist(v)),qc=as.integer(qc),
-           ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w),
-	   cs=as.integer(lt-1),ncs=as.integer(length(lt)))
-    if (cy>1) XWy <- if (is.null(drop)) matrix(oo$XWy,pt,cy) else matrix(oo$XWy,pt,cy)[-drop,] else
-    XWy <- if (is.null(drop)) oo$XWy else oo$XWy[-drop] 
-  }
+    ## old .C code - can't handle long vector k
+    #oo <- .C(C_XWyd,XWy=rep(0,pt*cy),y=as.double(y),X=as.double(unlist(X)),w=as.double(w),k=as.integer(k-1), 
+    #       ks=as.integer(ks-1),
+    #       m=as.integer(m),p=as.integer(p),n=as.integer(n),cy=as.integer(cy), nx=as.integer(nx), ts=as.integer(ts-1), 
+    #       dt=as.integer(dt),nt=as.integer(nt),v=as.double(unlist(v)),qc=as.integer(qc),
+    #       ar.stop=as.integer(ar.stop-1),ar.row=as.integer(ar.row-1),ar.weights=as.double(ar.w),
+    # 	   cs=as.integer(lt-1),ncs=as.integer(length(lt)))
+    #if (cy>1) XWy <- if (is.null(drop)) matrix(oo$XWy,pt,cy) else matrix(oo$XWy,pt,cy)[-drop,] else
+    #XWy <- if (is.null(drop)) oo$XWy else oo$XWy[-drop]
+    XWy <- numeric(pt*cy)
+    .Call(C_CXWyd,XWy,as.double(y),as.double(unlist(X)),as.double(w),k-1L,as.integer(ks-1L),as.integer(m),as.integer(p),
+          as.integer(cy),as.integer(ts-1L), as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(ar.stop-1L),
+	  as.integer(ar.row-1L),as.double(ar.w),as.integer(lt-1L))
+    if (cy>1) { XWy <- if (is.null(drop)) matrix(XWy,pt,cy) else matrix(XWy,pt,cy)[-drop,] } else {
+      XWy <- if (is.null(drop)) XWy else XWy[-drop]
+    }
+  }  
   XWy
 } ## XWyd 
 
@@ -384,11 +361,15 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
     if (bc>1) Xb <- matrix(Xb,ncol=bc)
   } else { ## dense marginals case
   
-    oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1),
-           ks = as.integer(ks-1), 
-           m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
-           as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(bc),as.integer(lt-1),as.integer(length(lt)))
-    Xb <- if (is.matrix(beta)) matrix(oo$f,n,bc) else oo$f
+    #oo <- .C(C_Xbd,f=as.double(rep(0,n*bc)),beta=as.double(beta),X=as.double(unlist(X)),k=as.integer(k-1),
+    #       ks = as.integer(ks-1), 
+    #       m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
+    #       as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(bc),as.integer(lt-1),as.integer(length(lt)))
+    #Xb <- if (is.matrix(beta)) matrix(oo$f,n,bc) else oo$f
+    f <- numeric(n*bc)
+    .Call(C_CXbd,f,beta,as.double(unlist(X)),k-1L, as.integer(ks-1L),as.integer(m),as.integer(p),
+          as.integer(ts-1L),as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(bc), as.integer(lt-1L))
+    Xb <- if (is.matrix(beta)) matrix(f,n,bc) else f	  
   }
   return(Xb)
 } ## Xbd
@@ -442,11 +423,15 @@ diagXVXd <- function(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL) {
       rpi <- unlist(lpip[rt])
       V <- V[lpi,rpi,drop=FALSE] ## select part of V required in correct order
     }
-    oo <- .C(C_diagXVXt,diag=as.double(rep(0,n)),V=as.double(V),X=as.double(unlist(X)),k=as.integer(k-1), 
-           ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx),
-	   ts=as.integer(ts-1), as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(nrow(V)),as.integer(ncol(V)),
-	   as.integer(nthreads),as.integer(lt-1),as.integer(length(lt)),as.integer(rt-1),as.integer(length(rt)))
-    D <- oo$diag
+#   oo <- .C(C_diagXVXt,diag=as.double(rep(0,n)),V=as.double(V),X=as.double(unlist(X)),k=as.integer(k-1), 
+#           ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx),
+#	   ts=as.integer(ts-1), as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(nrow(V)),
+#           as.integer(ncol(V)),as.integer(nthreads),as.integer(lt-1),as.integer(length(lt)),as.integer(rt-1),as.integer(length(rt)))
+#    D <- oo$diag
+    D <- numeric(n)
+    .Call(C_CdiagXVXt,D,V,as.double(unlist(X)),k-1L,as.integer(ks-1L),as.integer(m),as.integer(p),
+          as.integer(ts-1L), as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(nthreads),
+	  as.integer(lt-1L),as.integer(rt-1L))
   }
   D
 } ## diagXVXd
@@ -853,6 +838,27 @@ neicov <- function(Dd,nei) {
   (V+t(V))/2
 } ## neicov
 
+
+## Routines to force matrix to pdef
+
+pdev <- function(A) {
+## Force A to meet necessary conditions for +ve def from Thm 4.2.8. of Golub and van Load 4th ed.
+## Non-positive diagonals are set to diagonal dominance. Off diagonals are then set to just meet
+## necessary conditions.
+## NOTE: A is modified directly in situ, so care needed to force a copy to be kept if it's needed
+## A0 <- A will not work, as R only actually copies when R modifies!
+## A0 <- A; A0[1,1] <- A0[1,1] + 1;A0[1,1] <- A0[1,1] - 1  works.  
+  if (inherits(A,"Matrix")) {
+    if (!inherits(A,"dgCMatrix")) A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+    da <- diag(A); ii <- which(da==0)
+    if (length(ii)) diag(A)[ii] <- -1e-30 ## Avoid C code having to insert extra non-zeroes
+    mod <- .Call(C_spdev,A)
+  } else { ## dense matrix
+    mod <- .Call(C_dpdev,A)
+  }
+  if (mod>0) attr(A,"modified") <- mod
+  return(A)
+}
 
 ## following are wrappers for KP STZ constraints - intended for testing only
 

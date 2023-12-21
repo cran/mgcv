@@ -9,6 +9,8 @@ gfam <- function(fl) {
 ## that expect a matrix response are not usable. 'gfam' has class 'extended.family'
 ## and a fixed scale parameter of 1. Scale parameters of component families
 ## are estimated using REML/NCV.
+## fl has an attribut "fi" indicating which element of fl each response observation
+## comes from. 
   nf <- length(fl)
   ## evaluate and check type of families, adding extra derivatives as
   ## required...
@@ -72,6 +74,17 @@ gfam <- function(fl) {
     }
   } ## putTheta gfam
   
+  ## function needed by bam and predict.gam to subset data...
+  setInd <- function(ind) {
+  ## enable the fi index to be subsetted by ind, and restored is ind==NULL
+    fl <- get(".fl")
+    if (is.null(attr(fl,"fifull"))) {
+      if (is.null(ind)) return() else attr(fl,"fifull") <- attr(fl,"fi") ## store full fi
+    }  
+    attr(fl,"fi") <- if (is.null(ind)) attr(fl,"fifull") else attr(fl,"fifull")[ind]
+    assign(".fl", fl, envir=environment(sys.function()))
+  }  
+
   dev.resids <- function(y,mu,wt,theta=NULL) {
     if (is.null(theta)) theta <- get(".Theta")
     fl <- get(".fl")
@@ -573,18 +586,20 @@ gfam <- function(fl) {
      list(null.coef = null.coef, null.scale = null.scale)
   } ## get.null.coef
 
+  environment(setInd) <-
   environment(get.null.coef) <- environment(aic) <- environment(getfl) <- environment(ls) <-
-   environment(getTheta) <- environment(putTheta) <- environment(putfl) <- environment(preinitialize) <-
+  environment(getTheta) <- environment(putTheta) <- environment(putfl) <- environment(preinitialize) <-
   environment(Dd) <- environment(linkfun) <- environment(linkinv) <- environment(valideta) <- 
   environment(mu.eta) <- environment(g2g) <- environment(g3g) <- environment(postproc) <-
   environment(g4g) <- environment(dev.resids) <- environment(validmu) <- environment(predict) <- env
   if (need.rsd) environment(residuals) <- env
 
-   structure(list(family = fam, dev.resids = dev.resids,aic = aic,
+  structure(list(family = fam, dev.resids = dev.resids,aic = aic,
             link = link, linkfun = linkfun, linkinv = linkinv,mu.eta = mu.eta,
 	    initialize = initialize, validmu = validmu,putTheta=putTheta,getTheta=getTheta,
 	    g2g=g2g,g3g=g3g,g4g=g4g,Dd=Dd,preinitialize=preinitialize,valideta=valideta,
 	    postproc=postproc,predict=predict,residuals=residuals,n.theta=n.theta,
-	    ls=ls,getfl=getfl,putfl=putfl,get.null.coef=get.null.coef,canonical="none"), class = c("extended.family","family"))
+	    ls=ls,getfl=getfl,putfl=putfl,setInd=setInd,
+	    get.null.coef=get.null.coef,canonical="none"), class = c("extended.family","family"))
 } ## gfam
 

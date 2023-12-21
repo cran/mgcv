@@ -1337,38 +1337,30 @@ gam.fit5 <- function(x,y,lsp,Sl,weights=NULL,offset=NULL,deriv=2,family,scoreTyp
   } else { ## REML required
     NCV <- NCV1 <- NULL
     ## Compute the derivatives of log|H+S|... 
-    if (deriv == 1) { ## only first derivative wrt rho required...
-      d1ldetH <- -ll$d1H
-     
-      for (i in 1:m) {
-        A <- Sl.mult(rp$Sl,diag(q),i,full=TRUE)[!bdrop,!bdrop]
-        bind <- rowSums(abs(A))!=0 ## row/cols of non-zero block
-        A <- A[,bind,drop=FALSE] ## drop the zero columns  
-        A <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])
-        d1ldetH[i] <- d1ldetH[i] + sum(diag(A[bind,,drop=FALSE]))
+    if (deriv > 0) { ## only first derivative wrt rho required...
+      if (deriv==1&&!is.list(ll$d1H)) {
+        d1ldetH <- -ll$d1H
+        for (i in 1:m) {
+          A <- Sl.mult(rp$Sl,diag(q),i,full=TRUE)[!bdrop,!bdrop]
+          bind <- rowSums(abs(A))!=0 ## row/cols of non-zero block
+          A <- A[,bind,drop=FALSE] ## drop the zero columns  
+          A <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])
+          d1ldetH[i] <- d1ldetH[i] + sum(diag(A[bind,,drop=FALSE]))
+        }
+      } else { ## deriv>1 || is.list(ll$d1H)
+        ## computation of d1ldetH using full d1H derivative of Hessian w.r.t. sp matrices...
+        d1ldetH <- rep(0,m)
+        d1Hp <- list()
+        for (i in 1:m) {
+          A <- -ll$d1H[[i]] + Sl.mult(rp$Sl,diag(q),i)[!bdrop,!bdrop]
+          d1Hp[[i]] <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])  
+          d1ldetH[i] <- sum(diag(d1Hp[[i]]))
+        }
       }	
-      ## move this to deriv>1
-      #d1ldetH <- rep(0,m)
-      #d1Hp <- list()
-      #for (i in 1:m) {
-      #  A <- -ll$d1H[[i]] + Sl.mult(rp$Sl,diag(q),i)[!bdrop,!bdrop]
-      #  d1Hp[[i]] <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])  
-      #  d1ldetH[i] <- sum(diag(d1Hp[[i]]))
-      #}
-      ## ... snip
-      
-    } ## if (deriv == 1)
+    } ## if (deriv >0)
 
     if (deriv > 1) {
-      ## first computation of d1ldetH using full d1H derivative of Hessian w.r.t. sp matrices...
-      d1ldetH <- rep(0,m)
-      d1Hp <- list()
-      for (i in 1:m) {
-        A <- -ll$d1H[[i]] + Sl.mult(rp$Sl,diag(q),i)[!bdrop,!bdrop]
-        d1Hp[[i]] <- D*(backsolve(L,forwardsolve(t(L),(D*A)[piv,]))[ipiv,,drop=FALSE])  
-        d1ldetH[i] <- sum(diag(d1Hp[[i]]))
-      }
-      ## Now on to second derivatives...
+      ## second derivatives...
       d2ldetH <- matrix(0,m,m)
       k <- 0
       for (i in 1:m) for (j in i:m) {

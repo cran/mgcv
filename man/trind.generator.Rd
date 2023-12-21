@@ -27,7 +27,7 @@ Suppose that \code{m=1} and you fill an array using code like
           "something" would be stored for any permutation of the indices i,j,k,l.
           Clearly in storage we have the restriction l>=k>=j>=i, but for access we 
           want no restriction on the indices. \code{i4[i,j,k,l]} produces the 
-          appropriate \code{m} for unrestricted indices. \code{i3} and {i2} do the same 
+          appropriate \code{m} for unrestricted indices. \code{i3} and \code{i2} do the same 
           for 3d and 2d arrays. If \code{ifunc==TRUE} then \code{i2}, \code{i3} and \code{i4}
 	  are functions, so \code{i4(i,j,k,l)} returns appropriate \code{m}. For high \code{K}
 	  the function versions save storage, but are slower.

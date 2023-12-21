@@ -1,4 +1,4 @@
-## routines for very large dataset generalized additive modelling.
+# routines for very large dataset generalized additive modelling.
 ## (c) Simon N. Wood 2009-2023
 
 
@@ -176,7 +176,8 @@ compress.df <- function(dat,m=NULL) {
   k <- ii[k]     ## correct k index accordingly
   ## ... finished shuffle
   ## if arguments were matrices, then return matrix index
-  if (length(k)>n) k <- matrix(k,nrow=n) 
+  if (length(k)>n) k <- matrix(k,nrow=n)
+  storage.mode(k) <- "integer"
   k -> attr(xu,"index")
   xu
 } ## compress.df
@@ -243,7 +244,7 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
   names.pmf <- names.pmf[names.pmf %in% names(mf)] ## drop names.pmf not in mf (usually response)
  
   nk <- nk + length(names.pmf)
-  k <- matrix(0,nrow(mf),nk) ## each column is an index vector
+  k <- matrix(0L,nrow(mf),nk) ## each column is an index vector
   ks <- matrix(NA,nk,2,dimnames=list(rep("",nk)))
   ik <- 0 ## index counter i.e. counts marginal smooths and their indices
   nr <- rep(0,nk) ## number of rows for marginal term
@@ -276,7 +277,7 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
 	  ks[ik,1] <- if (ik==1) 1 else ks[ik-1,2] 
           if (is.matrix(ki)) {
 	     ks[ik,2] <- ks[ik,1] + ncol(ki)
-             k <- cbind(k,matrix(0,nrow(k),ncol(ki)-1)) ## extend index matrix
+             k <- cbind(k,matrix(0L,nrow(k),ncol(ki)-1)) ## extend index matrix
              ind <- ks[ik,1]:(ks[ik,2]-1) 
              k[,ind] <- ki 
            } else {
@@ -372,7 +373,7 @@ discrete.mf <- function(gp,mf,names.pmf,m=NULL,full=TRUE) {
   ## multiple arguments, so drop these here...
   ks <- ks[!is.na(ks[,1]),,drop=FALSE]
   if (ncol(k)>max(ks)-1) k <- k[,1:(max(ks)-1),drop=FALSE] 
-  k <- cbind(k,1) ## add an intercept index column
+  k <- cbind(k,1L) ## add an intercept index column
   nk <- ncol(k)
   ks <- rbind(ks,c(nk,nk+1)) ## add intercept row to ks
   nr <- c(nr,1) ## and intercept entry to nr
@@ -549,6 +550,7 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL, etastart = NULL,
 	    ## get deviance at step start, with current theta if efam
 	    dev0 <- if (efam) sum(family$dev.resids(G$y,mu0,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu0,G$w))
+	    
           }
         }
 	kk <- 1
@@ -557,12 +559,16 @@ bgam.fitd <- function (G, mf, gp ,scale , coef=NULL, etastart = NULL,
 	  dev <- if (efam) sum(family$dev.resids(G$y,mu,G$w,theta)) else
 	                 sum(family$dev.resids(G$y,mu,G$w))
           if (iter>2) { ## coef step length control
-	    bSb <- sum(rSb^2) ## penalty at end of beta step 
+	    bSb <- sum(rSb^2) ## penalty at end of beta step
+	    #stepr <- max(abs(coef-coef0))/(max(abs(coef0)))
+	    #if (stepr<2)
+	    stepr <- 2
+	    istepr <- 1-1/stepr
             if ((!is.finite(dev) || dev0 + bSb0 < dev + bSb) && kk < 30) { ## beta step not improving current pen dev
-              coef <- (coef0 + coef)/2 ## halve the step
-	      rSb <- (rSb0 + rSb)/2
-	      eta <- (eta0 + eta)/2
-	      prop$beta <- (b0 + prop$beta)/2
+              coef <- coef0*istepr + coef/stepr ## reduce the step
+	      rSb <- rSb0*istepr + rSb/stepr
+	      eta <- eta0*istepr + eta/stepr
+	      prop$beta <- b0*istepr + prop$beta/stepr
 	      kk <- kk + 1
             } else break
           } else break
@@ -938,6 +944,7 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
            wt <- G$y
            for (b in 1:n.block) {
              ind <- start[b]:stop[b]
+	     if (!is.null(family$setInd)) family$setInd(ind) ## family may need to know ind - e.g. gfam
              X <- predict(G,newdata=mf[ind,],type="lpmatrix",newdata.guaranteed=TRUE,block.size=length(ind))
              rownames(X) <- NULL
              if (is.null(coef)) eta1 <- eta[ind] else eta[ind] <- eta1 <- drop(X%*%coef) + offset[ind]
@@ -1173,6 +1180,8 @@ bgam.fit <- function (G, mf, chunk.size, gp ,scale ,gamma,method, coef=NULL,etas
           break
       }
     } ## end fitting iteration
+
+    if (!is.null(family$setInd)) family$setInd(NULL) ## reset family to state before indexing
 
     if (method=="fREML") { ## do expensive cov matrix cal only at end
       res <- Sl.postproc(Sl,fit,um$undrop,qrx$R,cov=TRUE,scale=scale,L=G$L,nt=npt)
@@ -2032,7 +2041,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
                 offset=NULL,method="fREML",control=list(),select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,
                 min.sp=NULL,paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
                 cluster=NULL,nthreads=1,gc.level=0,use.chol=FALSE,samfrac=1,coef=NULL,
-                drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,in.out=NULL,...)
+                drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,in.out=NULL,...) {
 
 ## Routine to fit an additive model to a large dataset. The model is stated in the formula, 
 ## which is then interpreted to figure out which bits relate to smooth terms and which to 
@@ -2042,7 +2051,7 @@ bam <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,n
 ## If cluster is a parallel package cluster uses parallel QR build on cluster. 
 ## 'n.threads' is number of threads to use for non-cluster computation (e.g. combining 
 ## results from cluster nodes). If 'NA' then is set to max(1,length(cluster)).
-{ control <- do.call("gam.control",control)
+  control <- do.call("gam.control",control)
   if (control$trace) t3 <- t2 <- t1 <- t0 <- proc.time()
   if (length(nthreads)==1) nthreads <- rep(nthreads,2)
   if (is.null(G)) { ## need to set up model!

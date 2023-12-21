@@ -13,7 +13,7 @@ are designed for datasets containing upwards of several tens of thousands of dat
 of \code{bam} is much lower memory footprint than \code{\link{gam}}, but it can also be much faster, 
 for large datasets. \code{bam} can also compute on a cluster set up by the \link[parallel:parallel-package]{parallel} package.
 
-An alternative fitting approach (Wood et al. 2017, Li and Wood, 2019) is provided by the \code{discrete==TRUE} method. In this case a method based on discretization of covariate values and C code level parallelization (controlled by the \code{nthreads} argument instead of the \code{cluster} argument) is used. This extends both the data set and model size that are practical.
+An alternative fitting approach (Wood et al. 2017, Li and Wood, 2019) is provided by the \code{discrete==TRUE} method. In this case a method based on discretization of covariate values and C code level parallelization (controlled by the \code{nthreads} argument instead of the \code{cluster} argument) is used. This extends both the data set and model size that are practical. Number of response data can not exceed \code{.Machine$integer.max}.
 
 }
 \usage{
@@ -137,7 +137,7 @@ single machine). See details and example code.
 If \code{NA} set to \code{max(1,length(cluster))}. See details.}
 
 \item{gc.level}{to keep the memory footprint down, it can help to call the garbage collector often, but this takes 
-a substatial amount of time. Setting this to zero means that garbage collection only happens when R decides it should. Setting to 2 gives frequent garbage collection. 1 is in between. Not as much of a problem as it used to be.
+a substatial amount of time. Setting this to zero means that garbage collection only happens when R decides it should. Setting to 2 gives frequent garbage collection. 1 is in between. Not as much of a problem as it used to be, but can really matter for very large datasets.
 }
 
 \item{use.chol}{By default \code{bam} uses a very stable QR update approach to obtaining the QR decomposition
@@ -228,6 +228,7 @@ This routine is less stable than `gam' for the same dataset.
 
 With \code{discrete=TRUE}, \code{te} terms are efficiently computed, but \code{t2} are not.
 
+Anything close to the maximum n of \code{.Machine$integer.max} will need a very large amount of RAM and probably \code{gc.level=1}. 
 } 
 
 \seealso{\code{\link{mgcv.parallel}}, 

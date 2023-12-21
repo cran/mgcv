@@ -141,7 +141,7 @@ void freemat(matrix A)
 	     }
       }
       if (!ok)
-      { error(_("An out of bound write to matrix has occurred!"),1);
+      { error(_("An out of bound write to matrix has occurred!"));
       }
       /* find the matrix being deleted in the linked list of extant matrices */
       i=0;delet=bottom;
