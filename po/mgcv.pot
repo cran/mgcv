@@ -1,0 +1,76 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the mgcv package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: mgcv 1.8-36\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-04 18:15+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: magic.c:445
+msgid "magic requires smoothing parameter starting values if L supplied"
+msgstr ""
+
+#: magic.c:563
+msgid "magic, the gcv/ubre optimizer, failed to converge after 400 iterations."
+msgstr ""
+
+#: matrix.c:82
+msgid "Failed to initialize memory for matrix."
+msgstr ""
+
+#: matrix.c:144 matrix.c:202
+msgid "An out of bound write to matrix has occurred!"
+msgstr ""
+
+#: matrix.c:150
+msgid "INTEGRITY PROBLEM in the extant matrix list."
+msgstr ""
+
+#: matrix.c:182
+msgid "You are trying to check matrix integrity without defining RANGECHECK."
+msgstr ""
+
+#: matrix.c:240
+msgid "Target matrix too small in mcopy"
+msgstr ""
+
+#: matrix.c:260 matrix.c:268 matrix.c:281 matrix.c:289
+msgid "Incompatible matrices in matmult."
+msgstr ""
+
+#: matrix.c:313
+msgid "Attempt to invert() non-square matrix"
+msgstr ""
+
+#: matrix.c:335
+msgid "Singular Matrix passed to invert()"
+msgstr ""
+
+#: qp.c:59
+msgid "ERROR in addconQT."
+msgstr ""
+
+#: qp.c:465
+msgid "QPCLS - Rank deficiency in model"
+msgstr ""
+
+#: tprs.c:40
+msgid "You must have 2m>d for a thin plate spline."
+msgstr ""
+
+#: tprs.c:375 tprs.c:383
+msgid ""
+"A term has fewer unique covariate combinations than specified maximum "
+"degrees of freedom"
+msgstr ""

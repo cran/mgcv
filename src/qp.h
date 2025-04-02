@@ -6,7 +6,7 @@ void GivensAddconQT(matrix *Q,matrix *T,matrix *a,matrix *s,matrix *c);
 
 void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matrix *Af,int *active);
 void PCLS(matrix *X,matrix *p,matrix *y,matrix *w,matrix *Ain,matrix *b,
-          matrix *Af,matrix *H,matrix *S,int *off,double *theta,int m, int *active);
+          matrix *Af,matrix *S,int *off,double *theta,int m, int *active);
 
 
 /* A global data structure for exporting information from this module for

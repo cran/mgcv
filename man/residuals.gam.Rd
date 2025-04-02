@@ -8,12 +8,13 @@
 }
 
 \usage{
-residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working", "response"),...)
+\method{residuals}{gam}(object, type = "deviance",...)
 }
-%- maybe also `usage' for other objects documented here.
 \arguments{
   \item{object}{ a \code{gam} fitted model object. }
-  \item{type}{the type of residuals wanted. }
+  \item{type}{the type of residuals wanted. Usually one of 
+             \code{"deviance"}, \code{"pearson"},\code{"scaled.pearson"}, 
+             \code{"working"}, or \code{"response"}.  }
    \item{...}{other arguments.}
 }
 \details{Response residuals are the raw residuals (data minus fitted
@@ -27,20 +28,19 @@ residuals.gam(object, type = c("deviance", "pearson","scaled.pearson", "working"
   return the deviance residuals defined by the model family. Working
   residuals are the residuals returned from model fitting at convergence.
 
-  There is  a special function for \code{gam} objects because of a bug
-  in the calculation of Pearson residuals in some versions of
-  residual.glm().
- 
+  Families can supply their own residual function, which is used in place of the standard 
+  function if present, (e.g. \code{\link{cox.ph}}).
+
 }
-\value{ An array of residuals.
+\value{ A vector of residuals.
 }
 
 
-\author{ Simon N. Wood \email{simon@stats.gla.ac.uk}}
+\author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 
 
-\seealso{   \code{\link{gam}} \code{\link{mgcv}}}
+\seealso{   \code{\link{gam}}}
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..
 
