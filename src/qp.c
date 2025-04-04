@@ -124,7 +124,7 @@ void GivensAddconQT(matrix *Q,matrix *T,matrix *a,matrix *s,matrix *c)
 
 void LSQPaddcon(matrix *Ain,matrix *Q,matrix *T,matrix *Rf,matrix *Py,matrix *PX,
                 matrix *s,matrix *c,int sth)
-/* Adds the sth row of Ain to the avtive set, updates Q and T using a sequence
+/* Adds the sth row of Ain to the active set, updates Q and T using a sequence
    of T->c-T->r-1 Givens rotations from the right, coefficients of which are
    stored in s and c. The ith rotation acts on elements (i,i+1) (i=0,1,...).
    Updates the upper triangular (lower left 0) matrix Rf = PXQ, by applying the
@@ -503,9 +503,9 @@ void QPCLS(matrix *Z,matrix *X, matrix *p, matrix *y,matrix *Ain,matrix *b,matri
         }
       } else  /* routine has arrived at a minimum */
       { /* feasibility check..... */
-        matmult(P,*Ain,*p,0,0);
-        x=0.0;for (i=0;i<c.r;i++) if (P.V[i]-b->V[i]<x) x=P.V[i]-b->V[i];
-        /*printf("P\n Worst feasibility violation %g",x);*/
+        /*matmult(P,*Ain,*p,0,0);
+          x=0.0;for (i=0;i<P.r;i++) if (P.V[i]-b->V[i]<x) x=P.V[i]-b->V[i];
+          printf("P\n Worst feasibility violation %g",x);*/
         /* create Z - this version is a full null space matrix, rather than sequence of rotations */
         *Z=Q; Z->c -= tk;
         /* copy active constraint information to active  */

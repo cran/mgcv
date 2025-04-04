@@ -23,6 +23,11 @@ present, and reparameterization needs checking (also for bam).
 
 * efsud Vb every time? Fix bam NCV variance comp, to be as gam.
 
+1.9-3
+
+* fixes a read-one-beyond-allocated memory error (in a redundant check with no
+  consequences)
+
 1.9-2
 
 ** 'NCV' added as a method option for bam(...,discrete=TRUE). More efficient 

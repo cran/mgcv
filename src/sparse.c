@@ -1655,7 +1655,7 @@ SEXP sXbd(SEXP X,SEXP BETA,SEXP LT) {
   for (j=0;j<bc;j++,beta0 += bp,Xb += n) 
     sXbdwork(Xb,&a,beta0,bp,Xs,v,qc,nt,ts,dt,lt,nlt,n,work,worki,1);
   
-  FREE(worki);FREE(work);
+  FREE(worki);FREE(work);FREE(v);FREE(Xs);
   UNPROTECT(9);
   return(XB);
 } /* sXbd */ 
@@ -1765,7 +1765,7 @@ SEXP sdiagXVXt(SEXP X, SEXP V, SEXP LT, SEXP RT) {
     //sXbsdwork(double *Xb,double *a,spMat beta0,int bp,spMat *Xs,double **v,int *qc,int nt,
     //	      int *ts,int *dt,int *lt,int nlt,int n,double *work,int *worki,int unit_a);
   }
-  spfree(&Ii,1);FREE(Vi.p);FREE(work);FREE(worki);FREE(a);
+  spfree(&Ii,1);FREE(Vi.p);FREE(work);FREE(worki);FREE(a);FREE(v);FREE(Xs);
   UNPROTECT(9);
   return(DXVX);
 } /* sdiagXVXt */

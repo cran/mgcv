@@ -1,5 +1,5 @@
 Package: mgcv
-Version: 1.9-2
+Version: 1.9-3
 Authors@R: person(given = "Simon",
                     family = "Wood",
                     role = c("aut", "cre"),
@@ -22,8 +22,8 @@ LazyLoad: yes
 ByteCompile: yes
 License: GPL (>= 2)
 NeedsCompilation: yes
-Packaged: 2025-04-02 10:43:33 UTC; sw283
+Packaged: 2025-04-03 13:22:13 UTC; sw283
 Author: Simon Wood [aut, cre]
 Maintainer: Simon Wood <simon.wood@r-project.org>
 Repository: CRAN
-Date/Publication: 2025-04-02 14:20:06 UTC
+Date/Publication: 2025-04-04 05:40:02 UTC

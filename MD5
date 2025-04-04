@@ -1,5 +1,5 @@
-2cf2c43f963d904be825c463e3f4ef1e *ChangeLog
-c391d9eacb836ca9f7b4df480224a2f0 *DESCRIPTION
+ad51de9edcc3c6da84552a0b62bf97e6 *ChangeLog
+3ea1297bba9d5200499f11fb95084830 *DESCRIPTION
 eb723b61539feef013de476e68b5c50a *GPL-2
 9d499ed8afaddd3925a834242b49a11c *NAMESPACE
 5f3084f9ae47f99a31108379ac6b3527 *R/bam.r
@@ -225,10 +225,10 @@ df106fe6ebe39b649f6ca08d1edf6013 *src/mgcv.h
 fba178e106b77812918c1b3e8f285e81 *src/misc.c
 7ddb607050bb38fb1f296dc2895e63fb *src/mvn.c
 d8cfc0d49a064b825ed6769609635406 *src/ncv.c
-1a77d8547b63e4baf437549610ad8e14 *src/qp.c
+a72bce58abae429b416426e93309e9b6 *src/qp.c
 073a4b5b0bc6e869c5b35478c47facf1 *src/qp.h
 d5673b88f6f3d85c62a1337f49abba24 *src/soap.c
 763772c0dbcd298b383e6aea06e2afe4 *src/sparse-smooth.c
-5885bc570f50f16b9450e401820ff565 *src/sparse.c
+17078a9b377f5cbc0271ae377daf2ee4 *src/sparse.c
 aeb8f7935ce0f9c218b95bebe81195d3 *src/tprs.c
 5bd85bf0319a7b7c755cf49c91a7cd94 *src/tprs.h
