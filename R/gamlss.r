@@ -950,6 +950,7 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     ymu <- y-mu;ymu2 <- ymu^2;tau2 <- tau^2
  
     l0 <- -.5 * ymu2 * tau2 - .5 * log(2*pi) + log(tau)
+    l0 <- wt * l0
     l <- sum(l0)
 
     if (deriv) {
@@ -994,6 +995,11 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     if (deriv) {
       i2 <- family$tri$i2; i3 <- family$tri$i3
       i4 <- family$tri$i4
+
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
+      if (is.matrix(l3)) l3 <- wt * l3
+      if (is.matrix(l4)) l4 <- wt * l4
    
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,deriv-1)
@@ -1265,6 +1271,7 @@ multinom <- function(K=1) {
     beta <- 1 + rowSums(ee); alpha <- log(beta)
     
     l0 <- eta[1:n+y*n] - alpha ## log likelihood
+    l0 <- wt * l0
     l <- sum(l0)    
 
     l1 <- matrix(0,n,K) ## first deriv matrix
@@ -1332,6 +1339,10 @@ multinom <- function(K=1) {
     ##if (return.l) return(list(l=l0,l1=l1,l2=l2,l3=l3,l4=l4)) ## for testing...
 
     if (deriv) {
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
+      if (is.matrix(l3)) l3 <- wt * l3
+      if (is.matrix(l4)) l4 <- wt * l4
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,l1,l2,tri$i2,l3=l3,i3=tri$i3,l4=l4,i4=tri$i4,
                       d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
@@ -1836,6 +1847,13 @@ ziplss <-  function(link=list("identity","identity")) {
     ##n <- length(y)
     ## l1 <- matrix(0,n,2)
     zl <- zipll(y,lambda,p,deriv)
+    ## apply prior weights...
+    zl$l <- wt * zl$l
+    if (deriv) {
+      zl$l1 <- wt * zl$l1; zl$l2 <- wt * zl$l2
+      if (is.matrix(zl$l3)) zl$l3 <- wt * zl$l3
+      if (is.matrix(zl$l4)) zl$l4 <- wt * zl$l4
+    }
 
     if (deriv) {
       ## need some link derivatives for derivative transform
@@ -1871,7 +1889,7 @@ ziplss <-  function(link=list("identity","identity")) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }		      
     } else ret <- list()
-    ret$l <- sum(zl$l); ret
+    ret$l <- sum(zl$l); ret$l0 <- zl$l; ret
   } ## end ll for ZIP
 
   sandwich <- function(y,X,coef,wt,family,offset=NULL) {
@@ -2072,6 +2090,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
     aa1 <- aa0 + 1 # (xi*(y-mu))/exp1^rho+1;
     aa2 <- 1/xi;
     l0  <- (-aa2*(1+xi)*log.aa1)-1/aa1^aa2-rho;
+    l0 <- wt * l0
     l <- sum(l0)
 
     if (deriv) {
@@ -2279,6 +2298,11 @@ gevlss <- function(link=list("identity","identity","logit")) {
     if (deriv) {
       i2 <- family$tri$i2; i3 <- family$tri$i3
       i4 <- family$tri$i4
+
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
+      if (is.matrix(l3)) l3 <- wt * l3
+      if (is.matrix(l4)) l4 <- wt * l4
    
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,deriv-1)
@@ -2573,6 +2597,7 @@ twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
     ld <- ldTweedie(y,mu=mu,p=NA,phi=NA,rho=rho,theta=theta,a=a,b=b,all.derivs=TRUE)
     ## m, t, r ; mm, mt, mr, tt, tr, rr
     l0 <- ld[,1]
+    l0 <- wt * l0
     l <- sum(l0)
     l1 <- cbind(ld[,7],ld[,4],ld[,2])
     l2 <- cbind(ld[,8],ld[,9],ld[,10],ld[,5],ld[,6],ld[,3])
@@ -2590,6 +2615,9 @@ twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
     if (deriv) {
       i2 <- family$tri$i2;#i3 <- i4 <- 0
       i3 <- family$tri$i3;i4 <- family$tri$i4
+
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
    
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,0)
@@ -2778,6 +2806,7 @@ gammals <- function(link=list("identity","log"),b=-7) {
     n <- length(y)
 
     l0  <-  etlymt-logy-ethmuy-lgamma(eth) ## l
+    l0 <- wt * l0
     l <- sum(l0)
     if (!is.finite(l)) return(list(l=l,l0=l0))
 
@@ -2833,6 +2862,11 @@ gammals <- function(link=list("identity","log"),b=-7) {
     if (deriv) {
       i2 <- family$tri$i2; i3 <- family$tri$i3
       i4 <- family$tri$i4
+
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
+      if (is.matrix(l3)) l3 <- wt * l3
+      if (is.matrix(l4)) l4 <- wt * l4
    
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,deriv-1)
@@ -3108,6 +3142,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
     ez <- exp(-z)
     
     l0 <- -beta - z - ez
+    l0 <- wt * l0
     l <- sum(l0)
     
     n <- length(y)
@@ -3162,6 +3197,11 @@ gumbls <- function(link=list("identity","log"),b=-7) {
     if (deriv) {
       i2 <- family$tri$i2; i3 <- family$tri$i3
       i4 <- family$tri$i4
+
+      ## apply prior weights...
+      l1 <- wt * l1; l2 <- wt * l2
+      if (is.matrix(l3)) l3 <- wt * l3
+      if (is.matrix(l4)) l4 <- wt * l4
    
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(l1,l2,l3,l4,ig1,g2,g3,g4,i2,i3,i4,deriv-1)
@@ -3499,6 +3539,7 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
     SS <- sinh( dTasMe )
     
     l0 <-  - tau - 0.5*log(2*pi) + log(CC) - 0.5*.log1pexp(2*log(abs(z))) - 0.5*SS^2 - phiPen*phi^2 
+    l0 <- wt * l0
     l <- sum(l0)
     
     if (deriv) {
@@ -3952,6 +3993,11 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
       I2 <- family$tri$i2
       I3 <- family$tri$i3
       I4 <- family$tri$i4
+
+      ## apply prior weights...
+      L1 <- wt * L1; L2 <- wt * L2
+      if (is.matrix(L3)) L3 <- wt * L3
+      if (is.matrix(L4)) L4 <- wt * L4
       
       ## transform derivates w.r.t. mu to derivatives w.r.t. eta...
       de <- gamlss.etamu(L1,L2,L3,L4,IG1,G2,G3,G4,I2,I3,I4,deriv-1)
