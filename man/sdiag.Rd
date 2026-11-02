@@ -36,6 +36,16 @@ sdiag(A,-1) ## first sub diagonal
 sdiag(A) <- 1 ## leading diagonal set to 1
 sdiag(A,3) <- c(-1,-2) ## set 3rd super diagonal 
 
+require(Matrix) ## same with sparse matrix
+A <- matrix(1:35,7,5)
+A <- as(A,"dgCMatrix")
+A
+sdiag(A,1) ## first super diagonal
+sdiag(A,-1) ## first sub diagonal
+
+sdiag(A) <- 1 ## leading diagonal set to 1
+sdiag(A,3) <- c(-1,-2) ## set 3rd super diagonal 
+
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

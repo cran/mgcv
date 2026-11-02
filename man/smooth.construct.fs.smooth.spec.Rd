@@ -9,7 +9,7 @@
 This smooth class allows a separate smooth for each level of a factor, with the same smoothing parameter for all 
 smooths. It is an alternative to using factor \code{by} variables.
 
-See \code{\link{factor.smooth}} for more genral alternatives for factor smooth interactions (including interactions of tensor product smooths with factors).
+See \code{\link{factor.smooth}} for more general alternatives for factor smooth interactions (including interactions of tensor product smooths with factors).
 }
 
 \usage{

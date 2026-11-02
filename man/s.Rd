@@ -7,7 +7,8 @@
   smooth - it exists purely to help set up a model using spline based smooths.
 }
 
-\usage{s(..., k=-1,fx=FALSE,bs="tp",m=NA,by=NA,xt=NULL,id=NULL,sp=NULL,pc=NULL)}
+\usage{s(..., k=-1,fx=FALSE,bs=getOption("mgcv.s.bs","tp"),m=NA,
+              by=NA,xt=getOption("mgcv.xt",NULL),id=NULL,sp=NULL,pc=NULL)}
 
 %- maybe also `usage' for other objects documented here.
 \arguments{
@@ -28,7 +29,8 @@
 
 \item{bs}{a two letter character string indicating the (penalized) smoothing basis to use.
 (eg \code{"tp"} for thin plate regression spline, \code{"cr"} for cubic regression spline).
-see \code{\link{smooth.terms}} for an over view of what is available.
+see \code{\link{smooth.terms}} for an over view of what is available. Can be a matrix with 2 elements
+in which case the first element is the basis for univariate smoothing and the second for multivariate.
 }
 
 \item{m}{The order of the penalty for this term (e.g. 2 for

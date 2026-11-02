@@ -40,11 +40,13 @@ Journal of the American Statistical Association 111, 1548-1575
 
 
 \examples{
-library(mgcv);library(MASS)
-b <- gam(list(accel~s(times,k=20,bs="ad"),~s(times)),
+library(mgcv)
+if (require(MASS)) {
+  b <- gam(list(accel~s(times,k=20,bs="ad"),~s(times)),
             data=mcycle,family=gaulss())
-summary(b) 
-plot(b,pages=1,scale=0)
+  summary(b) 
+  plot(b,pages=1,scale=0)
+}
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

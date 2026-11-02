@@ -35,7 +35,7 @@ The advantage of P-splines is the flexible way that penalty and basis order can 
 }
 
 \value{ An object of class \code{"pspline.smooth"} or \code{"cp.smooth"}. See \code{\link{smooth.construct}}, 
-for the elements that this object will contain.
+for the elements that this object will contain. Also contains factor of penalty matrix in \code{D} (\code{crossprod(D)} gives \code{S}), and orthogonal basis for null space of the overall penalty, \code{N}.
 }
 
 \details{A  smooth term of the form \code{s(x,bs="ps",m=c(2,3))} specifies a 2nd order P-spline basis (cubic spline), 

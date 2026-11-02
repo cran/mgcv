@@ -105,7 +105,7 @@ legend("topleft", c("estimated", "truth"), col = 1:2, lty = 1:2, lwd = 2)
 
 # Here shash is overkill, in fact the fit is not good, relative
 # to what we would get with mgcv::gaulss
-library(MASS)
+if (require(MASS)) {
 
 b <- gam(list(accel~s(times, k=20, bs = "ad"), ~s(times, k = 10), ~1, ~1),
          data=mcycle, family=shash)
@@ -121,6 +121,7 @@ for(qq in c(0.1, 0.3, 0.5, 0.7, 0.9)){
 }
 
 plot(b, pages = 1, scale = FALSE)
+}
 }
 \author{
 Matteo Fasiolo <matteo.fasiolo@gmail.com> and Simon N. Wood.

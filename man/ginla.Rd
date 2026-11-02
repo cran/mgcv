@@ -51,7 +51,7 @@ The routine is written for relatively expert users.
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
 
 \examples{
-  require(mgcv); require(MASS)
+  require(mgcv)
 
   ## example using a scale location model for the motorcycle data. A simple
   ## plotting routine is produced first...
@@ -83,7 +83,7 @@ The routine is written for relatively expert users.
   } ## plot.inla
 
   ## set up the model with a `gam' call...
-
+  if (require(MASS)) {
   G <- gam(list(accel~s(times,k=20,bs="ad"),~s(times)),
             data=mcycle,family=gaulss(),fit=FALSE)
   b <- gam(G=G,method="REML") ## regular GAM fit for comparison
@@ -126,6 +126,7 @@ The routine is written for relatively expert users.
 
   ## ... notice some real differences for the log sd smooth, especially
   ## at the lower and upper ends of the time interval.
+  }
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ..

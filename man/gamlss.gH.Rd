@@ -5,7 +5,7 @@
 \title{Calculating derivatives of log-likelihood wrt regression coefficients}
 \usage{
 gamlss.gH(X, jj, l1, l2, i2, l3 = 0, i3 = 0, l4 = 0, i4 = 0, d1b = 0,
-  d2b = 0, deriv = 0, fh = NULL, D = NULL,sandwich=FALSE)
+  d2b = 0, deriv = 0, fh = NULL, D = NULL,sandwich=FALSE,nt=1)
 }
 \arguments{
 \item{X}{matrix containing the model matrices of all the linear predictors.}
@@ -43,6 +43,8 @@ also 4th order derivatives.}
 \item{D}{diagonal matrix, used to provide some scaling.}
 
 \item{sandwich}{set to \code{TRUE} to return sandwich estimator 'filling', as opposed to the Hessian, in \code{l2}.}
+
+\item{nt}{number of threads to use (discrete cross-products only).}
 
 }
 \value{

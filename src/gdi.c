@@ -1703,7 +1703,7 @@ void gdiPK(double *work,double *X,double *E,double *Es,double *rS,double *U1,dou
   nt1 = *nt;
   
   if (*type==0) {
-    zz = (double *)CALLOC((size_t)*n,sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
+    zz = (double *)CALLOC((size_t)(*n > *q ? *n : *q),sizeof(double)); /* storage for z=[sqrt(|W|)z,0] */
     for (i=0;i< *n;i++) { 
       zz[i] = z[i]*raw[i]; /* form z itself */
     }

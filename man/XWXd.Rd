@@ -9,10 +9,11 @@
 \description{Routines for computing with discretized model matrices as described in Wood et al. (2017) and Li and Wood (2019).
 }
 \usage{
-XWXd(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,
-     lt=NULL,rt=NULL)
-XWyd(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt=NULL)
-Xbd(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL)
+XWXd(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,
+     ar.w=-1,lt=NULL,rt=NULL)
+XWyd(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,
+     lt=NULL,alt=TRUE,nthreads=1)
+Xbd(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL,nthreads=1)
 diagXVXd(X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
 ijXVXd(i,j,X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
 }
@@ -22,21 +23,22 @@ ijXVXd(i,j,X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
  if term subsetting arguments \code{lt} and \code{rt} are non-NULL then this requires an \code{"lpip"} attribute: see details. The elements of \code{X} may
  be sparse matrices of class \code{"dgCMatrix"}, in which case the list requires attributes \code{"r"} and \code{"off"} defining reverse indices (see details).}
  \item{w}{An n-vector of weights}
- \item{y}{n-vector of data.}
- \item{beta}{coefficient vector.}
+ \item{y}{n-vector of data, or multi-column matrix.}
+ \item{beta}{coefficient vector, or multi-column matrix.}
  \item{k}{A matrix whose columns are index n-vectors each selecting the rows of an X[[i]] required to create the full matrix.}
 \item{ks}{The ith term has index vectors \code{ks[i,1]:(ks[i,2]-1)}. The corresponing full model matrices are summed over.} 
 \item{ts}{The element of \code{X} at which each model term starts.}
 \item{dt}{How many elements of \code{X} contribute to each term.}
 \item{v}{\code{v[[i]]} is Householder vector for ith term, if \code{qc[i]>0}.}
 \item{qc}{if \code{qc[i]>0} then term has a constraint.}
-\item{nthreads}{number of threads to use}
+\item{nthreads}{number of threads to use (\code{Xbd} and \code{XWyd} currently ignore with sparse matrices).}
 \item{drop}{list of columns of model matrix/parameters to drop}
 \item{ar.stop}{Negative to ignore. Otherwise sum rows \code{(ar.stop[i-1]+1):ar.stop[i]} of the rows selected by \code{ar.row} and weighted by \code{ar.w} to get ith row of model matrix to use.}
 \item{ar.row}{extract these rows...}
 \item{ar.w}{weight by these weights, and sum up according to \code{ar.stop}. Used to implement AR models.}
 \item{lt}{use only columns of X corresponding to these model matrix terms (for left hand \code{X} in \code{XWXd}). If \code{NULL} set to \code{rt}.}
 \item{rt}{as \code{lt} for right hand \code{X}. If \code{NULL} set to \code{lt}. If \code{lt} and \code{rt} are \code{NULL} use all columns.}
+\item{alt}{whether to use faster alternative algorithm in dense case.}
 \item{V}{Coefficient covariance matrix.}
 \item{i}{vector of rows of \eqn{XVX^T}{XVX'} at which to evaluate.}
 \item{j}{vector of corresponding columns.}
@@ -46,7 +48,10 @@ ijXVXd(i,j,X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
 
 The \code{"lpip"} attribute of \code{X} is a list of the coefficient indices for each term. Required if subsetting via \code{lt} and \code{rt}.
 
-\code{X} can be a list of sparse matrices of class \code{"dgCMatrix"}, in which case reverse indices are needed, mapping stored matrix rows to rows in the full matrix (that is the reverse of \code{k} which maps full matrix rows to the stored unique matrix rows). \code{r} is the same dimension as \code{k} while \code{off} is a list with as many elements as \code{k} has columns. \code{r} and  \code{off} are supplied as attributes to \code{X} . For simplicity let \code{r} and \code{off} denote a single column and element corresponding to each other: then \code{r[off[j]:(off[j+1]-1)]} contains the rows of the full matrix corresponding to row \code{j} of the stored matrix. The reverse indices are essential for efficient computation with sparse matrices. See the example code for how to create them efficiently from the forward index matrix, \code{k}.    
+\code{X} can be a list of sparse matrices of class \code{"dgCMatrix"}, in which case reverse indices are needed, mapping stored matrix rows to rows in the full matrix (that is the reverse of \code{k} which maps full matrix rows to the stored unique matrix rows). \code{r} is the same dimension as \code{k} while \code{off} is a list with as many elements as \code{k} has columns. \code{r} and  \code{off} are supplied as attributes to \code{X} . For simplicity let \code{r} and \code{off} denote a single column and element corresponding to each other: then \code{r[off[j]:(off[j+1]-1)]} contains the rows of the full matrix corresponding to row \code{j} of the stored matrix. The reverse indices are essential for efficient computation with sparse matrices. See the example code for how to create them efficiently from the forward index matrix, \code{k}.
+
+As usual, \code{nthreads} should be used carefully: the speed up tends to be modest, and with too many threads it is easy for memory bandwidth and cache clash issues to start slowing computation (relative to computation with fewer threads) if too many threads are used. Too many is often well below the number of physical cores.
+   
 }
  
 

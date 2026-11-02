@@ -692,7 +692,9 @@ gam.fit3 <- function (x, y, sp, Eb,UrS=list(),
 	                         dd, deriv1,.Machine$double.eps,control$ncv.threads);
 	     if (pdef.fails) warn[[length(warn)+1]] <- "some NCV updates not positive definite"
 	   }
-	  
+	   
+           eta.cv <- eta.cv + offset[nei$d] 
+ 
 	   if (family$qapprox) {
              NCV <- sum(wdr[nei$d]) + gamma*sum(-2*ww[nei$d]*(eta.cv-eta[nei$d]) + w1[nei$d]*(eta.cv-eta[nei$d])^2)
              if (deriv) {
@@ -1052,7 +1054,7 @@ gam.fit3.post.proc <- function(X,L,lsp0,S,off,object,gamma) {
     ## END EXPERIMENTAL
   } else V.sp <- edf2 <- Vc <- NULL
   ret <- list(Vp=Vb,Ve=Ve,V.sp=V.sp,edf=edf,edf1=edf1,edf2=edf2,hat=hat,F=F,R=R)
-  if (is.null(object$Vc)) ret$Vc <- Vc
+  ret$Vc <- if (is.null(object$Vc))  Vc else Vb + object$Vc
   ret
 } ## gam.fit3.post.proc
 
@@ -1794,6 +1796,7 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     return(NULL) ## failed
   } ## end zoom
 
+  conv.tol0 <- conv.tol
   if (control$epsilon>conv.tol/100) control$epsilon <- conv.tol/100
 
   reml <- scoreType%in%c("REML","P-REML","ML","P-ML") ## REML/ML indicator
@@ -1830,11 +1833,11 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
     ind <- 1:family$n.theta
     nind <- ncol(L) - family$n.theta - if (family$n.theta + nrow(b$dVkk)<nrow(L)) 1 else 0 
     spind <- if (nind>0) family$n.theta+1:nind else rep(0,0)
-    rspind <- family$n.theta + 1:nrow(b$dVkk)
+    rspind <- if (nrow(b$dVkk)) family$n.theta + 1:nrow(b$dVkk) else rep(0,0)
   } else {
     nind <- ncol(L) - if (nrow(b$dVkk)<nrow(L)) 1 else 0 
     spind <- if (nind>0) 1:nind else rep(0,0) ## index of smooth parameters
-    rspind <- 1:nrow(b$dVkk)
+    rspind <-if (nrow(b$dVkk)) 1:nrow(b$dVkk) else rep(0,0)
   }  
   L0 <- L[rspind,spind] ##if (nrow(L)!=nrow(b$dVkk)) L[spind,spind] else L
   
@@ -2043,6 +2046,15 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
         B <- B - rho*(B%*%yg)%*%t(step) + rho*step%*%t(step)
       }
 
+      #if (i%%20==0) { ## add a regularizer every now and then if B too close to indefinite
+      #  R <- suppressWarnings(chol(B, pivot = TRUE, tol = 1e-6))
+      #	if (attr(R, "rank")<ncol(B)) B <- B + norm(B)*1e-6*diag(ncol(B)) 
+      #}
+
+      if (i>20) {
+        conv.tol <- if (kappa(B)*.Machine$double.eps>conv.tol0) kappa(B)*.Machine$double.eps else conv.tol0
+      }
+
       score.hist[i+1] <- trial$score
 
       lsp <- ilsp <- ilsp + step 
@@ -2122,9 +2134,9 @@ bfgs <-  function(lsp,X,y,Eb,UrS,L,lsp0,offset,U1,Mp,family,weights,
   score <- b[[sname]];grad <- t(L)%*%b[[sname1]];
 
   if (!is.null(b$Vg)) {
-    M <- ncol(b$db.drho)
-    b$Vg <- (B%*%t(L)%*%b$Vg%*%L%*%B)[1:M,1:M] ## sandwich estimate of 
-    db.drho <- b$db.drho%*%L[1:M,1:M,drop=FALSE]
+    M <- ncol(b$db.drho);P <- nrow(B)
+    b$Vg <- (B%*%t(L[,1:P,drop=FALSE])%*%b$Vg%*%L[,1:P,drop=FALSE]%*%B) ## sandwich estimate of 
+    db.drho <- b$db.drho%*%L[1:M,1:P,drop=FALSE]
     b$Vc <- db.drho %*% b$Vg %*% t(db.drho) ## correction term for cov matrices
   }
   b$dVkk <- NULL
@@ -2746,7 +2758,7 @@ ldTweedie0 <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999) {
 
   if (p == 1) { ## It's Poisson like
     ## ld[,1] <- dpois(x = y/phi, lambda = mu/phi,log=TRUE)
-    if (all.equal(y/phi,round(y/phi))!=TRUE) stop("y must be an integer multiple of phi for Tweedie(p=1)")
+    if (!isTRUE(all.equal(y/phi,round(y/phi)))) stop("y must be an integer multiple of phi for Tweedie(p=1)")
     ind <- (y!=0)|(mu!=0) ## take care to deal with y log(mu) when y=mu=0
     bkt <- y*0
     bkt[ind] <- (y[ind]*log(mu[ind]/phi) - mu[ind])
@@ -2899,7 +2911,7 @@ ldTweedie <- function(y,mu=y,p=1.5,phi=1,rho=NA,theta=NA,a=1.001,b=1.999,all.der
   ind <- p == 1
   if (sum(ind)) { ## It's Poisson like
     ## ld[,1] <- dpois(x = y/phi, lambda = mu/phi,log=TRUE)
-    if (all.equal(y[ind]/phi[ind],round(y[ind]/phi[ind]))!=TRUE) stop("y must be an integer multiple of phi for Tweedie(p=1)")
+    if (!isTRUE(all.equal(y[ind]/phi[ind],round(y[ind]/phi[ind])))) stop("y must be an integer multiple of phi for Tweedie(p=1)")
     indi <- (y[ind]!=0)|(mu[ind]!=0) ## take care to deal with y log(mu) when y=mu=0
     bkt <- y[ind]*0
     bkt[indi] <- ((y[ind])[indi]*log((mu[ind]/phi[ind])[indi]) - (mu[ind])[indi])

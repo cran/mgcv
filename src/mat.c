@@ -2032,7 +2032,113 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps) {
  /* now zero c and s storage */
   c = R + 2;s = R + *n + 2;
   for (x = c + *n - 2;c<x;c++,s++) *c = *s = 0.0;
-} /* chol_up */  
+} /* chol_up */
+
+SEXP RSGup(SEXP R,SEXP U,SEXP Gcs,SEXP Gij) {
+/* R is sparse upper triangular p by p. U is dense p by m.
+   This routine computes the sequence of p*m Givens rotations
+   needed to transform [R',U]' to upper triangular matrix P
+   where P'P = R'R + UU'. In so doing it does not modifiy R.
+   The point of this is that P is generally dense, but computation
+   with it can instead be efficiently accomplished using sparse
+   solves with R and the Givens rotations.
+
+   Gcs and Gij are p*m by 2 matrices. The first col of
+   Gcs is c and the second is s in the Givens rotation
+   based on zeroing an element into the index in the
+   first col of Gij from the second col of Gij where the
+   second col index is larger than the first, so that the
+   the relevent rotation has the form
+   [c  s]
+   [-s c]
+
+*/
+  SEXP i_sym,x_sym,dim_sym,p_sym;
+  int *Rp,*Ri,p,m,*gij,*Rif,i,j,k,ng=0,ipk,pm,*dim;
+  double *Rx,*u,*gcs,x,Rkk,c0,s0,Rkj;
+  p_sym = install("p");
+  dim_sym = install("Dim");
+  i_sym = install("i");
+  x_sym = install("x");
+  dim = INTEGER(R_do_slot(R,dim_sym));
+  Rp = INTEGER(R_do_slot(R,p_sym));
+  Ri = INTEGER(R_do_slot(R,i_sym));
+  Rx = REAL(R_do_slot(R,x_sym));
+  p = dim[1];m = ncols(U);pm = p*m;
+  u = REAL(U);
+  gcs = REAL(Gcs);
+  gij = INTEGER(Gij);  
+  Rif = (int *)CALLOC((size_t)p,sizeof(int));
+  for (i=0;i<p;i++) Rif[i] = Rp[i]; /* current first (next) non-zero row in ith col */
+  for (k=0;k<p;k++) { /* loop over cols of R */
+    for (i=m-1;i>0;i--) { /* rotate U'[1:(m-1),k] to U'[0,k] */
+      ipk = i*p+k; /* element to zero */
+      if (u[ipk]) {
+        x = hypote(u[ipk],u[ipk-p]);
+        c0 = u[ipk-p]/x;s0 = u[ipk]/x;
+        for (j=k;j<p;j++) { /* apply this Givens to U' */ 
+          ipk = i*p+j;
+	  x = u[ipk-p];
+	  u[ipk-p] = c0 * x + s0 * u[ipk];
+	  u[ipk] = -s0 * x + c0 * u[ipk];
+        }
+      } else {c0=1.0;s0=0.0;} /* already zeroed */
+      /* store this rotation */
+      gij[ng] = i + p -1 ; gij[ng+pm] = i + p;
+      gcs[ng] = c0; gcs[ng+pm] = s0; ng++;
+    }
+    /* now elements of U'[,k] below U'[0,k] are all zero,
+       so next step is to zero U'[0,k] into R[k,k]...  */
+    if (Ri[Rif[k]] != k) Rif[k]++; /* make sure Rif[k] pointing to R[k,k] */
+    Rkk = Rx[Rif[k]]; /* R[k,k] */
+    //Rprintf("Rkk=%g  u[k] = %g\n",Rkk,u[k]);
+    x = hypote(Rkk,u[k]);
+    c0 = Rkk/x; s0 = u[k]/x;
+    for (j=k;j<p;j++) { /* update U' by application of this rotation, but not R */
+      if (Ri[Rif[j]]>k) Rkj = 0; else {
+        Rkj = Rx[Rif[j]]; Rif[j]++;
+      }
+      u[j] = -s0 * Rkj + c0 * u[j];
+    }
+    gij[ng] = k; gij[ng+pm] = p;
+    gcs[ng] = c0; gcs[ng+pm] = s0; ng++;
+  } /* R col loop */
+  return(R_NilValue);
+} /* RSGup */  
+
+
+SEXP SGap(SEXP Gij, SEXP Gcs,SEXP X,SEXP TR) {
+/* Apply the sequence of Givens rotations returned by RSGup or their
+   transpose to matrix x. All matrices are dense here. */
+  int *gij,p,trans,m,*r0,*r1,n,i,j;
+  double *gcs,*x,*x0,*x1,*c,*s,c0,s0,xx;
+  gcs = REAL(Gcs);
+  gij = INTEGER(Gij);
+  x = REAL(X);trans = asInteger(TR);
+  p = nrows(X); m = nrows(Gcs); n = ncols(X);
+  r0 = gij; r1 = gij + m; c = gcs; s = gcs + m;
+  //Rprintf("m=%d n=%d p=%d\n",m,n,p);
+  if (trans) for (i=m-1;i>=0;i--) {
+     x0 = x + r0[i]; x1 = x + r1[i];
+     c0 = c[i]; s0 = s[i];
+     if (s0) for (j=0;j<n;j++,x0+=p,x1+=p) {
+       xx = *x0;
+       *x0 = c0 * xx - s0 * *x1;
+       *x1 = s0 * xx + c0 * *x1;
+     }  
+  } else for (i=0;i<m;i++) {
+      //Rprintf("\n i = %d ",i);
+     x0 = x + r0[i]; x1 = x + r1[i];
+     c0 = c[i]; s0 = s[i];
+     if (s0) for (j=0;j<n;j++,x0+=p,x1+=p) {
+       //Rprintf("j = %d ",j);
+       xx = *x0;
+       *x0 = c0 * xx + s0 * *x1;
+       *x1 = -s0 * xx + c0 * *x1;
+     }  
+  }
+  return(R_NilValue);
+} /* SGap */  
 
 SEXP mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS) {
 /* wrapper for calling chol_down using .Call */
@@ -2089,7 +2195,7 @@ void mroot(double *A,int *rank,int *n)
   pivot=(int *)CALLOC((size_t)*n,sizeof(int));
   mgcv_chol(A,pivot,n,&erank);
   if (*rank<=0) *rank = erank;
-  /* unscramble the returned choleski factor */ 
+ /* unscramble the returned choleski factor */ 
   B=CALLOC((size_t)(*n * *n),sizeof(double));
   /* copy A to B and zero A */
   for (p0=A,p1=B,i=0;i< *n;i++,p0+= *n,p1+= *n)
@@ -2300,7 +2406,33 @@ void band_chol(double *B,int *n,int *k,int *info) {
   kd = *k - 1;  
   F77_CALL(dpbtrf)(&uplo,n,&kd,B,k,info FCONE);
   // DPBTRF( UPLO, N, KD, AB, LDAB, INFO )
-}
+} /* band_chol */
+
+void band_solve(double *RB,int *n,int *k,double *B,int *cb,int *info) {
+/* k by n matrix RB contains k non-zero diagonals of an upper
+   triangular factor R. The leading diagonal is stored in the first row and is of length n.
+   Subsequent diagonal are zero padded at the end, to also be of length n. 
+   Note the unusual `by row' storage.
+   B is a matrix with *n rows and *cb columns
+*/  
+  char uplo='L',diag='N',trans;
+  int kd;
+  if (*info) trans='N'; else trans='T';
+  kd = *k - 1; /* number of super-diagonals, *n is order */
+  F77_CALL(dtbtrs)(&uplo,&trans,&diag,n,&kd,cb,RB,k,B,n,info FCONE FCONE FCONE);
+  
+  // dtbtrs(uplo,trans,diag,n,kd,nrhs,ab,ldab,b,ldb,info)
+} /* band_solve */
+
+void band_mult(double *RB,int *n,int *k,double *B,int *cb,int *trans) {
+/* as band_solve but for multiplication */
+  char uplo='L',diag='N',tr;
+  int kd,one=1,i;
+  if (*trans) tr='N'; else tr='T';
+  kd = *k - 1; /* number of super-diagonals, *n is order */
+  /* loop over columns of B */
+  for (i=0;i<*cb;i++,B += *n) F77_CALL(dtbmv)(&uplo,&tr,&diag,n,&kd,RB,k,B,&one FCONE FCONE FCONE);
+} /* band_mult */ 
 
 void mgcv_tri_diag(double *S,int *n,double *tau)
 /* Reduces symmetric n by n matrix S to tridiagonal form T 
@@ -2491,6 +2623,7 @@ SEXP mgcv_Rpbsi(SEXP A, SEXP NT) {
   mgcv_pbsi1(R,&r,&nt);
   return(R_NilValue);
 } /* mgcv_Rpbsi */
+
 
 void mgcv_PPt1(double *A,double *R,int *r,int *nt) {
 /* Computes A=RR', where R is r by r upper triangular. BLAS version.
@@ -3989,3 +4122,167 @@ SEXP dpdev(SEXP a) {
   return(MOD);
 } /* dpdev */
 
+void partial_band_chol0(double *A,double *R,int b,int n) {
+/* On entry A is b+1 by n containig the leading diagonal of
+   PD n by n matrix A' in row 0 and super diagonals in
+   subsequent rows. All diagonals start in col 0 (zero padded
+   at end). The matrix defined by the supplied diagonals need
+   not be PD, but any b+1 by b+1 diagonal block will be.
+   This routine attempts to find the Cholesky factor of the
+   supplied banded approximation to A', but if this is not
+   possible falls back to the Cholesky factor of a block diagonal
+   approximation. The approach is very simple. The Cholesky
+   algorithm is applied until a leading diagonal element of
+   the Cholesky factor would be imaginary. At that point a
+   new block is started (and the already computed elements
+   beyond the previous block are zeroed). The factor is returned in
+   R which has the same structure as A, it is the factor of a block
+   diagonal banded approximation to A' which has either exactly the
+   values in A' or zeroes.
+   It is an example of an incomplete Cholesky factorization,
+   useful for general purpose pre-conditioning.
+
+   This version useful for understanding partial_band_chol, as algorithm
+   is identical, but indexing is explicit here, with input and factor
+   separated. DO NOT delete - essentially documentation for version used!
+*/
+  int i,k,k1,j,j0,b1;
+  double x,z;
+  b1 = b + 1;
+  for (i=0;i<n;i++) { /* loop down the rows (conceptually) */
+    if (b<i) k1 = b; else k1 = i;
+    x = A[b1*i]; 
+    for (k=1;k<=k1;k++) {
+      z = R[k+(i-k)*b1]; 
+      x -= z*z;
+    }
+    if (x>0) R[b1*i] = sqrt(x); else { /* start new block */
+      R[b1*i] = sqrt(A[b1*i]);
+      for (k=1;k<=b;k++) { /* zero elements beyond previous block */
+        j0 = i-k; if (j0<0) j0 = 0;
+	for (j=j0;j<i;j++) R[k+b1*j] = 0;	
+      }
+    }
+    /* now complete the elements of the ith row of the factor */
+    for (j=1;j<=b;j++) {
+      x = A[j+b1*i];
+      k1 = b-j; if (k1>i) k1 = i;
+      for (k=1;k<=k1;k++) {
+	j0 = k+(i-k)*b1;
+	x -= R[j0] * R[j+j0];
+      }	
+      R[j+b1*i] = x/R[b1*i]; 			    
+    }	  
+  } /* row loop */
+} /* partial_band_chol0 */
+
+void partial_band_chol(double *A,int b,int n) {
+/* On entry A is b+1 by n containig the leading diagonal of
+   PD n by n matrix A' in row 0 and super diagonals in
+   subsequent rows. All diagonals start in col 0 (zero padded
+   at end). The matrix defined by the supplied diagonals need
+   not be PD, but any b+1 by b+1 diagonal block will be.
+   This routine attempts to find the Cholesky factor of the
+   supplied banded approximation to A', but if this is not
+   possible falls back to the Cholesky factor of a block diagonal
+   approximation. The approach is very simple. The Cholesky
+   algorithm is applied until a leading diagonal element of
+   the Cholesky factor would be imaginary. At that point a
+   new block is started (and the already computed elements
+   beyond the previous block are zeroed).
+
+   The factor is returned in A with the same structure, it is
+   the factor of a block diagonal banded approximation to A'
+   which has either exactly the values in A' or zeroes.
+
+   It is an example of an incomplete Cholesky factorization,
+   useful for general purpose pre-conditioning.
+*/
+  int i,k,k1,j,j0,b1;
+  double x,z,*Ap,Rii,*p,*p1;
+  b1 = b + 1;
+  Ap = A;
+  for (i=0;i<n;i++) { /* loop down the rows (conceptually) */
+    if (b<i) k1 = b; else k1 = i;
+    x = *Ap; /* ith diagonal element of input */
+    p = A + 1 + (i-1)*b1;
+    for (k=1;k<=k1;k++,p -= b) { /* sum over ith column of factor */
+      x -= *p * *p; 
+    }
+    /* Get ith diagonal element of factor, starting new block if necessary */ 
+    if (x>0) *Ap = sqrt(x); else { /* start new block */
+      *Ap = sqrt(*Ap); /* ith diagonal element of factor */
+      for (k=1;k<=b;k++) { /* zero elements beyond previous block in factor */
+        j0 = i-k; if (j0<0) j0 = 0;
+	p = A + k + b1 * j0;
+	for (j=j0;j<i;j++,p+=b1) *p = 0;	
+      }
+    }
+    Rii = *Ap; Ap++;
+    /* now complete the elements of the ith row of the factor */
+    for (j=1;j<=b;j++) {
+      x = *Ap; /* next element on ith row of input */
+      k1 = b-j; if (k1>i) k1 = i;
+      p = A + 1 + (i-1)*b1;
+      p1 = p + j;
+      for (k=1;k<=k1;k++,p-=b,p1-=b) {
+	x -= *p * *p1; /* required product of elements of factor columns */
+      }	
+      *Ap = x/Rii; /* corresponding element on ith row of factor */
+      Ap++; 			    
+    }	  
+  } /* row loop */
+} /* partial_band_chol */
+
+SEXP pabchol(SEXP a,SEXP r) {
+/* wrapper for partial_band_chol */
+  int n,b;
+  double *A,*R,*p,*p1;
+  b = nrows(a)-1; /* number of super diagonals */
+  n = ncols(a);
+  a = PROTECT(coerceVector(a,REALSXP));
+  A = REAL(a);
+  r = PROTECT(coerceVector(r,REALSXP));
+  R = REAL(r);
+  for (p=R,p1=R + n*(b+1);p<p1;p++,A++) *p = *A;/* copy A to R */
+  partial_band_chol(R,b,n); /* R over-written with factor */
+  //partial_band_chol0(A,R,b,n);
+  UNPROTECT(2);
+  return(R_NilValue);
+} /* pabchol */
+
+
+void XWXband(double *X,double *w,double *B,int *kk,int *n,int *p,int *rb) {
+/* extract diagonal bands kk[0] to kk[1] of X'WX and put them in
+   rows of B, each starting at row start. Diagonal band 0 is
+   the leading diagonal. The first extracted band goes in
+   the first row of B, which has rb rows. X is n by p. */
+  int i,j,k,kb=0;
+  double *Xi, *Xj, x, *wp;
+  for (k=kk[0];k<=kk[1];k++,kb++) {
+    Xi = X; Xj = X + *n * k;
+    for (j=0;j<*p-k;j++,Xi += *n,Xj += *n) {
+      for (x=0,i=0;i<*n;i++) x += Xi[i] * Xj[i] * w[i]; /* don't 'optimize' indexing out - spoils loop unrolling */
+      B[kb + j * *rb] = x;
+    }
+    /*for (j=0;j<*p-k;j++) { // marginally slower, presumably due to lack of loop unrolling 
+      for (wp=w,x=0,i=0;i<*n;i++,Xi++,Xj++,wp++) x += *Xi * *Xj * *wp;
+      B[kb + j * *rb] = x;
+      }
+    */
+  } /* band k loop */  
+} /* WXWband */
+
+SEXP RXWXband(SEXP x,SEXP W,SEXP b,SEXP KK) {
+/* wrapper for XWXband */
+  int *kk,n,p,rb;
+  double *X,*B,*w;
+  n = nrows(x); p = ncols(x);rb = nrows(b);
+  X = REAL(PROTECT(coerceVector(x,REALSXP)));
+  B = REAL(PROTECT(coerceVector(b,REALSXP)));
+  w = REAL(PROTECT(coerceVector(W,REALSXP)));
+  kk = INTEGER(PROTECT(coerceVector(KK,INTSXP)));
+  XWXband(X,w,B,kk,&n,&p,&rb);
+  UNPROTECT(4);
+  return(R_NilValue);
+} /* RWXWband */

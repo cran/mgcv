@@ -1,11 +1,11 @@
 useDynLib(mgcv, .registration = TRUE, .fixes = "C_")
 
-export("%.%",anova.gam, bam, bam.update,bandchol, bcg, betar,
-       blas.thread.test, 
+export("%.%",anova.gam, bam, bam.update,bandchol,bandmult,bandsolve, bcg, 
+       betar,blas.thread.test, 
        choldrop,cholup,cpois,clog,cnorm,cox.ph,concurvity, 
        cSplineDes,dDeta,dmvn,d.mvt,dpnorm,dppois,
        exclude.too.far,extract.lme.cov, extract.lme.cov2,feasible,FFdes,
-       formXtViX, formula.gam, gam.fit, fixDependence,fix.family.link,
+       formXtViX, formula.gam,  fixDependence,fix.family.link,
        fix.family.var, fix.family.ls, fix.family.qf,fix.family.rd,   
        fs.test,fs.boundary,gam, gam2derivative, 
        gam2objective,
@@ -28,6 +28,7 @@ export("%.%",anova.gam, bam, bam.update,bandchol, bcg, betar,
        print.gam,print.summary.gam,predict.gam,predict.bam,
        PredictMat,Predict.matrix,Predict.matrix2,
        Predict.matrix.Bspline.smooth,
+       Predict.matrix.b.tensor,
        Predict.matrix.cr.smooth,
        Predict.matrix.duchon.spline,
        Predict.matrix.cs.smooth,
@@ -47,13 +48,14 @@ export("%.%",anova.gam, bam, bam.update,bandchol, bcg, betar,
        psum.chisq,
        qq.gam,
        residuals.gam,rig,rTweedie,rmvn,r.mvt,
-       Rrank,s,scat,scasm,sdiag,"sdiag<-",shash,
+       Rrank,s,scat,scasm,sdiag,"sdiag<-",set.mgcv.options,shash,
        sim2jam,Sl.initial.repara,Sl.inirep,Sl.repara,Sl.setup,
        slanczos,smooth2random,
        smoothCon,smooth.construct,smooth.construct2,
        smooth.construct.ad.smooth.spec,
        smooth.construct.ad.smooth.spec,
        smooth.construct.bs.smooth.spec,
+       smooth.construct.bt.smooth.spec,
        smooth.construct.cc.smooth.spec,
        smooth.construct.cp.smooth.spec,
        smooth.construct.cr.smooth.spec,
@@ -90,7 +92,7 @@ importFrom(graphics,abline,axis,axTicks,box,contour,hist,image,lines,
            polygon,rect,strheight,strwidth,text,title)
 importFrom(utils, setTxtProgressBar, txtProgressBar)
 
-importFrom(splines,interpSpline)
+importFrom(splines,interpSpline,splineDesign,spline.des)
 
 importFrom(stats,.checkMFClasses,.getXlevels,anova,approx,as.formula,
 binomial,coef,contrasts,"contrasts<-",cooks.distance,cor,cov,
@@ -98,7 +100,7 @@ delete.response,dbeta,dgamma,dnorm,dpois,fitted,formula,gaussian,glm,
 influence,logLik,lm,mad,
 make.link,median,model.frame,model.offset,model.matrix,model.response,
 na.action,nlm,na.pass,napredict,na.omit,naresid,optim,pchisq,pnorm,pt,pf,
-power,ppois,predict,printCoefmat,quantile,
+poly,power,ppois,predict,printCoefmat,quantile,
 qbeta,qbinom,qcauchy,qchisq,qnbinom,qgamma,qnorm,qpois,qqline,qqnorm,qqplot,
 rchisq,reformulate,residuals,
 rbeta,rbinom,rgamma,rnbinom,rnorm,rpois,runif,sd,
@@ -108,8 +110,9 @@ importFrom(utils,object.size)
 
 importFrom(nlme,Dim,corMatrix,logDet,pdConstruct,pdFactor,pdMatrix,getGroupsFormula,lme,varFixed,lmeControl)
 
-importMethodsFrom(Matrix,t,colMeans,colSums,chol,solve,lu,expand)
-importFrom(Matrix,Diagonal,sparseMatrix,Matrix,sparse.model.matrix,diag)
+importFrom(Matrix,Diagonal,sparseMatrix,Matrix,sparse.model.matrix,condest,
+isDiagonal,t,colMeans,colSums,chol,solve,lu,expand,rcond,
+rowMeans,rowSums,norm,diag,diff)
 
 importFrom(methods,cbind2,as)
 importFrom(stats,weighted.mean)
@@ -159,9 +162,11 @@ S3method(fix.family.link,general.family)
 S3method(smooth.info,re.smooth.spec)
 S3method(smooth.info,fs.smooth.spec)
 S3method(smooth.info,sz.smooth.spec)
+S3method(smooth.info,bt.smooth.spec)
 S3method(smooth.info,default)
 S3method(smooth.construct,ad.smooth.spec)
 S3method(smooth.construct,bs.smooth.spec)
+S3method(smooth.construct,bt.smooth.spec)
 S3method(smooth.construct, cc.smooth.spec)
 S3method(smooth.construct,cp.smooth.spec)
 S3method(smooth.construct, cr.smooth.spec)
@@ -185,6 +190,7 @@ S3method(smooth.construct, t2.smooth.spec)
 S3method(smooth.construct, ts.smooth.spec)
 
 S3method(Predict.matrix,Bspline.smooth)
+S3method(Predict.matrix,b.tensor)
 S3method(Predict.matrix,cr.smooth)
 S3method(Predict.matrix,cs.smooth)
 S3method(Predict.matrix,cyclic.smooth)

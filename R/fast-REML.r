@@ -149,10 +149,7 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
       Sl[[b]]$start <- G$smooth[[i]]$first.para
       Sl[[b]]$stop <- G$smooth[[i]]$last.para
       Sl[[b]]$srank <- G$smooth[[i]]$rank ## original rank of penalty matrix
-      ## if the smooth has a g.index field it indicates non-linear params,
-      ## in which case re-parameterization will usually break the model.
-      ## Or global supression of reparameterization may be requested...
-      # Sl[[b]]$repara <- if (is.null(G$smooth[[i]]$g.index) && !no.repara) TRUE else FALSE
+   
       Sl[[b]]$repara <- G$smooth[[i]]$repara && !no.repara  
       if (!is.null(G$smooth[[i]]$updateS)) { ## then this block is nonlinear in smoothing parameters
         Sl[[b]]$repara <-FALSE
@@ -179,10 +176,11 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
       if (Sl[[b]]$linear) {
         nb <- nrow(Sl[[b]]$S[[1]])      
         sbdiag <- sbStart <- sbStop <- rep(NA,m)
-        ut <- upper.tri(Sl[[b]]$S[[1]],diag=FALSE) 
+        # ut <- upper.tri(Sl[[b]]$S[[1]],diag=FALSE) 
         ## overlap testing requires the block ranges 
         for (j in 1:m) { ## get block range for each S[[j]]
-          sbdiag[j] <- sum(abs(Sl[[b]]$S[[j]][ut]))==0 ## is penalty diagonal??
+         # sbdiag[j] <- sum(abs(Sl[[b]]$S[[j]][ut]))==0 ## is penalty diagonal??
+	  sbdiag[j] <- isDiagonal(Sl[[b]]$S[[j]])
           ir <- range((1:nb)[rowSums(abs(Sl[[b]]$S[[j]]))>0])
           sbStart[j] <- ir[1];sbStop[j] <- ir[2] ## individual ranges
         } 
@@ -212,9 +210,6 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
           Sl[[b]]$rank <- G$smooth[[i]]$rank[j]
 	  Sl[[b]]$lambda <- 1 ## dummy here
           Sl[[b]]$repara <- !no.repara ## signals ok to linearly reparameterize, now check this is really ok...
-          if (!is.null(G$smooth[[i]]$g.index)) { ## then some parameters are non-linear - can't re-param
-            if (any(G$smooth[[i]]$g.index[ind])) Sl[[b]]$repara <- FALSE
-          }
 	  Sl[[b]]$linear <- TRUE ## linear in smoothing params - assumed always true for multi-blocks
           b <- b + 1
         }
@@ -248,7 +243,7 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
     if (keepS) Sl[[b]]$S0 <- Sl[[b]]$S ## keep untransformed version
     if (!Sl[[b]]$linear) { ## nonlinear term
       ## never re-parameterized, but need contribution to penalty square root, E
-      Sl[[b]] <- Sl[[b]]$updateS(Sl[[b]]$lambda,Sl[[b]])
+      Sl[[b]] <- Sl[[b]]$updateS(Sl[[b]]$lambda,Sl[[b]]) ## Sl[[b]]$lambda is dummy: log scale or not irrelevant
       lambda <- c(lambda,Sl[[b]]$lambda)
       tmp <- Sl[[b]]$St(Sl[[b]],2)
       if (sparse) {
@@ -265,10 +260,12 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
 	S[ind,ind] <- tmp$St
       }	
     } else if (length(Sl[[b]]$S)==1) { ## then we have a singleton
-      if (sum(abs(Sl[[b]]$S[[1]][upper.tri(Sl[[b]]$S[[1]],diag=FALSE)]))==0) { ## S diagonal
+      #if (sum(abs(Sl[[b]]$S[[1]][upper.tri(Sl[[b]]$S[[1]],diag=FALSE)]))==0) { ## S diagonal
+      if (isDiagonal(Sl[[b]]$S[[1]])) {
         ## Reparameterize so that S has 1's or zero's on diagonal
         ## In new parameterization smooth specific model matrix is X%*%diag(D)
         ## ind indexes penalized parameters from this smooth's set.
+	## Note lack of Di used later to signal diagonal penalty 
 
         D <- diag(Sl[[b]]$S[[1]])
         ind <- D > 0 ## index penalized elements
@@ -281,7 +278,7 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
           tr <- singleStrans(Sl[[b]]$S[[1]],Sl[[b]]$rank,ldet=!Sl[[b]]$repara)
 	  ind <- rep(FALSE,ncol(tr$D))
 	  ind[1:tr$rank] <- TRUE
-	  Sl[[b]]$D <- tr$D
+	  Sl[[b]]$D <- tr$D ## t(D)%*%S%*%D gives partial identity
 	  Sl[[b]]$Di <- tr$Di
 	  Sl[[b]]$rank <- tr$rank
 	  Sl[[b]]$ldet=tr$ldet
@@ -323,7 +320,18 @@ Sl.setup <- function(G,cholesky=FALSE,no.repara=FALSE,sparse=FALSE,keepS=FALSE) 
           diag(E)[ind] <- 1; diag(S)[ind] <- 1
 	}  
         lambda <- c(lambda,1) ## record corresponding lambda
-      } else { ## need scaled root penalty in *original* parameterization
+      } else if (is.null(Sl[[b]]$Di)) { ## need scaled root penalty in *original* parameterization
+        ## diagonal penalty branch
+        ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind]
+	D <- 1/Sl[[b]]$D[Sl[[b]]$ind]; D2 <- D^2;D.norm <- sqrt(sum(D2));	
+	if (sparse) {
+	    E$j[[b]] <- E$i[[b]] <- ind; E$x[[b]] <- D/D.norm
+	    S$j[[b]] <- S$i[[b]] <- ind; S$x[[b]] <- D2/D.norm^2
+	} else { ## dense
+            diag(E)[ind] <- D/D.norm; diag(S)[ind] <- D2/D.norm^2
+	}
+	lambda <- c(lambda,1/D.norm^2) ## record corresponding lambda
+      } else { ## non-diagonal penalty branch
         #D <- Sl[[b]]$Di[1:Sl[[b]]$rank,]
 	D <- if (is.null(Sl[[b]]$nl.reg)) Sl[[b]]$Di[1:Sl[[b]]$rank,] else
 	        sqrt(Sl[[b]]$ev+Sl[[b]]$nl.reg)*t(Sl[[b]]$U)
@@ -876,7 +884,16 @@ ldetS <- function(Sl,rho,fixed,np,root=FALSE,Stot=FALSE,repara=TRUE,nt=1,deriv=2
             ## diag(S)[ind] <- exp(rho[k.sp]) ## smoothing param
 	    .Call(C_wdiag,S,ind,rep(exp(rho[k.sp]),length(ind)))
 	  }  
-        } else { ## root has to be in original parameterization...
+        } else  if (is.null(Sl[[b]]$Di)) { ## root has to be in original parameterization...
+          ## diagonal branch
+	  D <- 1/Sl[[b]]$D[Sl[[b]]$ind]^2 * exp(rho[k.sp])
+	  ind <- (Sl[[b]]$start:Sl[[b]]$stop)[Sl[[b]]$ind]
+	  if (sparse) {
+	    S$j[[b]] <- S$i[[b]] <- ind; S$x[[b]] <- D
+	  } else {
+            diag(S)[ind] <- D
+          }
+        } else { ## non-diagonal branch
           if (sparse) {
 	    ## dgTMatrix is triplet form, which makes combining easier...
 	    D <- if (is.null(Sl[[b]]$nl.reg)) as(as(as(crossprod(Sl[[b]]$Di[1:Sl[[b]]$rank,]) * exp(rho[k.sp]), "dMatrix"),
@@ -1126,11 +1143,14 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
   Amat <- is.matrix(A) 
   if (k<=0) { ## apply whole penalty
     B <- A*0
+    sparse <- inherits(B,"Matrix")
     for (b in 1:nb) { ## block loop
       ind <- Sl[[b]]$start:Sl[[b]]$stop ## index of coeffs for this bock
       if (!Sl[[b]]$linear) { ## non-linear block
-        if (Amat)  B[ind,] <- t(Sl[[b]]$AS(t(A[ind,]),Sl[[b]])) else
-	           B[ind] <- drop(Sl[[b]]$AS(A[ind],Sl[[b]]))
+        if (Amat) {
+	  B[ind,] <- if (sparse) t(Sl[[b]]$AS(t(A[ind,]),Sl[[b]])) else
+	             as.matrix(t(Sl[[b]]$AS(t(A[ind,]),Sl[[b]])))
+	} else B[ind] <- drop(Sl[[b]]$AS(A[ind],Sl[[b]]))
       } else if (length(Sl[[b]]$S)==1) { ## singleton
         if (Sl[[b]]$repara) {
           ind <- ind[Sl[[b]]$ind]
@@ -1138,14 +1158,14 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
 	            B[ind] <- Sl[[b]]$lambda*A[ind]
         } else { ## original penalty has to be applied 
           if (Amat) {
-	    B[ind,] <- Sl[[b]]$lambda*Sl[[b]]$S[[1]] %*% A[ind,] + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind,]
+	    B[ind,] <- as.matrix(Sl[[b]]$lambda*Sl[[b]]$S[[1]] %*% A[ind,]) + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind,]
 	  } else {
             B[ind] <- Sl[[b]]$lambda*Sl[[b]]$S[[1]] %*% A[ind] + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind]
 	  }  
         }
       } else { ## multi-S block
 	if (Sl[[b]]$repara) ind <- ind[Sl[[b]]$ind]
-        if (Amat) B[ind,] <- Sl[[b]]$St %*% A[ind,] else
+        if (Amat) B[ind,] <- as.matrix(Sl[[b]]$St %*% A[ind,]) else
                   B[ind] <- Sl[[b]]$St %*% A[ind]
       }
     } ## end of block loop
@@ -1172,7 +1192,7 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
               if (full) {
                 B <- A*0
                 if (Amat) {
-		  B[ind,] <- Sl[[b]]$lambda*Sl[[b]]$S[[1]]%*%A[ind,] + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind,] 
+		  B[ind,] <- as.matrix(Sl[[b]]$lambda*Sl[[b]]$S[[1]]%*%A[ind,]) + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind,] 
 		} else {  
                   B[ind] <- Sl[[b]]$lambda*Sl[[b]]$S[[1]]%*%A[ind] + if (is.null(Sl[[b]]$nl.reg)) 0 else Sl[[b]]$nl.reg * A[ind]
 	        }		  
@@ -1186,9 +1206,10 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
               }
             } else { ## non-linear
               if (full) {
-                B <- A*0
-		if (Amat) B[ind,] <- t(Sl[[b]]$AS(t(A[ind,]),Sl)) else
-	                  B[ind] <- drop(Sl[[b]]$AS(A[ind],Sl))
+                B <- A*0; sparse <- inherits(B,"Matrix")
+		if (Amat) {
+		  B[ind,] <- if (sparse) t(Sl[[b]]$AS(t(A[ind,]),Sl)) else as.matrix(t(Sl[[b]]$AS(t(A[ind,]),Sl)))
+		} else B[ind] <- drop(Sl[[b]]$AS(A[ind],Sl))
                 A <- B
               } else {
                 A <- if (Amat) t(Sl[[b]]$AS(t(A[ind,]),Sl)) else drop(Sl[[b]]$AS(A[ind],Sl))
@@ -1199,7 +1220,7 @@ Sl.mult <- function(Sl,A,k = 0,full=TRUE) {
             if (full) { ## return zero answer with all zeroes in place
               B <- A*0
               if (Amat) {
-                B[ind,] <- if (is.null(Sl[[b]]$Srp)||!Sl[[b]]$repara) Sl[[b]]$lambda[i]*(Sl[[b]]$S[[i]]%*%A[ind,]) else 
+                B[ind,] <- if (is.null(Sl[[b]]$Srp)||!Sl[[b]]$repara) as.matrix(Sl[[b]]$lambda[i]*(Sl[[b]]$S[[i]]%*%A[ind,])) else 
                                                      Sl[[b]]$Srp[[i]]%*%A[ind,]
               } else {
                 B[ind] <- if (is.null(Sl[[b]]$Srp)||!Sl[[b]]$repara) Sl[[b]]$lambda[i]*(Sl[[b]]$S[[i]]%*%A[ind]) else 
@@ -1331,7 +1352,7 @@ d.detXXS <- function(Sl,PP,nt=1,deriv=2,SPP=FALSE) {
 ## P is inverse of R from the QR of the augmented model matrix.
 ## Note that d1[k] is also the EDF suppressed by the kth smoothing penalty,
 ## for linear smoothing parameters.
-  spp <- SPP
+  spp <- SPP ## return SPP?
   SPP <- Sl.termMult(Sl,PP,full=FALSE,nt=nt) ## SPP[[k]] is S_k PP' where S_k is derivative in nl case
   ## if PP is sparse over block covered by penalty, implying that it is from the ISA and not a
   ## full inverse, then second order terms like tr(PPdS_jPPdS_k) will not be correct - hence will
@@ -1351,7 +1372,8 @@ d.detXXS <- function(Sl,PP,nt=1,deriv=2,SPP=FALSE) {
         indj <- attr(SPP[[j]],"ind")
 	## following is correct if only one term is sparse (involves incomplete portion of inverse Hessian PP),
 	## but not both. Use as approximation if i and j are for same block, but zero otherwise
-        xx <- if (sparse[i]&&sparse[j]&&!all.equal(indj,indi)) 0 else -sum(t(SPP[[i]][,indj,drop=FALSE])*SPP[[j]][,indi,drop=FALSE])  
+        xx <- if (sparse[i]&&sparse[j]&&!isTRUE(all.equal(indj,indi))) 0 else
+	      -sum(t(SPP[[i]][,indj,drop=FALSE])*SPP[[j]][,indi,drop=FALSE])  
         if (b && b == nli[2,j]) { ## non-linear second derivative needed
 	  k0 <- nli[1,i] - 1 ## where sps start in overall sp vector - 1
 	  ind <- Sl[[b]]$start:Sl[[b]]$stop

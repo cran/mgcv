@@ -4,7 +4,7 @@
 %- Also NEED an `\alias' for EACH other topic documented here.
 \title{Shape constrained additive smooth models}
 
-\description{ Fits a generalized additive model (GAM, GAMM, GAMLSS) subject to shape constriants on the components, using quadratic and linear programming and the extended Fellner-Schall method for smoothness estimation. Usable with all the families listed in \code{\link{family.mgcv}}.
+\description{ Fits a generalized additive model (GAM, GAMM, GAMLSS) subject to shape constraints on the components, using quadratic and linear programming and the extended Fellner-Schall method for smoothness estimation. Usable with all the families listed in \code{\link{family.mgcv}}.
 }
 \usage{
 
@@ -26,15 +26,14 @@ and \code{\link{t2}}, can be added to the right hand side to specify that the li
 This is a family object specifying the distribution and link to use in
 fitting etc (see \code{\link{glm}} and \code{\link{family}}). See 
 \code{\link{family.mgcv}} for a full list of what is available, which goes well beyond exponential family.
-Note that \code{quasi} families actually result in the use of extended quasi-likelihood 
-if \code{method} is set to a RE/ML method (McCullagh and Nelder, 1989, 9.6).
+Note that \code{quasi} families actually result in the use of extended quasi-likelihood (McCullagh and Nelder, 1989, 9.6).
 } 
 
 
 \item{data}{ A data frame or list containing the model response variable and 
 covariates required by the formula. By default the variables are taken 
 from \code{environment(formula)}: typically the environment from 
-which \code{gam} is called.} 
+which \code{scasm} is called.} 
 
 \item{weights}{  prior weights on the contribution of the data to the log likelihood. Note that a weight of 2, for example, 
                 is equivalent to having made exactly the same observation twice. If you want to reweight the contributions 
@@ -63,11 +62,11 @@ penalized out of the model? See \code{gamma} to increase penalization.  Has the 
 }
 
 \item{scale}{ If this is positive then it is taken as the known scale parameter. Negative signals that the 
-scale paraemter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
+scale parameter is unknown. 0 signals that the scale parameter is 1  for Poisson and binomial and unknown otherwise. 
 Note that (RE)ML methods can only work with scale parameter 1 for the Poisson and binomial cases.    
 } 
 
-\item{gamma}{Increase above 1 to force smoother fits. \code{gamma} is used to multiply the effective degrees of freedom in the GCV/UBRE/AIC score (so \code{log(n)/2} is BIC like). \code{n/gamma} can be viewed as an effective sample size, which allows it to play a similar role for RE/ML smoothing parameter estimation.} 
+\item{gamma}{Increase above 1 to force smoother fits. Effectively optimizes estimate of what REML would have been for sample size \code{n/gamma}. This is equivalent to simply multiplying the EFS ratio by \code{gamma}.} 
 
 
 \item{knots}{this is an optional list containing user specified knot values to be used for basis construction. 
@@ -109,20 +108,25 @@ An object of class \code{"gam"} as described in \code{\link{gamObject}}.
 }
 
 
-\details{Operates much as \code{\link{gam}}, but allows linear constraints on smooths to facilitate shape constraints. Smoothness selection uses the extended Fellner-Schall method of Wood and Fasiolo (2017). Model coefficient estimation uses linear programming to find initial feasible coefficients, and then sequential quadratic programming to maximize the penalized likelihood given smooting parameters.
+\details{Operates much as \code{\link{gam}}, but allows linear constraints on smooths to facilitate shape constraints. Smoothness selection uses the extended Fellner-Schall method of Wood and Fasiolo (2017). Model coefficient estimation uses linear programming to find initial feasible coefficients, and then sequential quadratic programming to maximize the penalized likelihood given smoothing parameters.
 
-For simple shape constraints on univariate smooths (and hence tensor product smooths) see \code{\link{smooth.construct.sc.smooth.spec}}. General linear constraints can be imposed on any smooth term via the \code{pc} argument to \code{\link{s}} etc. To do this \code{pc} is provided as a list of two lists. The first list component specifies the linear inequality constraints, and the second, if present specifies linear equality constraints.
+For simple shape constraints on univariate smooths (and hence tensor product smooths) see \code{\link{smooth.construct.sc.smooth.spec}}. General linear constraints can be imposed on any smooth term via the \code{pc} argument to \code{\link{s}} etc. To do this \code{pc} is provided as a list of two lists. The first list component specifies the linear equality constraints, and the second, if present specifies linear inequality constraints.
 
-The first list has a matrix element for each covariate of the smooth, named as the covariates. Two further elements are un-named: a matrix of weights and a vector specifying the right hand side of the condition to be met. For example, suppose that a constraint is to be applied to a smooth term term \eqn{f(X,Z)}{f(X,Z)}. The list would contain named matrices \eqn{\bf X}{X} and \eqn{\bf Z}{Z} and a third unnamed matrix, \eqn{\bf W}{W}, say. All are of the same dimension. The list also contains an unnaed vector with the same number of rows as the matrices, \eqn{\bf b}{b}, say. The constraints encoded are
-\deqn{\sum_j f(X_{ij},Z_{ij}) W_{ij} > b_i}{sum_j f(X_ij,Z_ij) W_ij > b_i}
-where the summation is over all columns of the matrices. There is one constraint for each row of the \eqn{\bf b}{b}. The second list, if present, has the same structure, but encodes equality constraints. If the first list is empty then there are no inequality constraints.
+The first list has a matrix element for each covariate of the smooth, named as the covariates. Two further elements are un-named: a matrix of weights and a vector specifying the right hand side of the condition to be met. For example, suppose that a constraint is to be applied to a smooth term term \eqn{f(X,Z)}{f(X,Z)}. The list would contain named matrices \eqn{\bf X}{X} and \eqn{\bf Z}{Z} and a third unnamed matrix, \eqn{\bf W}{W}, say. All are of the same dimension. The list also contains an unnamed vector with the same number of rows as the matrices, \eqn{\bf b}{b}, say. The constraints encoded are
+\deqn{\sum_j f(X_{ij},Z_{ij}) W_{ij} > b_i}{sum_j f(X_ij,Z_ij) W_ij = b_i}
+where the summation is over all columns of the matrices. There is one constraint for each row of \eqn{\bf b}{b}. The second list, if present, has the same structure, but encodes inequality constraints (\eqn{>b_i}{>b_i}). If the first list is empty then there are no equality constraints. 
 
-Notice that this structure is quite general - derivative and integral constraints are easily implemented numerically. Also note that the simple constraints of \code{\link{smooth.construct.sc.smooth.spec}} can be combined with general \code{pc} constraints.  
+This structure is quite general - derivative and integral constraints are easily implemented numerically. Also note that the simple constraints of \code{\link{smooth.construct.sc.smooth.spec}} can be combined with general \code{pc} constraints.
+
+Note that \code{pc} constraints replace the usual sum to zero identifiability constraints, so if these are required, they need to be explicitly included as equality constraints.
 
 }
 
 
 \references{
+Wood, S.N. (2026) Shape constrained additive smooth models (with discussion). Statistical Modelling. 26(4):382-409
+\doi{10.1177/1471082X261436505}
+
 Wood, S.N. and M. Fasiolo (2017) A generalized Fellner-Schall method for smoothing
 parameter optimization with application to Tweedie location, scale and shape models.
 Biometrics 73 (4), 1071-1081 \doi{10.1111/biom.12666}
@@ -134,7 +138,7 @@ Biometrics 73 (4), 1071-1081 \doi{10.1111/biom.12666}
 }
 
 \section{WARNINGS }{
-This is generally slower than gam, and can only use EFS soothness estimation
+This is generally slower than \code{gam}, and can only use EFS smoothness estimation
 } 
 
 \seealso{

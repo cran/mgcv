@@ -109,7 +109,7 @@ The parameterization used by \code{\link{gam}} can be controlled via
 \examples{
 ## example of using smoothCon and PredictMat to set up a basis
 ## to use for regression and make predictions using the result
-library(MASS) ## load for mcycle data.
+if (require(MASS)) { ## load for mcycle data.
 ## set up a smoother...
 sm <- smoothCon(s(times,k=10),data=mcycle,knots=NULL)[[1]]
 ## use it to fit a regression spline model...
@@ -130,6 +130,7 @@ beta <- coef(lm(y~X-1)) ## fit penalized regression spline
 Xp <- PredictMat(sm,data.frame(times=times)) ## prediction matrix
 with(mcycle,plot(times,accel)) ## plot data
 lines(times,Xp\%*\%beta) ## overlay smooth
+}
 }
 
 \keyword{models} \keyword{smooth} \keyword{regression}%-- one or more ...

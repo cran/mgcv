@@ -14,10 +14,12 @@
   marginal smooth must have only one penalty).
 }
 
-\usage{te(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,
-              np=TRUE,xt=NULL,id=NULL,sp=NULL,pc=NULL)
-ti(..., k=NA,bs="cr",m=NA,d=NA,by=NA,fx=FALSE,
-              np=TRUE,xt=NULL,id=NULL,sp=NULL,mc=NULL,pc=NULL)
+\usage{te(..., k=NA,bs=getOption("mgcv.te.bs","cr"),m=NA,d=NA,
+               by=NA,fx=FALSE,np=getOption("mgcv.te.np", TRUE),
+	       xt=getOption("mgcv.xt",NULL),id=NULL,sp=NULL,pc=NULL)
+ti(..., k=NA,bs=getOption("mgcv.te.bs","cr"),m=NA,d=NA,by=NA,fx=FALSE,
+             np=getOption("mgcv.te.np",TRUE),xt=getOption("mgcv.xt",NULL),
+	      id=NULL,sp=NULL,mc=getOption("mgcv.ti.mc",NULL),pc=NULL)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{

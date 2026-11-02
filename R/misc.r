@@ -11,8 +11,12 @@ mchol <- function(A) {
     R <- -1;attr(R,"rank") <- -1 ## signal rank deficient
   } else { 
     R <- Matrix::triu(Matrix::expand1(cha,"L."))
-    p <- ncol(A);
-    attr(R,"pivot") <- if (length(cha@perm)==0) 1:p else cha@perm+1
+    p <- ncol(A)
+    if (length(cha@perm)==0) pivot <- 1:p else {
+    ## Matrix::Cholesky pivot convention differs between sparse and dense! 
+      pivot <- cha@perm + if (min(cha@perm)==0) 1 else 0
+    }  
+    attr(R,"pivot") <- pivot 
     attr(R,"rank") <- p
   }  
   R ## R'R = H[pivot,pivot]
@@ -117,8 +121,8 @@ sdiag <- function(A,k=0) {
    j <- 1:p
  }
  if (length(i)>length(j)) i <- i[1:length(j)] else j <- j[1:length(i)]
- ii <- i + (j-1) * n 
- A[ii]
+ ##ii <- i + (j-1) * n; A[ii]
+ A[cbind(i,j)]
 } ## sdiag
 
 "sdiag<-" <- function(A,k=0,value) {
@@ -133,16 +137,16 @@ sdiag <- function(A,k=0) {
    j <- 1:p
  }
  if (length(i)>length(j)) i <- i[1:length(j)] else j <- j[1:length(i)]
- ii <- i + (j-1) * n 
- A[ii] <- value
+ ##ii <- i + (j-1) * n;A[ii] <- value
+ A[cbind(i,j)] <- value
  A
 } ## "sdiag<-"
 
-bandchol <- function(B) {
+bandchol <- function(B,partial=FALSE) {
 ## obtain R such that R'R = A. Where A is banded matrix contained in R.
   n <- ncol(B)
   k <- 0
-  if (n==nrow(B)) { ## square matrix. Extract the diagonals
+  if (n==nrow(B)&&isTRUE(all.equal(B,t(B)))) { ## square symmetric matrix. Extract the diagonals
     A <- B*0
     for (i in 1:n) {
       b <- sdiag(B,i-1)
@@ -151,12 +155,18 @@ bandchol <- function(B) {
         A[i,1:length(b)] <- b
       }
     } 
-    B <- A[1:k,]
+    B <- A[1:k,,drop=FALSE]
   }
-  oo <- .C(C_band_chol,B=as.double(B),n=as.integer(n),k=as.integer(nrow(B)),info=as.integer(0))
-  if (oo$info<0) stop("something wrong with inputs to LAPACK routine")
-  if (oo$info>0) stop("not positive definite")
-  B <- matrix(oo$B,nrow(B),n)
+  if (partial) {
+    R <- matrix(0,nrow(B),ncol(B));
+    .Call(C_pabchol,B,R) ## presumably could be re-written to only use B
+    B <- R
+  } else {
+    oo <- .C(C_band_chol,B=as.double(B),n=as.integer(n),k=as.integer(nrow(B)),info=as.integer(0))
+    if (oo$info<0) stop("something wrong with inputs to LAPACK routine")
+    if (oo$info>0) return(NULL) ##stop("not positive definite")
+    B <- matrix(oo$B,nrow(B),n)
+  }  
   if (k>0) { ## was square on entry, so also on exit...
     A <- A * 0
     for (i in 1:k) sdiag(A,i-1) <- B[i,1:(n-i+1)]
@@ -164,6 +174,29 @@ bandchol <- function(B) {
   }
   B
 } ## bandchol
+
+bandsolve <- function(B,x,trans=FALSE) {
+  n <- ncol(B)
+  if (n!=NROW(x)) stop("B and x incompatible")
+  cb <- NCOL(x)
+  oo <- .C(C_band_solve,RB=as.double(B),n=as.integer(n),k=as.integer(nrow(B)),B=as.double(x),
+           cb=as.integer(cb),info=as.integer(trans))
+  if (oo$info==0) { if (cb>1) matrix(oo$B,n,cb) else oo$B } else oo$info	   
+} ## bandsolve
+
+bandmult <- function(B,x,trans=FALSE) {
+## Diagonals of an upper triangular matrix R are stored in rows
+## of B. Leading diagonal first row, all diagonals starting
+## first column - un-needed elements not used (as bandchol).
+## Forms R%*%x if trans=FALSE and t(R)%*%x otherwise.
+  n <- ncol(B)
+  if (n!=NROW(x)) stop("B and x incompatible")
+  cb <- NCOL(x)
+  oo <- .C(C_band_mult,RB=as.double(B),n=as.integer(n),k=as.integer(nrow(B)),B=as.double(x),
+           cb=as.integer(cb),trans=as.integer(trans))
+  if (cb>1) matrix(oo$B,n,cb) else oo$B	   
+} ## bandmult
+
 
 trichol <- function(ld,sd) {
 ## obtain chol factor R of symm tridiag matrix, A, with leading diag
@@ -179,6 +212,30 @@ trichol <- function(ld,sd) {
   sd <- oo$sd*ld[1:(n-1)]
   list(ld=ld,sd=sd)
 }
+
+XWXband <- function(X,k,w=rep(1,nrow(X)),B=NULL) {
+## get diagonal bands 0 (leading) to k of X'WW where W = diag(w)
+## returning them in rows of B (each starting at col 1). If matrix
+## B supplied then it is assued to contin already computed bands, and only the
+## required extra bands are computed. X can be of class "matrix" or "dgCMatrix"
+  n <- nrow(X); p <- ncol(X)
+  if (k>p-1) k <- p-1
+  if (length(w)!=n) stop("w wrong length")
+  k <- c(0,k)
+  if (is.matrix(B)) {
+    if (ncol(B)!=p) {
+      warning("B has too few columns - ignored")
+      B <- NULL 
+      k[1] <- 0 ## have to start from leading diagonal
+    } else {
+      k[1] <- nrow(B) ## first new diagonal required
+      if (k[1]>k[2]) return(B[1:(k[2]+1),]) ## already have all needed!
+    }
+  } 
+  D <- matrix(0,diff(k)+1,p)
+  if (inherits(X,"dgCMatrix")) .Call(C_sRXWXband,X,w,D,k) else .Call(C_RXWXband,X,w,D,k)
+  if (is.null(B)) return(D) else return(rbind(B,D))
+} ## XWXband
 
 mgcv.omp <- function() {
 ## does open MP appear to be available?
@@ -257,7 +314,7 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
     return(XWX) ## note that this is sparse
   } ## sparse case 
   ## block oriented code...
-  if (is.null(lt)&&is.null(lt)) {
+  if (is.null(lt)&&is.null(rt)) {
     # old .C code - can't handle long vector k
     #oo <- .C(C_XWXd0,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
     #       k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
@@ -277,14 +334,15 @@ XWXd <- function(X,w,k,ks,ts,dt,v,qc,nthreads=1,drop=NULL,ar.stop=-1,ar.row=-1,a
     lpi <- unlist(lpip[lt])
     if (is.null(lt)) { ## note nrs and ncs not used in current code 
       lpi <- rpi
-      nrs <- lt <- 0 ## currently lt == 0 signals nrs = 0 !
-      ncs <- length(rt)
+      #nrs <-
+      lt <- 0 ## currently lt == 0 signals nrs = 0 !
+      #ncs <- length(rt)
     } else {
-      nrs <- length(lt)
+      # nrs <- length(lt)
       if (is.null(rt)) {
-        rt <- ncs <- 0
+        rt <- 0 #; ncs <- 0
 	rpi <- lpi
-      } else ncs <- length(rt)
+      } #else ncs <- length(rt)
     }  
     #oo <- .C(C_XWXd1,XWX =as.double(rep(0,ptfull^2)),X= as.double(unlist(X)),w=as.double(w),
     #       k=as.integer(k-1),ks=as.integer(ks-1),m=as.integer(m),p=as.integer(p), n=as.integer(n), 
@@ -330,7 +388,7 @@ XVXd <- function(X,e,k,ks,ts,dt,v,qc,nthreads=1,a,ma) {
 } ## XVXd
 
 
-XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt=NULL) {
+XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt=NULL,alt=TRUE,nthreads=1) {
 ## X'Wy...
 ## if lt if not NULL then it lists the discrete terms to include (from X)
 ## returned vector/matrix only includes rows for selected terms
@@ -350,6 +408,7 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
   cy <- if (is.matrix(y)) ncol(y) else 1
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
     ## create list for passing to C
+    if (any(qc<0)) stop("sparse method for Kronecker product contrasts not implemented")
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
     if (is.null(m$off)||is.null(m$r)) stop("reverse indices missing from sparse discrete marginals")
@@ -371,10 +430,11 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
     # 	   cs=as.integer(lt-1),ncs=as.integer(length(lt)))
     #if (cy>1) XWy <- if (is.null(drop)) matrix(oo$XWy,pt,cy) else matrix(oo$XWy,pt,cy)[-drop,] else
     #XWy <- if (is.null(drop)) oo$XWy else oo$XWy[-drop]
-    XWy <- numeric(pt*cy)
+    XWy <- numeric(pt*as.numeric(cy))
+    if (nthreads<1) nthreads <- 1;
     .Call(C_CXWyd,XWy,as.double(y),as.double(unlist(X)),as.double(w),k-1L,as.integer(ks-1L),as.integer(m),as.integer(p),
           as.integer(cy),as.integer(ts-1L), as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(ar.stop-1L),
-	  as.integer(ar.row-1L),as.double(ar.w),as.integer(lt-1L))
+	  as.integer(ar.row-1L),as.double(ar.w),as.integer(lt-1L),as.integer(alt),as.integer(nthreads))
     if (cy>1) { XWy <- if (is.null(drop)) matrix(XWy,pt,cy) else matrix(XWy,pt,cy)[-drop,] } else {
       XWy <- if (is.null(drop)) XWy else XWy[-drop]
     }
@@ -382,7 +442,7 @@ XWyd <- function(X,w,y,k,ks,ts,dt,v,qc,drop=NULL,ar.stop=-1,ar.row=-1,ar.w=-1,lt
   XWy
 } ## XWyd 
 
-Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
+Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL,nthreads=1) {
 ## note that drop may contain the index of columns of X to drop before multiplying by beta.
 ## equivalently we can insert zero elements into beta in the appropriate places.
 ## if lt if not NULL then it lists the discrete terms to include (from X)
@@ -409,6 +469,7 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
   }
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
     ## create list for passing to C
+    if (any(qc<0)) stop("sparse method for Kronecker product contrasts not implemented")
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
     if (is.null(m$off)||is.null(m$r)) stop("reverse indices missing from sparse discrete marginals")
@@ -427,9 +488,10 @@ Xbd <- function(X,beta,k,ks,ts,dt,v,qc,drop=NULL,lt=NULL) {
     #       m=as.integer(m),p=as.integer(p), n=as.integer(n), nx=as.integer(nx), ts=as.integer(ts-1), 
     #       as.integer(dt), as.integer(nt),as.double(unlist(v)),as.integer(qc),as.integer(bc),as.integer(lt-1),as.integer(length(lt)))
     #Xb <- if (is.matrix(beta)) matrix(oo$f,n,bc) else oo$f
-    f <- numeric(n*bc)
+    f <- numeric(n*as.numeric(bc))
     .Call(C_CXbd,f,beta,as.double(unlist(X)),k-1L, as.integer(ks-1L),as.integer(m),as.integer(p),
-          as.integer(ts-1L),as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(bc), as.integer(lt-1L))
+          as.integer(ts-1L),as.integer(dt),as.double(unlist(v)),as.integer(qc),as.integer(bc), as.integer(lt-1L),
+	  as.integer(nthreads))
     Xb <- if (is.matrix(beta)) matrix(f,n,bc) else f	  
   }
   return(Xb)
@@ -451,7 +513,7 @@ ijXVXd <- function(i,j,X,V,k,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL)
 } ## ijXVXd
 
 workXVXd <- function(X,V,k,k1,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL) {
-## discrete computation of diag(XVX') or scattered elements of XWX'
+## discrete computation of diag(XVX') or scattered elements of XVX'
 
   n <- if (is.matrix(k)) nrow(k) else length(k)
   m <- unlist(lapply(X,nrow));p <- unlist(lapply(X,ncol))
@@ -463,6 +525,7 @@ workXVXd <- function(X,V,k,k1,ks,ts,dt,v,qc,drop=NULL,nthreads=1,lt=NULL,rt=NULL
   if (inherits(X[[1]],"dgCMatrix")) { ## the marginals are sparse
     if (!is.null(k1)) stop("scattered XVX computation not yet implemented") 
     ## create list for passing to C
+    if (any(qc<0)) stop("sparse method for Kronecker product contrasts not implemented")
     m <- list(Xd=X,kd=k,ks=ks,v=v,ts=ts,dt=dt,qc=qc)
     m$off <- attr(X,"off"); m$r <- attr(X,"r")
     if (is.null(m$off)||is.null(m$r)) stop("reverse indices missing from sparse discrete marginals")
@@ -546,6 +609,32 @@ cholup <- function(R,u,up=TRUE) {
   R1
 } ## cholup
 
+RSGup <- function(R,u) {
+## Wrapper for C routine RSGup. We have a Matrix A + uu' and the sparse Cholesky
+## A = R'R. This finds sequence of Given rotations to transform [R',u]' to upper
+## triangular factor P of A + uu'. R and P are of course pivoted, but u is not
+## on entry, so is pivoted appropriately here.
+  if (!is.matrix(u)) u <- as.matrix(u)
+  m <- ncol(u);p <- ncol(R)
+  Gij <- matrix(0L,m*p,2);Gcs <- matrix(0.0,m*p,2)
+  if (!inherits(R,"Matrix")) stop("R not sparse, call pointless")
+  piv <- attr(R,"pivot")
+  .Call(C_RSGup,R,u[piv,,drop=FALSE],Gcs,Gij)
+  list(Gcs=Gcs, ## first col is Givens c, second Givens s
+       Gij=Gij, ## cols are elements being rotated, first < second
+       u=u[piv,,drop=FALSE]) ## pivoted u matrix needed for forming Px, P'x
+} ## RSGup
+
+SGap <- function(G,x,trans=FALSE) {
+## Wrapper for C function SGap to apply the Givens rotations
+## returned by RSGup to a matrix x. G$Gij is a two col matrix of rows
+## i < j Givens applied to (constructed from zeroing jth row). G$Gcs
+## is 2 col matrix of c and s defining rotation. 
+  if (!is.matrix(x)) x <- as.matrix(x)
+  trans <- as.integer(trans)
+  .Call(C_SGap,G$Gij,G$Gcs,x,trans)
+  x
+} ## SGap
 
 vcorr <- function(dR,Vr,trans=TRUE) {
 ## Suppose b = sum_k op(dR[[k]])%*%z*r_k, z ~ N(0,Ip), r ~ N(0,Vr). vcorr returns cov(b).
@@ -744,7 +833,7 @@ treig <- function(ld,sd,vec=FALSE,descend=FALSE) {
 } ## treig
 
 
-lanczos <- function(A,v0,M,Av = function(A,v) A%*%v,n=ncol(A)) {
+Mlanczos <- function(A,v0,M,Av = function(A,v) A%*%v,n=ncol(A)) {
 ## Apply M steps of Lanczos starting at v0 for n by n +ve semi definite matrix A.
 ## Av is a function forming the product of matrix A with vector v.
 ## A can be a matrix, in which case the default Av applies, or
@@ -784,7 +873,7 @@ lanczos <- function(A,v0,M,Av = function(A,v) A%*%v,n=ncol(A)) {
   ## tau^2 is jump size, eta is CDF at theta
   ## lam.ub is upper bound on larget eigenvalue
   list(theta=theta,tau=tau,eta=eta,err=err,vAv=vAv)
-} ## lanczos
+} ## Mlanczos
 
 eigen.approx <- function(A,Av = function(A,v) A%*%v,M=20,n.rep=20,n=ncol(A),seed=1) {
 ## get the approximate eigenvalues of n by n +ve semi def matrix A. Av is
@@ -807,7 +896,7 @@ eigen.approx <- function(A,Av = function(A,v) A%*%v,M=20,n.rep=20,n=ncol(A),seed
    tol <- .Machine$double.eps^.5
    for (r in 1:n.rep) {
      v0 <- rnorm(n)
-     lz <- lanczos(A,v0,M=M,Av=Av,n=n)
+     lz <- Mlanczos(A,v0,M=M,Av=Av,n=n)
      trA[r] <- lz$vAv
      ## following is suggested in Appendix C of LSY, and is quite important
      ## to avoid slight downward bias...
@@ -875,10 +964,11 @@ mat.rowsum <- function(X,m,k) {
 isa <- function(R,nt=1) {
 ## Finds the elements of (R'R)^{-1} on NZP(R+R').
   if (!inherits(R,c("dgCMatrix","dtCMatrix"))) stop("isa requires a dg/tCMatrix")
-  nt <- round(nt)
-  if (nt<1) nt = 1
+  nt <- as.integer(round(nt))
+  if (nt<1) nt = 1L
   Hpi <- R + t(R)
-  .Call(C_isa1p,t(R),Hpi,nt)
+  if (nt==1) .Call(C_isa1p,t(R),Hpi) else
+  .Call(C_isa2p,t(R),Hpi,nt)
   Hpi
 } ## isa
 

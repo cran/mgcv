@@ -112,6 +112,13 @@ b2 <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),family=tw(),
 plot(b2,pages=1)
 print(b2)
 
+## sam with NCV and gratuitous sp linkage
+
+b3 <- gam(y~s(x0,id=1)+s(x1,id=1)+s(x2)+s(x3,id=1),family=tw(),
+          data=dat,method="NCV")
+plot(b3,pages=1,scheme=2)
+print(b3)
+
 rm(dat)
 }
 \keyword{models} \keyword{regression}%-- one or more ..

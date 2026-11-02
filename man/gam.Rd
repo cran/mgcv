@@ -28,11 +28,11 @@ For very large datasets see \code{\link{bam}}, for mixed GAM see \code{\link{gam
 \usage{
 
 gam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
-    na.action,offset=NULL,method="GCV.Cp",
-    optimizer=c("outer","newton"),control=list(),scale=0,
-    select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,H=NULL,gamma=1,
-    fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=TRUE,
-    drop.intercept=NULL,nei=NULL,discrete=FALSE,...)
+    na.action,offset=NULL,method=getOption("mgcv.gam.method","GCV.Cp"),
+    optimizer=getOption("mgcv.gam.optimizer", c("outer", "newton")),
+    control=list(),scale=0,select=FALSE,knots=NULL,sp=NULL,min.sp=NULL,
+    H=NULL,gamma=1,fit=TRUE,paraPen=NULL,G=NULL,in.out,drop.unused.levels=
+    TRUE,drop.intercept=NULL,nei=NULL,discrete=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 
@@ -126,7 +126,7 @@ to add a ridge penalty to the parameters of the GAM in circumstances in which th
 is close to un-identifiable on the scale of the linear predictor, but perfectly well
 defined on the response scale.}
 
-\item{gamma}{Increase this beyond 1 to produce smoother models. \code{gamma} multiplies the effective degrees of freedom in the GCV or UBRE/AIC. \code{n/gamma} can be viewed as an effective sample size in the GCV score, and this also enables it to be used with REML/ML. Ignored with P-RE/ML or the \code{efs} optimizer. } 
+\item{gamma}{Increase this beyond 1 to produce smoother models. \code{gamma} multiplies the effective degrees of freedom in the GCV or UBRE/AIC. \code{n/gamma} can be viewed as an effective sample size in the GCV score, and this also enables it to be used with REML/ML by rescaling its data dependent parts. Ignored with P-RE/ML. } 
 
 \item{fit}{If this argument is \code{TRUE} then \code{gam} sets up the model and fits it, but if it is
 \code{FALSE} then the model is set up and an object \code{G} containing what

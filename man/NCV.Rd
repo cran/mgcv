@@ -34,8 +34,8 @@ The neighbourhood subsets \eqn{\alpha(k)}{a(k)} and \eqn{\delta(k)}{d(k)} have t
 \item \code{ma} gives the end of each neighbourhood. So \code{nei$a[(nei$ma[j-1]+1):nei$ma[j]]} gives the points dropped for the neighbourhood \code{j}: that is \eqn{\alpha(j)}{a(j)}.
 \item \code{d} is the vector of indices of points to predict.
 \item \code{md} gives the corresponding endpoints \code{md}. So \code{nei$d[(nei$md[j-1]+1):nei$md[j]]} indexes the points to predict for neighbourhood j: that is \eqn{\delta(j)}{d(j)}.
-\item \code{sample} is an optional element used by \code{\link{bam}}. If it is a single number it gives the number of neighbourhoods to randomly sample to construct the NCV criterion. If it is a vector then it should contain the indices of the neighbourhoods to use.   
-\item \code{jackknife} is an optional element used by \code{\link{gam}}. If supplied and \code{TRUE} then variance estimates are based on the raw Jackkife estimate, if \code{FALSE} then on the standard Bayesian results. If not supplied (usual) then an estimator accounting for the neighbourhood structure is used, that largely accounts for any correlation present within neighbourhoods. \code{jackknife} is ignored if NCV is being calculated for a model where another method is used for smoothing parameter selection.
+\item \code{sample} is an optional element used by \code{\link{bam}}. If it is a single number it gives the number of neighbourhoods to randomly sample to construct the NCV criterion. If it is a vector then it should contain the indices of the neighbourhoods to use. If there was originally one neighbourhood for each response observation, and leave-one-out is not being used, then variance estimation will use the neighbourhood structure, but a crude scaling of the regular residuals to have similar disperion to the cross-validated residuals (rather than computing all cross-validated residuals).     
+\item \code{jackknife} is an optional element used by \code{\link{gam}}. If supplied and \code{TRUE} then variance estimates are based on the raw Jackkife estimate, if \code{FALSE} then on the standard Bayesian results. If not supplied (usual) and there was originally one neighbourhood for each response observation, and leave-one-out is not being used, then an estimator accounting for the neighbourhood structure is used, that largely accounts for any correlation present within neighbourhoods. \code{jackknife} is ignored if NCV is being calculated for a model where another method is used for smoothing parameter selection.
 }
 If \code{nei==NULL} (or \code{a} or \code{ma} are missing) then leave-one-out cross validation is used. If \code{nei} is supplied but NCV is not selected as the smoothing parameter estimation method, then it is simply computed (but not optimized).
 }
@@ -59,7 +59,8 @@ Arlot, S. and A. Celisse (2010). A survey of cross-validation procedures for mod
 Roberts et al. (2017) Cross-validation strategies for data with temporal,
 spatial, hierarchical, or phylogenetic structure. Ecography 40(8), 913-929.
 
-Wood S.N. (2026) On Neighbourhood Cross Validation. Statistical Science (in press). \url{https://arxiv.org/abs/2404.16490}
+Wood S.N. (2026) On Neighbourhood Cross Validation. Statistical Science 41(4), 827-846.
+\doi{10.1214/25-STS1015},\url{https://arxiv.org/abs/2404.16490}
 }
 
 \author{ Simon N. Wood \email{simon.wood@r-project.org}}
@@ -92,6 +93,33 @@ f <- f - mean(f)
 par(mfrow=c(1,2))
 plot(b0,rug=FALSE,scheme=1);lines(x,f,col=2)
 plot(b1,rug=FALSE,scheme=1);lines(x,f,col=2)
+
+#####################################
+## example using randomly thinned nei
+#####################################
+
+sample.nei <- function(ii,a,ma) {
+## thin down neighbourhood structures, retaining folds in ii
+  m1 <- ma[ii] ## ... neighbourhood ends and starts...
+  m0 <- 1 + if (ii[1]==1) c(0,ma[ii[-1]-1]) else ma[ii-1]
+  lena <- m1-m0+1
+  a <- a[sequence(lena,m0)]
+  ma <- cumsum(lena)
+  list(a=a,ma=ma)
+} 
+ii <- sort(sample(n,200))
+ne1 <- nei
+ne1[c("a","ma")] <- sample.nei(ii,nei$a,nei$ma)
+ne1[c("d","md")] <- sample.nei(ii,nei$d,nei$md)
+b3 <- gam(y~s(x,k=40),method="NCV",nei=ne1,control=gc)
+plot(b0,rug=FALSE,scheme=1);lines(x,f,col=2)
+## note CI's not corrected for correlation in this case
+plot(b3,rug=FALSE,scheme=1);lines(x,f,col=2) 
+
+z <- rpois(n,exp(y+1)) ## other families
+b4 <- gam(z~s(x,k=40),family=poisson,control=gc)
+b5 <- gam(z~s(x,k=40),method="NCV",family=tw,nei=ne1,control=gc)
+
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

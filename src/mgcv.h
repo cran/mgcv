@@ -67,7 +67,10 @@
    corrupt R memory management without detection and trigger nothing until R
    messes up internally because of corruption, which then makes it look as if
    R is generating the problem. Hence better to reset for checking. Also sizing
-   errors in .C often generate no obvious valgrind error.*/
+   errors in .C often generate no obvious valgrind error.
+   NOTE that .Call code directly allocating R objects will still use R memory
+   management of course, making errors hard to locate.
+*/
 //#define CALLOC calloc
 //#define FREE free
 //#define REALLOC realloc
@@ -145,17 +148,30 @@ void XWXd1(double *XWX,double *X,double *w,int *k,int *ks, int *m,int *p, ptrdif
 SEXP CXWXd1(SEXP XWXr, SEXP Xr, SEXP wr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr, SEXP tsr, SEXP dtr,
 	    SEXP vr,SEXP qcr, SEXP nthreadsr, SEXP ar_stopr, SEXP ar_weightsr,
 	    SEXP rsr, SEXP csr);
-void XWyd(double *XWy,double *y,double *X,double *w,int *k, int *ks, int *m,int *p, ptrdiff_t *n,int *cy, 
+void XWydp(double *XWy,double *Wy,double *X,int *k,int *ks, int *m,int *p, ptrdiff_t *n, int *cy,
+           int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *cs, int *ncs,int *alt,
+	   int *iwork, ptrdiff_t *pwork, double *dwork,int *nthreads, ptrdiff_t *space,int *pk,int nXWy);
+void XWyd(double *XWy,double *Wy,double *X,int *k, int *ks, int *m,int *p, ptrdiff_t *n,int *cy, 
 	  int *nx, int *ts, int *dt, int *nt,double *v,int *qc,
-          int *ar_stop,int *ar_row,double *ar_weights,int *cs,int *ncs);
+          int *cs,int *ncs,int *alt,int *iwork,ptrdiff_t *pwork, double *dwork);
+void XWydspace(ptrdiff_t *space,int *nx, int *nt, ptrdiff_t *n, int *m, int *dt,int *p);
 SEXP CXWyd(SEXP XWyr, SEXP yr, SEXP Xr, SEXP wr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr, SEXP cyr, SEXP tsr,
-	   SEXP dtr,SEXP vr,SEXP qcr, SEXP ar_stopr, SEXP ar_rowr, SEXP ar_weightsr,SEXP csr);
+	   SEXP dtr,SEXP vr,SEXP qcr, SEXP ar_stopr, SEXP ar_rowr, SEXP ar_weightsr,SEXP csr,SEXP alti,SEXP nth);
+void Xbdspace0(ptrdiff_t *space,int *m,int *p, ptrdiff_t *n, int *nx, int *dt, int *nt);
 void Xbdspace(ptrdiff_t *space,int *m,int *p, ptrdiff_t *n, int *nx, int *dt, int *nt);
-void Xbd(double *f,double *beta,double *X,int *k, int *ks, int *m,int *p, ptrdiff_t  *n, 
+void Xbd0(double *f,double *beta,double *X,int *k, int *ks, int *m,int *p, ptrdiff_t  *n, 
 	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc,int *cs,int *ncs,
 	 int *iwork, ptrdiff_t *pwork,double *dwork);
-SEXP CXbd(SEXP fr, SEXP betar, SEXP Xr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr,
+void Xbd(double *f,double *beta,double *X,int *k,int *ks, int *m,int *p, ptrdiff_t *n, 
+	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc,int *cs,int *ncs,
+	  int *iwork, ptrdiff_t *pwork,double *dwork);
+void Xbdp(double *f,double *beta,double *X,int *k,int *ks, int *m,int *p, ptrdiff_t *n, 
+	 int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *bc,int *cs,int *ncs,
+	  int *iwork, ptrdiff_t *pwork,double *dwork,int *nthreads, ptrdiff_t *space,int *pk);
+SEXP CXbd0(SEXP fr, SEXP betar, SEXP Xr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr,
 	  SEXP tsr, SEXP dtr,SEXP vr,SEXP qcr,SEXP bcr,SEXP csr);
+SEXP CXbd(SEXP fr, SEXP betar, SEXP Xr, SEXP kr, SEXP ksr, SEXP mr, SEXP pr,
+	  SEXP tsr, SEXP dtr,SEXP vr,SEXP qcr,SEXP bcr,SEXP csr,SEXP nth);
 void diagXVXt(double *diag,double *V,double *X,int *k1,int *k2,int *ks,int *m,int *p, ptrdiff_t *n, 
 	      int *nx, int *ts, int *dt, int *nt,double *v,int *qc,int *pv,int *cv,int *nthreads,int *cs,int *ncs,int *rs,int *nrs);
 void idiagXLLtXt(double *diag,double *L,double *X,int *k,int *ks,int *m,int *p, int *n, 
@@ -202,6 +218,8 @@ void pivoter(double *x,int *r,int *c,int *pivot, int *col, int *reverse);
 void row_squash(double *X,int rnew,int rold,int col);
 void up2lo(double * A, int n);
 void band_chol(double *B,int *n,int *k,int *info);
+void band_solve(double *RB,int *n,int *k,double *B,int *cb,int *info);
+void band_mult(double *RB,int *n,int *k,double *B,int *cb,int *trans);
 void tri_chol(double *ld,double *sd,int *n,int *info);
 void mgcv_omp(int *a);
 void mgcv_chol(double *a,int *pivot,int *n,int *rank);
@@ -244,6 +262,8 @@ void dchol(double *dA, double *R, double *dR,int *p);
 void chol_down(double *R,double *Rup,int *n,int *k,int *ut);
 SEXP mgcv_chol_down(SEXP r,SEXP ru,SEXP N,SEXP K, SEXP UT);
 SEXP mgcv_chol_up(SEXP r,SEXP U,SEXP N,SEXP UP,SEXP EPS);
+SEXP RSGup(SEXP R,SEXP U,SEXP Gcs,SEXP Gij);
+SEXP SGap(SEXP Gij, SEXP Gcs,SEXP X,SEXP TR);
 void vcorr(double *dR,double *Vr,double *Vb,int *p,int *M);
 SEXP mgcv_Rpforwardsolve(SEXP R, SEXP B,SEXP NT);
 SEXP mgcv_Rpbacksolve(SEXP R, SEXP B,SEXP NT);
@@ -267,10 +287,13 @@ void chol_up(double *R,double *u, int *n,int *up,double *eps);
 void minres(double *R, double *u,double *b, double *x, int *p,int *m,double *work);
 SEXP QRdrop(SEXP q,SEXP r,SEXP K);
 SEXP QRadd(SEXP q,SEXP r,SEXP A);
-
-
+//void partial_band_chol(double *A,int b,int n);
+SEXP pabchol(SEXP a,SEXP r);
+SEXP RXWXband(SEXP x,SEXP W,SEXP b,SEXP KK);
+SEXP sRXWXband(SEXP X,SEXP W,SEXP b,SEXP KK);
 /* sparse matrix routines */
-SEXP isa1p(SEXP L,SEXP S,SEXP NT);
+SEXP isa1p(SEXP L,SEXP S);
+SEXP isa2p(SEXP L,SEXP S,SEXP NT);
 SEXP stmm(SEXP X); /* row Kronecker product */
 SEXP sdiagXVXt(SEXP X, SEXP V, SEXP LT, SEXP RT);
 SEXP sXbd(SEXP X,SEXP BETA,SEXP LT);

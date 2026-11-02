@@ -928,10 +928,12 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
     } // i loop  (term block rows)
     /* now run through stc enforcing consistency of block starts */
     k = stc[0];
-    for (i=1;i<nrc;i++) {
+    for (i=0;i<nrc;i++) {
       /* set r_start to correct value for first block on each row (first row always ok)... */
-      b = stc[i-1];k = stc[i];
-      block[k].r_start = block[b].r_start + block[b].r_size;
+      if (i) {
+	b = stc[i-1];k = stc[i];
+        block[k].r_start = block[b].r_start + block[b].r_size;
+      }	
       if (symmetric) j1=i; else j1=ncc-1;
       for (j=0;j<j1;j++) { /* work along cols of row */
         b = stc[i + j * nrc];k = stc[i + (j+1) * nrc];
@@ -941,7 +943,7 @@ SEXP sXWXd(SEXP X,SEXP W,SEXP LT, SEXP RT,SEXP NT) {
     }
     /* get total rows and cols of result... */
     rcum = block[k].r_start + block[k].r_size;
-    ccum = block[k].c_start + block[k].c_size;
+    ccum = block[k].c_start + block[k].c_size; 
   } else { /* structure matrix is unchanged */
     stc = str;
   }  
@@ -1946,172 +1948,377 @@ static inline int kij(int *Ap,int *Ai,int i, int j) {
 } /* kij */
 
 
-SEXP isa1p(SEXP L,SEXP S,SEXP NT) {
-/* Parallel version. Fine scale single column parallelization.
 
-   Inverse subset algorithm adapted from Rue (2005). Idea is to compute the 
+SEXP isa1p(SEXP L,SEXP S) {
+/* Inverse subset algorithm adapted from Rue (2005). Idea is to compute the 
    elements of S = (LL')^{-1} on the non-zero Pattern on L+L'. On entry 
    L and S are of class "dgCMatrix" and S has the non-zero pattern of L+L'.
    On exit S contains the required elements of the inverse.
-   The rate limiting step is the search for the matching non-zero elements in 
-   the intermost summation loop. This version uses an algorithm that 
-   simultaneously finds search brackets in S[,j] for each element in L[,i] 
-   (always the smaller) in the summation. Bisection is then used within the 
-   search bracket. It's only about 10% faster than simple bisection in reality!
+
+   This version works down through the columns of S, which allows the required
+   summations to be efficiently computed via scatter operations, without
+   searching for the matching indices in the summations. No obvious way of
+   parallelizing as col and row ordering is essential in order to define before
+   use. So NT ignored currently. Could parallelize on basis down separate paths
+   of ellimination tree - buit it's complex.
+
+   Recall matrix elements are in L@x, L@p[i] gives start location of col i.
+   L@i gives row corresponding to each element of L@x.
 */
-  
   SEXP i_sym,x_sym,dim_sym,p_sym,kr;
-  int *Lp,*Li,*Sp,*Si,i,j,k,q,*dim,s,k0,k1,l0,l1,n,mm,
-    *li0,*li1,s0,s1,s2,m,*ul,*ll,*ul0,*ll0,kk,*ulq,*llq,*llq1,*liq,nt,tid;
-  //long long int ops=0; 
-  double *Lx,*Sx,x=0.0,Lii,*lxp;
-  //global_ops=0;
-  /* register the names of the slots in X and XWX */
+  int *Sp,*Si,i,j,k,q,*dim,n,tid,kjj,ki,kji,nx,*r,*d,*sin;
+  double *Sx,Lii,*Sj0,sls,xx,*iLd,invjj,invii;
+  double * restrict Sj;
+  const int * restrict Lp, * restrict Lip, * restrict Lip1, * restrict Li;
+  const double * restrict Lx, * restrict Lxp;
+  /* register the names of the slots in L and S */
   p_sym = install("p");
   dim_sym = install("Dim");
   i_sym = install("i");
   x_sym = install("x");
-  nt = asInteger(NT); 
   /* Get pointers to the relevant slots in L*/ 
   Lp = INTEGER(R_do_slot(L,p_sym));
   dim = INTEGER(R_do_slot(L,dim_sym));
   n=dim[1];
   Li = INTEGER(R_do_slot(L,i_sym));
   Lx = REAL(R_do_slot(L,x_sym));
-
   /* Now get pointers to slots in S */
   Sp = INTEGER(R_do_slot(S,p_sym)); /* col j's elements lie between Sp[j] and Sp[j+1]-1 in x*/
   Si = INTEGER(R_do_slot(S,i_sym)); /* row index corresponding to elements in x*/
   Sx = REAL(R_do_slot(S,x_sym)); /* non-zero elements */
 
-  /* we need the maximum column length in L... */
-  for (mm=0,i=0;i<n;i++) {
-    j = Lp[i+1] - Lp[i]; if (j>mm) mm=j;
-  }  
-  /* allocate storage for the search interval limits... */
-  ll0 = ll = (int *)CALLOC((size_t)mm*nt,sizeof(int));
-  ul0 = ul = (int *)CALLOC((size_t)mm*nt,sizeof(int));
+  nx = Sp[n]; /* length of S@x */
+  sin = (int *)CALLOC((size_t)nx,sizeof(int)); /* indices of equivalent entry in opposite triangle */
+  r = (int *)CALLOC((size_t)n,sizeof(int)); /* r[j] tracks rows of col j processed so far */
+  d = (int *)CALLOC((size_t)n,sizeof(int)); /* d[j] is index of S[,j,j] */
+
+  for (j=0;j<n;j++) for (i=Sp[j];i<Sp[j+1];i++) {
+    q = Si[i]; /* current row of S[,j] */
+    if (q>=j) {
+      if (q==j) d[j] = i; /* index of S[j,j] in S@x */
+      k = Sp[q] + r[q]; /* index of S[j,q] in S@x */
+      sin[k] = i; sin[i] = k; r[q]++;
+    }  
+  }    
+
+  FREE(r);
   
-  for (i=n-1;i>=0;i--) { /* work down columns */
-    Lii = Lx[Lp[i]]; /* Lii is first element in ith col of L */
-    l0 = Lp[i]+1;l1 = Lp[i+1]; /* limits of L[,i] over which to sum */
-    li0 = Li + l0; li1 = Li + l1; /* pointers to row indices */
-    k1 = Sp[i+1]-1; // k0 = Sp[i];
-    k0 = kij(Sp,Si,i,i); /* get index for S[i,i] as we do not want to go further than this */
-    /* in fact elements j/k can be processed in any order, so openMP
-       parallel section could be used here. However calc is not 
-       block oriented */
-    tid = 0;
-    #ifdef _OPENMP
-#pragma omp parallel private(k,tid,ul,ll,j,m,q,s,s1,kk,ulq,llq,liq,llq1,s2,s0,x,lxp) num_threads(nt)
-    #endif 
-    { /* there seems to be little in it between blocking and by column threading */
-    #ifdef _OPENMP
-    #pragma omp for
-    #endif
-    for (k=k1;k>k0;k--) { /* work up rows of col i */
-      #ifdef _OPENMP
-      tid = omp_get_thread_num();
-      #endif
-      ul = ul0 + tid*mm;
-      ll = ll0 + tid*mm;
-      j = Si[k]; /* the row corresponding to stored element k */ 
-      /* Now compute S[i,j] which is S[j,i] which is in Sx[k] */
-      /* Loop over the ith column of L */
-      m = l1-l0; /* number of non zero elements in L[,i] */
-      if (m>0) {
-	s = kij(Sp,Si,*li0,j); /* location of Sp[Li[l0],j] */
-        s1 = kij(Sp,Si,li1[-1],j); /* location of Sp[Li[l1-1],j] */
-      }	else s1=s=Sp[j];
-      for (q=0;q<m;q++) { /* fill out initial search bracket ends */
-        ul[q] = s1;ll[q] = s;
-      }
-     	
-      kk = 0; /* interval we are working on */
+  Sj = (double *)CALLOC((size_t)n,sizeof(double)); /* storage for S[,j] */
+  iLd = (double *)CALLOC((size_t)n,sizeof(double));
+  for (i=0;i<n;i++) iLd[i] = 1.0/Lx[Lp[i]];   /* cache inverse LD elements */
+  /* note that row and column orderings are essential for define before use */
+  for (j=n-1;j>=0;j--) { /* work *down* through cols of Sj */
+    kjj = d[j];  /* location of element S[j,j] in S@x */
+    for (k=kjj+1;k<Sp[j+1];k++) Sj[Si[k]] = Sx[k]; /* fill Sj below row j... */
 
-      while (kk<m-1) { /* iterate for bracketing intervals */
-        s = (ll[kk] + ul[kk])/2; /* current interval mid-point */
-	s1 = Si[s]; /* row number at s */
-
-	for (q=kk;q<m;q++) { /* work through remaining intervals */
-          if (s1 > li0[q]) { /* is new point above point q? */
-            if (s<ul[q]) ul[q] = s; /* is new point closer than previous upper limit ? */
-          } else { /* new point is below or equal to point q */
-            if (s>ll[q]) ll[q] = s; else break; /* either it is a higher lower limit, or we can stop updating */
-          }   
-	}
-	/* now test whether interval kk is complete and we can move on... */
-	if (ul[kk] <= ll[kk+1]||ul[kk] == ll[kk]+1) kk++; 
-      }	/* bracketing interval loop */			       
-      /* at this stage we have non overlapping intervals within which to search for the
-         elements of S matching the non-zeores of L[,i], can now finish the matching 
-         by simple bisection within each interval. */
-      ulq=ul;llq=ll;liq=li0;llq1=ll+m;
-      for (x=0.0,lxp=Lx+l0;llq<llq1;llq++,ulq++,liq++,lxp++) { 
-        s = *llq;s2 = *ulq;kk = *liq;
-	while (Si[s] != kk) { /* search for S element corresponding to L element */
-          s0 = (s+s2+1)/2;
-	  if (Si[s0] > kk) s2=s0; else s=s0;
-	}
-	x -=  *lxp * Sx[s];
-      }	
-
-      x /= Lii;//ops++;
-      Sx[k] = x; /* S[j,i] */
-      s = kij(Sp,Si,i,j);
-      Sx[s] = x;/* S[i,j] */
-    } /***** k loop end *****/
-    } /* parallel section end */ 
-    /* now do k0, to fill in S[i,i] */
-    ul=ul0;ll=ll0;
-      
-    /* Now compute S[i,j] which is S[j,i] which is in Sx[k] */
-    /* Loop over the ith column of L */
-    m = l1-l0; /* number of non zero elements in L[,i] */
-    if (m>0) {
-      s = kij(Sp,Si,*li0,i); /* location of Sp[Li[l0],j] */
-        s1 = kij(Sp,Si,li1[-1],i); /* location of Sp[Li[l1-1],j] */
-    }  else s1=s=Sp[i];
-    for (q=0;q<m;q++) { /* fill out initial search bracket ends */
-      ul[q] = s1;ll[q] = s;
-    }
-     	
-    kk = 0; /* interval we are working on */
-
-    while (kk<m-1) { /* iterate for bracketing intervals */
-      s = (ll[kk] + ul[kk])/2; /* current interval mid-point */
-      s1 = Si[s]; /* row number at s */
-
-      for (q=kk;q<m;q++) { /* work through remaining intervals */
-        if (s1 > li0[q]) { /* is new point above point q? */
-          if (s<ul[q]) ul[q] = s; /* is new point closer than previous upper limit ? */
-        } else { /* new point is below or equal to point q */
-          if (s>ll[q]) ll[q] = s; else break; /* either it is a higher lower limit, or we can stop updating */
-        }   
-      }
-      /* now test whether interval kk is complete and we can move on... */
-      if (ul[kk] <= ll[kk+1]||ul[kk] == ll[kk]+1) kk++; 
-    }	/* bracketing interval loop */			       
-    /* at this stage we have non overlapping intervals within which to search for the
-       elements of S matching the non-zeores of L[,i], can now finish the matching 
-       by simple bisection within each interval. */
-    ulq=ul;llq=ll;liq=li0;llq1=ll+m;
-    for (x=0.0,lxp=Lx+l0;llq<llq1;llq++,ulq++,liq++,lxp++) { 
-      s = *llq;s2 = *ulq;kk = *liq;
-      while (Si[s] != kk) { /* search for S element corresponding to L element */
-        s0 = (s+s2+1)/2;
-	if (Si[s0] > kk) s2=s0; else s=s0;
-      }
-      x -=  *lxp * Sx[s];
-    }	
-    x += 1/Lii;
-    x /= Lii;//ops++;
-    Sx[k0] = x; /* S[j,i] */
+    /* do the diagonal i==j case */ 
     
+    invjj = iLd[j];
+    sls = invjj;
+    for (Lip=Li+Lp[j]+1,Lip1=Li+Lp[j+1],Lxp=Lx+Lp[j]+1; Lip<Lip1; Lip++,Lxp++)
+        sls -= Sj[*Lip] * *Lxp;
+    kji = sin[kjj];
+    Sj[j] = Sx[kjj] = Sx[kji] = sls*invjj;
+   
+    /* now i<j cases ... */
+    
+    for (ki=kjj-1;ki>=Sp[j];ki--) { /* work *up* rows of S[,j] from S[j,j] */
+      i = Si[ki]; /* this is row i of S[,j] */
+      invii = iLd[i];//Lii = Lx[Lp[i]]; /* 1/L[i,i] */
+      sls = 0; /* delta_{ij}/L[i,i] */
+      /* for (k=Lp[i]+1;k<Lp[i+1];k++) {
+	   xx = Sj[Li[k]];
+	   if (xx!=0) sls -= xx * Lx[k];
+         }
+      */	
+      for (Lip=Li+Lp[i]+1,Lip1 = Li+Lp[i+1],Lxp=Lx+Lp[i]+1;Lip<Lip1;Lip++,Lxp++) sls -= Sj[*Lip] * *Lxp;
+      kji = sin[ki]; /* location of S[j,i] in S@x */
+      Sj[i] = Sx[ki] = Sx[kji] = sls*invii; /* store results */
+    } /* ki loop working up rows */
+    for (k = Sp[j];k<Sp[j+1];k++) Sj[Si[k]] = 0; /* clean Sj for next col down */
+  } /* col j loop */
+  FREE(Sj);FREE(sin);FREE(d);FREE(iLd);
+  return(R_NilValue);
+}  /* isa1p */
+
+#include <R.h>
+#include <Rinternals.h>
+#include <stdlib.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+/* ---- per-column ISA body (shared by sequential and task paths) ---- */
+static inline void proc_col_isa(int jj,
+        const int * restrict d,
+        const int * restrict Sp, const int * restrict Si, double * restrict Sx,
+        const int * restrict Lp, const int * restrict Li,
+        const double * restrict Lx, const double * restrict iLd,
+        const int * restrict sin, double * restrict Sj, int n)
+{
+  int tid = 0;
+#ifdef _OPENMP
+  tid = omp_get_thread_num();
+#endif
+  double * restrict Sjt = Sj + (size_t)tid*n;
+  int kjj = d[jj], kk, kii;
+
+  /* scatter already-computed below-diagonal entries of col jj */
+  for (kk=kjj+1; kk<Sp[jj+1]; kk++) Sjt[Si[kk]] = Sx[kk];
+
+  /* diagonal i==jj */
+  {
+    double invjj = iLd[jj];
+    double sls   = invjj;
+    const int    * restrict Lip  = Li + Lp[jj]+1;
+    const int    * restrict Lip1 = Li + Lp[jj+1];
+    const double * restrict Lxp  = Lx + Lp[jj]+1;
+    for (; Lip<Lip1; Lip++,Lxp++) sls -= Sjt[*Lip] * *Lxp;
+    int kji = sin[kjj];
+    Sjt[jj] = Sx[kjj] = Sx[kji] = sls*invjj;
   }
-  FREE(ul0);FREE(ll0);
-  PROTECT(kr=allocVector(REALSXP,1));
-  REAL(kr)[0] = 0.0;//ops/(double) global_ops;
-  UNPROTECT(1);
-  return(kr);
-} /* isa1p */
+
+  /* strictly upper entries i<jj, working up */
+  for (kii=kjj-1; kii>=Sp[jj]; kii--) {
+    int ii = Si[kii];
+    double invii = iLd[ii];
+    double sls   = 0.0;
+    const int    * restrict Lip  = Li + Lp[ii]+1;
+    const int    * restrict Lip1 = Li + Lp[ii+1];
+    const double * restrict Lxp  = Lx + Lp[ii]+1;
+    for (; Lip<Lip1; Lip++,Lxp++) sls -= Sjt[*Lip] * *Lxp;
+    int kji = sin[kii];
+    Sjt[ii] = Sx[kii] = Sx[kji] = sls*invii;
+  }
+
+  /* clean this thread's scratch for reuse */
+  for (kk=Sp[jj]; kk<Sp[jj+1]; kk++) Sjt[Si[kk]] = 0.0;
+}
+
+/* descending sort of packed (size<<32 | id) keys, for longest-first tasks */
+static int cmp_ll_desc(const void *a,const void *b){
+  long long x=*(const long long*)a, y=*(const long long*)b;
+  return (x<y) - (x>y);
+}
+
+SEXP isa2p(SEXP L,SEXP S,SEXP NT) {
+/* Inverse subset algorithm (Rue, 2005), subtree-coarsened task parallelism with
+   a branch-point cut of the elimination tree. Computes elements of S=(LL')^{-1}
+   on the pattern of L+L'. The trunk (shared ancestor chain near the root) is
+   processed sequentially first; the independent subtrees hanging off the cut
+   frontier are processed one-task-each in parallel (dynamic, largest-first).
+   The cut is found by splitting the heaviest frontier node into its children
+   until the frontier holds >= 4*nt subtrees, so separator chains are absorbed
+   into a minimal trunk and the subtrees are the natural subdomains. */
+  SEXP i_sym,x_sym,dim_sym,p_sym;
+  int i,j,k,q,n,nt,lev,maxlev,nlev;
+  const int * restrict Lp, * restrict Li, * restrict dim;
+  const double * restrict Lx;
+  int * restrict Sp, * restrict Si;
+  double * restrict Sx;
+  int *sin,*r,*d,*parent,*level,*level_start,*cols_by_level,*pos;
+  int *ch_start,*child,*front,*cs,*sub_start,*subcols;
+  double *Sj,*iLd,*w;
+  long long *key;
+
+  p_sym=install("p"); dim_sym=install("Dim");
+  i_sym=install("i"); x_sym=install("x");
+
+  nt = asInteger(NT); if (nt<1) nt=1;
+
+  Lp=INTEGER(R_do_slot(L,p_sym)); dim=INTEGER(R_do_slot(L,dim_sym));
+  n=dim[1];
+  Li=INTEGER(R_do_slot(L,i_sym)); Lx=REAL(R_do_slot(L,x_sym));
+  Sp=INTEGER(R_do_slot(S,p_sym)); Si=INTEGER(R_do_slot(S,i_sym));
+  Sx=REAL(R_do_slot(S,x_sym));
+
+  int nx = Sp[n];
+  sin=(int *)CALLOC((size_t)nx,sizeof(int));
+  r  =(int *)CALLOC((size_t)n ,sizeof(int));
+  d  =(int *)CALLOC((size_t)n ,sizeof(int));
+
+  /* build sin[] (mirror index) and d[] (index of S[j,j]) */
+  for (j=0;j<n;j++) for (i=Sp[j];i<Sp[j+1];i++){
+    q=Si[i];
+    if (q>=j){ if (q==j) d[j]=i; k=Sp[q]+r[q]; sin[k]=i; sin[i]=k; r[q]++; }
+  }
+  FREE(r);
+
+  /* reciprocal diagonal of L */
+  iLd=(double *)CALLOC((size_t)n,sizeof(double));
+  for (i=0;i<n;i++) iLd[i]=1.0/Lx[Lp[i]];
+
+  /* elimination tree parent (parent[j] > j, or -1 for a root) + depth */
+  parent=(int *)CALLOC((size_t)n,sizeof(int));
+  level =(int *)CALLOC((size_t)n,sizeof(int));
+  for (j=0;j<n;j++) parent[j]=(Lp[j+1]>Lp[j]+1)?Li[Lp[j]+1]:-1;
+  maxlev=0;
+  for (j=n-1;j>=0;j--){
+    level[j]=(parent[j]<0)?0:level[parent[j]]+1;
+    if (level[j]>maxlev) maxlev=level[j];
+  }
+  nlev=maxlev+1;
+
+  /* columns bucketed by level (ascending) -> cols_by_level */
+  level_start  =(int *)CALLOC((size_t)(nlev+1),sizeof(int));
+  cols_by_level=(int *)CALLOC((size_t)n,sizeof(int));
+  pos          =(int *)CALLOC((size_t)nlev,sizeof(int));
+  for (j=0;j<n;j++) level_start[level[j]+1]++;
+  for (lev=0;lev<nlev;lev++) level_start[lev+1]+=level_start[lev];
+  for (lev=0;lev<nlev;lev++) pos[lev]=level_start[lev];
+  for (j=0;j<n;j++){ int l=level[j]; cols_by_level[pos[l]++]=j; }
+  FREE(pos);
+
+  Sj=(double *)CALLOC((size_t)n*nt,sizeof(double));
+
+  /* ---- child lists (CSR) from parent[] ---- */
+  ch_start=(int *)CALLOC((size_t)(n+1),sizeof(int));
+  child   =(int *)CALLOC((size_t)n,sizeof(int));
+  for (j=0;j<n;j++) if (parent[j]>=0) ch_start[parent[j]+1]++;
+  for (j=0;j<n;j++) ch_start[j+1]+=ch_start[j];
+  { int *cp=(int *)CALLOC((size_t)n,sizeof(int));
+    for (j=0;j<n;j++) cp[j]=ch_start[j];
+    for (j=0;j<n;j++) if (parent[j]>=0) child[cp[parent[j]]++]=j;
+    FREE(cp);
+  }
+
+  /* ---- subtree work weights: w[j] = own cost + sum over descendants ---- */
+  w=(double *)CALLOC((size_t)n,sizeof(double));
+  for (j=0;j<n;j++){ double c=(double)(Lp[j+1]-Lp[j]-1); w[j]=(c+1.0)*(c+1.0); }
+  for (j=0;j<n;j++) if (parent[j]>=0) w[parent[j]]+=w[j]; /* children (j) before parent */
+
+  /* ---- branch-point cut: split heaviest frontier node until enough subtrees ---- */
+  int target = 4*nt, nf=0, nsub;
+  front=(int *)CALLOC((size_t)n,sizeof(int));
+  cs   =(int *)CALLOC((size_t)n,sizeof(int));
+  for (j=0;j<n;j++) cs[j]=-1;                       /* -1 = trunk/unassigned */
+  for (j=0;j<n;j++) if (parent[j]<0) front[nf++]=j; /* start from roots */
+
+  if (nt>1) {
+    for (;;) {
+      if (nf>=target) break;
+      int m=-1; double best=-1.0;
+      for (int f=0;f<nf;f++){ int nd=front[f];
+        if (ch_start[nd+1]>ch_start[nd] && w[nd]>best){ best=w[nd]; m=f; } }
+      if (m<0) break;                               /* all frontier are leaves */
+      int node=front[m];
+      front[m]=front[--nf];                          /* node becomes trunk */
+      for (int a=ch_start[node];a<ch_start[node+1];a++) front[nf++]=child[a];
+    }
+  }
+  nsub = nf;Rprintf("nsub=%d  (target=%d, nt=%d)\n", nsub, target, nt);
+
+  if (nsub<=1) {
+    /* not worth parallelizing (chain-like etree): sequential, ancestors first */
+    for (int t=0;t<n;t++)
+      proc_col_isa(cols_by_level[t],d,Sp,Si,Sx,Lp,Li,Lx,iLd,sin,Sj,n);
+    FREE(ch_start);FREE(child);FREE(w);FREE(front);FREE(cs);
+    goto done;
+  }
+
+  /* label subtree roots, then propagate ids downward (level-ascending) */
+  for (int s=0;s<nsub;s++) cs[front[s]]=s;
+  for (int t=0;t<n;t++){ int jj=cols_by_level[t];
+    if (cs[jj]<0 && parent[jj]>=0) cs[jj]=cs[parent[jj]]; } /* trunk stays -1 */
+
+  /* ---- per-subtree column lists, level-ascending within each subtree ---- */
+  sub_start=(int *)CALLOC((size_t)(nsub+1),sizeof(int));
+  subcols  =(int *)CALLOC((size_t)n,sizeof(int));
+  for (j=0;j<n;j++) if (cs[j]>=0) sub_start[cs[j]+1]++;
+  for (int s=0;s<nsub;s++) sub_start[s+1]+=sub_start[s];
+  { int *p2=(int *)CALLOC((size_t)nsub,sizeof(int));
+    for (int s=0;s<nsub;s++) p2[s]=sub_start[s];
+    for (int t=0;t<n;t++){ int jj=cols_by_level[t];
+      if (cs[jj]>=0){ int s=cs[jj]; subcols[p2[s]++]=jj; } }
+    FREE(p2);
+  }
+
+  { double wt=0,wa=0;
+    for (j=0;j<n;j++){ double c=(double)(Lp[j+1]-Lp[j]-1),ow=(c+1.0)*(c+1.0);
+                   wa+=ow; if (cs[j]<0) wt+=ow; }
+    Rprintf("trunk work fraction = %.3f\n", wt/wa);
+  }  
+  /* order subtrees largest-first (LPT) */
+  key=(long long *)CALLOC((size_t)nsub,sizeof(long long));
+  for (int s=0;s<nsub;s++)
+    key[s]=(((long long)(sub_start[s+1]-sub_start[s]))<<32)|(unsigned)s;
+  qsort(key,(size_t)nsub,sizeof(long long),cmp_ll_desc);
+
+  /* Phase 1: trunk (cs<0), sequential, ancestors first */
+  for (int t=0;t<n;t++){ int jj=cols_by_level[t];
+    if (cs[jj]<0) proc_col_isa(jj,d,Sp,Si,Sx,Lp,Li,Lx,iLd,sin,Sj,n); }
+
+  /* Phase 2: independent subtrees, one task each, dynamic + largest-first */
+#ifdef _OPENMP
+#pragma omp parallel num_threads(nt)
+  {
+#pragma omp single
+    {
+#endif
+      for (int oi=0;oi<nsub;oi++){
+        int s=(int)(key[oi]&0xffffffff);
+#ifdef _OPENMP
+#pragma omp task firstprivate(s)
+#endif
+        {
+          for (int pp=sub_start[s];pp<sub_start[s+1];pp++)
+            proc_col_isa(subcols[pp],d,Sp,Si,Sx,Lp,Li,Lx,iLd,sin,Sj,n);
+        }
+      }
+#ifdef _OPENMP
+    } /* single */
+  }   /* parallel: implicit barrier waits for all tasks */
+#endif
+
+  FREE(ch_start);FREE(child);FREE(w);FREE(front);FREE(cs);
+  FREE(sub_start);FREE(subcols);FREE(key);
+
+done:
+  FREE(Sj);FREE(iLd);FREE(sin);FREE(d);
+  FREE(parent);FREE(level);FREE(level_start);FREE(cols_by_level);
+  return R_NilValue;
+} /* isa2p */
+
+
+SEXP sRXWXband(SEXP X,SEXP W,SEXP b,SEXP KK) {
+/* equivalent of RXWXband for sparse matrices of class dgCMatrix
+   extract diagonal bands kk[0] to kk[1] of X'WX and put them in
+   rows of B, each starting at row start. Diagonal band 0 is
+   the leading diagonal. The first extracted band goes in
+   the first row of B */  
+  SEXP i_sym,x_sym,dim_sym,p_sym;
+  int *dim,n,p,rb,*Xp,*Xi,*kk,i,j,k,kb,xi;
+  double *B,*Xx,*w,*s,x;
+  /* register the names of the slots in L and S */
+  p_sym = install("p");
+  dim_sym = install("Dim");
+  i_sym = install("i");
+  x_sym = install("x");
+  dim = INTEGER(R_do_slot(X,dim_sym));
+  Xp = INTEGER(R_do_slot(X,p_sym));
+  Xi = INTEGER(R_do_slot(X,i_sym));
+  Xx = REAL(R_do_slot(X,x_sym));
+  n =dim[0];p=dim[1];rb = nrows(b);
+  B = REAL(PROTECT(coerceVector(b,REALSXP))); /* dense matrix rb by p */
+  w = REAL(PROTECT(coerceVector(W,REALSXP)));
+  kk = INTEGER(PROTECT(coerceVector(KK,INTSXP)));
+  s =  (double *)CALLOC((size_t)n,sizeof(double)); /* scatter vector */
+  for (j=0;j<p;j++) { /* loop over columns */
+    for (i=Xp[j];i<Xp[j+1];i++) s[Xi[i]] = Xx[i]; /* scatter X[,j] */
+    for (kb=0,k=kk[0];k<=kk[1];k++,kb++) { /* loop over diagonals and rows of B */
+      /* compute X[,j]'*X[,j+k]... */ 
+      if (j+k<p) {
+	for (x=0,i=Xp[j+k];i<Xp[j+k+1];i++) {
+	  xi = Xi[i]; /* current row of X and w */  
+	  if (s[xi]) x += s[xi] * w[xi] * Xx[i];
+        }	  
+        B[kb + j * rb] = x;
+      }	
+    }
+    for (i=Xp[j];i<Xp[j+1];i++) s[Xi[i]] = 0; /* clean up scatter */
+  }
+  FREE(s);UNPROTECT(3);
+  return(R_NilValue);
+} /* sRXWXband */
+
+

@@ -216,6 +216,7 @@ scasm <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL
   names(object$coefficients) <- G$term.names
   object$call <- G$cl # needed for update() to work
   class(object) <- c("gam","glm","lm")
+  object$y <- G$y;object$prior.weights <- G$w
   if (is.null(object$deviance)) object$deviance <- sum(residuals(object,"deviance")^2)
   object$gcv.ubre <- -object$laml
   names(object$gcv.ubre) <- "REML"
@@ -224,7 +225,6 @@ scasm <- function(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL
   object$nsdf <- G$nsdf
   object$sig2 <- object$scale
   !object$scale.known -> object$scale.estimated
-  object$y <- G$y;object$prior.weights <- G$w
   ## The following lines avoid potentially very large objects in hidden environments being stored
   ## with fitted gam objects. The downside is that functions like 'termplot' that rely on searching in
   ## the environment of the formula can fail...
@@ -567,7 +567,7 @@ gH2ls <- function(b,g,R,eta=NULL,WX=NULL) {
 
 scasm.newton <- function(G,lsp,control,start=NULL,scale.known=TRUE,bs=0) {
 ## Newton sequential QP fitting of shape constrained models for extended and general families
-  warn <- list()
+  warn <- rep("",0)
   y <- G$y; nobs <- length(G$w); family <- G$family; weights <- G$w
   mustart <- etastart <- NULL
   if (inherits(G$family,"general.family")) { ## general family initialization
@@ -594,7 +594,7 @@ scasm.newton <- function(G,lsp,control,start=NULL,scale.known=TRUE,bs=0) {
   } else {
     coef <- as.numeric(start)
     feasible <- ((is.null(G$Ain)||!nrow(G$Ain)||min(G$Ain%*%coef - G$bin) >= -.Machine$double.eps^.5) &&
-                   (is.null(G$C)||!nrow(G$C)||all.equal(G$C%*%coef,G$C%*%G$beta0)==TRUE))	   
+                   (is.null(G$C)||!nrow(G$C)||isTRUE(all.equal(G$C%*%coef,G$C%*%G$beta0))))	   
   }
 
   if (!feasible) { ## start not feasible so use G$beta0 as initial feasible point 
@@ -650,8 +650,8 @@ scasm.newton <- function(G,lsp,control,start=NULL,scale.known=TRUE,bs=0) {
 	if (!is.null(coef) && (!is.finite(pdev) || (iter>1 && feasible && pdev - pdev0 > tol * abs(pdev)))) {
           start <- (start + coef)/2
 	  if (efam) mu <- G$family$linkinv(as.numeric(G$X %*% start + G$offset))
-	  if (all.equal(as.numeric(start),as.numeric(coef),tol=.Machine$double.eps^.75*mean(abs(coef))) == TRUE) {
-            warning("step failure")
+	  if (isTRUE(all.equal(as.numeric(start),as.numeric(coef),tol=.Machine$double.eps^.75*mean(abs(coef))))) {
+            warn[length(warn)+1] <- "step failure"
 	    start <- coef
 	    pdev <- pdev0
 	    not.ok <- FALSE
@@ -694,7 +694,7 @@ scasm.newton <- function(G,lsp,control,start=NULL,scale.known=TRUE,bs=0) {
     
     if ((!feasible||iter<=ucstart) && iter > 1) { ## check whether coef vector feasible yet 
       feasible <- ((is.null(G$Ain)||!nrow(G$Ain)||min(G$Ain%*%coef - G$bin) >= -.Machine$double.eps^.5) &&
-                   (is.null(G$C)||!nrow(G$C)||all.equal(G$C%*%coef,G$C%*%G$beta0)))
+                   (is.null(G$C)||!nrow(G$C)||isTRUE(all.equal(G$C%*%coef,G$C%*%G$beta0))))
     }
     ## get the gradient and Hessian of the deviance
     if (efam) {
@@ -734,7 +734,7 @@ scasm.newton <- function(G,lsp,control,start=NULL,scale.known=TRUE,bs=0) {
     rsd <- NULL
   }
   if (!feasible) stop("failed to find feasible starting values")
-  if (iter==control$maxit) warning("scasm.newton failed to converge")
+  if (iter==control$maxit) warn[length(warn)+1] <- "scasm.newton failed to converge"
   aic.model <- if (inherits(G$family,"general.family")) dev else G$family$aic(y,mu,theta,G$w,scale*sum(G$w))
 
   bsr <- matrix(0,length(start),bs)
@@ -1210,7 +1210,7 @@ scasm.fit <- function(G,control=gam.control(),gamma=1,bs=0,...) {
     sedf <- drop(t(L)%*%(v$sedf*G$sp)) ## suppressed EDF per sp 
     ii <- redf > .05; lsp1 <- lsp
     dlsp0 <- dlsp;
-    dlsp <- log(scale) + log(redf) - log(drop(t(L)%*%(v$pSp*G$sp)))
+    dlsp <- log(scale*gamma) + log(redf) - log(drop(t(L)%*%(v$pSp*G$sp)))
     maxstep <- max(abs(dlsp))
     if (i==1 && maxstep > 8)  dlsp <- 8*dlsp/maxstep
     if (i>2 && maxstep > 4) dlsp <- 4*dlsp/maxstep ## avoid overly long steps

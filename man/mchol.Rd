@@ -39,13 +39,20 @@ A <- Matrix::sparseMatrix(i=i,j=j,x=x)
 R <- mchol(A)
 piv <- attr(R,"pivot")
 range(crossprod(R)-A[piv,piv])
+## Solve Ax=z...
+z <- runif(10)
+x0 <- solve(A,z) ## as built in
+## using R...
+x <- z; x[piv] <- solve(R,solve(Matrix::t(R),z[piv]))
+range(x-x0)
 
 i <- sample(1:5,10,replace=TRUE)
 j <- sample(1:10,10,replace=TRUE)
 u <- sample(1:100,10)*.001
 A <- crossprod(Matrix::sparseMatrix(i=i,j=j,x=u))
 mchol(A)
-
+Matrix::diag(A) <- Matrix::diag(A) + .1 ## make +ve def
+mchol(A)
 }
 \keyword{models} \keyword{regression}%-- one or more ..
 

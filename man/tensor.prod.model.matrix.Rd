@@ -15,7 +15,7 @@ a\%.\%b
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{
-  \item{X}{a list of model matrices for the marginal bases of a smooth. Items can be class \code{"matrix"} or \code{"dgCMatrix"}, but not a mixture of the two.} 
+  \item{X}{a list of model matrices for the marginal bases of a smooth. Items can be class \code{"matrix"} or \code{"dgCMatrix"}.} 
  \item{S}{a list of penalties for the marginal bases of a smooth.}
  \item{a}{a matrix with the same number of rows as \code{A}.}
  \item{b}{a matrix with the same number of rows as \code{B}.}
@@ -43,7 +43,7 @@ Of course it's important that the model matrices and penalty matrices are presen
 constructing tensor product smooths.
 
 }
-\value{ Either a single model matrix for a tensor product smooth (of the same class as the marginals), or a list of penalty terms for a tensor product smooth.   
+\value{ Either a single model matrix for a tensor product smooth (class \code{"dgCMatrix"} if any elements of \code{X} are sparse matrices, otherwise class \code{"matrix"}), or a list of penalty terms for a tensor product smooth.   
 }
 \references{
 

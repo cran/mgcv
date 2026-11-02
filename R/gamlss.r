@@ -174,15 +174,18 @@ gamlss.ncv <- function(X,y,wt,nei,beta,family,llf,H=NULL,Hi=NULL,R=NULL,offset=N
       kk <- 0;jj <- 0
       for (j in 1:nlp) for (k in j:nlp) {
         kk <- kk  + 1
-	rowk <- 1:nm+(k-1)*nm
+	### BUG: deta appears sometimes to be incorrectly indexed here: unless C functions are repacking it then
+	### the appropriate dimension is n not nm and it needs further subsetting by nei$d - BUT
+	### rowk and rowj appear correct for indexing deta.cv
+	rowk <- 1:nm+(k-1)*nm  
 	rowj <- 1:nm+(j-1)*nm
 	#ncv1 <- ncv1 - colSums(llf$l2[nei$d,kk]*((deta[1:nm+(k-1)*nm,] + deta.cv[1:nm+(k-1)*nm,])*(eta.cv[,j]-eta[nei$d,j]) + 
 	#                   (eta.cv[,k]-eta[nei$d,k])*(deta.cv[1:nm+(j-1)*nm,] - deta[nei$d+(j-1)*n,])))*gamma*.5
-        ncv1 <- ncv1 - llf$l2[nei$d,kk]*((deta[rowk,] + deta.cv[rowk,])*(eta.cv[,j]-eta[nei$d,j]) +
+        ncv1 <- ncv1 - llf$l2[nei$d,kk]*((deta[nei$d+(k-1)*n,] + deta.cv[rowk,])*(eta.cv[,j]-eta[nei$d,j]) +
 	                       (eta.cv[,k]-eta[nei$d,k])*(deta.cv[rowj,] - deta[nei$d+(j-1)*n,]))*gamma*.5
         #if (j!=k) ncv1 <- ncv1 - colSums(llf$l2[nei$d,kk]*((deta[1:nm+(j-1)*nm,] + deta.cv[1:nm+(j-1)*nm,])*(eta.cv[,k]-eta[nei$d,k]) + 
 	#                   (eta.cv[,j]-eta[nei$d,j])*(deta.cv[1:nm+(k-1)*nm,] - deta[nei$d+(k-1)*n,])))*gamma*.5		  
-        if (j!=k) ncv1 <- ncv1 - llf$l2[nei$d,kk]*((deta[rowj,] + deta.cv[rowj,])*(eta.cv[,k]-eta[nei$d,k]) +
+        if (j!=k) ncv1 <- ncv1 - llf$l2[nei$d,kk]*((deta[nei$d+(j-1)*n,] + deta.cv[rowj,])*(eta.cv[,k]-eta[nei$d,k]) +
 	          (eta.cv[,j]-eta[nei$d,j])*(deta.cv[rowk,] - deta[nei$d+(k-1)*n,]))*gamma*.5
         for (l in k:nlp) {
           jj <- jj + 1
@@ -584,7 +587,7 @@ gamlss.etamu <- function(l1,l2,l3=NULL,l4=NULL,ig1,g2,g3=NULL,g4=NULL,i2,i3=NULL
 } # gamlss.etamu
 
 
-gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=NULL,D=NULL,sandwich=FALSE) {
+gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=NULL,D=NULL,sandwich=FALSE,nt=1) {
 ## X[,jj[[i]]] is the ith model matrix.
 ## lj contains jth derivatives of the likelihood for each datum,
 ## columns are w.r.t. different combinations of parameters.
@@ -618,8 +621,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
   nbs <- if (deriv<0) abs(deriv)-1 else 0 ## number of bootstrap reps
   if (nbs) lbs <- matrix(0,p,nbs) ## storage for BS reps
   for (r in 1:max(1,nbs)) {
-    #wbs <- if (nbs)  tabulate(sample(nobs,replace=TRUE),nobs) else rep(1,nobs) ## bootstrap weights
-    wbs <- if (nbs)  sample(c(-1,1),nobs,replace=TRUE) else rep(1,nobs) ## bootstrap weights EXPERIMENTAL
+    wbs <- if (nbs)  tabulate(sample(n,replace=TRUE),nobs) else rep(1,n) ## bootstrap weights
+    #wbs <- if (nbs)  sample(c(-1,1),n,replace=TRUE) else rep(1,n) ## bootstrap weights EXPERIMENTAL
     if (is.null(l1map)) { ## all cols of l1 supplied
       for (i in 1:K) { ## first derivative loop
         lb[jj[[i]]] <- lb[jj[[i]]] + if (discrete) XWyd(X$Xd,rep(1,n),wbs*l1[,i],X$kd,X$ks,X$ts,X$dt,X$v,X$qc,X$drop,lt=X$lpid[[i]]) else
@@ -653,7 +656,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
       for (i in 1:K) for (j in i:K) {
         ## A <- t(X[,jj[[i]],drop=FALSE])%*%(l2[,i2[i,j]]*X[,jj[[j]],drop=FALSE])
         mi2 <- if (ifunc) i2(i,j) else i2[i,j] 
-        A <- if (discrete) XWXd(X$Xd,w=wbs*l2[,mi2],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
+        A <- if (discrete) XWXd(X$Xd,w=wbs*l2[,mi2],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=nt,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]]) else
                crossprod(X[,jj[[i]],drop=FALSE],(wbs*l2[,mi2])*X[,jj[[j]],drop=FALSE])
         lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
         if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A) 
@@ -662,7 +665,7 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
        for (i in 1:K) for (j in i:K) {
          mi2 <- if (ifunc) i2(i,j) else i2[i,j]
          if (l2map[mi2]>0) {
-           A <- if (discrete) XWXd(X$Xd,w=wbs*l2[,l2map[mi2]],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,
+           A <- if (discrete) XWXd(X$Xd,w=wbs*l2[,l2map[mi2]],k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=nt,drop=X$drop,
 	        lt=X$lpid[[i]],rt=X$lpid[[j]]) else crossprod(X[,jj[[i]],drop=FALSE],(wbs*l2[,l2map[mi2]])*X[,jj[[j]],drop=FALSE])
            lbb[jj[[i]],jj[[j]]] <- lbb[jj[[i]],jj[[j]]] + A 
            if (j>i) lbb[jj[[j]],jj[[i]]] <- lbb[jj[[j]],jj[[i]]] + t(A)
@@ -690,15 +693,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
 
   if (deriv==1) { 
    ## assuming fh contains the inverse penalized Hessian, Hp, forms tr(Hp^{-1}dH/drho_j) for each j
-   g.index <- attr(d1b,"g.index") ## possible index indicating log parameterization
-   if (!is.null(g.index)) { ## then several transform related quantities are required 
-     beta <- attr(d1b,"beta") ##  regression coefficients 
-     d1g <- d1b; d1g[g.index,] <- d1g[g.index,]/beta[g.index] ## derivartive w.r.t. working parameters
-     hess.diag <- attr(d1b,"hess.diag") ## should diagonal correction terms be included?
-   }
    d1H <- rep(0,m)
    if (discrete) {
-     ## lpi <- attr(X,"lpi") ## this line was in original code for this discrete section, and lpi replaced jj below - mistake, I think
      for (i in 1:K) for (j in i:K) { ## lp block loop
        for (l in 1:m) { ## sp loop
          v <- rep(0,n);ind <- 1:n
@@ -708,26 +704,8 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
            if (mi3>0) v <- v + l3[,mi3] * d1eta[ind,l]
            ind <- ind + n
          }
-	 XVX <- XWXd(X$Xd,w=v,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=1,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]])
-	 if (!is.null(g.index)) { ## non-linear correction terms required
-           gi <- g.index[jj[[i]]];gj <- g.index[jj[[j]]]
-	   if (any(gi)) XVX[gi,] <- beta[jj[[i]]][gi]*XVX[gi,]
-	   if (any(gj)) XVX[,gj] <- t(beta[jj[[j]]][gj]*t(XVX[,gj]))
-	   if (any(gi)) {
-	     XWX <- beta[jj[[i]]][gi]*d1g[jj[[i]],l][gi]*lbb[jj[[i]],jj[[j]]][gi,]
-	     if (any(gj)) XWX[,gj] <- t(beta[jj[[j]]][gj]*t(XWX[,gj]))
-	     XVX[gi,] <- XVX[gi,] + XWX   
-	   }  
-	   if (any(gj)) {
-	     XWX <- t(beta[jj[[j]]][gj]*d1g[jj[[j]],l][gj]*t(lbb[jj[[i]],jj[[j]]][,gj]))
-	     if (any(gi)) XWX[gi,] <- beta[jj[[i]]][gi]*XWX[gi,]
-	     XVX[,gj] <- XVX[,gj] + XWX
-	     if (i==j&&hess.diag) { ## add diagonal corrections
-	       dd <- beta[jj[[i]]][gi]*(lbb[jj[[i]][gi],] %*% d1b[,l] + lb[jj[[i]]][gi]*d1g[jj[[i]],l][gi])
-	       XVX[gi,gj] <- XVX[gi,gj] + diag(drop(dd),nrow=sum(gi))
-             }
-           }
-         } ## end of non-linear corrections
+	 XVX <- XWXd(X$Xd,w=v,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,nthreads=nt,drop=X$drop,lt=X$lpid[[i]],rt=X$lpid[[j]])
+
 	 mult <- if (i==j) 1 else 2
 	 d1H[l] <- d1H[l] + mult * sum(XVX * fh[jj[[i]],jj[[j]]]) ## accumulate tr(Hp^{-1}dH/drho_l)
        }
@@ -735,29 +713,6 @@ gamlss.gH <- function(X,jj,l1,l2,i2,l3=0,i3=0,l4=0,i4=0,d1b=0,d2b=0,deriv=0,fh=N
    } else for (i in 1:K) for (j in i:K) { ## lp block loop
       Hpi <- fh[jj[[i]],jj[[j]]] ## correct component of inverse Hessian
       d1hc <- rep(0,m)
-      if (!is.null(g.index)) { ## correct for non-linearity
-        gi <- g.index[jj[[i]]];gj <- g.index[jj[[j]]]
-        for (l in 1:m) { ## s.p. loop
-          dcor <- 0
-	  if (any(gi)) {
-	    XWX <- beta[jj[[i]]][gi]*d1g[jj[[i]],l][gi]*lbb[jj[[i]],jj[[j]]][gi,]
-	    if (any(gj)) XWX[,gj] <- t(beta[jj[[j]]][gj]*t(XWX[,gj]))
-	    dcor <- dcor + sum(XWX * Hpi[gi,])
-	  }  
-	  if (any(gj)) {
-	    XWX <- t(beta[jj[[j]]][gj]*d1g[jj[[j]],l][gj]*t(lbb[jj[[i]],jj[[j]]][,gj]))
-	    if (any(gi)) XWX[gi,] <- beta[jj[[i]]][gi]*XWX[gi,]
-	    dcor <- dcor + sum(XWX * Hpi[,gj])
-	    if (i==j&&hess.diag) { ## diagonal correction
-               dd <- beta[jj[[i]]][gi]*(lbb[jj[[i]][gi],] %*% d1b[,l] + lb[jj[[i]]][gi]*d1g[jj[[i]],l][gi])
-	       dcor <- dcor + sum(dd*diag(Hpi)[gi])
-            }
-	  }
-	  d1hc[l] <- dcor
-	} ## s.p. loop end
-        if (any(gi)) Hpi[gi,] <- Hpi[gi,]*beta[jj[[i]]][gi]
-        if (any(gj)) Hpi[,gj] <- t(t(Hpi[,gj])*beta[jj[[j]]][gj]) ## was jj[i] -- wrong
-      } ## end of non-linearity correction
       a <- rowSums((X[,jj[[i]]] %*% Hpi) * X[,jj[[j]]])
       for (l in 1:m) { ## sp loop
         v <- rep(0,n);ind <- 1:n
@@ -921,7 +876,7 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
     gamlss.ncv(X,y,wt,nei,beta,family,llf,H=H,Hi=Hi,R=R,offset=offset,dH=dH,db=db,deriv=deriv,nt=nt)
   } ## ncv  
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## function defining the gamlss Gaussian model log lik. 
   ## N(mu,sigma^2) parameterized in terms of mu and log(sigma)
   ## deriv: 0 - eval
@@ -1000,7 +955,7 @@ gaulss <- function(link=list("identity","logb"),b=0.01) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }
@@ -1110,8 +1065,7 @@ multinom <- function(K=1) {
 ## linear predictor. 
 ## 1. get derivatives wrt mu, tau
 ## 2. get required link derivatives and tri indices.
-## 3. transform derivs to derivs wrt eta (gamlss.etamu).
-## 4. get the grad and Hessian etc for the model
+## 3. get the grad and Hessian etc for the model
 ##    via a call to gamlss.gH  
 ## the first derivatives of the log likelihood w.r.t
 ## the first and second parameters...
@@ -1234,7 +1188,7 @@ multinom <- function(K=1) {
     gamlss.ncv(X,y,wt,nei,beta,family,llf,H=H,Hi=Hi,R=R,offset=offset,dH=dH,db=db,deriv=deriv,nt=nt)
   } ## ncv  
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## Function defining the logistic multimomial model log lik. 
   ## Assumption is that coding runs from 0..K, with 0 class having no l.p.
   ## ... this matches binary log reg case... 
@@ -1334,7 +1288,7 @@ multinom <- function(K=1) {
     if (deriv) {
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,l1,l2,tri$i2,l3=l3,i3=tri$i3,l4=l4,i4=tri$i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) { ret$l1=l1; ret$l2=l2; ret$l3=l3 }		      
     } else ret <- list()
     ret$l <- l; ret
@@ -1811,7 +1765,7 @@ ziplss <-  function(link=list("identity","identity")) {
   } ## ncv  
 
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## function defining the gamlss ZIP model log lik. 
   ## First l.p. defines Poisson mean, given presence (lambda)
   ## Second l.p. defines probability of presence (p)
@@ -1866,7 +1820,7 @@ ziplss <-  function(link=list("identity","identity")) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }		      
@@ -1890,7 +1844,7 @@ ziplss <-  function(link=list("identity","identity")) {
   ## which is basically penalizing something different here.
   ## best we can do here is to use E only as a regularizer.
       n <- rep(1, nobs)
-      if (all.equal(y,round(y))!=TRUE) {
+      if (!isTRUE(all.equal(y,round(y)))) {
           stop("Non-integer response variables are not allowed with ziplss ")
       }
       if ((min(y)==0&&max(y)==1)) stop("Using ziplss for binary data makes no sense")
@@ -2012,7 +1966,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
     gamlss.ncv(X,y,wt,nei,beta,family,llf,H=H,Hi=Hi,R=R,offset=offset,dH=dH,db=db,deriv=deriv,nt=nt)
   } ## ncv  
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## function defining the gamlss GEV model log lik. 
   ## deriv: 0 - eval
   ##        1 - grad and Hess
@@ -2023,11 +1977,14 @@ gevlss <- function(link=list("identity","identity","logit")) {
     discrete <- is.list(X)
     jj <- attr(X,"lpi") ## extract linear predictor index
     if (is.null(eta)) {
-      eta <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[1]]) else X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]]
+      eta <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[1]]) else
+                           X[,jj[[1]],drop=FALSE]%*%coef[jj[[1]]]
       if (!is.null(offset[[1]])) eta <- eta + offset[[1]] 
-      etar <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[2]]) else X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] ## log sigma
+      etar <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[2]]) else
+                            X[,jj[[2]],drop=FALSE]%*%coef[jj[[2]]] ## log sigma
       if (!is.null(offset[[2]])) etar <- etar + offset[[2]]
-      etax <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[3]]) else X[,jj[[3]],drop=FALSE]%*%coef[jj[[3]]] ## shape parameter
+      etax <- if (discrete) Xbd(X$Xd,coef,k=X$kd,ks=X$ks,ts=X$ts,dt=X$dt,v=X$v,qc=X$qc,drop=X$drop,lt=X$lpid[[3]]) else
+                            X[,jj[[3]],drop=FALSE]%*%coef[jj[[3]]] ## shape parameter
       if (!is.null(offset[[3]])) etax <- etax + offset[[3]]
     } else { ## eta supplied
       etar <- eta[,2]
@@ -2059,16 +2016,10 @@ gevlss <- function(link=list("identity","identity","logit")) {
 
     exp1 <- exp(1); ## facilitates lazy auto-translation
     ymu <- y - mu
-    aa0 <- (xi*ymu)/exp1^rho # added
+    aa0 <- (xi*ymu)/exp1^rho
     ind <- which(aa0 <= -1) ## added
-    if (FALSE&&length(ind)>0) { ## all added
-      xii <- xi[ind] ## this idea is really not a good one - messes up derivatives when triggered
-      erho <- exp1^rho[ind]
-      eps1 <- 1-.Machine$double.eps^.25
-      ymu[ind] <- -erho/xii*eps1
-      aa0[ind] <- -eps1
-    }
-    log.aa1 <- log1p(aa0) ## added
+
+    suppressWarnings(log.aa1 <- log1p(aa0)) ## added
     aa1 <- aa0 + 1 # (xi*(y-mu))/exp1^rho+1;
     aa2 <- 1/xi;
     l0  <- (-aa2*(1+xi)*log.aa1)-1/aa1^aa2-rho;
@@ -2083,7 +2034,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
       cc2 <- ymu;
       cc0 <- bb1*xi*cc2 ## added
       
-      log.cc3 <- log1p(cc0) ## added
+      suppressWarnings(log.cc3 <- log1p(cc0)) ## added
       cc3 <- cc0 + 1 ##bb1*xi*cc2+1;
       l1[,2]  <-  (-bb1*cc2*cc3^((-1/xi)-1))+(bb1*(xi+1)*cc2)/cc3-1;
       dd3 <- xi+1;
@@ -2285,7 +2236,7 @@ gevlss <- function(link=list("identity","identity","logit")) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }		      
@@ -2492,7 +2443,7 @@ tw.null.fit <- function(y,a=1.001,b=1.999) {
 
 twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
 ## General family for Tweedie location scale model...
-## so mu is mu1, rho = log(sigma) is mu2 and transformed p is mu3
+## so mu is mu1,transformed p is mu2 and rho = log(sigma) is mu3
 ## Need to redo ldTweedie to allow vector p and phi
 ## -- advantage is that there is no point buffering
 ## 1. get derivatives wrt mu, rho and p.
@@ -2553,7 +2504,7 @@ twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
     object$null.deviance <- sum(pmax(2 * (object$y * tw.theta - tw.kappa) * object$prior.weights/exp(object$fitted.values[,3]),0))
   })
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,sandwich=FALSE,nt=1) {
   ## function defining the gamlss Tweedie model log lik. 
   ## deriv: 0 - eval
   ##        1 - grad and Hess
@@ -2596,7 +2547,7 @@ twlss <- function(link=list("log","identity","identity"),a=1.01,b=1.99) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=0,fh=fh,D=D,sandwich=sandwich) 
+                      d1b=d1b,d2b=d2b,deriv=0,fh=fh,D=D,sandwich=sandwich,nt=nt) 
     } else ret <- list()
     ret$l <- l; ret$l0 <- l0; ret
   } ## end ll twlss
@@ -2746,7 +2697,7 @@ gammals <- function(link=list("identity","log"),b=-7) {
   } ## ncv  
 
  
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## function defining the gamlss gamma model log lik. 
   ## deriv: 0 - eval
   ##        1 - grad and Hess
@@ -2839,7 +2790,7 @@ gammals <- function(link=list("identity","log"),b=-7) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }		      
@@ -3077,7 +3028,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
   } ## ncv  
 
 
-  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE) {
+  ll <- function(y,X,coef,wt,family,offset=NULL,deriv=0,d1b=0,d2b=0,Hp=NULL,rank=0,fh=NULL,D=NULL,eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
   ## function defining the gamlss gamma model log lik. 
   ## deriv: 0 - eval
   ##        1 - grad and Hess
@@ -3168,7 +3119,7 @@ gumbls <- function(link=list("identity","log"),b=-7) {
 
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,i2,l3=de$l3,i3=i3,l4=de$l4,i4=i4,
-                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich)
+                      d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt)
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }		      
@@ -3212,7 +3163,9 @@ gumbls <- function(link=list("identity","log"),b=-7) {
 	  startji[!is.finite(startji)] <- 0
 	  start[jj[[1]]] <- startji
 	  eta1 <- Xbd(x$Xd,start,k=x$kd,ks=x$ks,ts=x$ts,dt=x$dt,v=x$v,qc=x$qc,drop=x$drop,lt=x$lpid[[1]])
-	  lres1 <- family$linfo[[2]]$linkfun(log((y-family$linfo[[1]]$linkinv(eta1))^2)/2 - .25)
+	  ymu2 <- (y-family$linfo[[1]]$linkinv(eta1))^2
+	  ymu2 <- pmax(ymu2,0.05*mean(ymu2)) ## take care not to allow this to be too tiny
+	  lres1 <- family$linfo[[2]]$linkfun(log(ymu2)/2 - .25)
 	  if (!is.null(offset[[2]])) lres1 <- lres1 - offset[[2]]
 	  #lres1 <- family$linfo[[2]]$linkfun(lres1)
 	  R1 <- suppressWarnings(mchol(XWXd(x$Xd,w=rep(1,length(y)),k=x$kd,ks=x$ks,ts=x$ts,dt=x$dt,v=x$v,
@@ -3243,7 +3196,9 @@ gumbls <- function(link=list("identity","log"),b=-7) {
             startji[!is.finite(startji)] <- 0       
           } else startji <- pen.reg(x1,e1,yt1)
           start[jj[[1]]] <- startji
-          lres1 <- family$linfo[[2]]$linkfun(log((y-family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]]))^2)/2 - .25)
+	  ymu2 <- (y-family$linfo[[1]]$linkinv(x[,jj[[1]],drop=FALSE]%*%start[jj[[1]]]))^2
+	  ymu2 <- pmax(ymu2,0.05*mean(ymu2)) ## take care not to allow this to be too tiny
+          lres1 <- family$linfo[[2]]$linkfun(log(ymu2)/2 - .25)
 	  if (!is.null(offset[[2]])) lres1 <- lres1 - offset[[2]]
 	  #lres1 <- family$linfo[[2]]$linkfun(lres1)
           x2 <-  x[,jj[[2]],drop=FALSE];e2 <- E[,jj[[2]],drop=FALSE]
@@ -3418,7 +3373,7 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
 
 
   ll <- function(y, X, coef, wt, family, offset = NULL, deriv=0, d1b=0, d2b=0, Hp=NULL, rank=0, fh=NULL, D=NULL,
-                 eta=NULL,ncv=FALSE,sandwich=FALSE) {
+                 eta=NULL,ncv=FALSE,sandwich=FALSE,nt=1) {
     ## function defining the shash model log lik. 
     ## deriv: 0 - eval
     ##        1 - grad and Hess
@@ -3958,20 +3913,20 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
       
       ## get the gradient and Hessian...
       ret <- gamlss.gH(X,jj,de$l1,de$l2,I2,l3=de$l3,i3=I3,l4=de$l4,i4=I4,
-                       d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich) 
+                       d1b=d1b,d2b=d2b,deriv=deriv-1,fh=fh,D=D,sandwich=sandwich,nt=nt) 
       if (ncv) {
         ret$l1 <- de$l1; ret$l2 = de$l2; ret$l3 = de$l3
       }
     } else ret <- list()
     ret$l <- l;ret$l0 <- l0; ret
-  } ## end ll
+  } ## end ll shash
 
   sandwich <- function(y,X,coef,wt,family,offset=NULL) {
   ## compute filling for sandwich estimate of cov matrix
     ll(y,X,coef,wt,family,offset=NULL,deriv=1,sandwich=TRUE)$lbb
   }
 
-  initialize <- expression({
+  initialize <- expression({ ## shash
     ## idea is to regress g(y) on model matrix for mean, and then 
     ## to regress the corresponding log absolute residuals on 
     ## the model matrix for log(sigma) - may be called in both
@@ -4021,9 +3976,9 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
       start[jj[[4]]] <- startji
       
       }
-  }) ## initialize 
+  }) ## initialize shash
   
-  rd <- function(mu, wt, scale) { 
+  rd <- function(mu, wt, scale) { ## shash
     mu <- as.matrix(mu)
     if(ncol(mu)==1){ mu <- t(mu) }
     muE <- mu[ , 1, drop = TRUE]
@@ -4037,7 +3992,7 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
     return( .r )
   }
   
-  qf <- function(p, mu, wt, scale) {
+  qf <- function(p, mu, wt, scale) { ## shash
     mu <- as.matrix(mu)
     if(ncol(mu)==1){ mu <- t(mu) }
     muE <- mu[ , 1, drop = TRUE]
@@ -4050,7 +4005,7 @@ shash <- function(link = list("identity", "logeb", "identity", "identity"), b = 
     return( q)
   }
   
-  cdf <- function(q, mu, wt, scale, logp) {
+  cdf <- function(q, mu, wt, scale, logp) { ## shash
     mu <- as.matrix(mu)
     if(ncol(mu)==1){ mu <- t(mu) }
     muE <- mu[ , 1, drop = TRUE]

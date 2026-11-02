@@ -12,7 +12,7 @@
          ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,too.far=0.1,
          all.terms=FALSE,shade.col="gray80",shift=0,
          trans=I,seWithMean=FALSE,unconditional=FALSE,by.resids=FALSE,
-         scheme=0,deriv=FALSE,...)
+         scheme=getOption("mgcv.plot.scheme", 0),deriv=FALSE,...)
 }
 %- maybe also `usage' for other objects documented here.
 \arguments{ 

@@ -33,7 +33,7 @@ Shape constrained \code{"sc"} versions are available for use with \code{\link{sc
 }
 
 \value{ An object of class \code{"Bspline.smooth"}. See \code{\link{smooth.construct}}, 
-for the elements that this object will contain.
+for the elements that this object will contain. Also contains factor(s) of penalty matrix/matrices in \code{D} (\code{crossprod(D[[i]])} gives \code{S[[i]]}), and orthogonal basis for null space of the overall penalty, \code{N}. 
 }
 
 \details{ The basis and penalty are sparse (although sparse matrices are not used to represent them). \code{m[2]>m[1]} will generate an error, since in that case the penalty would be based on an undefined derivative of the basis, which makes no sense. The terms can have multiple penalties of different orders, for example \code{s(x,bs="bs",m=c(3,2,1,0))} specifies a cubic basis with 3 penalties: a conventional cubic spline penalty, an integrated square of first derivative penalty, and an integrated square of function value penalty.  

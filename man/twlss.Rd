@@ -21,7 +21,7 @@ twlss(link=list("log","identity","identity"),a=1.01,b=1.99)
 An object inheriting from class \code{general.family}.
 }
 
-\details{ The first linear predictor defines the mean parameter \eqn{\mu}{m} (default link \code{log}). The Tweedie variance is given by \eqn{\phi\mu^p}{sm^p}. The second linear predictor defines the log scale parameter \eqn{\rho=\log(\phi)}{r=log(s)} (no link choice). The third linear predictor, \eqn{\theta}{t}, defines \eqn{p = \{a + b\exp(\theta)\}/\{1+\exp(\theta)\}}{p=(a+b exp(t))/(1+exp(t))} (again with no choice of link). 
+\details{ The first linear predictor defines the mean parameter \eqn{\mu}{m} (default link \code{log}). The Tweedie variance is given by \eqn{\phi\mu^p}{sm^p}.  The second linear predictor, \eqn{\theta}{t}, defines \eqn{p = \{a + b\exp(\theta)\}/\{1+\exp(\theta)\}}{p=(a+b exp(t))/(1+exp(t))} (no link choice). The third linear predictor defines the log scale parameter \eqn{\rho=\log(\phi)}{r=log(s)} (again with no choice of link). 
 
 A Tweedie random variable with 1<p<2 is a sum of \code{N} gamma random variables 
 where \code{N} has a Poisson distribution. The p=1 case is a generalization of a Poisson distribution and is a discrete 
@@ -80,8 +80,8 @@ plot(b,pages=1)
 print(b)
 
 eb <- exp(coef(b));nb <- length(eb)
-eb[nb-1] ## scale
-(1+2*eb[nb])/(1+eb[nb]) ## p
+eb[nb] ## scale
+(1+2*eb[nb-1])/(1+eb[nb-1]) ## p
 
 rm(dat)
 }

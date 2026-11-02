@@ -73,7 +73,7 @@ gam.mh <- function(b,ns=10000,burn=1000,t.df=40,rw.scale=.25,thin=1) {
   beta <- coef(b);Vb <- vcov(b)
   X <- model.matrix(b); burn <- max(0,burn)
   prog <- interactive();iprog <- 0
-  di <- floor((ns+burn)/100)
+  di <- max(1,floor((ns+burn)/100))
   if (prog) prg <- txtProgressBar(min = 0, max = ns+burn, initial = 0,
                    char = "=",width = NA, title="Progress", style = 3)
   bp <- rmvt(ns+burn,beta,Vb,df=t.df) ## beta proposals

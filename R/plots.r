@@ -1,4 +1,4 @@
-#  R plotting routines for the package mgcv (c) Simon Wood 2000-2017
+##  R plotting routines for the package mgcv (c) Simon Wood 2000-2017
 ##  With contributions from Henric Nilsson
 
 
@@ -41,7 +41,7 @@ fix.family.qf <- function(fam) {
     }
   } else if (family=="binomial") {
     fam$qf <- function(p,mu,wt,scale) {
-      if (all.equal(wt,ceiling(wt))!=TRUE) {
+      if (!isTRUE(all.equal(wt,ceiling(wt)))) {
         wt <- ceiling(wt)
 	warning("non-integer binomial denominator: quantiles incorrect")
       }
@@ -606,7 +606,7 @@ polys.plot <- function(pc,z=NULL,scheme="heat",lab="",...) {
     nz <- names(z)
     npc <- names(pc)
     if (!is.null(nz)&&!is.null(npc)) { ## may have to re-order z into pc order.
-      if (all.equal(sort(nz),sort(npc))!=TRUE) stop("names of z and pc must match")
+      if (!isTRUE(all.equal(sort(nz),sort(npc)))) stop("names of z and pc must match")
       z <- z[npc]
     } 
 
@@ -799,6 +799,32 @@ plot.fs.interaction <- function(x,P=NULL,data=NULL,label="",
     }
   }
 } ## end plot.fs.interaction
+
+blockit <- function(X,f=function(X,arg) colSums(X),arg=NULL,bsize=10,rows = FALSE) {
+## f is a vector valued function of the rows or columns of X, so if rows is TRUE
+## and i an integer then f(X[i,]) is a scalar, for example. This function simply
+## breaks up the computation, operating sequentially on subsets of the rows/cols.
+## This is useful to control memory usage when X is sparse, but the intermediate
+## quantities computed in f need not be.  
+  n <- if (rows) nrow(X) else ncol(X)
+  if (!n) return()
+  nb <- floor(n/bsize) ## number of full size blocks
+  bsfinal <- n - nb*bsize ## size of final block
+  z <- numeric(n) ## vector to hold result
+  if (nb) {
+    ii <- 1:bsize ## indices for first block
+    for (i in 1:nb) {
+      z[ii] <- if (rows) f(X[ii,],arg) else f(X[,ii],arg)
+      ii <- ii + bsize
+    }
+  }  
+  if (bsfinal) {
+    ii <- (nb*bsfinal+1):n ## indices for last block
+    z[ii] <- if (rows) f(X[ii,],arg) else f(X[,ii],arg)
+  }
+  z
+} ## blockit
+
 
 plot.mgcv.smooth <- function(x,P=NULL,data=NULL,label="",
                      partial.resids=FALSE,rug=TRUE,se=TRUE,scale=-1,n=100,n2=40,n3=3,
@@ -1271,7 +1297,7 @@ md.plot <- function(f,nr,nc,m,vname,lo,hi,hcolors,scheme,main,...) {
 plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scale=-1,n=100,n2=40,n3=3,
                      theta=30,phi=30,jit=FALSE,xlab=NULL,ylab=NULL,main=NULL,ylim=NULL,xlim=NULL,
 		     too.far=0.1,all.terms=FALSE,shade.col="gray80",shift=0,trans=I,seWithMean=FALSE,
-		     unconditional=FALSE,by.resids=FALSE,scheme=0,deriv=FALSE,...)
+		     unconditional=FALSE,by.resids=FALSE,scheme=getOption("mgcv.plot.scheme",0),deriv=FALSE,...)
 
 # Create an appropriate plot for each smooth term of a GAM.....
 # x is a gam object
@@ -1349,8 +1375,8 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
     if (any(se>=1)) se <- TRUE else if (any(se<=0)) se <- FALSE
   }
 
-  if (se[1] && x$Vp[1,1] < 0) ## check that variances are actually available
-  { se <- FALSE
+  if (se[1] && !is.list(x$Vp) && x$Vp[1,1] < 0) { ## check that variances are actually available
+    se <- FALSE
     warning("No variance estimates available")
   }
 
@@ -1366,6 +1392,17 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
 
   pd <- list(); ## plot data list
   i <- 1 # needs a value if no smooths, but parametric terms ...
+
+  if (is.list(x$Vp)) {
+    if (!is.null(x$bs)) {
+      x$bs <- NULL;warning("bootstrap intervals not available")
+    }
+    if (seWithMean) {
+      seWithMean <- FALSE; warning("seWithMean not available")
+    }   
+  }
+
+  np <- length(x$coefficients)
 
   ##################################################
   ## First the loop to get the data for the plots...
@@ -1388,7 +1425,7 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
       p <- x$coefficients[first:last]   ## relevent coefficients 
       offset <- attr(P$X,"offset")      ## any term specific offset
       ## get fitted values ....
-      if (is.null(offset)) P$fit <- P$X%*%p else P$fit <- P$X%*%p + offset 
+      P$fit <- if (is.null(offset)) as.numeric(P$X%*%p) else as.numeric(P$X%*%p) + offset 
       if (!is.null(P$exclude)) P$fit[P$exclude] <- NA
       if (se[1] && P$se && is.null(x$bs)) { ## get standard errors for fit
         ## test whether mean variability to be added to variability (only for centred terms)
@@ -1407,7 +1444,17 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
           }
 	} else { ## se in centred (or anyway unconstained) space only
 	  if (seWithMean && is.null( attr(x$smooth[[i]],"nCons"))) warning("seWithMean unavailable")
-	  se.fit <- sqrt(pmax(0,rowSums(as(P$X%*%x$Vp[first:last,first:last,drop=FALSE],"matrix")*P$X)))
+	  if (is.list(x$Vp)) {
+	    if (inherits(P$X,"Matrix")) {
+	      Xt <- t(P$X);Xt@i <- Xt@i + as.integer(first-1);Xt@Dim[1] <- as.integer(np)
+	      xsparse <- TRUE
+            } else {
+              Xt <- matrix(0,np,nrow(P$X));Xt[first:last,] <- t(P$X); xsparse <- FALSE
+            }
+	    #se.fit <- x$Vp$V(Xt,x$Vp$arg) ## experimental: assumes Vp for forming se directly
+	    se.fit <- if (!xsparse) sqrt(pmax(0,colSums(x$Vp$V(Xt,x$Vp$arg)*Xt))) else
+	    blockit(Xt,f=function(Xt,arg) sqrt(pmax(0,colSums(arg$V(Xt,arg$arg)*Xt))),arg=x$Vp,bsize=200,rows = FALSE)
+          } else se.fit <- sqrt(pmax(0,rowSums(as(P$X%*%x$Vp[first:last,first:last,drop=FALSE],"matrix")*P$X)))
         }
         if (!is.null(P$exclude)) se.fit[P$exclude] <- NA
       } ## standard errors for fit completed
@@ -1566,12 +1613,12 @@ plot.gam <- function(x,residuals=FALSE,rug=NULL,se=TRUE,pages=0,select=NULL,scal
 
 
 
-exclude.too.far <- function(g1,g2,d1,d2,dist)
+exclude.too.far <- function(g1,g2,d1,d2,dist) {
 # if g1 and g2 are the co-ordinates of grid modes and d1,d2 are co-ordinates of data
 # then this routine returns a vector with TRUE if the grid node is too far from
 # any data and FALSE otherwise. Too far is judged using dist: a positive number indicating
 # distance on the unit square into which the grid is scaled prior to calculation
-{ mig<-min(g1)
+  mig<-min(g1)
   d1<-d1-mig;g1<-g1-mig
   mag<-max(g1)
   d1<-d1/mag;g1<-g1/mag
@@ -1586,7 +1633,7 @@ exclude.too.far <- function(g1,g2,d1,d2,dist)
   if (m!=length(d2)) stop("data vectors are of different lengths")
   if (dist<0) stop("supplied dist negative")
   distance<-array(0,n)
-  o<-.C(C_MinimumSeparation,x=as.double(cbind(g1,g2)),n=as.integer(n), d=as.integer(2),
+  o <- .C(C_MinimumSeparation,x=as.double(cbind(g1,g2)),n=as.integer(n), d=as.integer(2),
                             t=as.double(cbind(d1,d2)),m=as.integer(m),distance=as.double(distance))
  
   res <- rep(FALSE,n)

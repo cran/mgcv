@@ -21,6 +21,65 @@ present, and reparameterization needs checking (also for bam).
 * bam(...,discrete=TRUE) has no option to use the identical
 	discretizaton to that used in fitting when predicting
 
+1.9-5
+
+** 'bt' smooth class - tensor products of B-splines with general derivative
+  based penalties. 
+
+* Bug in cnorm censored evaluation which could cause fit failure. Thanks to
+	Gavin Simpson. 	
+
+* p>n allocation bug in gdi.c:gdiPK that could cause crash. Fixed thanks to
+  Xinhui Wang. 
+
+* Further adjustment of bam efam handling of scale parameter (tw basically) 
+  to avoid low count and convergence problems.
+
+* Various NCV fixes thanks to Fabian Scheipl and Gavind Simpson.1.9-5
+
+* Added ability to control a number of defaults using 'options'. See 
+  ?options.mgcv. 
+
+* bam NCV fix - sub-sampling error fix and bug in working storage computation
+  which could lead to massive over-allocation of working storage. Thanks to 
+  Xavier Giroux-Bougard for reporting.
+  
+* Various bam NCV memory errors - thanks to Fabian Scheipl. 
+
+* Fix to offset handling for exponential and extended families with NCV + a
+  memory error with by variables for NCV with bam. 
+  - thanks to Max Goplerud for reporting.
+
+* Fix to general constraint documentation for scasm, and handling of general 
+  constraints involving repeated values.
+
+* gam and scasm modified so that gamma parameter works with EFS smoothness 
+  estimation.
+
+* ti terms modified to never trigger numerical side constraints.
+
+* tensor product penalty scaling tweaked to use efficient 'norm' instead of 
+  expensive 'eigen'.
+
+* Fix to NCV handling for extended families when number of points to drop is 
+  not number of data. Thanks to Nicole Augustin for reporting.
+
+* Fix to QNCV handling for general families when number of points to drop is 
+  not number of data. Thanks to Gavin Simpson.
+
+* gumbls initialization stabilized a little.
+
+* fixed side-effect that uniquecombs created contrast attribute for factors
+  even when original had no attribute set.
+
+* Added bandmult and bandsolve for multiplication and solves with banded 
+  upper triangular factor returned by bandchol, and a 'partial' option to
+  bandchol for case when banded matrix is not PD but is constructed from 
+  diagonals of PD matrix. 
+
+* tensor product smooth constructor modified to apply same scaling to 
+  marginal penalties as applied to full term penalties.
+
 1.9-4
 
 *** scasm function provided for shape constrained additive smooth models, via

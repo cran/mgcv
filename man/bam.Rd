@@ -20,10 +20,10 @@ An alternative fitting approach (Wood et al. 2017, Li and Wood, 2019) is provide
 bam(formula,family=gaussian(),data=list(),weights=NULL,subset=NULL,
     na.action=na.omit, offset=NULL,method="fREML",control=list(),
     select=FALSE,scale=0,gamma=1,knots=NULL,sp=NULL,min.sp=NULL,
-    paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=FALSE,
-    cluster=NULL,nthreads=1,gc.level=0,use.chol=FALSE,samfrac=1,
-    coef=NULL,drop.unused.levels=TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,
-    in.out=NULL,nei=NULL,...)
+    paraPen=NULL,chunk.size=10000,rho=0,AR.start=NULL,discrete=
+    getOption("mgcv.bam.discrete",FALSE),cluster=NULL,nthreads=1,
+    gc.level=0,use.chol=FALSE,samfrac=1,coef=NULL,drop.unused.levels=
+    TRUE,G=NULL,fit=TRUE,drop.intercept=NULL,in.out=NULL,nei=NULL,...)
 }
 %- maybe also `usage' for other objects documented here.
 

@@ -47,7 +47,7 @@ estimate.theta <- function(theta,family,y,mu,scale=1,wt=1,tol=1e-7,attachH=FALSE
   if (scale>=0&&family$n.theta==0) stop("erroneous call to estimate.theta - no free parameters")
   n.theta <- length(theta) ## dimension of theta vector (family$n.theta==0 => all fixed)
   del.ind <- 1:n.theta
-  if (scale<0) theta <- c(theta,if (all.equal(y,mu)==TRUE) log(var(y)*.1) else
+  if (scale<0) theta <- c(theta,if (isTRUE(all.equal(y,mu))) log(var(y)*.1) else
                           log(mean((y-mu)^2/family$variance(mu))))
   nll <- nlogl(theta,family,y,mu,scale,wt,2)
   g <- if (family$n.theta==0) nll$g[-del.ind] else nll$g
@@ -222,7 +222,7 @@ nb <- function (theta = NULL, link = "log") {
         r$Dmuth <- 2 * wt * theta * (1 - yth/muth)/muth
         r$Dmu3 <- 4 * wt * (yth/muth^3 - y/mu^3)
         r$Dmu2th <- 2 * wt * theta * (2*yth/muth - 1)/muth^2
-	r$EDmu2th <- 2 * wt / muth^2
+	r$EDmu2th <- 2 * wt * theta / muth^2
       } 
       if (level>1) { ## whole damn lot
         r$Dmu4 <- 2 * wt * (6*y/mu^4 - 6*yth/muth^4)
@@ -809,7 +809,7 @@ cnorm <- function (theta = NULL, link = "identity") {
       ddnorm <- function(x0,x1,a0=0,a1=0,s0=1,s1=1,log.p=TRUE) {
       ## Cancellation avoiding evaluation of
       ## c = s1*exp(a1)*dnorm(x1)-s0*exp(a0)*dnorm(x0)
-      ## or log(|c|) where sj = +/- 1.
+      ## or log(|c|) where sj = +/- 1 or 0 for a zero.
       ## because c can be negative then the sign of c is
       ## also returned in the log.p = TRUE case 
         if (any(x0>=x1)) warning("some x0>=x1")
@@ -819,11 +819,11 @@ cnorm <- function (theta = NULL, link = "identity") {
         ii <- p0>p1 ## swap to avoid log of negative
         d <- p1[ii]; p1[ii] <- p0[ii]; p0[ii] <- d
         ii <- s0*s1 > 0 ## same sign
-        dp[ii] <- p0[ii] + logexm1(p1[ii]-p0[ii]) ## use log(exp(p1)-exp(p0)) = log(exp(p0)*exp(p1-p0)-1))
+        dp[ii] <- p0[ii] + logexm1(p1[ii]-p0[ii]) ## use log(exp(p1)-exp(p0)) = log(exp(p0)*(exp(p1-p0)-1))
         ii <- s0*s1 < 0 ## opposite sign
-        dp[ii] <- p0[ii] + logexp1(p1[ii]-p0[ii]) ## use log(exp(p1)+exp(p0)) = log(exp(p0)*exp(p1-p0)+1))
-	ii <- s0 == 0; sign[ii] <- s1[ii]; dp[ii] <- p1
-	ii <- s1 == 0; sign[ii] <- -s0[ii]; dp[ii] <- p0
+        dp[ii] <- p0[ii] + logexp1(p1[ii]-p0[ii]) ## use log(exp(p1)+exp(p0)) = log(exp(p0)*(exp(p1-p0)+1))
+	ii <- s0 == 0; sign[ii] <- s1[ii]; dp[ii] <- p1[ii]
+	ii <- s1 == 0; sign[ii] <- -s0[ii]; dp[ii] <- p0[ii]
         if (log.p==FALSE) dp <- sign*exp(dp) else attr(dp,"sign") <- sign 
         dp
       } ## ddnorm
@@ -884,7 +884,7 @@ cnorm <- function (theta = NULL, link = "identity") {
 	Dt <-  2*attr(ldzdz,"sign")*exp(ldzdz-ldp) ##2*(dnorm1*z1-dnorm0*z0)/dpn
 	Dmu2[ii] <- Dmui^2/2 + e2thi*Dt
 	if (level>0) {
-	  ldz2dz2 <- ddnorm(z0,z1,log(z0^2),log(z1^2),log.p=TRUE)
+	  ldz2dz2 <- ddnorm(z0,z1,log(z0^2),log(z1^2),sign(z0^2),sign(z1^2),log.p=TRUE)
 	  ldz3dz3 <- ddnorm(z0,z1,log(abs(z0^3)),log(abs(z1^3)),sign(z0),sign(z1),log.p=TRUE) 
           #ldbdb <- ddnorm(z0,z1,log(abs(bly0)),log(abs(bly1)),sign(bly0),sign(bly1),log.p=TRUE)
 	  #ldbzdbz <- ddnorm(z0,z1,log(abs(bly0*z0)),log(abs(bly1*z1)),sign(bly0*z0),sign(bly1*z1),log.p=TRUE)
@@ -910,7 +910,7 @@ cnorm <- function (theta = NULL, link = "identity") {
                       attr(lda1a1,"sign")*exp(lda1a1-ldp - th3i)
                       ##e3thi*(dnorm1*(2*z13*ethi + Dmui*z12-4*z1*ethi) -
 		      ##       dnorm0*(2*z03*ethi + Dmui*z02-4*z0*ethi))/dpn
-          ldz4dz4 <- ddnorm(z0,z1,log(z0^4),log(z1^4),log.p=TRUE)
+          ldz4dz4 <- ddnorm(z0,z1,log(z0^4),log(z1^4),sign(z0^2),sign(z1^2),log.p=TRUE)
           Dmu3th[ii] <- Dmt*(3*Dmu2i/2-Dmui^2/4) + Dmui*(3*Dmu2t - Dmui*Dmt)/2 + e2thi*(2*Dmui-Dmt) +
                           (Dt-10) * attr(ldz2dz2,"sign")*exp(ldz2dz2-ldp-th3i) +
                           ## e3thi*(Dt-10)*(dnorm1*z12-dnorm0*z02)/dpn +
@@ -3969,7 +3969,7 @@ ziP <- function (theta = NULL, link = "identity",b=0) {
 
     initialize <- expression({
         if (any(y < 0)) stop("negative values not allowed for the zero inflated Poisson family")
-        if (all.equal(y,round(y))!=TRUE) {
+        if (!isTRUE(all.equal(y,round(y)))) {
           stop("Non-integer response variables are not allowed with ziP ")
         }
         if ((min(y)==0&&max(y)==1)) stop("Using ziP for binary data makes no sense")
